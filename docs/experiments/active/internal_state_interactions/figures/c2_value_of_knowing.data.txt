@@ -1,0 +1,5 @@
+ordinary agent: recorded episodes behind the hit rates (0 / 1 / 2 predators)|1,000,000|1,000,000|100.0|per context 333,947 / 333,743 / 332,310; the ambusher-split contexts are in the study plan, not drawn
+ordinary agent: start states compared per context|41,106|41,106|100.0|every start state of the planner, tie margin 0.5
+modulator agent: recorded episodes behind the hit rates (0 / 1 / 2 predators)|1,000,000|1,000,000|100.0|per context 333,947 / 333,743 / 332,310; the ambusher-split contexts are in the study plan, not drawn
+modulator agent: start states compared per context|41,106|41,106|100.0|every start state of the planner, tie margin 0.5
+rollouts per policy and context|30,000|30,000|100.0|3 seeds x 10,000 starts, 500 steps, map without a warm bush

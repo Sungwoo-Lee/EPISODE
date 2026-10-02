@@ -1,0 +1,200 @@
+# EXPERIMENTAL, NOT MAINTAINED (CLAUDE.md "Config maintenance scope"): a concept world of the
+# continual-worlds study, docs/experiments/active/continual_worlds/CONTINUAL_WORLDS.md.
+#
+# FOG (15 x 15): short, noisy smell and blurred sight
+#
+# Smell range 3 (level 05: 20), vision blurred along each line of sight 3x more
+# (visual_blur_radial_scale 1.5, level 05: 0.5) -- NOT vision range 1, which would change the
+# observation width (58) and is refused by the curriculum check -- and perceptual noise ON for
+# smell (sigma 0.3) and sight (sigma 0.2) only, at a constant level. Every interoceptive channel,
+# touch, pain, temperature and proprioception stay exact. 2-5 hunting predators (brief 1-2, x2.25). Food 2-9;
+# ambushers, fires, rocks, bushes at level-05 density.
+#
+# PER-CELL DENSITY (Revision 1, 2026-09-28): every count is set against HOME's per-cell density
+# (level 05 on 100 cells); a count the concept brief gave in Home-grid terms is scaled by area
+# (x2.25 at 15 x 15, round-half-up), so the concept's pressure holds per cell. Design doc 3.2.
+#
+# STATIONARY BY CONSTRUCTION: this file changes only the EXTERNAL world. Every body rule, the
+# interoceptive channels, the reward, max_steps and the observation layout (58 numbers) are
+# inherited unchanged from level 05 through `extends:`. Food energy per bite (6) and the bush
+# healing multiplier (25) are body-side keys and are not touched.
+# Lists (resources / entities / obstacles / location_areas) are restated in full because
+# Config.merge replaces lists wholesale (CONFIG_GUIDE.md section 1); every entry not named
+# above is level 05's entry verbatim with its placement box widened to the grid, the approach
+# validated for 15 x 15 / 20 x 20 by scripts/analysis/studies/context_exploration/make_worlds.py.
+# Generated once from level 05's resolved lists; values are pinned in the design doc (section 3.2).
+extends: environment/experiment/basic/05-campfire_thermal_10x10
+environment:
+  height: 15
+  width: 15
+  location_areas:
+  - type: grass
+    area:
+    - [1, 1]
+    - [15, 15]
+  - type: sand
+    area:
+    - [0, 0]
+    - [0, 0]
+  resources:
+  - name: food
+    type: food
+    count_low: 2
+    count_high: 9
+    spawn_area:
+    - [1, 1]
+    - [15, 15]
+    properties: [1.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    max_consumption: 12
+    regeneration_delay: 0
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.0
+  - name: hiding_predator
+    type: hiding_predator
+    count_low: 5
+    count_high: 27
+    spawn_area:
+    - [1, 1]
+    - [15, 15]
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    max_consumption: -1
+    regeneration_delay: 20
+    damage: [15.0, 45.0]
+    nociception_intensity: 0.9
+  entities:
+  - class: predator
+    behaviour: hunt
+    tag: pred
+    count_low: 2
+    count_high: 5
+    properties: [0.0, 0.7, 0.5, 0.0, 0.0]
+    properties_std: [0.0, 0.3, 0.3, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    move_interval: [1, 1]
+    damage: [15.0, 120.0]
+    attack_delay: [1, 3]
+    nociception_intensity: 0.9
+    spawn_area:
+    - [1, 1]
+    - [15, 15]
+    patrol_area:
+    - [1, 1]
+    - [15, 15]
+    detection_range: [1, 7]
+    max_stamina: [30, 150]
+    stamina_recovery_rate: [1, 1]
+    hunt_stamina_threshold: [0.7, 0.7]
+    lose_interest_multiplier: [1.5, 1.5]
+    attack_range: [2, 3]
+    attack_success_rate: 0.5
+  - class: neutral
+    behaviour: wander
+    tag: rabbit
+    count_low: 0
+    count_high: 5
+    properties: [0.0, 0.5, 0.7, 0.0, 0.0]
+    properties_std: [0.0, 0.3, 0.3, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    move_interval: [1, 1]
+    damage: [0.0, 0.0]
+    attack_delay: [0, 0]
+    nociception_intensity: 0.1
+    spawn_area:
+    - [1, 1]
+    - [15, 15]
+    patrol_area:
+    - [1, 1]
+    - [15, 15]
+  obstacles:
+  - name: campfire
+    count_low: 2
+    count_high: 7
+    area:
+    - [1, 1]
+    - [15, 15]
+    edge_margin: 2
+    temperature_ratio: [11, 11]
+    blocking: false
+    blocks_sight: false
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.0
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: rock
+    count_low: 14
+    count_high: 27
+    area:
+    - [1, 1]
+    - [15, 15]
+    blocking: false
+    damage: [1, 5]
+    nociception_intensity: 0.9
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: tree
+    count: 0
+    area:
+    - [5, 15]
+    - [5, 15]
+    blocking: true
+    damage: [0.1, 0.5]
+    nociception_intensity: 0.1
+    properties: [0.0, 0.0, 0.0, 0.0, 1.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: tree
+    count: 0
+    area:
+    - [5, 15]
+    - [5, 15]
+    blocking: true
+    damage: [0.1, 0.5]
+    nociception_intensity: 0.1
+    properties: [0.0, 0.0, 0.0, 0.0, 1.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: bush
+    count_low: 9
+    count_high: 23
+    area:
+    - [1, 1]
+    - [15, 15]
+    blocking: false
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.0
+    hides_agent: true
+    blocks_animals: true
+    properties: [0.0, 0.0, 0.0, 1.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+sensory: {sensor_radius: 3, visual_blur_radial_scale: 1.5}
+perceptual_noise:
+  enabled: true
+  modalities:
+    injury: {mode: constant, sigma: 0.0, injury_noise_scale: 0.0}
+    nutrition: {mode: constant, sigma: 0.0, injury_noise_scale: 0.0}
+    satiation: {mode: constant, sigma: 0.0, injury_noise_scale: 0.0}
+    body_temperature: {mode: constant, sigma: 0.0, injury_noise_scale: 0.0}
+    interoceptive_nociception: {mode: constant, sigma: 0.0, injury_noise_scale: 0.0}
+    extero_nociception: {mode: constant, sigma: 0.0, injury_noise_scale: 0.0}
+    thermoception: {mode: constant, sigma: 0.0, injury_noise_scale: 0.0}
+    collision: {mode: constant, sigma: 0.0, injury_noise_scale: 0.0}
+    proprioception: {mode: constant, sigma: 0.0, injury_noise_scale: 0.0}
+    location: {mode: constant, sigma: 0.0, injury_noise_scale: 0.0}
+    olfaction: {mode: constant, sigma: 0.3, injury_noise_scale: 0.0}
+    visual: {mode: constant, sigma: 0.2, injury_noise_scale: 0.0}

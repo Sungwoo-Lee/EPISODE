@@ -1,0 +1,72 @@
+# EXPERIMENTAL, NOT MAINTAINED (CLAUDE.md "Config maintenance scope"): part of the single-channel
+# smell hypervigilance study,
+#   docs/experiments/active/hypervigilance/SINGLE_CHANNEL_SMELL_HYPERVIGILANCE.md
+#
+# PURPOSE (plain language): level 05 exactly, except that the predator and the rabbit now smell
+# of ONE shared odour instead of two. In level 05 each animal carries two odour numbers
+# (channels 1 and 2 of the 5-number smell vector): the predator about 0.7 / 0.5 and the rabbit
+# about 0.5 / 0.7, each jittered per episode with SD 0.3. The RATIO of the two tells the classes
+# apart at any distance. Here channel 2 is silenced for both animals; the predator keeps 0.7 and
+# the rabbit 0.5 on channel 1 with the SAME SD 0.3. The only way left to tell them apart by smell
+# is how strong channel 1 is, which also depends on distance -- the classes overlap more.
+#
+# WHAT CHANGES vs basic/05 (verified on the trainer's own loader, EnvParams diffed field by field;
+# see the design doc §2.3): ONLY `animal_property` and `animal_property_std`, and only in the
+# channel-2 column (predator 0.5 -> 0, rabbit 0.7 -> 0; SD 0.3 -> 0 for both). Observation width is
+# unchanged (58): the smell vector stays 5 numbers wide; channel 2 simply reads 0 everywhere,
+# because nothing else in this world emits on it.
+#
+# RANDOM-STREAM NOTE: `core.py` draws the per-episode odour jitter as one normal per
+# (animal, channel) from a key that does not depend on the means, so for the same training seed
+# and the same evaluation seed an animal's channel-1 value is THE SAME NUMBER here as in basic/05.
+# Only channel 2 differs (0 here). That is what makes the paired read in the design doc exact.
+#
+# WHY THE WHOLE `entities:` LIST IS RESTATED: `Config.merge` replaces lists wholesale
+# (CONFIG_GUIDE.md, "list-replace footgun"). Both entries below are copied VERBATIM from
+# basic/04-jump_attack_10x10.yaml (the ladder rung that defines them; basic/05 inherits them
+# unchanged), with only the two property lines of each edited. If basic/04's entities change,
+# this file does NOT follow -- re-copy before any new launch and re-run the EnvParams diff.
+#
+# No critical-settings registry value changes (entity odour vectors are not a registry row;
+# `sensory.vector_size` stays 5, `decay_power` 1.0, `sensor_radius` 20, `olfactory_grid_range` 1).
+extends: environment/experiment/basic/05-campfire_thermal_10x10
+
+environment:
+  entities:
+    - class: "predator"
+      behaviour: "hunt"
+      tag: "pred"
+      count_low: 0
+      count_high: 2
+      properties: [0.0, 0.7, 0.0, 0.0, 0.0]       # level 05: [0.0, 0.7, 0.5, 0.0, 0.0]
+      properties_std: [0.0, 0.3, 0.0, 0.0, 0.0]   # level 05: [0.0, 0.3, 0.3, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      move_interval: [1, 1]
+      damage: [15.0, 120.0]
+      attack_delay: [1, 3]
+      nociception_intensity: 0.9
+      spawn_area: [[1, 1], [10, 10]]
+      patrol_area: [[1, 1], [10, 10]]
+      detection_range: [1, 7]
+      max_stamina: [30, 150]
+      stamina_recovery_rate: [1, 1]
+      hunt_stamina_threshold: [0.7, 0.7]
+      lose_interest_multiplier: [1.5, 1.5]
+      attack_range: [2, 3]
+      attack_success_rate: 0.5
+    - class: "neutral"
+      behaviour: "wander"
+      tag: "rabbit"
+      count_low: 0
+      count_high: 2
+      properties: [0.0, 0.5, 0.0, 0.0, 0.0]       # level 05: [0.0, 0.5, 0.7, 0.0, 0.0]
+      properties_std: [0.0, 0.3, 0.0, 0.0, 0.0]   # level 05: [0.0, 0.3, 0.3, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      move_interval: [1, 1]
+      damage: [0.0, 0.0]
+      attack_delay: [0, 0]
+      nociception_intensity: 0.1
+      spawn_area: [[1, 1], [10, 10]]
+      patrol_area: [[1, 1], [10, 10]]

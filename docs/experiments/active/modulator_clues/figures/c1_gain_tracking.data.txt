@@ -1,0 +1,4 @@
+modulated runs|9|9|100.0|blind, Wave 1 levels 02-06, Wave 2 levels 04-06
+checkpoints per Wave-1/2 cell|5|5|100.0|the same late checkpoints as the behaviour; Wave 1 levels 02/03 at matched training length
+checkpoints for the blind cell|1|5|20.0|final only: the blind run's saved config no longer loads, so it cannot be re-replayed
+episodes replayed|128|128|100.0|one fixed set, shared by every run and checkpoint

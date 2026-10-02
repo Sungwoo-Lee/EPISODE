@@ -1,0 +1,20 @@
+{
+  "accel": 0.0,
+  "base": 0.2,
+  "final_injury_bush": 0.0,
+  "final_injury_bush_pred": 0.0,
+  "final_injury_open": 85.00015258789062,
+  "final_injury_open_pred": 85.0,
+  "float32_resolution": 7.62939453125e-06,
+  "mult": 25.0,
+  "n_compared": 102,
+  "n_steps": 50,
+  "nutrition_drop_per_step": 1.0,
+  "nutrition_drop_worst_deviation": 0.0,
+  "seed": 0,
+  "start_injury": 95.0,
+  "steps_to_zero_bush": 19,
+  "worst_residual": 0.000152587890625,
+  "worst_residual_bush": 0.0,
+  "worst_residual_open": 0.000152587890625
+}

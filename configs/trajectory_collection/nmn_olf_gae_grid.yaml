@@ -1,0 +1,55 @@
+# nmn_olf_gae_grid - post-training evaluation population for the EXTENDED-OLFACTION neuromodulator grid.
+#
+# This grid is the site x input-slice grid re-trained on the olfaction-only sensory arm
+# (configs/environment/experiment/archive/sensory_ladder/B_olf_only.yaml, olfactory_grid_range: 1), so the
+# agent gets a five-cell directional smell field instead of one omnidirectional whiff. Observation
+# width is 47 here against 27 for the range-0 grids, which is why a store costs roughly 10-12 GB
+# per run rather than 7.
+#
+# ONE PASS. Nothing is collected for these runs yet, and `n_episodes` is a guarded manifest field,
+# so a store collected short cannot be extended later - the range-0 MC grid needed a second root
+# for exactly that reason. The full million goes in one store with one manifest.
+#
+# seed_base 1,000,000 is LOAD-BEARING. It covers 1,000,000..1,999,999, the same range the sensor
+# ladder and both range-0 grids cover, so episode i presents the same world everywhere. That is
+# what makes every cross-grid and cross-study read paired rather than merely same-sized.
+#
+# NO cmp10m CONTROL RUNS. The range-0 grids' specs each carried five unmodulated `cmp10m` seeds as
+# a control band. Those runs are trained at olfactory_grid_range 0 on a different environment, so
+# against this grid they are not a control - they are a different experiment. This grid's only
+# unmodulated reference is its own in-grid `t1none` cell.
+#
+# TWO CELLS ARE ABSENT: t4act_X and t5crt_ALL died on node 102 at 1.0M and 0.8M of 10M episodes and
+# are being retrained. They get their own spec once those finish; collecting a partial checkpoint
+# here would put an under-trained agent in the grid under a name that claims otherwise.
+
+name: nmn_olf_gae_grid
+algo: rppo
+out_root: results/trajectories_olfgae
+episodes: 1000000
+seed_base: 1000000         # LOAD-BEARING - matches the ladder and both range-0 grids
+checkpoints: [final]
+nodes: [106, 107, 108, 111, 112]   # 114 has no pyarrow; 102 has a foreign tenant that killed two
+                                   # runs of this very grid; 113 is running the two reruns
+obs_precision: float32     # must match every other store these figures are compared against
+npar: 1                    # correctness, not throughput: every GPU worker on a node lands on GPU 0
+device: gpu
+batch_size: 5000
+shard_episodes: 5000
+blocks_per_cell: 200       # 1,000,000 / 5,000
+
+runs:
+  - {label: t1none, path: results/JAX_RecurrentPPO/20260909-161137_rppo_olfgae_t1none_s42}
+  - {label: t2enc_ALL, path: results/JAX_RecurrentPPO/20260909-161137_rppo_olfgae_t2enc_ALL_s42}
+  - {label: t2enc_I, path: results/JAX_RecurrentPPO/20260909-161137_rppo_olfgae_t2enc_I_s42}
+  - {label: t2enc_X, path: results/JAX_RecurrentPPO/20260909-161137_rppo_olfgae_t2enc_X_s42}
+  - {label: t3rnn_ALL, path: results/JAX_RecurrentPPO/20260909-161137_rppo_olfgae_t3rnn_ALL_s42}
+  - {label: t3rnn_I, path: results/JAX_RecurrentPPO/20260909-161137_rppo_olfgae_t3rnn_I_s42}
+  - {label: t3rnn_X, path: results/JAX_RecurrentPPO/20260909-161137_rppo_olfgae_t3rnn_X_s42}
+  - {label: t4act_ALL, path: results/JAX_RecurrentPPO/20260909-161137_rppo_olfgae_t4act_ALL_s42}
+  - {label: t4act_I, path: results/JAX_RecurrentPPO/20260909-161138_rppo_olfgae_t4act_I_s42}
+  - {label: t5crt_I, path: results/JAX_RecurrentPPO/20260909-161138_rppo_olfgae_t5crt_I_s42}
+  - {label: t5crt_X, path: results/JAX_RecurrentPPO/20260909-161138_rppo_olfgae_t5crt_X_s42}
+  - {label: t16quad_ALL, path: results/JAX_RecurrentPPO/20260909-161139_rppo_olfgae_t16quad_ALL_s42}
+  - {label: t16quad_I, path: results/JAX_RecurrentPPO/20260909-161139_rppo_olfgae_t16quad_I_s42}
+  - {label: t16quad_X, path: results/JAX_RecurrentPPO/20260909-161139_rppo_olfgae_t16quad_X_s42}

@@ -1,0 +1,4 @@
+checkpoints per point|20|50|40.0|the newest 20 of 50; older ones average in a less-trained agent
+episodes per checkpoint|30|30|100.0|fixed seeds, so both agents meet identical scenes
+test scenes shown|5|12|41.7|the uninjured scenes ordered by threat; the injured and smell-silenced variants are in Figure 1
+training runs|2|2|100.0|one ordinary and one neuromodulated run, one seed each

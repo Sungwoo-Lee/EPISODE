@@ -1,0 +1,461 @@
+---
+title: Interoceptive Behavior-Measure Study — finding measures of foraging & avoidance vs. nutrition & injury
+topic: behavior_measures
+status: active
+created: 2026-06-29
+last_updated: 2026-06-29
+aliases: [behavior-measure-study, interoceptive-measure-study]
+---
+
+# Interoceptive Behavior-Measure Study
+
+## Purpose (read this first)
+
+This is a long-running study with **one goal**: discover the right *measures* of an agent's
+behavior — specifically **foraging** (going to food and eating) and **avoidance** (keeping away
+from a threat) — and how those behaviors change with the agent's **internal state**: how hungry
+it is (**nutrition**, 0 = starving … 100 = full) and how hurt it is (**injury**, 0 = unhurt …
+100 = near death).
+
+The key word is *measures*. We do **not** know in advance which number best captures "the agent
+forages more when hungry" or "the agent avoids more when injured". **Finding that measure is the
+deliverable, not an input.** So this study must not start by assuming a metric.
+
+### How we work (the method — non-negotiable)
+
+1. **Trajectory-first (qualitative).** Build a small probe environment, run the frozen agent in
+   it, and *watch what it actually does* step-by-step (via the `trajectory-story` skill, which
+   reads the `.rec.gz` recordings that `scripts/eval/eval_rollout.py --record` writes). Look at the
+   behavior before naming any number.
+2. **Metric-second (quantitative).** Only once a trajectory pattern *clearly and repeatably*
+   tracks the internal-state sweep do we crystallize it into an episode-level number. The metric
+   is then **grounded in observed behavior**, not assumed up front.
+
+This order matters: a metric chosen before looking can measure the wrong thing confidently.
+
+### The agent we probe (fixed for the whole study)
+
+One frozen checkpoint, never retrained:
+
+- **Run:** `20260627-015427_rppo_basic05_randinit_n112`
+- **Checkpoint:** `models/8900007` (~8.9M steps, the final one)
+- **Why this one:** it was trained with **fully randomized** starting states — nutrition drawn
+  uniformly from [0, 100] and injury from [0, 100] — on a 10×10 grid with food, a hunting
+  predator (0–2 of them), and a harmless wandering "rabbit" (0–2). Because its training covered
+  the *entire* [0,100]×[0,100] internal-state square, **every** start-state we test is
+  in-distribution. That removes the trap that derailed an earlier study, where a model trained
+  only from full-nutrition/zero-injury produced off-distribution wandering that masqueraded as
+  "hypervigilance" (see [[20260624_0517_indist_random_init_reverses_hypervig]]).
+- **Olfaction:** smell decay power = 2.0 (steep). Probe configs must match this (it is the
+  default, so no override is needed).
+- **Grid:** trained on 10×10 — probes default to 10×10 to stay in-distribution, though grid size
+  is a free dial (a robust agent should be size-invariant).
+
+## Plan (phases)
+
+We isolate **one factor at a time**, simplest first. Each phase runs the trajectory-first loop
+above before any metric is declared.
+
+| Phase | Vary | Hold fixed | Question being probed |
+|---|---|---|---|
+| **1a** | nutrition 0→100 | injury 0, no threat, food at a **fixed** spot | Does hunger change foraging? (controlled, comparable trajectories) |
+| **1b** | nutrition 0→100 | injury 0, no threat, food **sparse/random** | Does the Phase-1a signal survive a naturalistic layout? |
+| **2**  | injury 0→100 | (threat present and/or food present — design TBD after Phase 1) | Does injury change avoidance and/or foraging? |
+| later | nutrition × injury | — | Build toward a 2D map once single-factor measures are validated |
+
+Phase 1a vs 1b choice is recorded: **controlled first to find the signal, naturalistic to
+confirm it generalizes** (user decision, 2026-06-29).
+
+Phase 2's exact target (avoidance vs. foraging-suppression vs. both) is **deliberately left open**
+— it is itself part of what the trajectory-first observation in Phase 1 will inform.
+
+## Current status
+
+- **2026-06-29** — Study scoped. Subject model chosen (`basic05_randinit_n112`, ckpt 8900007),
+  method fixed (trajectory-first → emergent metrics), Phase 1a stimulus design chosen
+  (controlled, then naturalistic). Anchor doc created. **Next: build Phase 1a configs, run the
+  nutrition sweep, watch trajectories.**
+
+## How to run one probe (operational reference)
+
+```
+# 1. roll out the frozen agent in a probe env, recording trajectories
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python scripts/eval/eval_rollout.py \
+  --config environment/experiment/behavior_probes/<probe>.yaml \
+  --checkpoint results/JAX_RecurrentPPO/20260627-015427_rppo_basic05_randinit_n112/models/8900007 \
+  --record
+#   (omit --agent_config: it auto-loads the model's saved config.yaml)
+
+# 2. read the trajectories step-by-step (qualitative, FIRST)
+#    -> use the `trajectory-story` skill on the written .rec.gz files
+
+# 3. (optional, canonical video) render to mp4
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python scripts/eval/render_recordings.py <recordings_dir>
+```
+
+## Links
+
+- Direction / perspective: [[experiment_environment_design_perspective]]
+- Earlier concrete probe designs (conflict/hypervigilance): [[experiment_environment_designs_v1]]
+- Why the in-distribution model matters: [[20260624_0517_indist_random_init_reverses_hypervig]]
+- Phase 1a configs: `configs/environment/experiment/behavior_probes/core/forage_nutrition/`
+- Statistics for model comparison (Welch t, Mann–Whitney U, Cohen's d, paired Wilcoxon, Bonferroni, effect-size vs significance): [[model_comparison_statistics_tutorial]]
+
+## Findings log
+
+### 2026-06-29 — Phase 1a first run (single seed=42, 1 ep/level, nutrition 0/25/50/75/100)
+
+**Setup:** 10×10, agent fixed start, single food 6 cells straight ahead ("Down"), no threat,
+injury 0. Subject ckpt 8900007. Recordings: `results/eval/forage_nutrition/nutr{000..100}/`.
+
+**Qualitative result — hunger changes the *timing* of foraging, not the path.** Every survivor
+walks the identical straight 6-step line to the food (no meandering). What scales with starting
+nutrition:
+
+| nutrition | pre-departure Rest steps | step reaches food | at-food behavior |
+|---|---|---|---|
+| 0 | — | **dies @ step 2** (starves crossing) | n/a — survival floor, not foraging |
+| 25 | ~0 | t8 | one long continuous eat-bout to ~65, then leaves |
+| 50 | 2 | t10 | continuous eat to ~96 |
+| 75 | 2 | t11 | eat to 100 then rest (sated) |
+| 100 | 4 | t13 | nibble-and-rest top-up, holds ~100 |
+
+**Emergent candidate measures (trajectory-grounded, not assumed):**
+- **(A) Latency to reach food** = steps until first on-food-cell. Monotonic ↑ with nutrition (8→10→11→13).
+- **(B) Pre-departure delay** = Rest/non-approach steps before committing to the food. ↑ with satiety (0→2→2→4).
+- **(C) Eat-bout structure** = hungry → one long refill bout; full → eat-rest top-up oscillation. (Harder to scalarize.)
+
+**Caveats / next:**
+- Single seed, single episode per level — the monotonic trend needs **multiple seeds** to trust (action sampling is stochastic; geometry is fixed).
+- **Nutrition 0 is a death floor.** Useful foraging range ≈ 15–100. The most urgent-forager regime (just above the floor, e.g. 10/15/20) is unsampled — add a **finer low-end sweep**, possibly with food closer so a starving agent can reach it and we can watch desperation foraging.
+- First action is always "Eat" regardless of level — likely an init artifact, ignore.
+- **Next step:** finer low-end + multi-seed to confirm measures (A)/(B) are monotonic, then crystallize one as the Phase-1a metric.
+
+**Status:** Phase 1a controlled sweep RUN; signal found (satiety delays foraging). Not yet
+multi-seed-confirmed. Phase 1b (naturalistic) not started.
+
+### 2026-06-29 — Phase 1a quantitative confirmation (8 levels × 8 seeds)
+
+Levels nutr 0/10/15/20/25/50/75/100, seeds 42–49. Recordings:
+`results/eval/forage_nutrition_ms/nutr{level}/`. Measures computed from `snapshots`:
+**A = latency to reach food** (first step nutrition rises = first successful eat);
+**B = departure delay** (first step the agent leaves the start cell).
+
+| nutr | survived | reach-food A | departure-delay B |
+|---|---|---|---|
+| 0  | 0/8 | never | 1 |
+| 10 | 0/8 | never | 1 |
+| 15 | 0/8 | never | 1 |
+| 20 | 8/8 | 13 | 1 |
+| 25 | 8/8 | **9** | 1 |
+| 50 | 8/8 | 11 | 3 |
+| 75 | 8/8 | 11 | 3 |
+| 100 | 8/8 | 14 | 5 |
+
+**Key results:**
+1. **The probe is deterministic** — every measure is ±0.0 across all 8 seeds (fixed geometry, no
+   animals → no behavioral variance). So **1 episode/level suffices**; seeds add nothing here.
+   (Multi-seed will matter again only once we add random placement or threats.)
+2. **Sharp survival floor between nutr 15 and 20** for food 6 cells away: ≤15 starves en route
+   (0/8), ≥20 survives (8/8). The floor is a controllable boundary (moves with food distance).
+3. **Two distinct foraging-disruption signatures emerge — opposite ends, different causes:**
+   - **Satiety dithering (high nutrition):** the agent sits and *Rests* before bothering to
+     forage. Captured cleanly by **B (departure delay): monotonic 1→3→5** with satiety. This is
+     the clean "hunger drives foraging *initiative*" measure.
+   - **Desperation meander (near the death floor, nutr20):** the agent leaves immediately (B=1)
+     but takes a *disorganized, meandering path* (reaches @13 vs 25's @9) — reproducible across
+     all 8 seeds. Inflates A at the low end. NOT a satiety-delay; a path-efficiency disruption.
+   - Net: **A (reach latency) is U-shaped** (compound of both effects); **B is the clean,
+     monotonic satiety measure.**
+
+**Crystallized Phase-1a metric candidate:** **pre-departure delay B** = Rest/non-approach steps
+before the agent commits to moving toward food. Monotonic in satiety, deterministic, trajectory-
+grounded. A second measure — **path inefficiency** (reach-steps minus shortest-path) — captures
+the separate near-floor desperation-meander effect and is worth keeping as a distinct readout.
+
+**Status:** Phase 1a COMPLETE. Signal found and confirmed; metric candidate (B) crystallized;
+desperation-meander noted as a second, distinct signature. **Next: Phase 1b (naturalistic /
+random food placement) to test whether B and the meander survive outside the fixed geometry.**
+
+### 2026-06-29 — User trajectory-level findings + direction test (Phase 1a robustness)
+
+Two interpretive findings from the nutrition-sweep trajectories (user-observed):
+
+1. **Low-nutrition foraging is disorganized.** Near the starvation floor (nutr 20) the agent
+   leaves immediately but cannot go *straight* to food (meanders, reaches @13 vs nutr25's @9).
+   Hypothesis: this may be tangled with an **initial-condition effect** — the agent's start
+   position and/or the fresh recurrent hidden state at episode reset, not purely a nutrition
+   effect. OPEN: disentangle init-condition from nutrition.
+
+2. **The "up-first, then straight-down" path is OPTIMAL, not noise.** The olfactory sensor
+   reports smell **intensity only — no direction** (≈ 1/dist^p). To localize food the agent must
+   *move and observe whether intensity rises or falls* (gradient sampling). The observed one-step
+   probe (Up, away from the row-7 food → smell drops → reverse → direct descent) is the
+   theoretically optimal strategy under a non-directional sensor. This is a real behavioral
+   capability, not a quirk.
+
+**Test (this is the direction sweep):** is the probe-then-direct optimal approach **preserved in
+all four directions**, or is it a learned bias toward the down-axis (because in the fixed probe
+the food was always straight down)? Design: food at grid CENTER, agent starts on each of the four
+sides (top/bottom/left/right) at equal distance — varies starting location, isolates approach
+direction, keeps food clear of walls. Crossed with nutr {20, 25} to also check whether the
+low-nutrition meander (finding 1) is direction-dependent or appears in every direction.
+Configs: `configs/environment/experiment/behavior_probes/core/forage_direction/` (explore tier
+until validated; promote to core/ if the optimal approach holds in all directions).
+
+### 2026-06-29 — Direction-test result: the "up-first" is a FIXED opening, not an adaptive probe
+
+Ran food-at-center, agent on each of 4 sides × nutr {20,25} (8 configs, seed 42). Optimal path = 4
+steps. Steps-to-reach-food: bottom 4–5 (food UP), left 6 (food RIGHT), top 7–8 (food DOWN),
+right 7–10 (food LEFT).
+
+**Decisive observation: in ALL 8 runs the agent's first action is `Up`, independent of food
+direction.** So the "up-then-direct" path seen in the original (food-DOWN) probe is NOT a
+direction-adaptive gradient probe — it is a **stereotyped fixed opening move**, followed by
+genuine gradient-following.
+
+- **Capability preserved (good):** after the fixed opening, the agent reads the (non-directional)
+  smell gradient and orients to the food correctly in every direction. Directional foraging is
+  robust → the core foraging probe is geometry-fair *in aggregate*, but has a per-direction bias.
+- **Bias exposed:** efficiency depends on alignment of the up-opening with the food bearing —
+  food-up (bottom start) is near-optimal (the opening aligns); food-down (top start) is worst (the
+  opening walks into the wall, away from food); left/right cost an orthogonal opening + reorient.
+- **Refines user finding #2:** "optimal up-then-down" = fixed first-step prior + gradient-following
+  thereafter, NOT an info-gathering probe chosen for this food.
+- **Refines user finding #1:** the low-nutrition meander is direction-dependent (nutr20 is cleaner
+  than nutr25 for top/bottom/left, but the right-start nutr20 meanders badly and hits a wall) —
+  supports an initial-condition × direction interaction, not a pure nutrition effect.
+
+**Open:** is the fixed up-opening a property of the recurrent state at reset (no obs history yet)?
+Test by giving a few warm-up steps, or by checking the first-action distribution from many random
+starts. OPEN follow-up before promoting forage_direction to core/.
+
+**Status:** Phase 1a direction robustness CHARACTERIZED. Foraging works in all directions; opening
+move is a fixed "up" prior. Configs in core/forage_direction/ (not yet promoted — pending the
+fixed-opening investigation).
+
+### 2026-06-29 — Avoidance probe (Phase 2 start): agent dives into bush as cover — confirmed
+
+First avoidance probe. 10×10, agent center [5,5], one `hides_agent` bush 3 cells LEFT [5,2], one
+hunting predator 4 cells RIGHT [5,9] closing in; full nutrition + injury 0 (isolate avoidance); no
+food. Baseline + no-predator control. Configs: `core/avoidance/`. Recordings:
+`results/eval/avoidance/`.
+
+**Result — the agent dives into the bush as cover, and it is threat-driven:**
+- **Baseline:** Rests as predator approaches (dist 4→1), then bolts LEFT into the bush only when the
+  predator is **adjacent (dist 1)**; reaches cover in 3 steps. The hide **breaks predator tracking**
+  (predator loses the agent, wanders, dist→8). Agent then **emerges when safe, gets re-detected,
+  flees back** — a hide/emerge oscillation. Survives the full episode (101, starvation cap, no
+  food), final injury 37 (hits taken during transitions).
+- **Control (no predator):** agent **never enters the bush** (0 visits); Rests then idly wanders
+  away from it.
+
+**Establishes:** bush-diving is **cover-seeking avoidance, not bush-affinity** (control proves it).
+
+**Two behavioral signatures (candidate avoidance measures):**
+- **Reactive/last-moment flight** — flees at predator dist ≈1, NOT preemptively (echoes prior
+  insight that this agent's avoidance is post-contact, not anticipatory). Candidate measure:
+  *flee-trigger distance* (predator distance at the step the agent first moves toward cover).
+- **Cover use** — fraction of threatened steps spent hidden in the bush; and *time-to-cover* from
+  threat onset.
+
+**Open / next:** (1) does the flee-trigger distance change with **injury** (Phase 2 core question —
+does pain make avoidance earlier/more preemptive)? (2) bush-distance sweep (near/mid/far) — is
+cover still reached in time when farther? (3) predator-approach direction (does the fixed-opening
+bias from foraging affect escape routing?). Probe stays in explore/ until an avoidance measure is
+validated across a sweep, then promote to core/.
+
+**Settings note (avoidance probe):** `max_steps` set to **100** (was inheriting 500 but never
+reached it — the no-food run starves at ~step 100 since nutrition starts 100 and drains ~1/step).
+The cap now matches the nutrition-bounded observation window. init nutrition = 100 (fixed, full),
+init injury = 0 (fixed). To observe avoidance over a longer horizon, add food or raise the window.
+
+### 2026-06-30 — Avoidance 2×3 matrix: animal {pred, rabbit, none} × injury {0, 70}
+
+Extended the avoidance probe to a matrix. Rabbit = neutral class, **hunt** behaviour, harmless
+(damage 0) — IDENTICAL motion to the predator, so the only difference is harmful-vs-harmless.
+High injury = 70. Configs: `core/avoidance/avoid_{pred,rabbit,none}_inj{00,70}.yaml`. All single
+seed 42, max_steps 100, full nutrition. Measures from recordings (bush = obs_pos cell).
+
+| config | flee trigger | bush@ | bush-use | animal-adjacent% | Δinjury |
+|---|---|---|---|---|---|
+| pred_inj00   | animal dist 1, t4 | t6 | 22% | 26% | +37 (hit) |
+| pred_inj70   | animal dist 1, t4 | t6 | 21% | 22% | −43 (heal − hits) |
+| rabbit_inj00 | animal dist 1, t4 | t6 | 15% | **53%** | +0 (harmless) |
+| rabbit_inj70 | animal dist 1, t4 | t6 | 20% | 33% | −70 (heal) |
+| none_inj00   | n/a | never | 0% | — | +0 |
+| none_inj70   | n/a | never | 0% | — | −70 (heal) |
+
+**Findings:**
+1. **Escape reflex is stereotyped & undiscriminating.** Flee-to-cover trigger is IDENTICAL across
+   all 4 animal runs — flee when animal is adjacent (dist 1, t4), reach bush t6 — for predator AND
+   harmless rabbit, at injury 0 AND 70. A fixed reflex (cf. the fixed "up-first" foraging opening),
+   not a threat appraisal. The bush conceals the agent from the neutral too (rabbit wanders off
+   during the hide), so this is not a hides_agent mechanism artifact.
+2. **Discrimination is in the SUSTAINED phase, damage-driven.** Agent keeps evading/re-hiding the
+   predator (takes hits, +37) but TOLERATES the harmless rabbit adjacent (53% adj, drifts along the
+   wall with it trailing, stops re-hiding). Learns "rabbit is safe" via experienced harm, not
+   up-front identity.
+3. **Injury does NOT make avoidance earlier/preemptive (core Phase-2 result).** Flee trigger at
+   inj70 == inj0 (dist 1, t4). The simple "pain → heightened vigilance / earlier flight" hypothesis
+   is REFUTED for this agent.
+4. **Bonus mechanisms:** (a) high injury alone never triggers hiding (control 0% bush at inj70 —
+   hiding needs an animal); (b) **injury heals over time** (70 → 0 when not hit; negative Δinjury).
+
+**Open:** is the "flee at dist 1" reflex a function of the predator's detection_range/attack timing
+rather than the agent's choice? Test by varying bush distance (can it still reach cover at dist 1
+when the bush is far?) and predator speed. Candidate validated measure: *animal-adjacent fraction*
+(separates predator-evasion from rabbit-tolerance) — promote avoidance to core/ once it holds across
+a bush-distance sweep.
+
+### 2026-06-30 — Added wandering rabbit: avoidance reflex is APPROACH-triggered, not presence/identity
+
+Added a non-chasing (wander) harmless rabbit to the matrix (in-distribution neutral motion — what
+the agent actually trained on). Configs: `core/avoidance/avoid_rabbitwander_inj{00,70}.yaml`.
+
+| animal | inj | flees to cover? | bush-use | adjacent% | min-dist | Δinj |
+|---|---|---|---|---|---|---|
+| predator (chases)        | 0/70 | yes @dist1, bush@t6 | 21–22% | 22–26% | 0 | +37 / −43 |
+| rabbit CHASING (harmless)| 0/70 | yes @dist1, bush@t6 | 15–20% | 33–53% | 0 | +0 / −70 |
+| rabbit WANDERING (harmless)| 0/70 | **NO — 0% bush** | 0% | 0% | 2 (never adjacent) | +0 / −70 |
+| no animal                | 0/70 | n/a | 0% | — | — | +0 / −70 |
+
+**Finding — the flee-to-cover reflex is triggered by an animal APPROACHING to adjacency, not by
+presence or identity:**
+- A *chasing* animal (predator OR harmless rabbit) closes to dist 1 → agent bolts to bush
+  (identical reflex). A *wandering* rabbit never pursues (min-dist 2, never adjacent) → agent
+  **never enters the bush (0%)**, behaving exactly like the no-animal control.
+- Cleanly separates **motion from identity**: the approach/chase drives avoidance, not the animal's
+  presence and not which animal it is.
+
+Combined avoidance picture for this agent: (1) reflex trigger = approach-to-adjacency (identity- &
+injury-blind); (2) no approach → no avoidance; (3) sustained discrimination is damage-driven
+(evades predator, tolerates the harmless chaser once unhurt by it).
+
+**Caveat:** single seed — the wander rabbit happened not to reach adjacency. Multi-seed would
+confirm a wanderer *never* triggers the reflex even if it drifts adjacent. **Status:** avoidance
+matrix characterized; the approach-triggered reflex + damage-driven sustained discrimination is the
+candidate avoidance story to validate across a bush-distance sweep before promoting to core/.
+
+### 2026-06-30 — Predator-smell on a wandering rabbit: olfactory identity does NOT trigger avoidance
+
+Added `avoid_rabbitwander_predsmell_inj{00,70}`: a wandering, harmless, rabbit-visual animal with
+ONLY its olfactory `properties` flipped to the predator's `[0,0.7,0.5]` (vs rabbit `[0,0.5,0.7]`).
+Isolates the olfactory channel.
+
+| condition | inj | bush-use | adjacent | Δinj |
+|---|---|---|---|---|
+| wander, rabbit-smell      | 0/70 | 0% | 0% / 0% | +0/−70 |
+| wander, PREDATOR-smell    | 0/70 | **0%** | 0% / 3% | +0/−70 |
+| chase, rabbit-smell (ref) | 0/70 | 15–20% | 33–53% | — |
+| chase, predator-smell(ref)| 0/70 | 21–22% | 22–26% | +37/−43 |
+
+**Finding:** the predator's olfactory signature ALONE does NOT trigger avoidance. The predator-
+smelling wanderer is ignored exactly like the plain wander rabbit (0% bush) — even when it drifted
+adjacent (inj70, min-dist 1) the agent did not flee to cover. No preemptive/distal response to
+predator odor.
+
+**Avoidance trigger pinned down by elimination:** the flee-to-cover reflex is driven by **sustained
+approach/chase motion to adjacency**, NOT by olfactory identity, NOT visual identity, NOT injury
+level, NOT mere presence. It is a motion-triggered reflex, not a multi-sensory threat appraisal.
+
+| candidate trigger | drives avoidance? | evidence |
+|---|---|---|
+| animal approaching/chasing to adjacency | YES | predator & chasing-rabbit both trigger |
+| olfactory identity (predator smell) | no | predator-smell wanderer ignored |
+| visual identity | no | chasing rabbit (rabbit visual) triggers anyway |
+| injury / pain level | no | flee timing identical inj 0 vs 70 |
+| mere presence | no | wandering rabbit ignored, like control |
+
+**Caveat:** single seed. **Status:** avoidance trigger characterized (motion/approach-driven reflex
++ damage-driven sustained discrimination). Next: multi-seed confirmation + bush-distance sweep,
+then promote avoidance to core/.
+
+### 2026-06-30 — CORRECTION: olfaction IS necessary for the flee reflex (olf-zeroed chaser ignored)
+
+Probe (user-designed): chasing, harmless, rabbit-VISUAL animal with olfactory property set to
+`[0, 0, 0.5, 0, 0]` — the predator-identifiable channel (ch1, the 0.7) zeroed. Configs:
+`core/avoidance/avoid_rabbit_olfzero_inj{00,70}`.
+
+| condition (all CHASE, harmless except pred) | inj | flees to bush? | bush-use | adjacent | Δinj |
+|---|---|---|---|---|---|
+| rabbit-smell [0,.5,.7]   | 0/70 | **YES** (bush@t6) | 15–20% | 33–53% | +0/−70 |
+| OLF-ZEROED [0,0,.5]      | 0/70 | **NO** (0% bush)  | 0% | 48–49% | +0/−70 |
+| predator-smell [0,.7,.5] | 0/70 | **YES** (bush@t6) | 21–22% | 22–26% | +37/−43 |
+
+**Result (trajectory):** with the zeroed smell the chasing animal reaches the agent's own cell
+(dist 0) while the agent keeps Resting; it never bolts to cover, then drifts to a corner with the
+animal sitting on it. The ONLY difference from the (fleeing) chasing rabbit is the olfactory vector
+(visual = rabbit ch7 in both) — so olfaction is decisively responsible.
+
+**This CORRECTS the 2026-06-30 "avoidance is purely motion-triggered, smell-independent" claim
+(the `avoid_rabbitwander_predsmell` section).** Revised model: the flee-to-cover reflex requires
+**BOTH (a) an approaching/chasing animal AND (b) a recognizable olfactory signature**:
+- chase + rabbit-smell → flees; chase + predator-smell → flees; chase + zeroed-smell → NO flee;
+  wander + any smell → no flee.
+- Predator-vs-rabbit *identity* does not change the reflex (both trigger equally), but **degrading
+  the smell abolishes it**. The earlier "predator-smell wanderer ignored" stays consistent — it had
+  no approach motion (motion is also necessary).
+
+**Hypothesis surfaced:** olfactory channel 1 (zeroed here) may be the "animal-present" signal
+(both predator 0.7 and neutral 0.5 have it high), with channel 2 the predator/neutral discriminator.
+Zeroing ch1 ⇒ agent does not register an animal ⇒ no avoidance. **Testable:** zero ch2 instead, or
+keep ch1 / drop ch2, and re-run. This is the next probe before any avoidance measure is promoted.
+
+**Status:** avoidance trigger revised — needs approach motion AND recognizable olfaction. Single
+seed; the channel-role hypothesis is unconfirmed (one config).
+
+### 2026-06-30 — Avoidance QUANTITATIVE analysis (30 seeds/config, statistics + heatmap)
+
+Promoted the criteria to measures and ran statistics. Variation injected via small initial-state
+jitter (eval policy is deterministic, so seeds alone don't vary action choice): injury bands
+low=[0,10]/high=[60,80], nutrition=[90,100], 30 seeds/config, geometry fixed. Configs:
+`explore/avoidance_stat/` (extend the core/avoidance probes). NO video. Per-episode measures from
+`.rec.gz`; mean±std over 30 seeds. Outputs (gitignored): `results/eval/avoidance_stat/STATS/`
+`avoidance_stats.csv` + `avoidance_stats_heatmap.png` (rows=experiment, cols=criterion, color =
+per-column min–max normalized mean).
+
+**Statistics confirm the qualitative story, and show WHERE variance lives:**
+- **Bush-use rate** (fraction of episodes that enter the bush): predator & chasing-rabbit = **1.00±0.00**
+  (always); olf-zeroed chaser = 0.03–0.13; wander = 0.00–0.17; none = 0. → chasing + recognizable
+  smell is necessary AND sufficient, across 30 seeds.
+- **Flight-initiation distance (FID) = 1.0±0.0** and **bush-entry step = 6.0±0.0** for every recognizable
+  chaser at BOTH injury levels — the escape reflex is **perfectly deterministic and injury-
+  independent** (zero variance under initial-state jitter).
+- **Discrimination is statistically real:** chasing-rabbit proximity fraction 0.46±0.09 vs predator 0.34±0.08 at inj0 (~7 SE apart) — the agent tolerates the harmless chaser closer than the predator.
+- **The variance is downstream, not in the reflex:** predator Δinjury = +22±25 (inj0) — damage taken
+  is highly variable episode to episode; and predator inj70 survival = 91±21 (sometimes injury-death
+  as hits push 60–80 → 100), vs ~96±3 starvation-bounded elsewhere.
+- olf-zeroed chaser proximity fraction ≈ 0.50 (animal sits on the agent, no flee) — confirms no avoidance.
+
+**Takeaway:** the flee-to-cover reflex is a near-deterministic function of (recognizable-smell ∧
+approach); injury and seed don't move it. Behavioral variability appears only in the *consequences*
+(damage absorbed, survival). These criteria are now validated as measures for the avoidance family.
+
+**Status:** avoidance quantified (n=30). Candidate measures validated: bush-use rate, flight-initiation distance (FID),
+bush-entry step (all deterministic), animal-proximity fraction (discrimination), injury change &
+survival steps (the variable consequences). Next family or a bush-distance sweep to make FID non-degenerate.
+
+### Measures & definitions — avoidance family (canonical names)
+
+Metric names standardized (2026-06-30; expanded with movement metrics). All computed per episode
+from `.rec.gz` snapshots (`agent_pos`, `animal_pos`, `obs_pos`=bush, `injury_level`; `T`=episode
+length; distance = Manhattan), then averaged (mean±std) over the 30 seeds. Proportions are reported
+as **percentages** (of an episode's steps, or of episodes for "entered bush"), grouped Bush use /
+Distance to animal / Movement & chase / Outcome:
+
+| Group | Metric | Definition |
+|---|---|---|
+| Bush use | **entered bush (% of episodes)** | per episode 1 if the agent ever stands on the bush cell else 0; mean ×100 = % of episodes that used the bush. *(was "bush-use rate" / "flee rate")* |
+| Bush use | **steps to reach bush** | number of steps until the FIRST time the agent stands on the bush cell (latency to reach cover). N/A if it never enters. *(was "bush-entry step" / "reach-cover step")* |
+| Bush use | **time in bush (%)** | % of the episode's steps the agent stands on the bush cell (how long hidden). *(was "bush-dwell fraction")* |
+| Distance to animal | **flight-initiation distance (FID)** | animal–agent distance at the first step the agent leaves its start cell — predator–prey distance at flight onset (standard ethology term). |
+| Distance to animal | **time near animal (%)** | % of steps the animal is at distance ≤ 1 of the agent (on/next-to it). *(was "animal-proximity fraction")* |
+| Distance to animal | **closest approach** | smallest agent–animal distance reached over the episode (cells). |
+| Movement & chase | **time moving (%)** | % of steps the agent's position changes (moves vs rests/eats-in-place). High = flight/kiting; low = settles in cover. |
+| Movement & chase | **spatial spread (R_g)** | radius of gyration = √(var(row)+var(col)) of the agent's positions, in cells. ≈0 = localized (hides); large = roams the arena (runs). |
+| Movement & chase | **longest chase (steps)** | longest unbroken run of steps with the animal within ≤2 cells of the agent. Long = sustained chase (kiting); short = chase broken (cover cuts tracking). *(was "pursuit duration")* |
+| Outcome | **injury change (end − start)** | agent injury at last step minus first step (+ net harmed / − net healed). |
+| Outcome | **survival steps** | episode length `T` (until death or the max_steps cap). |
+
+Heatmap + CSV: `results/eval/avoidance_stat/STATS/avoidance_stats_{heatmap.png,csv}` (gitignored).

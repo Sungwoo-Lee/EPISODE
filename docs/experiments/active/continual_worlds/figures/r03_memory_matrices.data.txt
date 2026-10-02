@@ -1,0 +1,3 @@
+matrix cells (checkpoint by world, per agent)|210|210|100.0|5 checkpoints x 7 worlds x 2 agents x 3 sequences; 2,000 test episodes each, most-likely action
+difference cells beyond evaluation noise|37|105|35.2|marked with a star; cell-level noise only, not the registered forgetting vote
+worlds shown|7|7|100.0|every world the matrices were run in: the five planned worlds that passed their pilots plus the two scouted replacements

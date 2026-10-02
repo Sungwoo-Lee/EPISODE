@@ -1,0 +1,767 @@
+<title>Hiding Factor Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  color-scheme:light dark;
+  --bg:#f6f7f4; --surface:#ffffff; --surface2:#eceee8; --sunk:#e4e7de;
+  --ink:#1a201c; --ink2:#4c5650; --ink3:#7b877f;
+  --line:#d8ded4; --line2:#c3ccbd;
+  --accent:#2d6a4f; --accent-soft:#e0ebe4; --accent-ink:#23543f;
+  --track:#dfe3d9; --fill:#2d6a4f;
+  --shadow:0 1px 2px rgba(26,32,28,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#141815; --surface:#1b201d; --surface2:#232a26; --sunk:#11150f;
+    --ink:#e9ede9; --ink2:#a6b2aa; --ink3:#7d8a82;
+    --line:#2e3632; --line2:#3d4741;
+    --accent:#74c39a; --accent-soft:#1d2f26; --accent-ink:#9fd9bb;
+    --track:#2c332e; --fill:#74c39a;
+    --shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#141815; --surface:#1b201d; --surface2:#232a26; --sunk:#11150f;
+  --ink:#e9ede9; --ink2:#a6b2aa; --ink3:#7d8a82;
+  --line:#2e3632; --line2:#3d4741;
+  --accent:#74c39a; --accent-soft:#1d2f26; --accent-ink:#9fd9bb;
+  --track:#2c332e; --fill:#74c39a;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+}
+:root[data-theme="light"]{color-scheme:light}
+*{box-sizing:border-box}
+/* An author display rule beats the UA [hidden] rule; the filter sets .hidden on grids. */
+.entry[hidden],.group[hidden],.empty[hidden]{display:none!important}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.6; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px 96px}
+h1,h2,h3{font-family:Newsreader,Georgia,"Times New Roman",serif;font-weight:600;text-wrap:balance;margin:0}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace}
+a{color:var(--accent-ink);text-decoration-thickness:1px;text-underline-offset:2px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+
+/* ---------- masthead ---------- */
+.mast{border-bottom:1px solid var(--line);padding:56px 0 34px;margin-bottom:38px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink3);margin-bottom:18px}
+h1{font-size:clamp(36px,6vw,58px);line-height:1.04;letter-spacing:-.015em;max-width:15ch}
+.standfirst{font-size:18px;line-height:1.62;color:var(--ink2);max-width:66ch;margin-top:20px}
+.standfirst strong{color:var(--ink);font-weight:600}
+.meta{display:flex;flex-wrap:wrap;gap:8px 26px;margin-top:26px;
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink3)}
+
+/* ---------- prose ---------- */
+h2{font-size:27px;letter-spacing:-.01em;margin-bottom:10px}
+h3{font-size:19px;margin-bottom:6px}
+.sec{margin:52px 0 0}
+.sec-lede{color:var(--ink2);max-width:66ch;margin:0 0 22px}
+
+/* ---------- tally ---------- */
+.tally{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);margin:30px 0 0}
+.tally>div{background:var(--surface);padding:16px 18px}
+.tally .n{font-family:Newsreader,serif;font-size:40px;line-height:1;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.tally .lab{font-size:12.5px;color:var(--ink2);margin-top:7px;line-height:1.4}
+.tally .lab .dot{margin-right:7px}
+/* auto-fit leaves 3+1 at 561-720px and the container's gap colour paints the empty cells. */
+@media (max-width:760px){.tally{grid-template-columns:1fr 1fr}}
+
+/* ---------- cadence diagram ---------- */
+figure{margin:26px 0 0}
+.diagram{background:var(--surface);border:1px solid var(--line);padding:20px 18px 12px;
+  overflow-x:auto}
+.diagram svg{display:block;min-width:640px;max-width:900px;width:100%;height:auto;margin:0 auto}
+/* F31: the cue is driven by the box's MEASURED overflow, not by a viewport
+   breakpoint, so it cannot drift away from the condition that causes it. */
+.scroll-cue{font-family:"IBM Plex Mono",monospace;font-size:11px;
+  color:var(--ink3);margin:9px 0 0;letter-spacing:.03em}
+figcaption{font-size:13px;color:var(--ink2);margin-top:12px;max-width:66ch;line-height:1.55}
+
+/* ---------- legend ---------- */
+.legend{display:grid;grid-template-columns:repeat(5,1fr);gap:18px 26px;
+  margin:22px 0 0;padding:20px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.legend dt{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink);
+  margin-bottom:5px}
+.legend dd{margin:0;font-size:13px;color:var(--ink2);line-height:1.5}
+@media (max-width:1000px){.legend{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:640px){.legend{grid-template-columns:1fr}}
+
+/* ---------- toolbar ---------- */
+.toolbar{position:sticky;top:0;z-index:20;background:var(--bg);
+  border-bottom:1px solid var(--line);padding:14px 0 13px;margin-top:46px;
+  display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+/* The chip row wraps below 959px, giving a 99-140px sticky bar. Same boundary as the rail. */
+@media (max-width:959px){.toolbar{position:static}}
+.search{flex:1 1 210px;min-width:170px;background:var(--surface);color:var(--ink);
+  border:1px solid var(--line2);padding:8px 11px;font:inherit;font-size:13.5px;border-radius:3px}
+.search::placeholder{color:var(--ink3)}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{background:var(--surface);border:1px solid var(--line2);color:var(--ink2);
+  font:inherit;font-size:12.5px;padding:6px 11px;border-radius:3px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:7px;line-height:1.2}
+.chip:hover{border-color:var(--ink3)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
+.count{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink3);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- catalogue layout ---------- */
+.cols{display:grid;grid-template-columns:186px 1fr;gap:44px;margin-top:30px;align-items:start}
+/* The chip row wraps below 960px, making .toolbar 99px tall and burying the rail's
+   first row under it. Hide the rail wherever that happens rather than guessing an offset. */
+@media (max-width:959px){.cols{grid-template-columns:1fr;gap:0}.rail{display:none}}
+.rail{position:sticky;top:78px}
+.rail ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
+.rail a{display:flex;justify-content:space-between;gap:8px;padding:6px 9px;
+  font-size:13px;color:var(--ink2);text-decoration:none;border-left:2px solid transparent}
+.rail a:hover{background:var(--surface2);color:var(--ink)}
+.rail a.on{border-left-color:var(--accent);color:var(--ink);background:var(--surface2)}
+.rail .k{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink3);
+  font-variant-numeric:tabular-nums}
+
+.group{margin-bottom:46px;scroll-margin-top:86px}
+.group-head{border-bottom:2px solid var(--ink);padding-bottom:9px;margin-bottom:4px}
+.group-head h3{font-size:21px}
+.group-role{font-size:13.5px;color:var(--ink2);margin:9px 0 0;max-width:70ch;line-height:1.55}
+
+/* ---------- entry ---------- */
+.entry{display:grid;grid-template-columns:1fr 260px;gap:8px 28px;
+  padding:17px 0;border-bottom:1px solid var(--line);align-items:start}
+@media (max-width:640px){.entry{grid-template-columns:1fr;gap:12px}}
+.entry-name{font-weight:600;font-size:15.5px;line-height:1.4;margin-bottom:5px}
+.entry-role{font-size:13.5px;color:var(--ink2);line-height:1.55;max-width:62ch;margin:0}
+.entry-note{font-size:13px;color:var(--ink2);line-height:1.5;max-width:62ch;
+  margin:8px 0 0;padding-left:11px;border-left:2px solid var(--line2)}
+.entry-note b{color:var(--ink);font-weight:600}
+.spec{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink2);
+  display:flex;flex-direction:column;gap:7px;padding-top:2px}
+.spec .k{color:var(--ink);word-break:break-word}
+.spec .v{color:var(--ink3);word-break:break-word}
+
+/* range bar */
+.bar{display:flex;flex-direction:column;gap:4px}
+.bar .track{position:relative;height:6px;background:var(--track);border-radius:3px}
+.bar .fill{position:absolute;top:0;bottom:0;background:var(--ink3);border-radius:3px;min-width:2px}
+.bar .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink2);
+  transform:translateX(-50%)}
+.bar .ends{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink3);
+  font-variant-numeric:tabular-nums}
+.bar.flat .fill{background:var(--ink3);opacity:.55}
+
+/* badges */
+/* Hue on this page encodes evidence status and nothing else. Cadence is a five-way
+   nominal scale whose own label already names it, so it is set in type, not colour. */
+.badge{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em;
+  text-transform:uppercase;padding:2px 7px;border-radius:2px;white-space:nowrap;
+  border:1px solid var(--line2);color:var(--ink2);background:var(--surface2);
+  font-weight:500;display:inline-block;vertical-align:2px;margin-left:7px}
+.legend .badge{margin-left:0}
+.st{font-size:11.5px;display:inline-flex;align-items:center;gap:6px;color:var(--ink2);white-space:nowrap}
+/* Evidence status is ORDINAL, and every hue in this project already means something
+   in the figures (F11 amendment). So the scale is carried by fill and shape on one
+   neutral, not by colour. */
+.st .dot,.chip .dot,.lab .dot{width:9px;height:9px;border-radius:50%;flex:none;
+  display:inline-block;vertical-align:-1px;box-sizing:border-box}
+.d-published{background:var(--ink);border:1px solid var(--ink)}
+.d-supp{background:linear-gradient(90deg,var(--ink2) 0 50%,transparent 50% 100%);
+  border:1px solid var(--ink2)}
+.d-never{background:transparent;border:2.5px solid var(--ink)}
+.d-novar{background:var(--line2);border:1px solid var(--line2)}
+.empty{padding:34px 0;color:var(--ink3);font-size:14px}
+
+/* ---------- closing ---------- */
+.pick{border:1px solid var(--line);background:var(--surface);padding:20px 22px;margin:18px 0 0;
+  max-width:78ch}
+.pick h3{font-size:17px;margin-bottom:8px;line-height:1.35}
+.pick .cost{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink2);background:var(--surface2);
+  border:1px solid var(--line2);padding:2px 7px;border-radius:2px;font-weight:500;
+  display:inline-block;vertical-align:2px;margin-left:8px}
+.pick .cost.paid{border-style:dashed}
+.pick p{font-size:14px;color:var(--ink2);margin:0;line-height:1.6;max-width:70ch}
+.picks{display:flex;flex-direction:column;gap:14px}
+
+.srcs{margin-top:18px;border-top:1px solid var(--line);padding-top:18px;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px 32px}
+.srcs h4{font-size:12px;font-family:"IBM Plex Mono",monospace;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink3);margin:0 0 8px;font-weight:500}
+.srcs ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.srcs li{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink2);
+  line-height:1.45;word-break:break-word}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--ink3);max-width:70ch;line-height:1.6}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <div class="eyebrow">Grid-world environment · parameter reference</div>
+  <h1>Hiding Factor Atlas</h1>
+  <p class="standfirst">
+    In this project an agent lives on a 10&times;10 grid, and one of the things it does is
+    stand inside a bush &mdash; a behaviour the project measures as <strong>bush hiding</strong>:
+    the share of an episode's steps spent in a bush. Several studies have asked what makes it do
+    that more or less. This page is the inventory behind that question: <strong>every setting
+    the environment has</strong>, what it actually does, whether it changes from one episode to
+    the next, and whether anyone has yet tested it as a driver of hiding.
+  </p>
+  <p class="standfirst">
+    The reason the question is answerable at all is that this world <strong>rerolls its own
+    contents before every episode</strong> &mdash; how many predators appear, how far each can
+    see, how many bushes exist, how hurt and how hungry the agent wakes up. Those rolls are made
+    before the agent acts and are independent of it, so their effect on behaviour is causally
+    identified: it is a randomised experiment the environment runs on itself, a million times over.
+    Settings that <em>don't</em> reroll are fixed by the config file, and testing one of those
+    means training a new agent.
+  </p>
+  <div class="meta">
+    <span>Reference world: <code>04-restprem_a01</code></span>
+    <span>Compiled 2026-09-09</span>
+    <span>Inventory only &mdash; nothing here is measured</span>
+  </div>
+</header>
+
+<section class="sec" id="gap" style="margin-top:0">
+  <h2>Where the evidence stands</h2>
+  <p class="sec-lede">
+    Each parameter below carries one of four states. The counts are computed from the catalogue
+    itself, so they cannot drift away from it.
+  </p>
+  <div class="tally" id="tally"></div>
+</section>
+
+<section class="sec" id="cadence">
+  <h2>Three ways a setting can vary</h2>
+  <p class="sec-lede">
+    Every entry in the catalogue is tagged with one of these. The tag is the single most
+    important thing about a parameter, because it decides what it costs to study: a value the
+    world rerolls is free to analyse from data already collected, while a value fixed in the
+    config file cannot be studied without training another agent.
+  </p>
+  <figure>
+    <div class="diagram" id="dia">
+      <svg viewBox="0 0 760 246" role="img" aria-label="Timeline of one episode showing which parameters are drawn at reset, which are redrawn during the episode, and which are fixed by the config across the whole run.">
+        <!-- fixed bracket -->
+        <line x1="40" y1="34" x2="720" y2="34" stroke="var(--line2)" stroke-width="1.5"/>
+        <line x1="40" y1="34" x2="40" y2="44" stroke="var(--line2)" stroke-width="1.5"/>
+        <line x1="720" y1="34" x2="720" y2="44" stroke="var(--line2)" stroke-width="1.5"/>
+        <text x="380" y="24" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--ink3)" style="fill:var(--ink3)">fixed by the config &mdash; identical in every episode of the run</text>
+
+        <!-- episode axis -->
+        <line x1="40" y1="120" x2="720" y2="120" stroke="var(--line2)" stroke-width="2"/>
+        <!-- reset marker -->
+        <circle cx="70" cy="120" r="13" fill="var(--accent)" style="fill:var(--accent)"/>
+        <text x="70" y="125" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600" fill="var(--bg)" style="fill:var(--bg)">R</text>
+        <!-- step ticks -->
+        <g stroke="var(--line2)" stroke-width="1.5">
+          <line x1="140" y1="113" x2="140" y2="127"/><line x1="200" y1="113" x2="200" y2="127"/>
+          <line x1="260" y1="113" x2="260" y2="127"/><line x1="320" y1="113" x2="320" y2="127"/>
+          <line x1="380" y1="113" x2="380" y2="127"/><line x1="440" y1="113" x2="440" y2="127"/>
+          <line x1="500" y1="113" x2="500" y2="127"/><line x1="560" y1="113" x2="560" y2="127"/>
+          <line x1="620" y1="113" x2="620" y2="127"/><line x1="680" y1="113" x2="680" y2="127"/>
+        </g>
+        <!-- event markers -->
+        <circle cx="260" cy="120" r="7" fill="var(--bg)" stroke="var(--ink2)" stroke-width="2" style="fill:var(--bg);stroke:var(--ink2)"/>
+        <circle cx="440" cy="120" r="7" fill="var(--bg)" stroke="var(--ink2)" stroke-width="2" style="fill:var(--bg);stroke:var(--ink2)"/>
+        <circle cx="620" cy="120" r="7" fill="var(--bg)" stroke="var(--ink2)" stroke-width="2" style="fill:var(--bg);stroke:var(--ink2)"/>
+
+        <!-- reset label -->
+        <line x1="70" y1="137" x2="70" y2="164" stroke="var(--accent)" stroke-width="1.5" style="stroke:var(--accent)"/>
+        <text x="70" y="180" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="500" fill="var(--accent)" style="fill:var(--accent)">drawn at reset</text>
+        <text x="70" y="198" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="var(--ink2)" style="fill:var(--ink2)">entity counts, predator traits, odour,</text>
+        <text x="70" y="214" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="var(--ink2)" style="fill:var(--ink2)">starting wound and hunger, every position</text>
+        <text x="70" y="234" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="var(--ink3)" style="fill:var(--ink3)">recorded once per episode</text>
+
+        <!-- event label -->
+        <line x1="440" y1="103" x2="440" y2="78" stroke="var(--ink2)" stroke-width="1.5" style="stroke:var(--ink2)"/>
+        <text x="440" y="70" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="500" fill="var(--ink)" style="fill:var(--ink)">redrawn on every occurrence</text>
+        <text x="440" y="54" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="var(--ink2)" style="fill:var(--ink2)">how hard a hit lands; whether a pounce connects</text>
+
+        <text x="700" y="150" text-anchor="end" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="var(--ink3)" style="fill:var(--ink3)">&hellip; up to 500 steps, or death</text>
+      </svg>
+    </div>
+    <p class="scroll-cue" id="cue" hidden>&#8596; the diagram is wider than this screen &mdash; drag it sideways</p>
+    <figcaption>
+      One episode, left to right. The filled marker is reset, where the world rolls its dice; the
+      hollow markers are moments during the episode where a further draw happens. The bracket above
+      spans everything the config pins down for the entire training run.
+    </figcaption>
+  </figure>
+
+  <dl class="legend">
+    <div>
+      <dt><span class="badge b-ep">ep</span></dt>
+      <dd>Redrawn at every reset, independently of the agent. Causally identified, and already
+        recorded in the per-episode table of the trajectory store.</dd>
+    </div>
+    <div>
+      <dt><span class="badge b-event">event</span></dt>
+      <dd>Redrawn each time the thing happens &mdash; every collision, every pounce. Recorded in
+        the per-step table.</dd>
+    </div>
+    <div>
+      <dt><span class="badge b-derived">derived</span></dt>
+      <dd>Not a draw at all, but computable from recorded positions. Free, and almost entirely
+        unexplored.</dd>
+    </div>
+    <div>
+      <dt><span class="badge b-within">within</span></dt>
+      <dd>Changes over the course of an episode as a consequence of what happens in it. Associational,
+        not causal.</dd>
+    </div>
+    <div>
+      <dt><span class="badge b-fixed">fixed</span></dt>
+      <dd>Constant in this world. Studying it means a different config, and therefore a new
+        training run.</dd>
+    </div>
+  </dl>
+</section>
+
+<div class="toolbar">
+  <input class="search" id="q" type="search" placeholder="Search parameters&hellip;" aria-label="Search parameters">
+  <div class="chips" id="filters" role="group" aria-label="Filter by evidence state"></div>
+  <span class="count" id="count"></span>
+</div>
+
+<div class="cols">
+  <nav class="rail" aria-label="Parameter groups"><ol id="rail"></ol></nav>
+  <main id="cat"></main>
+</div>
+
+<section class="sec" id="next">
+  <h2>Where I would look first</h2>
+  <p class="sec-lede">
+    Three seams stand out, ranked by what they cost. The first two need no new training and no new
+    data collection &mdash; everything they need is already in the million-episode store.
+  </p>
+  <div class="picks">
+    <div class="pick">
+      <h3>Spatial arrangement&nbsp;<span class="cost">free &mdash; data already collected</span></h3>
+      <p>
+        Every factor tested so far is a <em>count</em> or a <em>trait</em>: how many bushes, how far
+        a predator sees. Nothing tests <em>arrangement</em>. Ten bushes clustered in one corner and
+        ten spread evenly are the same number and a completely different world for an animal deciding
+        whether cover is reachable. The published study already shows the strongest hint of this &mdash;
+        spawning next to a bush gives far more hiding than spawning five cells away &mdash; and that is
+        one crude summary of a geometry that is fully recorded and otherwise unused. The sharpest
+        versions are the ones where cover is nominally available but actually is not: a predator
+        standing between the agent and its nearest bush, or a bush sitting on top of a buried ambush.
+      </p>
+    </div>
+    <div class="pick">
+      <h3>How hard each hit lands&nbsp;<span class="cost">free &mdash; data already collected</span></h3>
+      <p>
+        A predator's damage is drawn from <code>[15, 120]</code> on <em>every</em> collision &mdash; an
+        eightfold range &mdash; and no analysis so far distinguishes a graze from a near-fatal blow.
+        That is a randomised treatment applied repeatedly inside each episode, sitting in the
+        <code>damage</code> column of every step file, unexamined. The same is true of whether a
+        pounce connected or missed, which is a coin flip the world makes on the agent's behalf.
+      </p>
+    </div>
+    <div class="pick">
+      <h3>The three chase traits nobody has switched on&nbsp;<span class="cost paid">needs a new training run</span></h3>
+      <p>
+        The config schema declares five predator traits as per-episode distributional fields, but in
+        this entire config line <strong>only two are ever given a real range</strong> &mdash;
+        <code>detection_range</code> and <code>max_stamina</code>. Stamina recovery, hunt threshold and
+        chase persistence are written as degenerate <code>[x, x]</code> in every live config, so the
+        sampling machinery runs each episode and returns a constant. Real ranges for them exist only
+        in three archived hypervigilance configs. They are three causally-identified factors the
+        environment is already built to randomise and nobody currently turns on &mdash; cheap to enable,
+        but they change the training world, so they cost a run.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="sources">
+  <h2>Where this came from</h2>
+  <p class="sec-lede">
+    Every value in the catalogue was read from these files. The reference world is the arm of the
+    resting-bonus sweep where resting earns no extra healing, which is the agent the published
+    hiding study analysed.
+  </p>
+  <div class="srcs">
+    <div>
+      <h4>Config chain, in resolution order</h4>
+      <ul>
+        <li>configs/environment/experiment/basic_bushrefuge_restpremium/04-restprem_a01.yaml</li>
+        <li>configs/environment/experiment/basic_bushrefuge/04-jump_attack_10x10.yaml</li>
+        <li>configs/environment/experiment/basic_bushrefuge/03-random_init_10x10.yaml</li>
+        <li>configs/environment/default.yaml</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Schema and store contracts</h4>
+      <ul>
+        <li>docs/environment/02_config_schema.md</li>
+        <li>docs/environment/TRAJECTORY_STORE_SCHEMA.md &sect;3.1&ndash;3.2</li>
+        <li>docs/environment/CONFIG_GUIDE.md</li>
+        <li>docs/environment/CONFIG_CRITICAL_SETTINGS.md</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Studies whose status this records</h4>
+      <ul>
+        <li>docs/experiments/active/trajectory_factors/a01_hiding_drivers.md</li>
+        <li>docs/experiments/active/trajectory_factors/a01_factor_analysis.md</li>
+        <li>docs/experiments/active/sensor_ladder/sensor_ladder.md</li>
+        <li>docs/experiments/active/diagnosis/INJURY_HIDING_SIGN_RECONCILIATION.md</li>
+        <li>scripts/analysis/supplementary/extra_factors.py, geom.py</li>
+      </ul>
+    </div>
+  </div>
+  <p class="foot">
+    Two honest limits. The evidence states record what could be verified from the published pages
+    and the supplementary scripts &mdash; entries marked <em>supplementary only</em> were probed in
+    exploratory passes whose findings may or may not have survived onto a page, so check before
+    redoing one. And this is an inventory of what <em>could</em> be tested: nothing here has been
+    measured, so no entry claims that a parameter does or does not move hiding.
+  </p>
+</section>
+
+</div>
+
+<script>
+const GROUPS = [
+  {id:"threat", name:"Threat: how many, and how capable", role:"The predator is the reason cover exists. Everything in this group is redrawn at reset, so an episode can hand the agent anything from an empty map to two far-sighted, relentless hunters."},
+  {id:"odour", name:"Odour: the only distal sense", role:"With sight range set to zero, smell is the agent's only way of knowing anything is out there. Predator and rabbit were deliberately built to smell alike — their chemical signatures are drawn around overlapping means — so an episode can hand the agent a rabbit that smells more predator-like than the predator does."},
+  {id:"cover", name:"Cover and obstacles", role:"Bushes are the hiding place; rocks are scenery that hurts on contact. Counts reroll every episode, and so do positions — but only the counts have ever been analysed."},
+  {id:"resource", name:"Food and buried ambush", role:"Food is the reason to leave cover; buried ambush predators are the reason leaving is dangerous. Both are 'resources' in the config, which is why an ambush predator is configured like a food patch rather than like an animal."},
+  {id:"body", name:"Body state at spawn", role:"The agent does not wake up fresh. Its starting wound and hunger are drawn uniformly across their whole range, which makes them the cleanest causal handles in the world — assigned by the environment, before the agent has done anything."},
+  {id:"geom", name:"Spawn geometry", role:"Not draws in their own right, but consequences of where everything landed. All of it is recoverable from the recorded positions at step zero, and almost none of it has been looked at."},
+  {id:"event", name:"Within-episode events", role:"Draws the world makes during the episode rather than before it. They are recorded per step, and they are randomised, so they carry the same causal warrant as the reset draws."},
+  {id:"senses", name:"What the agent can sense", role:"Fixed in this world, and the subject of a separate fourteen-arm study that varied exactly these settings. Listed here because every result about hiding is conditional on them."},
+  {id:"physio", name:"Physiology and reward", role:"How the body decays, heals and is rewarded. One of these — the premium on an unbroken rest streak — is the variable the ten-arm sweep that produced this agent was built to test."},
+  {id:"frame", name:"World frame", role:"The size and shape of the problem. Constant across every run in this line, and worth stating because several results are only interpretable against them."},
+  {id:"thermal", name:"Thermal", role:"A body-temperature system with its own heat field, heat sources and thermoceptor. Present in the code and off in every config in this line, so it contributes nothing to any hiding result to date."}
+];
+
+const STATUS = {
+  published:{label:"On the published page", short:"Published"},
+  supp:{label:"Supplementary pass only", short:"Supplementary"},
+  never:{label:"Never analysed", short:"Never analysed"},
+  novar:{label:"No variance in this world", short:"No variance"}
+};
+
+// world = value in the reference world. lo/hi = the uniform draw bounds. dom = axis domain for the bar.
+const P = [
+ // ---- threat ----
+ {g:"threat",n:"How many predators appear",k:"entities[pred].count_low / count_high",w:"[0, 2]",lo:0,hi:2,dom:[0,2],cad:"ep",col:"animal_active",st:"published",
+  role:"Redrawn each episode. A third of episodes contain no predator at all, which is why any threat-conditioned statistic has to say whether those episodes are in or out."},
+ {g:"threat",n:"How many harmless rabbits appear",k:"entities[rabbit].count_low / count_high",w:"[0, 2]",lo:0,hi:2,dom:[0,2],cad:"ep",col:"animal_active",st:"published",
+  role:"The rabbit does no damage. It exists to be mistaken for a predator, and the agent does sometimes hide from it."},
+ {g:"threat",n:"How far a predator can see",k:"detection_range",w:"[1, 7]",lo:1,hi:7,dom:[0,10],cad:"ep",col:"animal_detect_sampled",st:"published",
+  role:"The distance at which a predator switches from patrolling to hunting. It is the strongest single factor found so far.",
+  note:"<b>The finding that reframed the study.</b> As this rises from 1 to 7 the share of the episode spent hiding goes 20.0% to 56.7%, while total bush steps <em>fall</em> 48.6 to 25.6 — because a predator that sees further kills the agent five times sooner. Counting total steps reverses the sign."},
+ {g:"threat",n:"How long a predator can chase before tiring",k:"max_stamina",w:"[30, 150]",lo:30,hi:150,dom:[0,150],cad:"ep",col:"animal_max_stamina_sampled",st:"published",
+  role:"Stamina is spent hunting and recovered while patrolling. At the top of this range a predator can chase almost indefinitely."},
+ {g:"threat",n:"How far a predator can pounce",k:"attack_range",w:"[2, 3]",lo:2,hi:3,dom:[0,5],cad:"ep",col:"animal_attack_range_sampled",st:"published",
+  role:"A hunting predator within this Manhattan distance of an <em>unhidden</em> agent leaps, replacing its normal one-cell move. The pounce is why cover matters in this world: a bush blocks it outright.",
+  note:"Set to <code>[0, 0]</code> — disabled — one level down the curriculum, so a directly comparable no-pounce config already exists."},
+ {g:"threat",n:"Cooldown between pounces",k:"attack_delay",w:"[1, 3]",lo:1,hi:3,dom:[0,5],cad:"ep",col:"animal_attack_delay_sampled",st:"published",
+  role:"Steps a predator must wait after any pounce attempt, hit or miss. A short cooldown makes open ground far more expensive."},
+ {g:"threat",n:"Probability a fired pounce connects",k:"attack_success_rate",w:"0.5",lo:0.5,hi:0.5,dom:[0,1],cad:"event",col:"hit_predator (outcome)",st:"never",
+  role:"Not a per-episode draw but a fixed coin weight: half of all pounces land on the agent, half land on a random adjacent cell, leaving it alive and beside a predator.",
+  note:"The <em>realised</em> outcome varies on every attempt and is recoverable from the recorded hit flags and positions. Whether a near-miss changes subsequent hiding is an obvious question nobody has asked."},
+ {g:"threat",n:"How fast a predator moves",k:"move_interval",w:"[1, 1]",lo:1,hi:1,dom:[0,4],cad:"fixed",col:"animal_move_int_sampled",st:"novar",
+  role:"Steps between predator moves. Pinned at full speed here, deliberately — a slower predator lets the agent survive by running forever and never need a bush.",
+  note:"Sibling configs in the same family set <code>[1, 3]</code>, so a mixed-speed world already exists as a written config."},
+ {g:"threat",n:"How rested a predator must be to start hunting",k:"hunt_stamina_threshold",w:"[0.7, 0.7]",lo:0.7,hi:0.7,dom:[0,1],cad:"fixed",col:"animal_hunt_thresh_sampled",st:"novar",
+  role:"The fraction of maximum stamina a predator needs before it will re-engage. The engine draws this per episode; every live config gives it a single value.",
+  note:"Real ranges (<code>[0.3, 0.9]</code>, <code>[0.5, 0.9]</code>) exist only in archived hypervigilance configs."},
+ {g:"threat",n:"How fast a predator recovers stamina",k:"stamina_recovery_rate",w:"[1, 1]",lo:1,hi:1,dom:[0,2],cad:"fixed",col:"animal_recovery_sampled",st:"novar",
+  role:"Stamina regained per step while not hunting. Governs how long a respite lasts after a chase breaks off.",
+  note:"Archived configs use <code>[0.25, 2.0]</code> and <code>[0.5, 1.5]</code>. Switched off everywhere in this line."},
+ {g:"threat",n:"How far past losing sight a predator keeps chasing",k:"lose_interest_multiplier",w:"[1.5, 1.5]",lo:1.5,hi:1.5,dom:[0,3],cad:"fixed",col:"animal_lose_interest_sampled",st:"novar",
+  role:"Chase persistence, as a multiple of the detection range. Directly sets how long the agent must stay in cover before it is safe to come out — which is as close to a hiding-duration knob as this environment has.",
+  note:"Archived configs use <code>[1.0, 3.0]</code>. Of the three switched-off chase traits, this is the one whose mechanism points most directly at hiding."},
+
+ // ---- odour ----
+ {g:"odour",n:"How predator-like a predator smells",k:"entities[pred].properties_std",w:"± 0.3 on two channels",lo:0,hi:1,dom:[0,1],cad:"ep",col:"animal_property_sampled",st:"published",
+  role:"A predator's chemical signature is drawn around (0.7, 0.5) with a standard deviation of 0.3 on both channels. The difference between the two channels is what the study calls predator-likeness."},
+ {g:"odour",n:"How predator-like a rabbit smells",k:"entities[rabbit].properties_std",w:"± 0.3 on two channels",lo:0,hi:1,dom:[0,1],cad:"ep",col:"animal_property_sampled",st:"published",
+  role:"The rabbit is drawn around (0.5, 0.7) — the predator's mean with the two channels swapped — with the same spread, so the two distributions overlap heavily.",
+  note:"This is the study's cleanest false-alarm handle: an episode can hand the agent a harmless animal whose smell is more predator-like than a real predator's, and the agent hides from it and pays for it in food."},
+ {g:"odour",n:"How strongly an animal smells at all",k:"same draw, channel sum",w:"derived from the two channels",cad:"ep",col:"animal_property_sampled",st:"supp",
+  role:"The two odour channels vary independently, so each draw carries two quantities: their difference (predator-likeness) and their sum (sheer intensity). A faint predator and a pungent one score identical predator-likeness.",
+  note:"Spotted by a supplementary store audit and only partly carried onto the published page. Intensity is a plausible driver in its own right — a strong smell is an easier detection at any identity."},
+ {g:"odour",n:"How confusable this episode's animals are with each other",k:"both draws, jointly",w:"derived",cad:"derived",col:"animal_property_sampled",st:"never",
+  role:"Predator-likeness is measured per animal against a fixed scale. But the discrimination problem the agent actually faces is the gap between the specific predator and the specific rabbit it was handed this episode.",
+  note:"Both draws are recorded; nobody has taken their difference. This is the quantity a discrimination account of hiding would predict on."},
+ {g:"odour",n:"The keenest of two predators, and the spread between them",k:"detection_range, across slots",w:"derived",cad:"derived",col:"animal_detect_sampled",st:"never",
+  role:"When two predators are present, trait analyses have used the average or dropped those episodes. The average is the wrong summary: what threatens the agent is the more dangerous of the two.",
+  note:"Flagged in a supplementary script and never carried through to a figure."},
+
+ // ---- cover ----
+ {g:"cover",n:"How many bushes exist",k:"obstacles[bush].count_low / count_high",w:"[4, 10]",lo:4,hi:10,dom:[0,12],cad:"ep",col:"obs_active",st:"published",
+  role:"The number of hiding places, redrawn each episode. More bushes means more hiding and slightly longer survival."},
+ {g:"cover",n:"How many rocks exist",k:"obstacles[rock].count_low / count_high",w:"[6, 12]",lo:6,hi:12,dom:[0,14],cad:"ep",col:"obs_active",st:"published",
+  role:"Rocks do not block movement here; they damage the agent on contact. In the published ranking their effect on hiding is essentially flat, which makes them a useful negative control."},
+ {g:"cover",n:"Where the bushes are",k:"obstacles[bush].area + placement",w:"full grid, redrawn",cad:"ep",col:"obs_row / obs_col",st:"never",
+  role:"Positions are redrawn every episode alongside the counts, and are recorded for every step. No analysis has used them as anything but a source for one distance.",
+  note:"<b>The largest single gap in the inventory.</b> Ten bushes in one corner and ten spread evenly are the same count and a different world."},
+ {g:"cover",n:"Whether cover is clustered or scattered",k:"— derived from bush positions",w:"derived",cad:"derived",col:"obs_row / obs_col",st:"never",
+  role:"A dispersion measure over the drawn bush positions: mean pairwise distance, or the number of distinct clumps. Clustered cover means long exposed runs between refuges."},
+ {g:"cover",n:"How much of the map is near cover",k:"— derived from bush positions",w:"derived",cad:"derived",col:"obs_row / obs_col",st:"never",
+  role:"Mean distance from an arbitrary cell to the nearest bush — a map-wide safety measure, as opposed to the agent's own distance at spawn. It says how expensive hiding is on average, wherever the agent happens to be."},
+ {g:"cover",n:"Whether the nearest bush is a poisoned refuge",k:"— bush against rock and ambush positions",w:"derived",cad:"derived",col:"obs_* / res_*",st:"never",
+  role:"A bush sitting on or beside a buried ambush predator, or ringed by damaging rocks, is cover the agent cannot use safely.",
+  note:"Cases where cover is nominally available but actually is not are exactly where a count-based factor and a behaviour would come apart."},
+ {g:"cover",n:"Whether a bush blocks predators or merely conceals",k:"obstacles[bush].blocks_animals",w:"true",cad:"fixed",col:"manifest",st:"novar",
+  role:"True here, which makes the bush a physical refuge — predators cannot enter it, and a pounce cannot reach into it. False in the sibling family, where a bush only breaks line of sight.",
+  note:"A directly comparable pair of configs exists, differing in exactly this one key. This is the single most consequential fixed setting for anything called hiding."},
+ {g:"cover",n:"How much a rock hurts on contact",k:"obstacles[rock].damage",w:"[1, 5]",lo:1,hi:5,dom:[0,10],cad:"event",col:"damage, event_collided",st:"never",
+  role:"Redrawn on every collision. Small compared with a predator's bite, but it is the one damage source the agent meets while simply moving around."},
+ {g:"cover",n:"Ground type",k:"location_areas",w:"grass over the whole grid",cad:"fixed",col:"manifest",st:"novar",
+  role:"The world supports grass and sand as distinct terrain with distinct visual signatures. Here the sand region is collapsed to nothing, so terrain is uniform."},
+
+ // ---- resource ----
+ {g:"resource",n:"How many food patches exist",k:"resources[food].count_low / count_high",w:"[1, 4]",lo:1,hi:4,dom:[0,6],cad:"ep",col:"res_allocated",st:"published",
+  role:"Food is the reason to be out of cover. Scarcer food should mean more foraging pressure and less hiding."},
+ {g:"resource",n:"How many ambush predators are buried",k:"resources[hiding_predator].count_low / count_high",w:"[2, 12]",lo:2,hi:12,dom:[0,14],cad:"ep",col:"res_allocated",st:"published",
+  role:"Invisible until stepped on, damaging 15 to 45 when triggered. Six times more of them at the top of the range than the bottom, which makes open ground genuinely risky.",
+  note:"A ten-arm replicate that removed these entirely was run, and it <em>refuted</em> the hypothesis that ambush risk explains why an injured agent under-uses cover."},
+ {g:"resource",n:"Where the food is",k:"resources[food].spawn_area + placement",w:"full grid, redrawn",cad:"ep",col:"res_row / res_col",st:"never",
+  role:"Redrawn each episode and recorded per step, including which patches are still active. Never used as a factor."},
+ {g:"resource",n:"How far food sits from cover",k:"— food against bush positions",w:"derived",cad:"derived",col:"res_* / obs_*",st:"supp",
+  role:"If food and cover coincide the agent can do both at once; if they are far apart it must choose. This is the forage-versus-hide trade-off made physical, and it varies from episode to episode for free.",
+  note:"Computed in a supplementary geometry script and, as far as the published page shows, never carried into the analysis."},
+ {g:"resource",n:"Where the ambush predators are buried",k:"resources[hiding_predator].spawn_area",w:"full grid, redrawn",cad:"ep",col:"res_row / res_col",st:"never",
+  role:"Their positions decide whether the route to food, or the route to cover, is mined. The count alone cannot distinguish those cases."},
+ {g:"resource",n:"Food running out and growing back",k:"max_consumption: 12, regeneration_delay: 0",w:"12 feeds, instant regrowth",cad:"within",col:"res_cons_count, res_reg_timer",st:"never",
+  role:"A patch supports twelve feeds and then regenerates with no delay. Depletion state is recorded every step, so how food availability decays over an episode is observable.",
+  note:"Associational, not causal — depletion is a consequence of the agent's own eating. It belongs to a different class of question from the reset draws."},
+ {g:"resource",n:"How hard an ambush predator hits",k:"resources[hiding_predator].damage",w:"[15, 45]",lo:15,hi:45,dom:[0,120],cad:"event",col:"damage, hit_hiding_predator",st:"never",
+  role:"Drawn afresh each time one is triggered. A third of a predator's maximum bite at worst, but delivered without warning."},
+
+ // ---- body ----
+ {g:"body",n:"The wound it wakes up with",k:"body.random_start_injury (0–100)",w:"[0, 100]",lo:0,hi:100,dom:[0,100],cad:"ep",col:"injury_level at t=0",st:"published",
+  role:"Uniform over the entire injury scale, assigned before the agent acts. The cleanest causal handle in the world, and the one the project's central question turns on.",
+  note:"<b>The result to read carefully.</b> A separate study found a wounded agent hides more in its first twenty-five steps — but the behaviour underneath is that it stops moving and rests, and whether that scores as hiding depends on how far the nearest bush is when it freezes."},
+ {g:"body",n:"How hungry it wakes up",k:"body.random_start_nutrition (0–100)",w:"[0, 100]",lo:0,hi:100,dom:[0,100],cad:"ep",col:"nutrition at t=0",st:"published",
+  role:"Also uniform over its full range. Hunger and hiding are in direct competition: food is outside cover.",
+  note:"An earlier draft of the published study read this as having no immediate effect. The correction — binning by the assigned draw rather than by contemporaneous nutrition — reversed it: hunger causally suppresses hiding."},
+ {g:"body",n:"Where on the map it wakes up",k:"environment.random_start_pos",w:"true — full grid",cad:"ep",col:"agent_row / agent_col at t=0",st:"published",
+  role:"The agent's own start position is redrawn every episode, independently of where everything else landed. That independence is what makes every spawn-geometry measure below a causal handle rather than a correlation.",
+  note:"Only one consequence of this draw has been analysed: the distance to the nearest bush."},
+ {g:"body",n:"Starting satiation",k:"body.random_start_satiation",w:"false — pinned at 100",cad:"fixed",col:"satiation at t=0",st:"novar",
+  role:"Not randomised. Satiation is a one-for-one transform of nutrition in this config, so randomising hunger already moves it; there is no separate handle here."},
+
+ // ---- geom ----
+ {g:"geom",n:"Distance at spawn to the nearest bush",k:"— agent against bush positions",w:"derived, 0 to ~10",lo:0,hi:10,dom:[0,12],cad:"derived",col:"t=0 rows",st:"published",
+  role:"The one spatial factor that has been analysed, and it is strong: hiding runs from 24.8% when the agent wakes beside a bush down to 10.7% when the nearest is five or more cells away."},
+ {g:"geom",n:"Distance at spawn to the nearest predator",k:"— agent against animal positions",w:"derived",cad:"derived",col:"t=0 rows",st:"never",
+  role:"How much warning the agent gets. A predator that starts across the map is a different problem from one that starts adjacent, and the two are pooled in every result so far."},
+ {g:"geom",n:"Distance at spawn to the nearest food",k:"— agent against resource positions",w:"derived",cad:"derived",col:"t=0 rows",st:"never",
+  role:"The other half of the trade-off: how far the agent must travel to eat, and therefore how long it must spend outside cover."},
+ {g:"geom",n:"Distance at spawn to the nearest buried ambush",k:"— agent against resource positions",w:"derived",cad:"derived",col:"t=0 rows",st:"never",
+  role:"Unlike the others this one is unobservable to the agent — ambush predators give off no smell and no visual signature. It is therefore a control: it should predict damage but not anticipatory behaviour."},
+ {g:"geom",n:"Whether it woke up already inside a bush",k:"— agent position against bush positions",w:"derived, boolean",cad:"derived",col:"agent_in_bush at t=0",st:"supp",
+  role:"A special case worth separating, because starting in cover means the first hiding step costs nothing at all.",
+  note:"Computed in a supplementary geometry script; not visible on the published page."},
+ {g:"geom",n:"Whether a predator sits between the agent and its nearest bush",k:"— three-way position geometry",w:"derived, boolean",cad:"derived",col:"t=0 rows",st:"never",
+  role:"Cover that requires running past the threat is not really cover. This distinguishes a reachable refuge from a nominal one, using positions that are already recorded.",
+  note:"Of everything in this catalogue, this is the measure whose mechanism maps most directly onto a decision the agent has to make."},
+ {g:"geom",n:"How far the predator itself is from cover",k:"— animal against bush positions",w:"derived",cad:"derived",col:"t=0 rows",st:"supp",
+  role:"Because bushes block predators in this world, a predator's own position relative to cover shapes the geometry of any chase."},
+
+ // ---- event ----
+ {g:"event",n:"How hard each individual hit lands",k:"entities[pred].damage",w:"[15, 120]",lo:15,hi:120,dom:[0,120],cad:"event",col:"damage",st:"never",
+  role:"Redrawn on every collision — an eightfold range, from a scratch to most of a lethal wound. Recorded in the per-step table for all 10.78 million damage steps.",
+  note:"<b>A randomised treatment applied inside the episode.</b> No published analysis separates a graze from a near-fatal blow, though the peri-damage figure treats all hits alike."},
+ {g:"event",n:"Which thing did the hitting",k:"— predator, ambush, or rock",w:"three sources",cad:"event",col:"hit_predator / hit_hiding_predator / hit_neutral",st:"published",
+  role:"Three separate flags per step. Partly used: the published nociception analysis separates damage by origin to ask whether the agent responds to the signal or to the event that caused it."},
+ {g:"event",n:"Whether a pounce landed or missed",k:"— outcome of attack_success_rate",w:"coin flip, p = 0.5",lo:0.5,hi:0.5,dom:[0,1],cad:"event",col:"derived from hit flags + positions",st:"never",
+  role:"A miss leaves the predator standing next to the agent instead of on it. Same threat, opposite outcome — a natural experiment in what a near-miss does to subsequent behaviour."},
+
+ // ---- senses ----
+ {g:"senses",n:"Whether smell carries a direction",k:"sensory.olfactory_grid_range",w:"0 — one sample, at its own cell",lo:0,hi:0,dom:[0,3],cad:"fixed",col:"manifest",st:"novar",
+  role:"At zero the agent samples the odour field only where it stands, so it knows something is near but not which way. Above zero it samples a diamond of cells and the readings carry a gradient.",
+  note:"The fourteen-arm sensor study found this buys more than sharper eyesight does — the single largest sensory effect measured."},
+ {g:"senses",n:"How far a smell carries",k:"sensory.sensor_radius",w:"20",lo:20,hi:20,dom:[0,20],cad:"fixed",col:"manifest",st:"novar",
+  role:"A property of the field rather than the sensor. At 20 it exceeds the 10×10 grid, so it never binds — every smell reaches everywhere, and only decay shapes it."},
+ {g:"senses",n:"How fast a smell fades with distance",k:"sensory.decay_power",w:"1.0",lo:1,hi:1,dom:[0,3],cad:"fixed",col:"manifest",st:"novar",
+  role:"The exponent on the odour falloff. Because the radius never binds, this is what actually determines how localising a smell is."},
+ {g:"senses",n:"How far the agent can see",k:"sensory.visual_sensor_range",w:"0 — its own cell only",lo:0,hi:0,dom:[0,4],cad:"fixed",col:"manifest",st:"novar",
+  role:"Zero. This agent is blind at any distance, which is why smell carries the whole burden and why odour ambiguity has behavioural consequences at all."},
+ {g:"senses",n:"Blur, occlusion, and whether sight resolves identity",k:"visual_blur_enabled, visual_occlusion_enabled, visual_value_mode",w:"off, off, sum",cad:"fixed",col:"manifest",st:"novar",
+  role:"An anisotropic point-spread blur, line-of-sight occlusion behind nearer objects, and how per-cell contributions combine.",
+  note:"The sensor study's headline: what matters about sight is whether it tells you <em>what</em> you are looking at, not how sharp it is."},
+ {g:"senses",n:"Whether the agent can read its own wound directly",k:"sensory.injury_observable",w:"false",cad:"fixed",col:"manifest",st:"novar",
+  role:"False, so the instantaneous injury value is removed from the observation. The agent is not blind to its wound — it feels it through the nociceptive channel below — but only in smoothed, delayed form."},
+ {g:"senses",n:"The lag and smoothing on felt nociception",k:"interoceptive_kernel_tau: 3.0, _length: 12",w:"peak 3 steps back, 12-step buffer",lo:3,hi:12,dom:[0,12],cad:"fixed",col:"manifest",st:"novar",
+  role:"Injury history is convolved with an alpha kernel peaking three steps back. The buffer is zeroed at reset, so a wound the agent wakes up with is unfelt on step one and fades in over roughly ten steps.",
+  note:"This is why 'the wound it wakes up with' and 'what the agent feels' are different variables, and why an analysis that confuses them gets the timing wrong."},
+ {g:"senses",n:"Sensory noise",k:"perceptual_noise.enabled",w:"false",cad:"fixed",col:"manifest",st:"novar",
+  role:"Off in this world. When on, eleven modalities each get their own noise mode, with several scaled by the agent's injury level — so being hurt would degrade perception.",
+  note:"The next level of the curriculum turns this on. Injury-scaled sensory noise is a mechanism that would couple wound and hiding directly, and it is untested here."},
+
+ // ---- physio ----
+ {g:"physio",n:"The premium on an unbroken rest streak",k:"body.recovery_accel_rate / recovery_base_rate",w:"0.0 / 5.0 — no premium",lo:0,hi:0,dom:[0,1],cad:"fixed",col:"manifest",st:"published",
+  role:"Healing is <code>base × (1 + accel)^(streak − 1)</code>. This arm is the zero-premium anchor: resting heals at a flat rate with no reward for continuity.",
+  note:"Ten arms span premiums from 1× to about 130,000×, and all ten were analysed. The sweep was built to test whether making an uninterrupted heal valuable would drive a wounded agent to a safe spot. It did not."},
+ {g:"physio",n:"How fast the agent burns nutrition",k:"body.metabolic_cost",w:"1.0 per step",lo:1,hi:1,dom:[0,3],cad:"fixed",col:"manifest",st:"novar",
+  role:"Sets the clock on the whole episode: with no eating, full nutrition drains in a hundred steps. It is the reason hiding cannot be free."},
+ {g:"physio",n:"What a meal is worth",k:"body.food_nutrition_gain",w:"6 per feed",lo:6,hi:6,dom:[0,12],cad:"fixed",col:"manifest",st:"novar",
+  role:"Six nutrition per feed against one burned per step, so roughly one step in six must be spent eating just to break even."},
+ {g:"physio",n:"How injury is charged and healed",k:"injury_smoothing_duration, recovery_base_rate",w:"3 steps, 5.0 per rest",lo:3,hi:3,dom:[0,12],cad:"fixed",col:"manifest",st:"novar",
+  role:"Damage is spread over three steps rather than applied at once, and injury falls only when the agent takes the Rest action.",
+  note:"Heal-by-rest is the standing explanation for why an injured agent under-uses cover: it freezes and heals wherever it happens to be standing."},
+ {g:"physio",n:"What the agent is rewarded for",k:"body.use_homeostatic_reward, death_penalty",w:"true, 100",cad:"fixed",col:"manifest",st:"novar",
+  role:"Reward is the reduction in a drive combining hunger and injury, with a penalty at death. Performance is nonetheless scored in survival steps, never in accumulated reward."},
+ {g:"physio",n:"Whether resting and eating are available at all",k:"rest_action_enabled, eat_action_enabled",w:"true, true",cad:"fixed",col:"manifest",st:"novar",
+  role:"Both on. With Rest disabled the heal-by-rest confound would disappear — and so would healing."},
+ {g:"physio",n:"Whether overeating kills",k:"body.overeating_death",w:"false",cad:"fixed",col:"manifest",st:"novar",
+  role:"Off, so there is no upper penalty on eating and no reason to leave food uneaten. A known latent-bug site the project checks for on every config change."},
+
+ // ---- frame ----
+ {g:"frame",n:"How long an episode can run",k:"environment.max_steps",w:"500",lo:500,hi:500,dom:[0,600],cad:"fixed",col:"manifest",st:"novar",
+  role:"The cap. Reaching it is one of five recorded termination reasons, and a run that hits the cap regularly is measuring something different from one that dies young."},
+ {g:"frame",n:"The size of the world",k:"environment.height / width",w:"10 × 10",lo:10,hi:10,dom:[0,15],cad:"fixed",col:"manifest",st:"novar",
+  role:"A hundred cells holding up to thirty-six entities. Density is high, which is worth remembering whenever a distance is interpreted — 'far away' here is five cells."},
+ {g:"frame",n:"How entities are placed without overlapping",k:"environment.placement.mode",w:"per_entity",cad:"fixed",col:"manifest",st:"novar",
+  role:"A sequential scan resolving overlaps one entity at a time. It determines the joint distribution of every position, and therefore underlies every geometry measure in this catalogue."},
+
+ // ---- thermal ----
+ {g:"thermal",n:"The thermal system as a whole",k:"thermal.enabled",w:"false",cad:"fixed",col:"—",st:"novar",
+  role:"A body temperature, a blurred heat field built from object heat sources, a thermoceptor that reports the field relative to body temperature, and an optional metabolic cost of thermoregulation. Off in every config in this line.",
+  note:"Newly built. It adds a second homeostatic drive that competes with hunger and injury, and a reason to seek or avoid particular cells — which would make it the first factor able to compete with a bush for the same square."}
+];
+
+/* ---------------- render ---------------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/&(?![a-z#]+;)/g,"&amp;").replace(/</g,"&lt;");
+
+function tally(){
+  const c = {published:0,supp:0,never:0,novar:0};
+  P.forEach(p => c[p.st]++);
+  $("#tally").innerHTML = Object.keys(STATUS).map(k =>
+    `<div><div class="n">${c[k]}</div><div class="lab"><span class="dot d-${k}"></span>${STATUS[k].label}</div></div>`
+  ).join("");
+  return c;
+}
+
+function bar(p){
+  if(p.lo === undefined || p.hi === undefined || !p.dom) return "";
+  const [d0,d1] = p.dom, span = d1 - d0 || 1;
+  const flat = p.lo === p.hi;
+  const L = ((p.lo - d0)/span)*100, W = ((p.hi - p.lo)/span)*100;
+  const inner = flat
+    ? `<span class="tick" style="left:${L.toFixed(1)}%"></span>`
+    : `<span class="fill" style="left:${L.toFixed(1)}%;width:${W.toFixed(1)}%"></span>`;
+  return `<div class="bar${flat?" flat":""}">
+      <div class="track">${inner}</div>
+      <div class="ends"><span>${d0}</span><span>${flat?"no spread":"drawn uniformly"}</span><span>${d1}</span></div>
+    </div>`;
+}
+
+function entry(p){
+  return `<article class="entry" data-st="${p.st}" data-s="${esc((p.n+" "+p.k+" "+(p.col||"")+" "+p.role).toLowerCase())}">
+    <div>
+      <div class="entry-name">${esc(p.n)}&nbsp;<span class="badge b-${p.cad}">${p.cad}</span></div>
+      <p class="entry-role">${p.role}</p>
+      ${p.note ? `<p class="entry-note">${p.note}</p>` : ""}
+    </div>
+    <div class="spec">
+      <span class="k">${esc(p.k)}</span>
+      <span class="v">${esc(p.w)}</span>
+      ${bar(p)}
+      <span class="v">recorded as <b>${esc(p.col)}</b></span>
+      <span class="st"><span class="dot d-${p.st}"></span>${STATUS[p.st].short}</span>
+    </div>
+  </article>`;
+}
+
+function build(){
+  $("#cat").innerHTML = GROUPS.map(g => {
+    const rows = P.filter(p => p.g === g.id);
+    return `<section class="group" id="g-${g.id}">
+      <div class="group-head"><h3>${g.name}</h3></div>
+      <p class="group-role">${g.role}</p>
+      ${rows.map(entry).join("")}
+    </section>`;
+  }).join("");
+  $("#rail").innerHTML = GROUPS.map(g =>
+    `<li><a href="#g-${g.id}" data-g="${g.id}"><span>${g.name.split(":")[0]}</span><span class="k">${P.filter(p=>p.g===g.id).length}</span></a></li>`
+  ).join("");
+}
+
+let active = new Set();
+function filters(c){
+  $("#filters").innerHTML = Object.keys(STATUS).map(k =>
+    `<button class="chip" data-k="${k}" aria-pressed="false"><span class="dot d-${k}"></span>${STATUS[k].short} ${c[k]}</button>`
+  ).join("");
+  $("#filters").addEventListener("click", e => {
+    const b = e.target.closest(".chip"); if(!b) return;
+    const k = b.dataset.k;
+    if(active.has(k)) active.delete(k); else active.add(k);
+    b.setAttribute("aria-pressed", active.has(k) ? "true" : "false");
+    apply();
+  });
+}
+
+function apply(){
+  const q = $("#q").value.trim().toLowerCase();
+  let shown = 0;
+  document.querySelectorAll(".entry").forEach(el => {
+    const okS = active.size === 0 || active.has(el.dataset.st);
+    const okQ = !q || el.dataset.s.includes(q);
+    const on = okS && okQ;
+    el.hidden = !on;
+    if(on) shown++;
+  });
+  document.querySelectorAll(".group").forEach(g => {
+    g.hidden = !g.querySelector(".entry:not([hidden])");
+  });
+  $("#count").textContent = shown === P.length
+    ? `${P.length} parameters`
+    : `${shown} of ${P.length}`;
+  let empty = document.getElementById("empty");
+  if(shown === 0){
+    if(!empty){
+      empty = document.createElement("p");
+      empty.id = "empty"; empty.className = "empty";
+      $("#cat").appendChild(empty);
+    }
+    empty.textContent = "No parameter matches that filter.";
+    empty.hidden = false;
+  } else if(empty){ empty.hidden = true; }
+}
+
+function rail(){
+  const links = [...document.querySelectorAll("#rail a")];
+  const obs = new IntersectionObserver(es => {
+    es.forEach(e => {
+      if(e.isIntersecting){
+        const id = e.target.id.replace("g-","");
+        links.forEach(a => a.classList.toggle("on", a.dataset.g === id));
+      }
+    });
+  }, {rootMargin:"-80px 0px -70% 0px"});
+  document.querySelectorAll(".group").forEach(g => obs.observe(g));
+}
+
+function cue(){
+  const box = document.getElementById("dia"), c = document.getElementById("cue");
+  if(box && c) c.hidden = box.scrollWidth <= box.clientWidth + 1;
+}
+addEventListener("resize", cue);
+
+const counts = tally();
+build();
+filters(counts);
+$("#q").addEventListener("input", apply);
+apply();
+rail();
+cue();
+</script>

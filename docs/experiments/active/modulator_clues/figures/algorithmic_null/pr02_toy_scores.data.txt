@@ -1,0 +1,5 @@
+status: illustration — toy numbers made by the script to explain a method; not a study result and not read from any analysis output
+decision_rules: none (illustration)
+source: random toy moments generated in pr02_toy_scores.py (seed 0)
+row: toy moments per relationship|2,000|2,000|100.0|h, d and p drawn uniformly on [0, 1]; all rows used for fit and score
+row: relationships scored|5|5|100.0|network A against five versions of network B

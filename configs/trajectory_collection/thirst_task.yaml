@@ -1,0 +1,60 @@
+# Trajectory stores for the THIRST TASK screen -- 18 stores: the ordinary and the modulated agent,
+# one training seed (42), in nine level-06 water worlds (three map sizes x three smell reaches).
+# Purpose: the input to the Basic Behaviour Analysis pipeline for these runs.
+# Design: docs/experiments/active/thirst_task/THIRST_TASK.md (Revision 1).
+#
+# NOT the same collection as THIRST_TASK.md §5.5 (10 000 episodes x three checkpoints into
+# results/analysis/thirst_task/). This one is the Basic Behaviour store: 1 000 000 greedy episodes
+# of the FINAL checkpoint per run, into its own root, so the two never share a store directory.
+#
+# Cell names: g<map side>s<smell reach>; sW = smell carries across the whole map, s5 / s3 = 5 / 3
+# squares. Agent: t1none = ordinary agent, t16quad = modulated agent.
+# All 18 runs finished ("Training complete" in each log), final checkpoint >= 10 000 000 episodes
+# (10000016 .. 10000109), checked 2026-10-02. Trained at commit 583b022f (frozen thirst-runs
+# worktree); src/ and scripts/eval/traj_collect/ are byte-identical between 583b022f and v5.0.
+#
+# WATER COLUMNS. The store schema has no hydration, pond-position or drink column. Hydration is in
+# the observation (obs_true / obs_noised width 59; the Hydration slot); the pond cells are NOT
+# stored and must be recomputed from each episode_seed with the collector's reset recipe
+# (THIRST_TASK.md §5.5). Death codes 6 (dehydration) and 7 (overdrinking) are recorded.
+#
+# Launch AFTER review, through the finished-runs-only wrapper (idempotent), on v5.0:
+#   /home/vncuser/miniconda3/envs/grid_world_pain/bin/python \
+#     scripts/analysis/studies/level05_body_interactions/launch_collection.py \
+#     configs/trajectory_collection/thirst_task.yaml \
+#     --logs-glob 'logs/20261002_012*_rppo_thirst_*.log' --nodes <live-free nodes>
+#
+# Every scientific key is copied from hv_single_channel_smell.yaml. seed_base is LOAD-BEARING:
+# it makes episode i present the same reset draws to the ordinary and the modulated run of a cell.
+name: thirst_task
+algo: rppo
+out_root: results/trajectories_thirst_task
+episodes: 1000000
+seed_base: 1000000         # LOAD-BEARING - identical to hvsmell / l05body / Wave 1 / Wave 2
+checkpoints: [final]
+nodes: [FILL_AT_LAUNCH]    # placeholder; the launch wrapper overrides it with live-free nodes
+obs_precision: float32
+npar: 1
+device: gpu
+batch_size: 5000
+shard_episodes: 5000
+blocks_per_cell: 200
+runs:
+  - {label: thirst_g10sW_ordinary_s42,   path: results/JAX_RecurrentPPO/20261002_012801_rppo_thirst_g10sW_t1none_s42}
+  - {label: thirst_g10sW_modulated_s42,  path: results/JAX_RecurrentPPO/20261002_012802_rppo_thirst_g10sW_t16quad_s42}
+  - {label: thirst_g10s5_ordinary_s42,   path: results/JAX_RecurrentPPO/20261002_012804_rppo_thirst_g10s5_t1none_s42}
+  - {label: thirst_g10s5_modulated_s42,  path: results/JAX_RecurrentPPO/20261002_012806_rppo_thirst_g10s5_t16quad_s42}
+  - {label: thirst_g10s3_ordinary_s42,   path: results/JAX_RecurrentPPO/20261002_012808_rppo_thirst_g10s3_t1none_s42}
+  - {label: thirst_g10s3_modulated_s42,  path: results/JAX_RecurrentPPO/20261002_012809_rppo_thirst_g10s3_t16quad_s42}
+  - {label: thirst_g15sW_ordinary_s42,   path: results/JAX_RecurrentPPO/20261002_012749_rppo_thirst_g15sW_t1none_s42}
+  - {label: thirst_g15sW_modulated_s42,  path: results/JAX_RecurrentPPO/20261002_012751_rppo_thirst_g15sW_t16quad_s42}
+  - {label: thirst_g15s5_ordinary_s42,   path: results/JAX_RecurrentPPO/20261002_012753_rppo_thirst_g15s5_t1none_s42}
+  - {label: thirst_g15s5_modulated_s42,  path: results/JAX_RecurrentPPO/20261002_012755_rppo_thirst_g15s5_t16quad_s42}
+  - {label: thirst_g15s3_ordinary_s42,   path: results/JAX_RecurrentPPO/20261002_012757_rppo_thirst_g15s3_t1none_s42}
+  - {label: thirst_g15s3_modulated_s42,  path: results/JAX_RecurrentPPO/20261002_012759_rppo_thirst_g15s3_t16quad_s42}
+  - {label: thirst_g20sW_ordinary_s42,   path: results/JAX_RecurrentPPO/20261002_012738_rppo_thirst_g20sW_t1none_s42}
+  - {label: thirst_g20sW_modulated_s42,  path: results/JAX_RecurrentPPO/20261002_012740_rppo_thirst_g20sW_t16quad_s42}
+  - {label: thirst_g20s5_ordinary_s42,   path: results/JAX_RecurrentPPO/20261002_012741_rppo_thirst_g20s5_t1none_s42}
+  - {label: thirst_g20s5_modulated_s42,  path: results/JAX_RecurrentPPO/20261002_012743_rppo_thirst_g20s5_t16quad_s42}
+  - {label: thirst_g20s3_ordinary_s42,   path: results/JAX_RecurrentPPO/20261002_012745_rppo_thirst_g20s3_t1none_s42}
+  - {label: thirst_g20s3_modulated_s42,  path: results/JAX_RecurrentPPO/20261002_012747_rppo_thirst_g20s3_t16quad_s42}

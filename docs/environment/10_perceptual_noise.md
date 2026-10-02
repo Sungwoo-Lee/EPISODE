@@ -1,0 +1,494 @@
+# 10 — Perceptual Noise
+
+> **Source**: `src/environment/sensor.py` (`apply_perceptual_noise`, `sensor.py:223`), `src/environment/config_loader.py` (`_parse_noise_config`, `config_loader.py:957`) | **Back to hub**: [ENVIRONMENT_SUMMARY](ENVIRONMENT_SUMMARY.md)
+
+---
+
+## What this document is about
+
+Biological sensing is imprecise — and pain makes it worse. This document describes how the GridWorld Pain environment simulates that imprecision through **perceptual noise**: small random perturbations added to each sensor reading every step.
+
+Each sensor (called a **modality** — e.g. olfaction, collision, proprioception) gets its own noise setting. The noise is **state-dependent**: when the agent is injured, the random perturbations grow larger, so its readings become less reliable. At full health the agent perceives the world fairly clearly; at maximum injury every sensor (except those configured as clean references) is smeared by Gaussian noise.
+
+Concretely, noise is Gaussian with mean zero and a standard deviation (σ) that scales with normalised injury: `σ_eff = σ_base × (1 + α × injury_norm)`. At zero injury, `σ_eff = σ_base`. At maximum injury, `σ_eff = σ_base × (1 + α)`. With typical values `σ_base = 0.1` and `α = 1.5`, the effective noise standard deviation grows from 0.1 (healthy) to 0.25 (maximum injury).
+
+The whole system is toggled by `params.perceptual_noise_enabled` (set from `perceptual_noise.enabled` in YAML). When disabled, `apply_perceptual_noise` is a pass-through and the observation is returned unchanged.
+
+![Perceptual noise dynamics](10_perceptual_noise_dynamics.png)
+
+---
+
+## Noise Modes
+
+Three modes per modality, set in YAML as a string and stored as an integer in `EnvParams`:
+
+| Mode string | Integer value | σ_effective | Description |
+|-------------|---------------|-------------|-------------|
+| `none` | 0 | 0.0 | No noise applied; modality is a clean reference |
+| `constant` | 1 | `σ_base` | Fixed Gaussian noise; not affected by injury level |
+| `state_dependent` | 2 | `σ_base × (1 + α × injury_norm)` | Noise grows with normalised injury |
+
+**State-dependent formula** (`sensor.py:250–260`):
+```
+norm_injury = state.injury_level / max(params.max_injury, 1e-6)
+
+σ_eff[i] = σ_base[i] * (1.0 + α[i] * norm_injury)   # mode 2
+          = σ_base[i]                                   # mode 1
+          = 0.0                                         # mode 0
+```
+
+The `jnp.where` dispatch at `sensor.py:256–260` implements this as a fully vectorised expression over the full observation length — no Python branching at inference time.
+
+- At `norm_injury = 0.0` (healthy): `σ_eff = σ_base`.
+- At `norm_injury = 1.0` (maximum injury): `σ_eff = σ_base × (1 + α)`.
+- With typical defaults `σ_base = 0.1`, `α = 1.5`: max σ = `0.1 × 2.5 = 0.25`.
+- Setting `σ_base = 0.0` silences noise entirely regardless of mode — `σ_eff = 0` for all injury levels.
+
+**Motivation**: pain degrades both interoceptive and exteroceptive perception. A highly injured agent has less reliable sensory information about its own body state and its environment, requiring it to act under greater uncertainty — a computational analogue of pain-induced perceptual distortion.
+
+---
+
+## Configuration
+
+YAML structure under `perceptual_noise.modalities` (`configs/environment/default.yaml`):
+
+```yaml
+perceptual_noise:
+  enabled: true                         # master on/off switch
+  modalities:
+    <modality_key>:
+      mode: "none" | "constant" | "state_dependent"
+      sigma: <float>                    # σ_base
+      injury_noise_scale: <float>       # α (used in mode 2 only; ignored in modes 0/1)
+      clip_min: <float>                 # post-noise lower bound (default: -100.0 if omitted)
+      clip_max: <float>                 # post-noise upper bound (default:  100.0 if omitted)
+```
+
+**YAML key order is the single source of truth for noise array indices.** `config_loader.py:963–967` builds `noise_modality_order` by iterating `modalities_cfg` in YAML declaration order. Any reordering of YAML keys changes the array indices stored in `EnvParams` — see the Critical Invariant section below.
+
+**All 13 modalities** (values from `configs/environment/default.yaml`):
+
+| YAML key | Sensor name in code | Array index (default YAML order) | Mode | σ_base | α | clip |
+|----------|--------------------|---------------------------------|------|--------|---|------|
+| `injury` | `Injury` | 0 | `state_dependent` | 0.0 | 1.5 | [0, 1] |
+| `nutrition` | `Nutrition` | 1 | `state_dependent` | 0.0 | 1.5 | [0, 1] |
+| `satiation` | `Satiation` | 2 | `state_dependent` | 0.1 | 1.5 | [0, 1] |
+| `body_temperature` | `Body Temperature` | 3 | `state_dependent` | 0.0 | 1.5 | [-100, 100] |
+| `interoceptive_nociception` | `Interoceptive Nociception` | 4 | `state_dependent` | 0.1 | 1.5 | [0, 1] |
+| `extero_nociception` | `Extero Nociception` | 5 | `state_dependent` | 0.1 | 1.5 | [0, 100] |
+| `thermoception` | `Thermoception` | 6 | `state_dependent` | 0.0 | 1.5 | [-100, 400] |
+| `olfaction` | `Olfaction` | 7 | `state_dependent` | 0.2 | 1.5 | [0, 100] |
+| `collision` | `Collision` | 8 | `constant` | 0.01 | 0.0 | [0, 1] |
+| `proprioception` | `Proprioception` | 9 | `constant` | 0.05 | 0.0 | [0, 1] |
+| `visual` | `Visual` | 10 | `state_dependent` | 0.2 | 1.5 | [0, 100] |
+| `location` | `Location` | 11 | `constant` | 0.01 | 0.0 | [-1, 1] |
+| `hydration` | `Hydration` | 12 | `state_dependent` | 0.1 | 1.5 | [0, 1] |
+
+**Notes on the default values:**
+- `injury` and `nutrition` have `σ_base = 0.0` — noise is declared but silenced. Mode is `state_dependent` so it activates immediately if `sigma` is raised in a derived config without changing `mode`.
+- `collision` and `proprioception` use `constant` mode — their noise is fixed regardless of injury level.
+- `visual` has `clip_max = 100.0` even though one-hot channels are nominally in [0, 1]; the permissive bound allows noisy one-hots to exceed 1.0 without hard-clipping.
+- `location` has `clip_min = -1.0` to match its `[-1, 1]` normalised coordinate range.
+- `hydration` (added with water, THIRST_WATER_PLAN) is appended last so no earlier index moves, and takes the 13th and last padded slot. Only a water world has a `Hydration` observation; the level-07 noise world restates it at σ 0.0.
+- `thermoception` is the one modality whose clips **must** be declared explicitly, and it
+  is worth understanding why. Every modality is clipped whenever `perceptual_noise.enabled`
+  is true — **including modalities in mode `none`**, because the clip is applied after the
+  (zero) noise, not instead of it. The loader's defaults are `clip_min = -100`,
+  `clip_max = +100`, and a thermoceptive reading near a fire measures up to about **+170**
+  on the shipped example config (and past +300 on a config that lets fires merge). A
+  noise-enabled thermal run would therefore have trained on a sensor saturated at 100,
+  with the fire and its comfort ring indistinguishable, while every test — all of which
+  run with noise off — saw the true value. `[-100, 400]` is chosen to never bind: the cold
+  end is `default_temp` low (−28) minus the highest survivable body temperature (+15), and
+  the hot end is the measured field peak plus `|body_temp|`, each with better than 2×
+  headroom. Its `σ_base` is `0.0` because no thermal-noise magnitude has been calibrated;
+  copying olfaction's 0.2 onto a signal that spans ~200 units would look like noise while
+  doing nothing.
+- `body_temperature` declares its clips explicitly for the same reason `thermoception` does,
+  and the same reason applies with the same force: the clip is applied whenever
+  `perceptual_noise.enabled` is true, including in mode `none`, and this channel carries
+  **raw degrees** rather than a `[0, 1]` fraction. `[-100, +100]` can never bind on a
+  plausible config — the survivable band is `[min_temperature, max_temperature]` = `[-15,
+  +15]`, and a terminal overshoot adds at most one step of the recurrence,
+  `k_exchange · |T_field − T| ≈ 0.04 × 167 ≈ 6.7`, so the bounds carry better than 5×
+  headroom. Its `σ_base` is `0.0` because **no noise magnitude has been calibrated on a
+  degrees scale**; copying its interoceptive neighbours' `0.1` (calibrated for a `[0, 1]`
+  channel) would add nothing while looking like it added noise.
+- **A new modality needs two edits that block each other.** The YAML block alone raises
+  `Strict Config: unknown perceptual-noise modality key(s)` (the `_YAML_KEY_TO_SENSOR_NAME`
+  whitelist), and the whitelist entry alone leaves `apply_perceptual_noise` raising a bare
+  `KeyError` inside a jit trace that names neither the config nor the fix. Land both, plus
+  the `_sensor_stat_columns` and `build_sensory_viz` branches, in one change.
+
+---
+
+## `_parse_noise_config` (config_loader)
+
+`_parse_noise_config(config) → dict` (`config_loader.py:957`)
+
+Doc 02 owns the full body of `_parse_noise_config`. The verbatim excerpt below covers the fields consumed directly by `apply_perceptual_noise`; see [02_config_loader.md](02_config_loader.md) for the complete implementation and surrounding context.
+
+Source: `src/environment/config_loader.py:944–1002`
+```python
+_YAML_KEY_TO_SENSOR_NAME = {
+    "injury":                    "Injury",
+    "nutrition":                 "Nutrition",
+    "satiation":                 "Satiation",
+    "extero_nociception":        "Extero Nociception",
+    "interoceptive_nociception": "Interoceptive Nociception",
+    "olfaction":                 "Olfaction",
+    "collision":                 "Collision",
+    "proprioception":            "Proprioception",
+    "visual":                    "Visual",
+    "location":                  "Location",
+}
+
+def _parse_noise_config(config: Config):
+    modalities_cfg = config.get('perceptual_noise.modalities') or {}
+
+    def _parse_mode(s):
+        return 2 if s == 'state_dependent' else 1 if s == 'constant' else 0
+
+    noise_modality_order = tuple(
+        _YAML_KEY_TO_SENSOR_NAME[k]
+        for k in modalities_cfg
+        if k in _YAML_KEY_TO_SENSOR_NAME
+    )
+    pad = max(0, _NOISE_SLOTS - len(noise_modality_order))   # _NOISE_SLOTS = 13
+
+    noise_modes = jnp.pad(jnp.array([
+        _parse_mode(modalities_cfg[k].get('mode', 'none'))
+        for k in modalities_cfg if k in _YAML_KEY_TO_SENSOR_NAME
+    ], dtype=jnp.int32), (0, pad))
+    
+    noise_sigmas = jnp.pad(jnp.array([
+        modalities_cfg[k].get('sigma', 0.0)
+        for k in modalities_cfg if k in _YAML_KEY_TO_SENSOR_NAME
+    ], dtype=jnp.float32), (0, pad))
+    
+    noise_injury_scales = jnp.pad(jnp.array([
+        modalities_cfg[k].get('injury_noise_scale', 0.0)
+        for k in modalities_cfg if k in _YAML_KEY_TO_SENSOR_NAME
+    ], dtype=jnp.float32), (0, pad))
+    
+    noise_clip_min = jnp.pad(jnp.array([
+        modalities_cfg[k].get('clip_min', -100.0)
+        for k in modalities_cfg if k in _YAML_KEY_TO_SENSOR_NAME
+    ], dtype=jnp.float32), (0, pad))
+    
+    noise_clip_max = jnp.pad(jnp.array([
+        modalities_cfg[k].get('clip_max', 100.0)
+        for k in modalities_cfg if k in _YAML_KEY_TO_SENSOR_NAME
+    ], dtype=jnp.float32), (0, pad))
+
+    return {
+        "noise_modality_order": noise_modality_order,
+        "noise_modes": noise_modes,
+        "noise_sigmas": noise_sigmas,
+        "noise_injury_scales": noise_injury_scales,
+        "noise_clip_min": noise_clip_min,
+        "noise_clip_max": noise_clip_max,
+    }
+```
+
+> **API notes — `_parse_noise_config`**
+> - `noise_modality_order` is a **Python tuple of strings** stored as a static field in `EnvParams`. Changing YAML key order rewrites this tuple and triggers a full JIT recompile. See [primer: static-dynamic](00_jax_primer.md#static-dynamic).
+> - `jnp.pad(..., (0, pad))` right-pads each of the five arrays to a constant shape `[13]`. Array shapes are static under `@jax.jit`; the fixed size prevents recompilation when modality count varies within the 13-slot budget. See [primer: static-dynamic](00_jax_primer.md#static-dynamic).
+> - The five arrays are **parallel**: slot `i` in `noise_modes`, `noise_sigmas`, `noise_injury_scales`, `noise_clip_min`, and `noise_clip_max` all describe the same modality — the entry at position `i` in `noise_modality_order`.
+> - `_parse_mode` encodes the three modes as integers via a branchless ternary chain. The integer is stored in a `jnp.int32` array; the JAX-side `jnp.where` in `apply_perceptual_noise` dispatches without Python branching at inference time. See [primer: branchless](00_jax_primer.md#branchless).
+
+**Step-by-step**:
+1. Read `perceptual_noise.modalities` dict (`config_loader.py:958`). Python ≥ 3.7 and PyYAML ≥ 5.1 both preserve insertion order, so YAML declaration order is maintained.
+2. Emit `noise_modality_order` tuple (`config_loader.py:963–967`) by iterating YAML keys in declaration order and mapping through `_YAML_KEY_TO_SENSOR_NAME` (`config_loader.py:944–955`). Only keys present in that mapping are included; unknown YAML keys are silently dropped.
+3. Build five parallel arrays by iterating the same filtered key order:
+   - `noise_modes [K]` int32: `0/1/2` from mode string via `_parse_mode` (`config_loader.py:960–961`)
+   - `noise_sigmas [K]` float32: `sigma` field (default `0.0` if absent)
+   - `noise_injury_scales [K]` float32: `injury_noise_scale` field (default `0.0` if absent)
+   - `noise_clip_min [K]` float32: `clip_min` field (default `-100.0` if absent)
+   - `noise_clip_max [K]` float32: `clip_max` field (default `100.0` if absent)
+4. Zero-pad all five arrays to length 13 using `jnp.pad(..., (0, pad))` (`config_loader.py:968`).
+
+The returned dict is unpacked into `EnvParams` with `**_parse_noise_config(config)` (`config_loader.py:941`).
+
+**`_YAML_KEY_TO_SENSOR_NAME` mapping** (`config_loader.py:944–955`):
+```python
+{
+    "injury":                    "Injury",
+    "nutrition":                 "Nutrition",
+    "satiation":                 "Satiation",
+    "extero_nociception":        "Extero Nociception",
+    "interoceptive_nociception": "Interoceptive Nociception",
+    "olfaction":                 "Olfaction",
+    "collision":                 "Collision",
+    "proprioception":            "Proprioception",
+    "visual":                    "Visual",
+    "location":                  "Location",
+}
+```
+
+Note: the definition order in `_YAML_KEY_TO_SENSOR_NAME` does **not** determine array indices — YAML declaration order in the config file does. This dict is a lookup table only.
+
+---
+
+## `apply_perceptual_noise` (sensor)
+
+`apply_perceptual_noise(obs, state, params, key)` (`sensor.py:223`)
+
+Decorated with `@jax.jit` (bare, no `static_argnames`). `params.perceptual_noise_enabled` is a static bool field in `EnvParams`, so the `if not params.perceptual_noise_enabled: return obs` guard at `sensor.py:225` is resolved at trace time — the disabled path compiles to a pass-through with zero runtime overhead.
+
+**Step-by-step**:
+1. Call `get_observation_breakdown(params)` (`sensor.py:228`) to get the ordered `{sensor_name: dim}` mapping for the current params configuration. This is the same function that controls observation assembly in `get_observation` — the two are always in sync.
+2. Build `modality_map = {name: i for i, name in enumerate(params.noise_modality_order)}` (`sensor.py:232`) — maps each sensor name to its noise array index.
+3. For each `(sensor_name, dim)` in breakdown (`sensor.py:239–243`), look up the array index and broadcast the noise params to a vector of length `dim` using `jnp.full`. **No guard**: if `sensor_name` is absent from `modality_map` this raises a `KeyError` at JIT trace time (see Critical Invariant).
+4. Concatenate all broadcasted vectors (`sensor.py:245–247`) into full-obs-length arrays: `sigma_base [obs_dim]`, `alpha [obs_dim]`, `mode [obs_dim]`.
+5. Compute `norm_injury = state.injury_level / max(params.max_injury, 1e-6)` (`sensor.py:250`). This is a scalar derived from the agent's current internal injury state.
+6. Compute effective sigma per element using a vectorised `jnp.where` (`sensor.py:256–260`):
+   ```
+   σ_eff[i] = σ_base[i] * (1 + α[i] * norm_injury)   if mode[i] == 2
+            = σ_base[i]                                  if mode[i] == 1
+            = 0.0                                        if mode[i] == 0
+   ```
+7. Build `clip_min [obs_dim]` and `clip_max [obs_dim]` by the same broadcast-and-concatenate pattern (`sensor.py:263–264`). **Asymmetry**: the clip list comprehensions use `if name in modality_map` whereas the sigma/alpha/mode loop uses a bare dict lookup with no guard — see Suspected Bugs.
+8. Draw noise: `noise = jax.random.normal(key, obs.shape) * sigma_eff` (`sensor.py:266`). One independent N(0,1) draw per observation element, scaled elementwise by `σ_eff`. Draws are independent across all dimensions and modalities.
+9. Return `jnp.clip(obs + noise, clip_min, clip_max)` (`sensor.py:267`).
+
+**PRNG key** (`sensor.py:273` in `get_observation`):
+```python
+obs_key = jax.random.fold_in(state.key, 999)
+```
+`state.key` is refreshed every step via the split-and-store pattern in `core.py`. `fold_in(key, 999)` creates a deterministic, per-step noise key without consuming a split from the main key. The constant `999` is an arbitrary salt whose only role is to make the observation noise branch independent from other uses of `state.key` in the same step.
+
+### Full verbatim implementation
+
+`apply_perceptual_noise` is the core noise function. The full source is reproduced below so every line can be read alongside the API notes that follow.
+
+Source: `src/environment/sensor.py:222–267`
+```python
+@jax.jit
+def apply_perceptual_noise(obs: jnp.ndarray, state: EnvState, params: EnvParams, key: jax.random.PRNGKey):
+    """Applies vectorized, state-dependent Gaussian noise based on modality-specific modes."""
+    if not params.perceptual_noise_enabled:
+        return obs
+        
+    breakdown = get_observation_breakdown(params)
+    
+    # Mapping Sensor names to indices in params.noise_modes/sigmas/scales
+    # Derived from YAML order stored in params.
+    modality_map = {name: i for i, name in enumerate(params.noise_modality_order)}
+    
+    sigma_base_list = []
+    alpha_list = []
+    mode_list = []
+    
+    # Static iteration over breakdown (which depends on EnvParams/struct)
+    for sensor_name, dim in breakdown.items():
+        idx = modality_map[sensor_name]
+        sigma_base_list.append(jnp.full((dim,), params.noise_sigmas[idx]))
+        alpha_list.append(jnp.full((dim,), params.noise_injury_scales[idx]))
+        mode_list.append(jnp.full((dim,), params.noise_modes[idx]))
+        
+    sigma_base = jnp.concatenate(sigma_base_list)
+    alpha = jnp.concatenate(alpha_list)
+    mode = jnp.concatenate(mode_list)
+    
+    # Normalized injury (0.0 to 1.0)
+    norm_injury = state.injury_level / jnp.maximum(params.max_injury, 1e-6)
+    
+    # Effective Sigma calculation:
+    # Mode 0: None (0.0)
+    # Mode 1: Constant (sigma_base)
+    # Mode 2: State-Dependent (sigma_base * (1 + alpha * injury))
+    sigma_eff = jnp.where(
+        mode == 2,
+        sigma_base * (1.0 + alpha * norm_injury),
+        jnp.where(mode == 1, sigma_base, 0.0)
+    )
+    
+    # Clip ranges (Vectorized)
+    clip_min = jnp.concatenate([jnp.full((dim,), params.noise_clip_min[modality_map[name]]) for name, dim in breakdown.items() if name in modality_map])
+    clip_max = jnp.concatenate([jnp.full((dim,), params.noise_clip_max[modality_map[name]]) for name, dim in breakdown.items() if name in modality_map])
+    
+    noise = jax.random.normal(key, obs.shape) * sigma_eff
+    return jnp.clip(obs + noise, clip_min, clip_max)
+```
+
+> **API notes — `apply_perceptual_noise`**
+>
+> **`@jax.jit` and the static-bool guard (lines 222–226)**  
+> The bare `@jax.jit` decorator means JAX traces the function once per unique combination of argument *shapes and types*. `params.perceptual_noise_enabled` is a static Python `bool` field in the `EnvParams` struct (declared with `struct.field(pytree_node=False)`), so `if not params.perceptual_noise_enabled: return obs` is evaluated at *trace time*, not at runtime. When noise is disabled the compiled function is a literal pass-through. See [primer: static-dynamic](00_jax_primer.md#static-dynamic) and [primer: jit](00_jax_primer.md#jit).
+>
+> **Static iteration builds per-element sigma vector (lines 239–247)**  
+> The `for sensor_name, dim in breakdown.items()` loop runs entirely in Python during JIT tracing — it is fully unrolled and leaves no loop in the compiled XLA code. Each `jnp.full((dim,), scalar)` creates a constant JAX array for one modality segment; `jnp.concatenate` fuses them into full-obs-length arrays `sigma_base`, `alpha`, and `mode`. See [primer: static-dynamic](00_jax_primer.md#static-dynamic).
+>
+> **Critical invariant — noise order must match breakdown (line 240)**  
+> `modality_map[sensor_name]` raises a `KeyError` at trace time if any sensor returned by `get_observation_breakdown` is absent from `params.noise_modality_order`. YAML declaration order determines `noise_modality_order`; `get_observation_breakdown` determines which sensors are active. These two sets must be kept in sync. This is a known desync hazard — see the Critical Invariant section below.
+>
+> **`jnp.where` for branchless mode dispatch (lines 256–260)**  
+> The nested `jnp.where` evaluates all three branches simultaneously and selects elementwise — no Python `if` at inference time. A Python `if mode == 2:` would be illegal here because `mode` is a JAX array, not a Python scalar. The `state_dependent` path is `sigma_base * (1.0 + alpha * norm_injury)`; the `constant` path is `sigma_base`; the `none` path is `0.0`. See [primer: branchless](00_jax_primer.md#branchless).
+>
+> **`jnp.maximum` for the injury denominator (line 250)**  
+> `state.injury_level / jnp.maximum(params.max_injury, 1e-6)` uses `jnp.maximum` (elementwise JAX op) instead of Python `max`. `params.max_injury` is a JAX scalar array of shape `[]`; Python `max` only works on Python numbers. The `1e-6` floor prevents division-by-zero if `max_injury` is ever set to 0.
+>
+> **Clip asymmetry — guard on `clip_min/clip_max` but not on `sigma_base` (lines 263–264)**  
+> The list comprehensions for `clip_min` and `clip_max` include `if name in modality_map`, while the `sigma_base_list` loop (lines 239–243) uses a bare `modality_map[sensor_name]`. Both iterate the same `breakdown` dict, so the guard is always `True` and lengths always match. The asymmetry is a latent hazard: a future refactor that changes the iteration set for one path but not the other could silently produce mismatched array lengths. See Desync 3 in the Critical Invariant section.
+>
+> **PRNG: one key, one draw, full-obs-length (lines 266–267)**  
+> `jax.random.normal(key, obs.shape)` draws independent N(0,1) samples for every element of the full observation vector. Independence across modalities comes from the statistical properties of the PRNG, not from separate per-modality key splits. Multiplying by `sigma_eff` scales each element independently to implement per-modality σ. See [primer: prng](00_jax_primer.md#prng).
+>
+> **`fold_in` vs `split` for the obs key (from `get_observation`, line 273)**  
+> `jax.random.fold_in(state.key, 999)` produces a new deterministic key without consuming a slot from the original key's sequence (unlike `jax.random.split`). The integer `999` namespaces this branch away from other uses of `state.key` in the same step. Because `state.key` is refreshed each step, the noise key changes every step — observations are not correlated across time. See [primer: prng](00_jax_primer.md#prng).
+
+---
+
+## Array Layout
+
+**Why a fixed 13**: the pad to `_NOISE_SLOTS` (`config_loader.py`) keeps array shapes static across configs with fewer modalities. Adding or removing modalities from the YAML changes `noise_modality_order` length (a static tuple field — triggers recompilation) but keeps the five noise arrays at shape `[13]`, avoiding GPU memory reallocations. Any unused slots are zero-padded and never accessed at runtime. **As of 2026-09-30 the default config uses all 13** (`hydration` took the last one, [[thirst_water_plan]]), so there is no spare: the next modality must widen `_NOISE_SLOTS` and the `EnvParams.noise_*` arrays together (the loader raises a named error on a 14th).
+
+**Index assignment**: indices 0–12 correspond to YAML keys in their declaration order in the config file. With the default config (`configs/environment/default.yaml`, order as resolved by the loader on 2026-09-30):
+
+| Array index | YAML key | Sensor name |
+|-------------|----------|-------------|
+| 0 | `injury` | Injury |
+| 1 | `nutrition` | Nutrition |
+| 2 | `satiation` | Satiation |
+| 3 | `body_temperature` | Body Temperature |
+| 4 | `interoceptive_nociception` | Interoceptive Nociception |
+| 5 | `extero_nociception` | Extero Nociception |
+| 6 | `thermoception` | Thermoception |
+| 7 | `olfaction` | Olfaction |
+| 8 | `collision` | Collision |
+| 9 | `proprioception` | Proprioception |
+| 10 | `visual` | Visual |
+| 11 | `location` | Location |
+| 12 | `hydration` | Hydration |
+
+---
+
+## Critical Invariant: Noise Order Must Match Observation Breakdown
+
+**This is a known desync hazard in this project.**
+
+`apply_perceptual_noise` iterates `get_observation_breakdown(params)` (the sensor assembly order, which is also the order of slices in the observation vector) and looks up each sensor's noise parameters by name via `modality_map`. The lookup is name-based, so the noise array index order (YAML declaration order) does **not** need to match the observation vector order. However, two desync conditions will crash or silently corrupt:
+
+### Desync 1 — Sensor enabled but noise entry missing (KeyError)
+
+If `get_observation_breakdown` lists a sensor (because it is enabled in `params`) that has **no entry** in `noise_modality_order` (because it was omitted from the YAML `modalities` block), `apply_perceptual_noise` raises a `KeyError` at `sensor.py:240` during JIT trace. The crash is immediate and loud.
+
+**Safe fix**: always include every enabled sensor under `perceptual_noise.modalities`, even if you want no noise — set `mode: none`.
+
+### Desync 2 — Noise entry present but sensor disabled (silent, safe)
+
+If YAML declares noise for a sensor that is disabled in `params`, that entry never appears in `get_observation_breakdown`, so its noise arrays are allocated but never used. No crash; the pad slots absorb the waste. This direction is safe.
+
+### Desync 3 — `clip_min/max` skip mismatch (latent asymmetry)
+
+The clip list comprehension at `sensor.py:263–264` uses `if name in modality_map`, whereas the sigma/alpha/mode loop at `sensor.py:239–243` uses a bare `modality_map[sensor_name]` with no guard. In practice both paths iterate the same `breakdown` dict, so the `if name in modality_map` guard is always true and lengths always match. But if a future refactor changes the iteration sets, the clip arrays could become shorter than `sigma_eff`, causing a `jnp.clip` shape mismatch or silent broadcasting — see Suspected Bugs.
+
+---
+
+## Full Per-Modality Noise Table
+
+For each modality: observation dimensions, enabling condition, noise formula, and the state variable that drives state-dependent noise.
+
+| Sensor name | Obs dims | Gating condition | Mode (default) | σ_base (default) | α (default) | clip (default) | State driver |
+|-------------|----------|-----------------|----------------|-----------------|-------------|----------------|-------------|
+| Injury | 1 | `params.injury_observable` | state_dependent | 0.0 | 1.5 | [0, 1] | `state.injury_level` |
+| Nutrition | 1 | `params.nutrition_observable` | state_dependent | 0.0 | 1.5 | [0, 1] | `state.injury_level` |
+| Satiation | 1 | always present | state_dependent | 0.1 | 1.5 | [0, 1] | `state.injury_level` |
+| Interoceptive Nociception | 1 | `params.interoceptive_nociception_enabled` | state_dependent | 0.1 | 1.5 | [0, 1] | `state.injury_level` |
+| Extero Nociception | 1 | `params.nociception_enabled` | state_dependent | 0.1 | 1.5 | [0, 100] | `state.injury_level` |
+| Olfaction | `res_property.shape[-1]` | `params.olfactory_enabled` | state_dependent | 0.2 | 1.5 | [0, 100] | `state.injury_level` |
+| Collision | `2·sr²+2·sr+1` | always present | constant | 0.01 | 0.0 | [0, 1] | — |
+| Proprioception | `params.action_dim` | `params.proprioception_enabled` | constant | 0.05 | 0.0 | [0, 1] | — |
+| Visual | `(2·vr²+2·vr+1)·8` | `params.visual_sensor_enabled` | state_dependent | 0.2 | 1.5 | [0, 100] | `state.injury_level` |
+| Location | 2 | `params.location_sensor_enabled` | constant | 0.01 | 0.0 | [-1, 1] | — |
+| Hydration | 1 | `params.water_enabled` | state_dependent | 0.1 | 1.5 | [0, 1] | `state.injury_level` |
+
+**Hydration (2026-09-30, [[thirst_water_plan]])** is the 13th modality, appended **last** in
+`default.yaml`'s `modalities` so no existing index moved (lookups are by name). It takes the
+last of the 13 padded slots: the next modality must widen `_NOISE_SLOTS` and `EnvParams.noise_*`
+together. The entry exists in every world's order (it is parsed from `default.yaml`) but is
+only looked up when the breakdown contains "Hydration", i.e. when water is on; the loader
+refuses `water.enabled: true` without it. The level-07 noise rung sets it to sigma 0.0
+explicitly (interoception stays clean there).
+
+`sr` = `params.sensor_range` (collision diamond radius); `vr` = `params.visual_sensor_range`.
+
+All state-dependent modalities share the same injury driver: `norm_injury = state.injury_level / max(params.max_injury, 1e-6)`. There is no separate per-modality state variable — injury is the single axis of perceptual degradation.
+
+---
+
+## Changing the modality count moves the noise on EVERY channel
+
+`apply_perceptual_noise` draws **one** normal vector for the whole observation —
+`jax.random.normal(key, obs.shape)` — so the draw is indexed by position across the entire
+vector. Adding or removing any modality changes `obs.shape`, which changes that single draw, so
+**every other channel gets a different noise realisation too**, not just the one that moved.
+
+Measured 2026-09-14 when `body_temperature` was added: from the same state and the same key, the
+other 32 channels differ by up to **0.40** between the flag-on and flag-off arms.
+
+This is inherent to the one-vector draw and is not caused by any particular modality. It matters
+for exactly one thing, and it is easy to miss:
+
+> **An A/B comparison that differs in modality count is NOT a paired comparison when noise is on.**
+> The two arms do not see "the same world plus one extra reading" — they see different noise
+> everywhere. Seeding both arms identically does not fix it.
+
+Every shipped thermal config has `perceptual_noise.enabled: false`, so nothing today is affected.
+If a paired noise-on comparison is ever needed, the fix is to draw per-modality from `fold_in`
+sub-keys instead of one vector — a change to `sensor.py` that would shift every existing noise-on
+fixture, so it needs a plan, not a patch.
+
+## Clarifications / FAQ
+
+**Q: What's the lookup failure mode — KeyError or silent skip?**
+A: **KeyError** at JIT trace time (`sensor.py:240`) when an enabled sensor is missing from `noise_modality_order`. Crash is immediate and loud. The reverse (noise configured for a disabled sensor) is safe — the entry is never accessed.
+
+**Q: Does noise apply when the sensor has no signal (e.g. no predator in sight)?**
+A: Yes. Noise is added unconditionally per dimension. An "all zeros" olfaction vector becomes "all small Gaussians" after noise. The clip bounds keep the value in range. Agents must learn to distinguish "weak signal" from "weak signal + noise".
+
+**Q: Is noise correlated across dimensions within one modality?**
+A: No. One PRNG key, one vector draw of full-obs-length (`sensor.py:266`), one independent N(0,1) sample per element. Two dimensions of the same modality (e.g. olfaction channels) have uncorrelated draws, though they share the same `σ_eff` value.
+
+**Q: Is noise correlated across modalities in one step?**
+A: No, same reason. Different modalities have different `σ_eff` but all underlying N(0,1) draws are independent.
+
+**Q: Is noise correlated across steps?**
+A: No. `obs_key = jax.random.fold_in(state.key, 999)` and `state.key` changes every step. Sequential observations see uncorrelated noise.
+
+**Q: What happens at `injury_norm > 1.0`?**
+A: Not possible in practice — injury is clipped to `[0, max_injury]` in `update_body`. If it somehow exceeded `max_injury`, `σ_eff` would grow beyond `σ_base × (1 + α)` without bound. No guard exists in `apply_perceptual_noise`.
+
+**Q: What does `clip_min/clip_max` do beyond the natural sensor range?**
+A: Defines the valid range of the *noisy* observation. For sensors with natural range `[0, 1]`, the clip typically matches. For olfaction and extero nociception with `clip_max: 100`, the wide bound accommodates large values when the agent is on top of an entity. The clip is applied only after noise — **the pre-noise obs is never clipped** by this step.
+
+**Q: Why are `clip_min/clip_max` defaults `-100/100` in `_parse_noise_config`?**
+A: Permissive bounds so that missing clip config does not mangle the signal. Set `clip_min`/`clip_max` explicitly per modality in YAML to enforce a narrower range.
+
+**Q: If I set `mode: state_dependent` and `injury_noise_scale: 0`, does it behave like `constant`?**
+A: Yes. `σ_eff = σ_base × (1 + 0 × norm_injury) = σ_base`. Functionally identical to `constant` mode.
+
+**Q: Can I set `sigma: 0` in `state_dependent` mode?**
+A: Yes — `σ_eff = 0 × (...) = 0`. No noise. Equivalent to `mode: none`. The default config uses this for `injury` and `nutrition` to silence their noise while keeping the `state_dependent` mode declaration ready to activate by raising `sigma`.
+
+**Q: How does noise affect the Visual sensor's binary channels?**
+A: Small Gaussians centred on 0 or 1, then clipped to `[0, 100]`. A channel that reads 1 might become 0.87; a channel that reads 0 might become 0.08. The agent sees a continuous smear, not binary values. Consider whether your policy network expects binary visual inputs.
+
+**Q: Is perceptual noise applied during training but not eval?**
+A: Controlled by the `apply_noise` argument to `get_observation` (`sensor.py:270`, static arg). Training wrappers pass `True`; eval rollouts typically pass `False` for a deterministic observation. When `apply_noise=False`, `apply_perceptual_noise` is never called regardless of `perceptual_noise_enabled`.
+
+**Q: What's the CPU/GPU cost of `apply_perceptual_noise`?**
+A: One vector draw from N(0,1) sized to the observation (`sensor.py:266`), one elementwise multiply-add, one clip. Negligible compared to the rest of the step. The `breakdown` loop is Python-side but runs only at trace time — it is fully unrolled by `@jax.jit` and does not execute at inference time.
+
+**Q: Why the 999 fold-in constant?**
+A: A readable salt constant to create an independent noise PRNG branch without consuming a key split. Any integer constant would work; 999 was chosen for readability. Documented in doc 09.
+
+**Q: Can I add an eleventh modality?**
+A: Yes, if it corresponds to a real sensor. Steps: (1) add the YAML key to `_YAML_KEY_TO_SENSOR_NAME` (`config_loader.py:944`); (2) add the sensor name to `get_observation_breakdown` (`sensor.py:328`); (3) add the YAML entry to all relevant configs; (4) if active modalities will exceed `_NOISE_SLOTS` (13, of which 12 are used as of 2026-09-14), widen that constant — the loader now raises a named error telling you both places to change, rather than silently producing a wider array — in `config_loader.py:968`.
+
+**Q: Do `noise_modality_order` and `get_observation_breakdown` have to declare modalities in the same order?**
+A: No. Lookup is by name (`modality_map[sensor_name]`). YAML order determines array *indices*; names determine runtime *lookup*. Order inconsistency is safe but confusing — convention is to keep YAML declaration order aligned with observation assembly order for readability.
+
+**Q: What if `perceptual_noise.modalities` is empty or absent?**
+A: `_parse_noise_config` defaults `modalities_cfg = {}` (`config_loader.py:958`), producing an empty `noise_modality_order` and five all-zero arrays of length 13. `apply_perceptual_noise` would then KeyError on the first sensor in `breakdown`. In practice, set `perceptual_noise.enabled: false` whenever `modalities` is empty — the pass-through guard at `sensor.py:225` prevents the crash.

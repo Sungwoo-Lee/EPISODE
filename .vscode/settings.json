@@ -1,0 +1,40 @@
+{
+  "files.watcherExclude": {
+    "**/.claude/worktrees/**": true,
+    "**/wandb/**": true,
+    "**/results/**": true,
+    "**/claude_data/**": true,
+    "**/graphify-out/**": true,
+    "**/legacy/**": true,
+    "**/antigravity_data/**": true,
+    "**/logs/**": true,
+    "**/tmp/**": true,
+    "**/.git/**": true
+  },
+  "search.exclude": {
+    "**/.claude/worktrees/**": true,
+    "**/wandb/**": true,
+    "**/results/**": true,
+    "**/claude_data/**": true,
+    "**/graphify-out/**": true,
+    "**/legacy/**": true,
+    "**/antigravity_data/**": true,
+    "**/logs/**": true,
+    "**/tmp/**": true
+  },
+  "foam.files.ignore": [
+    "**/.claude/worktrees/**",
+    "**/wandb/**",
+    "**/results/**",
+    "**/claude_data/**",
+    "**/graphify-out/**",
+    "**/legacy/**",
+    "**/antigravity_data/**",
+    "**/logs/**",
+    "**/tmp/**",
+    "**/.git/**",
+    "**/node_modules/**",
+    "**/docs/project/references/**/sources/**",
+    "**/docs/diary/**"
+  ]
+}

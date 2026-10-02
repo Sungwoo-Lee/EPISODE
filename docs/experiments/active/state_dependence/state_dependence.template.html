@@ -1,0 +1,354 @@
+<title>The World, Not the Brain</title>
+__HOUSE_STYLE__
+<style>
+  /* REQUIRED OVERRIDE (House Style Sheet, F11 amendment): the figures spend --series-1 blue on the
+     ordinary agent and --series-2 orange on the neuromodulated one, plus green and red on the two
+     panels of Figure 2. Chrome uses none of the four. */
+  :root { --accent: #3f5b7a; --accent-text: #35506e; --warn: #7a5340; }
+  :root { --f-head: 'Pretendard', system-ui, -apple-system, "Segoe UI", sans-serif;
+          --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  figure, figcaption { min-width: 0; }
+  table.datatable { min-width: 640px; }
+  table.datatable td:first-child, table.datatable th:first-child { min-width: 170px; }
+  /* The middle column holds short provenance phrases that the browser will happily
+     squeeze to 150px and wrap one word per line; each column gets its own floor. */
+  /* The floors must SUM to less than the text column (688px minus cell padding), or the table
+     scrolls on a desktop with its cue showing and the verdict column cut mid-word -- which is the
+     defect the floors were added to prevent, moved to a wider viewport. */
+  table.wide { min-width: 585px; }
+  table.wide td:nth-child(1), table.wide th:nth-child(1) { min-width: 190px; }
+  table.wide td:nth-child(2), table.wide th:nth-child(2) { min-width: 180px; }
+  table.wide td:nth-child(3), table.wide th:nth-child(3) { min-width: 215px; }
+</style>
+
+<div class="wrap">
+
+<section class="col">
+  <h1>The World, Not the Brain</h1>
+  <p class="lede">We spent months asking whether a neuromodulator makes an agent's behaviour depend
+  more on the state of its own body. It doesn't, measurably. What does — by a factor of five — is
+  changing the world it lives in.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">01</span> What this page is about</h2>
+
+<p>An agent lives in a small grid world. It gets hungry, it gets wounded, predators hunt it, and
+bushes let it hide. The idea under test is a <strong>neuromodulator</strong>: a small extra network
+that reads the agent's internal state — how hurt it is, how hungry — and uses that to rescale the
+signals flowing through the rest of its brain. It is loosely modelled on what chemicals like
+noradrenaline do in a real nervous system.</p>
+
+<p>The prediction that follows is specific, and it is <em>not</em> "the modulated agent behaves
+differently". It is that the modulated agent's behaviour should <strong>depend more on how its body
+feels</strong>. So the measure is a difference of differences:</p>
+
+<div class="callout">
+  <p class="eyebrow">The measure, in one line</p>
+  <p><code>state span = % of steps hiding when badly wounded &minus; % when unhurt</code>
+  &mdash; measured with no threat anywhere in the world</p>
+  <p>Big means behaviour tracks the body. Zero means the body makes no difference to what the agent
+  does.</p>
+</div>
+
+<p>Three findings, and the first one is a correction to our own earlier reading.</p>
+
+<ol>
+  <li><strong>The obvious way to measure this gives the wrong answer</strong>, and gives it
+  confidently — a flat number across six very different agents that turns out to be a property of
+  the environment rather than of any of them.</li>
+  <li>Measured properly, <strong>state-dependence rises five-fold across three versions of the
+  world</strong> — and the neuromodulator moves it by less than the difference between two runs of
+  the same agent with different random seeds.</li>
+  <li>The modulator is not idle. But <strong>about nine tenths of what it does is a fixed
+  rescaling</strong> that never changes, and only the remaining tenth tracks the body at all.</li>
+</ol>
+</section>
+
+<section class="col">
+<h2><span class="num">02</span> The trap: a number that is flat for the wrong reason</h2>
+
+<p>An agent's injury level is not handed to it — it is <em>earned</em>, by being bitten. And being
+bitten means a predator was on top of it, which is itself the thing that drove it into a bush. So if
+you measure "how much does this agent hide when wounded" over ordinary episodes, a large part of
+what you measure is not the agent's policy at all. It is the shape of a predator encounter, which is
+the same in every world and for every agent.</p>
+
+<p>The environment provides the way out. In some episodes the agent is handed a wound
+<strong>at the start</strong>, drawn at random, before it has done anything. Behaviour that tracks
+<em>that</em> number cannot have caused it.</p>
+
+<figure>
+  <img data-fig="a02_two_panels" alt="Two bar-chart panels sharing a vertical scale, three pairs of bars each. Left panel, labelled confounded: the blind and sighted pairs are both about 21 and indistinguishable from one another, while the cover-heals pair rises to about 45. Right panel, labelled causal: the bars rise steadily from about 4.5 and 2.8 in the blind world, to about 8 in the sighted world, to about 20 in the cover-heals world.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  <figcaption>
+    <span><b>Figure 1 — the same six agents, measured two ways, giving opposite answers.</b>
+    Look at the first two worlds. On the left they are identical — 21.3 and 21.6 — and our earlier
+    analysis read that as "switching vision on changes nothing". On the right the same two worlds are
+    4.5 and 8.2: vision <b>doubles</b> how much behaviour tracks the body. The third world is much
+    larger in both panels, so the confound does not hide everything; what it hides is the vision
+    effect, by burying it under a predator encounter that is identical in every run.</span>
+    <span><b>Axes.</b> Horizontal, both panels: the world the agent was trained in — blind, sighted,
+    or cover-heals. Vertical, both panels (shared scale): the state span in percentage points, 0 to
+    50 — the share of steps spent hiding when badly wounded minus the share when unhurt, with no
+    threat present. Zero would mean the body makes no difference to behaviour. The two panels share
+    the scale, so a bar's height means the same thing in both.</span>
+    __DATA:a02_two_panels__
+    <span><b>How it is computed.</b> Each agent is replayed over its saved trajectory store of one
+    million episodes. Every step is labelled with the agent's injury at that moment, sorted into four
+    equal quarters from unhurt to badly wounded, and we compute the share of steps in each quarter
+    where the agent was standing on a hiding bush with no animal nearby. The state span is the
+    highest quarter minus the lowest. The left panel uses every step. The right panel keeps only the
+    first 25 steps of episodes where the environment <em>assigned</em> a random starting injury, so
+    the wound precedes anything the agent did — that restriction costs about four fifths of the data,
+    which is the price of breaking the loop. <b>What this figure does not show:</b> any threat
+    condition — both panels are the no-animal baseline; and it shows one level of the curriculum for
+    the two later worlds, not all of them.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">03</span> What actually moves it: the world</h2>
+
+<p>Read properly, the same measure separates three versions of the world very clearly. Each rung
+is a real change that was made for its own reasons, months apart.</p>
+
+<figure>
+  <img data-fig="a01_ladder" alt="Bar chart with three pairs of bars and error bars. The blind pair sits at about 4.5 and 2.8, the sighted pair at about 8.2 both, and the cover-heals pair at about 20.4 and 20.7. Within each pair the blue and orange bars are nearly the same height, while the three pairs differ greatly from one another.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  <figcaption>
+    <span><b>Figure 2 — each change to the world clears the noise floor easily; the neuromodulator
+    does not.</b> Giving the agent vision roughly doubles how much its behaviour tracks its body.
+    Making cover the only place a wound heals quickly doubles it again and more. Within each pair,
+    the ordinary and the neuromodulated agent are all but indistinguishable. The error bars are not
+    the usual within-run intervals — they are how far apart two runs of the <em>same</em> agent land
+    when only the random seed differs, which is the only honest scale for a claim about one run
+    against another.</span>
+    <span><b>Axes.</b> Horizontal: the world the agent was trained in — blind, sighted, or
+    cover-heals. Vertical: the state span in percentage points, 0 to 28 — the share of steps hiding
+    when badly wounded minus the share when unhurt, no threat present. Error bars are ±1 run-to-run
+    standard deviation measured from five seeds of one unmodulated agent.</span>
+    __DATA:a01_ladder__
+    <span><b>How it is computed.</b> Same quantity as Figure 1's right-hand panel, on the causal
+    restriction. The three worlds are, in order: an agent with no visual sense at all; the same agent
+    with a short-range sense that reports only <em>that</em> a neighbouring cell is occupied, never
+    what occupies it; and a world where resting in cover heals a wound twenty-five times faster than
+    resting in the open, so hiding acquires a reason beyond safety. The error bar deserves a word,
+    because it is the part most analyses get wrong. The tool's own confidence intervals are about
+    ±0.06 points, which would make every difference on this page "significant", including ones that
+    reverse sign between worlds. Those intervals describe sampling <em>within</em> one run. The
+    quantity that matters is how much two runs of the same configuration disagree, so we measured it
+    directly: five seeds of one unmodulated agent in a fixed world, giving a spread of 1.25 points,
+    which is what the bars show. <b>What this figure does not show:</b> the two intermediate injury
+    quarters, which are computed but not plotted; and any estimate of seed spread in these particular
+    worlds — the five-seed measurement comes from a fourth, simpler world.</span>
+  </figcaption>
+</figure>
+
+<div class="callout">
+  <p class="eyebrow">The comparison that matters</p>
+  <p><b>World changes:</b> +3.7 points (vision) and +12.2 points (cover heals) — <b>2.9 and 9.8
+  times</b> the run-to-run noise.<br>
+  <b>Neuromodulator:</b> &minus;1.7, &minus;0.1, +0.2 points across the three worlds —
+  <b>1.4, 0.1 and 0.2 times</b> the same noise, in inconsistent directions.</p>
+</div>
+</section>
+
+<section class="col">
+<h2><span class="num">04</span> Is the modulator even running?</h2>
+
+<p>A null result always has a boring explanation waiting: perhaps the extra network did nothing at
+all, in which case the experiment says nothing about the idea. That can be checked directly, by
+replaying trained agents and recording every number the modulator emits.</p>
+
+<p>It is not idle. But what it does divides in two, and only one half can possibly produce
+state-dependent behaviour. Some of its output is a <strong>constant per channel</strong> — this
+feature always amplified, that one always damped, whatever is happening. That is a learned weight
+wearing a different hat. The rest varies <strong>moment to moment</strong> as the body's state
+changes, and that part is the entire mechanism the design rests on.</p>
+
+<figure>
+  <img data-fig="a03_modulator_mechanism" alt="Horizontal bar chart with five rows, one per site in the network, each with a bar and a scatter of individual dots. The memory core sits near five percent, the two encoder rows near eight percent, and the actor and critic rows near twenty percent. A vertical line marks fifty percent, far to the right of every bar.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  <figcaption>
+    <span><b>Figure 3 — about nine tenths of the modulator's output never changes.</b>
+    At the memory core only <b>5%</b> of its variation tracks the body; at the two encoder sites
+    about <b>8%</b>. It is highest where the decision is actually made — the actor and the critic, at
+    about <b>20%</b> — which is a sensible place for it to end up, and still leaves four fifths of
+    the signal constant. So the behavioural null is not "the modulator was switched off". It is
+    <b>the modulator largely learned to be a fixed rescaling layer</b>, and the tenth of it that does
+    track the body does not move behaviour by a measurable amount.</span>
+    <span><b>Axes.</b> Horizontal: the share of the modulator's gain variation that changes over time
+    rather than being fixed per channel, as a percentage, 0 to 60. Vertical: where in the network the
+    modulator acts — memory core, the two encoder stages, the actor, the critic. Bars are the median
+    across trained arms; each dot is one arm.</span>
+    __DATA:a03_modulator_mechanism__
+    <span><b>How it is computed.</b> Every modulated agent is replayed on one fixed set of 128
+    episodes, so all of them see identical worlds and the comparison between them is not confounded
+    by luck. At each site the modulator emits one gain per channel per timestep. The variation in those gains
+    splits in two: variation <em>across channels</em> — how much channels differ from one another on
+    average — and variation <em>across time</em>, how much a single channel's own gain moves as the
+    episode unfolds. The number plotted is the second as a share of the total, so a pure constant per
+    channel scores 0% and a modulator responding only to the body scores 100%. Computed per arm and
+    per site, pooled across the two grids, which agree. <b>What this
+    figure does not show:</b> <em>what</em> the time-varying part tracks — it establishes that the
+    gains move, not that they move with injury specifically; and it is measured on the blind-world
+    grids, where the modulator's behavioural effect was also smallest.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">05</span> The result we had not reported at all</h2>
+
+<p>The tool that computes all of this names a different measure as its headline, and our earlier
+analysis omitted it. Instead of asking <em>where the agent is</em>, it asks <em>what the agent
+decides</em>: among the moments when it stands in the open and chooses to move, how often does the
+move take it into cover? That matters because a wounded agent mostly stops moving in order to heal,
+and whether stopping counts as "hiding" depends only on whether it happened to halt on a bush. An
+agent that freezes drops out of this measure instead of inflating it.</p>
+
+<figure>
+  <img data-fig="a04_entry_rate" alt="Bar chart with three pairs of bars and error bars, all pointing downward below a zero line. Values range from about minus 0.8 to minus 2.6 percentage points. A note at the top left reads that the predicted direction was up.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  <figcaption>
+    <span><b>Figure 4 — wounded agents take cover <em>less</em> readily when a predator is near, in
+    every world and for both agents.</b> The predicted direction was up: being hurt ought to make an
+    agent more willing to duck into cover under threat. Every bar is below zero, and the effect is
+    several times the run-to-run noise. Whatever these agents learned, it is not "when hurt, take
+    cover sooner" — if anything it is the reverse, which is a finding in its own right and one we
+    should have reported when the runs were first analysed.</span>
+    <span><b>Axes.</b> Horizontal: the world the agent was trained in — blind, sighted, or
+    cover-heals. Vertical: the change in bush-entry rate in percentage points, −3.6 to +1.5 — the
+    entry rate in the most wounded quarter minus the least wounded, with a predator within two cells.
+    Zero means a wound makes no difference to the decision. Error bars are ±1 run-to-run standard
+    deviation from five seeds of one unmodulated agent.</span>
+    __DATA:a04_entry_rate__
+    <span><b>How it is computed.</b> An entry event is a step where the agent was not in a bush,
+    chose a movement action rather than resting or eating, and was in a bush on the next step. The
+    entry rate is those events as a share of all the moments it could have happened — in the open,
+    moving. Rest and eat are excluded from the denominator, which is the whole point: a frozen agent
+    contributes nothing either way. We restrict to the first 25 steps of randomised-injury episodes
+    with a predator within two cells, split those into four quarters by starting injury, and take the
+    highest quarter's rate minus the lowest. The row alignment is the part that is easy to get wrong
+    and the tool documents it: the deciding step is the one before, while the action taken and the
+    outcome are both read off the step after. <b>What this figure does not show:</b> episodes with no predator nearby, where the
+    same measure is computed but asks a different question; and it cannot say whether the agent is
+    choosing something better instead — only that it is not choosing cover.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">06</span> The one place it looked like something, and why it isn&rsquo;t</h2>
+
+<p>There is a second measure, and it is closer to the actual prediction. Rather than asking how much
+the agent hides when wounded, it asks how much a nearby predator&rsquo;s effect on its hiding
+<em>grows</em> as the wound worsens — the agent&rsquo;s response to the outside world changing with
+the state of its body. That interaction is the thing a neuromodulator is supposed to produce.</p>
+
+<figure>
+  <img data-fig="a05_replication" alt="A dot plot with nine rows grouped into three blocks. The two no-vision rows sit to the right of zero at about plus 0.95 and plus 0.06. All four vision-on rows sit to the left of zero, between minus 0.38 and minus 1.16. The three cover-heals rows are mixed, two slightly left of zero and one far to the right at plus 1.50. Two shaded vertical bands of different widths straddle zero.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  <figcaption>
+    <span><b>Figure 5 — four from four, and it does not replicate.</b>
+    In the middle block every one of four levels comes out negative. That is the block our earlier
+    analysis looked at, and on its own it is exactly the shape of a real effect. Then the blocks
+    either side of it point the other way — positive with no vision, and the largest value on the
+    whole figure positive once cover heals. <b>A mechanism that genuinely coupled behaviour to the
+    body would not change sign when the scenery changes.</b> The two bands are two estimates of the
+    same noise floor, from the two return estimators; which one you believe decides whether almost
+    every point here is "significant" or almost none is, which is the argument for measuring a floor
+    rather than accepting the one a tool prints.</span>
+    <span><b>Axes.</b> Horizontal: the neuromodulated agent&rsquo;s value minus its ordinary
+    twin&rsquo;s, in percentage points per injury quarter, −1.8 to +2.1; zero means the modulator
+    changed nothing. Vertical: the nine world-and-level comparisons, grouped into the three worlds.
+    The shaded bands are ±1 run-to-run standard deviation under each of the two return estimators.</span>
+    __DATA:a05_replication__
+    <span><b>How it is computed.</b> For each agent we take the causal episodes, split them into four
+    quarters by assigned starting injury, and within each quarter compute the difference in hiding
+    between steps with a predator within two cells and steps with none — the predator&rsquo;s effect.
+    The trend is how that effect changes per quarter, fitted across the four. One number per run; the
+    figure plots the modulated run&rsquo;s minus its ordinary twin&rsquo;s. Two curriculum levels
+    never assign a random starting injury and so cannot appear. The noise bands come from five seeds
+    of one unmodulated agent in a fixed world, computed separately under each return estimator, which
+    disagree by a factor of five — that disagreement is itself a finding, and it is why only one band
+    would have been misleading. <b>What this figure does not show:</b> the absolute size of the
+    predator effect, only how it changes with injury; and it cannot separate "the modulator does
+    nothing" from "the modulator does something too small for a single seed to detect".</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">07</span> What this replaces</h2>
+
+<p>These claims were made in this project and are wrong. They are left here rather than deleted.</p>
+
+<p class="cue" hidden>Scroll the table sideways to see every column.</p>
+<div class="scroll">
+<table class="wide">
+  <thead><tr><th>Claim, as made</th><th>Where it came from</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>"State-dependence is flat at about 21 points across all six agents — neither vision nor the modulator changes it."</td>
+        <td>the confounded panel</td>
+        <td><b>Superseded.</b> On the causal panel it is 2.8–4.5 blind, 8.1–8.2 sighted, 20.4–20.7 with cover healing. It rises five-fold.</td></tr>
+    <tr><td>"Vision does not rescue the modulator, so the 'nothing to gate' excuse fails."</td>
+        <td>one pair of runs, one level</td>
+        <td><b>Withdrawn as worded.</b> The vision added reports only that a cell is occupied, never what occupies it, so "nothing identity-bearing to gate" survives as an objection.</td></tr>
+    <tr><td>"Blind to sighted is nearly a single-variable step."</td>
+        <td>a config diff that collapsed lists</td>
+        <td><b>Wrong.</b> The hiding bush also stopped being enterable by predators between the two experiments. Two variables, both on the causal path.</td></tr>
+    <tr><td>Every difference quoted with a ±0.06 confidence interval.</td>
+        <td>the tool's within-run intervals</td>
+        <td><b>Wrong scale.</b> Two runs differing only by seed disagree by 1.25 points on this measure — twenty times that interval.</td></tr>
+  </tbody>
+</table>
+</div>
+</section>
+
+<section class="col">
+<h2><span class="num">08</span> What we would still not claim</h2>
+
+<div class="callout warn">
+  <p class="eyebrow">The binding limit</p>
+  <p><strong>One training seed per cell.</strong> Every bar on this page is one run. The error bars
+  are borrowed from a five-seed measurement in a <em>different, simpler</em> world, so they are an
+  estimate of the right quantity rather than a measurement of it here. A modulator effect smaller
+  than about a point could not be detected by this design at all.</p>
+</div>
+
+<ul>
+  <li><b>Everything is read at the final saved checkpoint.</b> A companion analysis this week showed
+  that a behaviour measure read off the last checkpoint can differ from the average of the last ten
+  by enough to reverse a conclusion. A million episodes removes sampling noise, not that drift.</li>
+  <li><b>The blind-to-sighted step changed two things</b>, not one — vision, and whether a predator
+  could walk into the hiding bush. No difference across that step can be attributed to either alone.</li>
+  <li><b>The causal restriction is not perfectly clean.</b> Episodes in the most-wounded quarter
+  survive to be counted slightly less often than the least-wounded, and by different margins in
+  different worlds, so survivors are mildly selected toward hiders.</li>
+  <li><b>"The modulator does nothing" is not established</b> — only that its effect on this measure,
+  in these worlds, is smaller than the difference between two random seeds.</li>
+</ul>
+</section>
+
+<section class="col">
+<h2><span class="num">09</span> How to reproduce this</h2>
+<p>The measure is <code>scripts/analysis/context_dependence.py</code>⁠, run over the trajectory
+stores under <code>results/trajectories_*</code>⁠; its outputs are the JSON files in
+<code>results/analysis/basicq2_w1/</code>⁠, one per run, each carrying both panels. The five-seed
+noise estimate is the <code>context_seedscale</code> directory, computed from five seeds of one
+unmodulated agent. The modulator's gain decomposition comes from
+<code>scripts/analysis/nmn/run_mod_distribution.py</code>⁠. Each figure is one script under
+<code>scripts/analysis/studies/state_dependence/</code> and emits its own data-accounting file
+beside its image.</p>
+<p>Departures from the House Style Sheet: the chrome accent and warning hues are moved off the
+figure palette, which the sheet requires when figures spend colours on data categories; headings are
+set in Pretendard and code in the reader's system monospace, because the sheet links its IBM Plex
+families from a font host a published page cannot reach; and wide tables sit in horizontal scroll
+boxes with an overflow cue, which is the sheet's own mechanism.</p>
+</section>
+
+</div>
+__HOUSE_SCRIPT__

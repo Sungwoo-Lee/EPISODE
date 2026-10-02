@@ -1,0 +1,3 @@
+worlds on the left (others at today's density)|40|72|55.6|the 'others at today's count' worlds share the same food positions, so their search times are identical
+worlds on the right|72|72|100.0|18 pass balance criteria 1, 2, 4, 5 at hazard x1; memory warmth trip
+real resets per world for the food search time|1,000|1,000|100.0|search capped at 2,000 steps in 8 worlds (at most 0.9 % of resets)

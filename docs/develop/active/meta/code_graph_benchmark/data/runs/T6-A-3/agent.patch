@@ -1,0 +1,459 @@
+diff --git a/src/environment/dashboard/labels.py b/src/environment/dashboard/labels.py
+index 3f497ba..a080b35 100644
+--- a/src/environment/dashboard/labels.py
++++ b/src/environment/dashboard/labels.py
+@@ -310,11 +310,24 @@ def panel_map_slots(sense: str, display: ChannelDisplay) -> int:
+     are slots: no limit is imposed (user decision). It WARNS, naming both
+     numbers, so an accidental edit -- deleting the Terrain group takes vision
+     from 6 maps to 8 -- is discoverable instead of silent.
++
++    A legacy recording that draws more maps than the panel is sized for warns
++    too, and its message names the remedy: re-record it, which regenerates it
++    with channel names and the terrain merge. Nothing refuses it any more; the
++    painter simply draws smaller squares.
+     """
+     _check_sense(sense)
+     drawn = len(map_plan(sense, display))
+     slots = PANEL_MAP_SLOTS[sense]
+     if display.legacy:
++        if drawn > slots:
++            logger.warning(
++                "%s draws %d maps but its panel is sized for %d: this recording "
++                "was made before channel names existed, so it carries no terrain "
++                "merge and draws one map per channel, so its squares are drawn "
++                "smaller. Re-record it at current code to regenerate it with "
++                "channel names and the terrain merge.",
++                sense, drawn, slots)
+         return max(slots, drawn)
+     if drawn > slots:
+         logger.warning(
+diff --git a/src/environment/dashboard/painters.py b/src/environment/dashboard/painters.py
+index dad8969..1010f61 100644
+--- a/src/environment/dashboard/painters.py
++++ b/src/environment/dashboard/painters.py
+@@ -666,6 +666,9 @@ def build_channel_maps(dash, ax, x0, w, h, sense, title, display, colour_stops,
+     slot = (w - MAP_GAP * (n - 1)) / n
+     box = min(slot, h - 58 - 40)
+     cs = box / k
++    # The gap inside a square shrinks with the square, so a wide range's tiny
++    # squares keep a positive size instead of a negative one.
++    inset = min(1.5, cs / 4)
+     top = 58
+     cells = []
+     for i, (name, qualifier, kind, ch) in enumerate(maps):
+@@ -674,10 +677,11 @@ def build_channel_maps(dash, ax, x0, w, h, sense, title, display, colour_stops,
+         for dr, dc in offsets:
+             cx = bx + (dc + sensor_range) * cs
+             cy = top + (dr + sensor_range) * cs
+-            mine.append(rrect(ax, cx + 1.5, cy + 1.5, cs - 3, cs - 3, 3, P.TRACK, z=2))
++            mine.append(rrect(ax, cx + inset, cy + inset, cs - 2 * inset,
++                              cs - 2 * inset, min(3, cs / 4), P.TRACK, z=2))
+         # the agent's own square, outlined in the agent's colour
+-        rrect(ax, bx + sensor_range * cs + 0.5, top + sensor_range * cs + 0.5,
+-              cs - 1, cs - 1, 3, "none", P.IRIS, 2, z=3)
++        rrect(ax, bx + sensor_range * cs + inset / 3, top + sensor_range * cs + inset / 3,
++              cs - 2 * inset / 3, cs - 2 * inset / 3, min(3, cs / 4), "none", P.IRIS, 2, z=3)
+         label_y = top + box + 20
+         # A label too wide for its own map WRAPS at its first space, exactly as
+         # the approved sketch does it ("Hiding predator" over two lines). It is a
+diff --git a/src/environment/dashboard/panels.py b/src/environment/dashboard/panels.py
+index 4795e3a..1c32fd7 100644
+--- a/src/environment/dashboard/panels.py
++++ b/src/environment/dashboard/panels.py
+@@ -48,7 +48,6 @@ from .layout import (
+     LEFT_W,
+     PAD,
+     CardDemand,
+-    LayoutOverflowError,
+     Size,
+     pack,
+ )
+@@ -133,8 +132,15 @@ HEADER_H: int = 32
+ BAND_CHROME_TOP: int = CARD_TITLE_H
+ BAND_CHROME_BOTTOM: int = PAD
+ 
+-#: Smallest legible cell in a per-channel diamond map (plan section D7.2).
++#: The NOMINAL square of a per-channel diamond map (plan section D7.2): what a
++#: panel's declared size is computed from. Not a floor -- the painter draws
++#: smaller squares when the range needs them.
+ MAP_CELL_MIN_PX: int = 10
++#: How many squares across a map the declared panel size assumes (a range-2
++#: diamond), whatever the real sensor range. Chosen so the widest declaration
++#: (a legacy eight-map panel: 474 px) fits the 520 px the band grants each of
++#: its two senses.
++MAP_NOMINAL_CELLS: int = 5
+ #: The gap between two adjacent channel maps. THE PAINTER READS THIS ONE --
+ #: `painters.py` imports it as its `MAP_GAP` rather than declaring its own, so
+ #: the width a panel ASKS FOR and the width it is DRAWN AT cannot disagree.
+@@ -403,68 +409,51 @@ def _vital_row_size(ctx: LayoutContext) -> Size:
+ 
+ def _olf_min_size(ctx: LayoutContext) -> Size:
+     if ctx.olfactory_range >= 1:
+-        span = _span("Olfaction", ctx.display_for("Olfaction"), ctx.olfactory_range)
+-        return Size(span, CARD_TITLE_H + _map_h(ctx.olfactory_range) + PAD)
++        span = _span("Olfaction", ctx.display_for("Olfaction"))
++        return Size(span, CARD_TITLE_H + _map_h() + PAD)
+     return Size(0, OLF_ROWS_H)
+ 
+ 
+ def _visual_min_size(ctx: LayoutContext) -> Size:
+     if ctx.visual_range >= 1:
+-        span = _span("Visual", ctx.display_for("Visual"), ctx.visual_range)
+-        return Size(span, CARD_TITLE_H + _map_h(ctx.visual_range) + PAD)
++        span = _span("Visual", ctx.display_for("Visual"))
++        return Size(span, CARD_TITLE_H + _map_h() + PAD)
+     return Size(0, VISUAL_ROWS_H)
+ 
+ 
+-def _span(sense: str, display: ChannelDisplay, r: int) -> int:
+-    """The PANEL width a sense drawn as diamond maps needs, in pixels.
+-
+-    WHAT THIS HAS TO AGREE WITH, because it did not until 2026-09-18. This
+-    number is a promise made to the packer, and the packer keeps it absolutely:
+-    ask for more than the painter needs and it REFUSES a frame that would have
+-    drawn (vision at range 3 declared 616 px against a real 482 px, so the whole
+-    video failed to render); ask for less and it hands the painter a panel the
+-    painter then refuses (olfaction at range 1 declared 182 px against a real
+-    206 px, which was 8.4 px map squares under a 10 px floor). Three counts have
+-    to match `painters.build_channel_maps`:
+-
+-      * HOW MANY SLOTS -- not how many channels, and since 2026-09-21 not how
+-        many maps either. The panel is a FIXED size: `labels.panel_map_slots`
+-        answers this, and the painter divides the width it is granted by the
+-        same number, so a run with fewer channels draws normal-sized maps and
+-        leaves the rest of the panel blank instead of stretching one map across
+-        it. Asked of the same function the painter divides by, never recomputed.
+-      * THE GAP -- `MAP_GAP_PX`, which the painter imports from here.
+-      * THE CARD'S PADDING -- `episode.py` hands the painter `panel.w - 2 * PAD`
+-        (episode.py:465), so what the PANEL needs is the painter's requirement
+-        plus that padding. This term was simply missing.
+-
+-    The height is a separate declaration and is NOT fixed here; see the note on
+-    `_map_h`.
++def _span(sense: str, display: ChannelDisplay) -> int:
++    """The PANEL width a sense drawn as diamond maps declares, in pixels.
++
++    INDEPENDENT OF THE SENSOR RANGE, on purpose (user decision, 2026-09-24). The
++    width used to grow with the range (slots * (2r+1) * a 10 px floor), so a wide
++    enough range asked the packer for more than the band grants a sense and the
++    whole video failed to render. The declaration is now a fixed nominal size --
++    `MAP_NOMINAL_CELLS` squares of `MAP_CELL_MIN_PX` per slot -- that always fits
++    inside the band's grant, and the painter divides whatever width it is handed
++    among the squares the range needs, drawing them smaller rather than refusing.
++
++    What it still depends on is HOW MANY SLOTS the panel holds, asked of
++    `labels.panel_map_slots` -- the function the painter divides by, never
++    recomputed -- so a legacy eight-map panel is wider than a configured
++    three-map one. The other terms are `MAP_GAP_PX`, which the painter imports
++    from here, and the card's padding: `episode.py` hands the painter
++    `panel.w - 2 * PAD`, so the panel needs the maps' width plus that.
+     """
+     n_maps = panel_map_slots(sense, display)
+-    cells = 2 * r + 1
+-    return (n_maps * cells * MAP_CELL_MIN_PX
++    return (n_maps * MAP_NOMINAL_CELLS * MAP_CELL_MIN_PX
+             + MAP_GAP_PX * (n_maps - 1)
+             + 2 * PAD)
+ 
+ 
+-def _map_h(r: int) -> int:
+-    """The HEIGHT a sense's maps need, by the same floor as their width.
+-
+-    KNOWN TO UNDER-STATE THE PAINTER'S REAL DEMAND, and left alone deliberately
+-    on 2026-09-18 rather than quietly corrected alongside the width. The painter
+-    fits its maps into ``h - 58 - 40`` -- 58 px of title strip above and 40 px of
+-    channel captions below -- so its real need at range `r` is
+-    ``98 + (2r+1) * 10``, which is 36 px more than this declares at every range.
+-    It has never bitten, because the band's own floor (``layout.MIN_BAND_H`` =
+-    200 px) exceeds the painter's height demand everywhere the two senses are
+-    actually drawn (168 px at range 3), and the band gets 236-256 px in practice.
+-    It would first bite at range 5. Recorded here so the next reader finds a
+-    measured note rather than rediscovers it; fixing it is a separate change with
+-    its own render proof, because the band's height is shared between the two
+-    senses and moving it reflows the frame.
++def _map_h() -> int:
++    """The HEIGHT a sense's maps declare: the nominal square, whatever the range.
++
++    Fixed for the same reason as the width, and it matters here for the same
++    thing: a range-dependent height at range 12 (25 squares) would exceed the
++    band's height and refuse. The painter fits its maps into whatever height it is
++    granted (``h - 58 - 40``, the title strip above and the captions below).
+     """
+-    return (2 * r + 1) * MAP_CELL_MIN_PX
++    return MAP_NOMINAL_CELLS * MAP_CELL_MIN_PX
+ 
+ 
+ def _state_exists(ctx: LayoutContext) -> bool:
+@@ -653,50 +642,16 @@ def check_completeness(ctx: LayoutContext) -> None:
+ 
+ 
+ def pack_or_explain(ctx: LayoutContext):
+-    """Pack the frame, turning the one EXPECTED refusal into a message that teaches.
+-
+-    A recording made before channel names existed carries no merge group, so it
+-    draws one map per channel -- eight for a standard vision vector, where a
+-    configured recording draws six. At sensor range 3 those eight maps need more
+-    width than the band can give any one sense, and the packer correctly refuses.
+-
+-    That refusal is right, but a bare `LayoutOverflowError` about pixels tells
+-    the reader nothing about what to DO. Here it is re-raised naming the reason
+-    (the recording predates channel names) and the remedy (re-record it, which
+-    regenerates it with names and the terrain merge and brings it back inside the
+-    panel).
+-
+-    THE PACKER'S OWN NUMBERS ARE QUOTED RATHER THAN RE-DERIVED. Working out what
+-    the band would have granted requires repeating the packer's arithmetic
+-    outside the packer -- a second copy of exactly the calculation whose
+-    disagreement with the painter broke every video in `4b6f7196`. The original
+-    exception already carries both the need and the grant, so it is attached
+-    verbatim instead.
++    """Pack the frame.
++
++    This used to turn one EXPECTED refusal -- a legacy recording's eight maps
++    outgrowing the band at a wide sensor range -- into advice to re-record. A
++    sense panel's declared size no longer depends on the sensor range and always
++    fits the band, so that refusal cannot happen; the advice now lives in the
++    warning `labels.panel_map_slots` logs. The name stays because `episode.py`
++    calls it.
+     """
+-    try:
+-        return pack(ctx)
+-    except LayoutOverflowError as exc:
+-        stale = [s for s in ("Olfaction", "Visual")
+-                 if ctx.observed(s) and ctx.display_for(s).legacy]
+-        if not stale:
+-            raise
+-        drawn = {s: len(map_plan_len(ctx, s)) for s in stale}
+-        raise LayoutOverflowError(
+-            f"this recording was made BEFORE channel names existed, so it carries "
+-            f"no terrain merge and draws one map per channel "
+-            f"({', '.join(f'{s}: {n} maps' for s, n in drawn.items())}). At this "
+-            f"sensor range that does not fit in the sensor band. Re-record it at "
+-            f"current code: that regenerates it WITH channel names and the terrain "
+-            f"merge, which brings the maps back inside the panel. "
+-            f"The packer's own measurement: {exc}"
+-        ) from exc
+-
+-
+-def map_plan_len(ctx: LayoutContext, sense: str):
+-    """The maps ``sense`` draws in ``ctx`` -- a thin accessor for diagnostics."""
+-    from .labels import map_plan
+-
+-    return map_plan(sense, ctx.display_for(sense))
++    return pack(ctx)
+ 
+ 
+ def present_cards(
+diff --git a/tests/env/test_dashboard_band_span.py b/tests/env/test_dashboard_band_span.py
+index da17e98..9204f71 100644
+--- a/tests/env/test_dashboard_band_span.py
++++ b/tests/env/test_dashboard_band_span.py
+@@ -72,7 +72,7 @@ from src.environment.dashboard.labels import (  # noqa: E402
+     map_plan,
+     panel_map_slots,
+ )
+-from src.environment.dashboard.layout import LayoutOverflowError, pack  # noqa: E402
++from src.environment.dashboard.layout import pack  # noqa: E402
+ 
+ #: `(panel key, conventional channel count, colour stops)` per sense, exactly as
+ #: `episode.py` passes them to the painter.
+@@ -92,7 +92,10 @@ SENSES = {
+ #: a change to either is still caught.
+ PAINTER_CELL_FLOOR_PX = 10
+ 
+-RANGES = (1, 2, 3)
++#: How many squares across a map the declared size assumes, whatever the range.
++NOMINAL_CELLS = 5
++
++RANGES = tuple(range(1, 13))
+ REGIMES = ("configured", "legacy")
+ CASES = [(s, r, g) for s in SENSES for r in RANGES for g in REGIMES]
+ IDS = [f"{s.lower()}_r{r}_{g}" for s, r, g in CASES]
+@@ -178,20 +181,12 @@ def _painter_map_count(sense, display):
+     return len(map_plan(sense, display))
+ 
+ 
+-def _painter_needs_w(sense, r, display):
+-    """The panel width the painter requires, built from the painter's own terms.
+-
+-    `episode.py` gives the painter `panel.w - 2 * PAD`, and the painter divides
+-    it into `panel_map_slots` slots of `2r+1` squares with `MAP_GAP` between
+-    them. Invert that at the NOMINAL 10 px square. The painter no longer refuses
+-    a smaller square (the floor was removed on 2026-09-22), so this is what the
+-    REGISTRY declares, not a limit the painter enforces. NOTE it is the SLOT
+-    count, not the map count -- that is what makes blank space appear instead of
+-    one stretched map.
+-    """
++def _nominal_w(sense, display):
++    """The panel width a sense declares: `panel_map_slots` slots of the NOMINAL
++    square, whatever the sensor range. Built from literals, not from the
++    registry's own `MAP_NOMINAL_CELLS`."""
+     n = panel_map_slots(sense, display)
+-    cells = 2 * r + 1
+-    return (n * cells * PAINTER_CELL_FLOOR_PX
++    return (n * NOMINAL_CELLS * PAINTER_CELL_FLOOR_PX
+             + PN.MAP_GAP * (n - 1)
+             + 2 * PN.PAD)
+ 
+@@ -265,26 +260,20 @@ def _paint(sense, r, panel_w, panel_h=400, display=None):
+ # the property, in BOTH sizing regimes
+ # ---------------------------------------------------------------------------
+ @pytest.mark.parametrize("sense,r,regime", CASES, ids=IDS)
+-def test_the_declared_minimum_is_exactly_what_the_painter_needs(sense, r, regime):
++def test_the_declared_size_is_fixed_and_independent_of_the_range(sense, r, regime):
+     n = SENSES[sense][1]
+     display = _display(sense, n, regime=regime)
+     declared = _declared_w(sense, r, regime=regime)
+-    needed = _painter_needs_w(sense, r, display)
+-    assert declared == needed, (
+-        f"{sense} at range {r} ({regime}): the registry declares {declared}px but "
+-        f"the painter needs {needed}px "
+-        f"({panel_map_slots(sense, display)} slots of {2 * r + 1} squares, "
+-        f"{PN.MAP_GAP}px gaps, {2 * PN.PAD}px card padding). "
+-        f"A declaration above the requirement makes the packer refuse a frame "
+-        f"the painter would draw; one below it hands the painter a panel it "
+-        f"refuses."
+-    )
++    assert declared == _nominal_w(sense, display)
++    assert declared == _declared_w(sense, 1, regime=regime), (
++        f"{sense} ({regime}) declares a different width at range {r} than at "
++        f"range 1; the declaration must not depend on the sensor range")
+ 
+ 
+ @pytest.mark.parametrize("sense,r,regime", CASES, ids=IDS)
+ def test_the_painter_draws_at_the_declared_minimum_AND_below_it(
+         sense, r, regime):
+-    """The painter's own verdict, not arithmetic about it.
++    """The painter's own verdict, not arithmetic about it -- at ranges 1 to 12.
+ 
+     INVERTED on 2026-09-22 rather than deleted. This case used to assert the
+     painter REFUSED one pixel below the declared minimum, because a map square
+@@ -394,7 +383,7 @@ def test_the_painter_has_NO_cell_floor_and_the_registrys_nominal_still_matches()
+ #: What the band actually grants one of two sense panels, measured from the
+ #: packer's own geometry rather than copied: the band is
+ #: `CANVAS_W - OUTER - cx` wide, its two children split that with one `GAP`
+-#: between them. Asserted below so the three cases' arithmetic is anchored to
++#: between them. Asserted below so the cases' arithmetic is anchored to
+ #: something real.
+ EXPECTED_GRANT_PX = 520
+ 
+@@ -403,82 +392,51 @@ def test_the_band_grants_each_of_two_senses_the_width_these_cases_assume():
+     lay = pack(_full_ctx(vis_channels=8, vis_range=2,
+                          channel_display=_payload(8)))
+     assert lay.panels["visual"].w == EXPECTED_GRANT_PX, (
+-        f"the band grant moved to {lay.panels['visual'].w}px; the three "
+-        f"wide-sense cases below are written against {EXPECTED_GRANT_PX}px")
+-
++        f"the band grant moved to {lay.panels['visual'].w}px; the cases below "
++        f"are written against {EXPECTED_GRANT_PX}px")
+ 
+-def test_a_configured_world_reading_both_senses_wide_packs_and_paints():
+-    """CONFIGURED, vision at range 3. Three slots need 254 px of the 520 granted.
+ 
+-    Range 3 is the condition the band-width fix exists for and the widest sense
+-    panel the packer is ever asked to place. No maintained world reads sight that
+-    far, so the condition is held HERE, in memory, where no commit can delete it.
++@pytest.mark.parametrize("regime", REGIMES)
++@pytest.mark.parametrize("r", RANGES)
++def test_a_world_reading_both_senses_at_any_range_packs_and_paints(r, regime):
++    """NOTHING REFUSES at any range from 1 to 12, in either slot regime.
+ 
+-    The numbers fell (482 -> 254) when vision's slot count went 6 -> 3 on
+-    2026-09-22. The PROPERTY is unchanged and is what this case guards: whatever
+-    the registry declares, the packer must grant at least that much, and the
+-    painter must then draw into it without complaint.
+-    """
+-    ctx = _full_ctx(vis_channels=8, vis_range=3, channel_display=_payload(8))
+-    display = _display("Visual", 8)
+-    assert panel_map_slots("Visual", display) == 3
+-    assert _painter_needs_w("Visual", 3, display) == 254
+-
+-    lay = pack(ctx)
+-    box = lay.panels["visual"]
+-    assert box.w >= 254
+-    _paint("Visual", 3, box.w, panel_h=box.h, display=display)
+-
+-    olf = _display("Olfaction", 5)
+-    obox = lay.panels["olfactory"]
+-    assert obox.w >= _painter_needs_w("Olfaction", 1, olf)
+-    _paint("Olfaction", 1, obox.w, panel_h=obox.h, display=olf)
+-
+-
+-def test_an_eight_channel_LEGACY_world_at_range_three_is_refused_and_says_why():
+-    """The mirror, and the reason the refusal is stated as NEED versus GRANT.
+-
+-    A legacy recording draws one map per channel, so eight channels at range 3
+-    need 634 px against the 520 px the band grants. It genuinely does not fit.
+-    The refusal must name the reason and the remedy -- re-record it, which
+-    regenerates it with names and the terrain merge and brings it back inside
+-    the panel -- rather than surfacing as a bare packer error.
++    A legacy eight-channel vision panel is the widest declaration there is
++    (eight slots), so it is the case that would first outgrow the band.
+     """
++    legacy = regime == "legacy"
++    payload = None if legacy else _payload(8)
++    ctx = _full_ctx(vis_channels=8, vis_range=r, olf_range=r,
++                    channel_display=payload)
++    lay = P.pack_or_explain(ctx)                       # must NOT raise
++    for sense in SENSES:
++        key = SENSES[sense][0]
++        box = lay.panels[key]
++        display = _display(sense, SENSES[sense][1], regime=regime)
++        assert box.w >= _nominal_w(sense, display)
++        _paint(sense, r, box.w, panel_h=box.h, display=display)
++
++
++def test_a_legacy_eight_map_panel_fits_the_band_grant():
+     display = _display("Visual", 8, regime="legacy")
+     assert panel_map_slots("Visual", display) == 8
+-    assert _painter_needs_w("Visual", 3, display) == 634
+-    assert 634 > EXPECTED_GRANT_PX
++    assert _nominal_w("Visual", display) == 474
++    assert _nominal_w("Visual", display) <= EXPECTED_GRANT_PX
+ 
+-    ctx = _full_ctx(vis_channels=8, vis_range=3, channel_display=None)
+-    with pytest.raises(LayoutOverflowError):
+-        pack(ctx)
+ 
+-    with pytest.raises(LayoutOverflowError) as exc:
+-        P.pack_or_explain(ctx)
+-    msg = str(exc.value).lower()
+-    assert "re-record" in msg, f"the refusal must name the remedy. Got: {msg}"
+-    assert "634" in str(exc.value) and "520" in str(exc.value), (
+-        f"the refusal must name what it needed and what it was granted. "
+-        f"Got: {exc.value}")
+-
+-
+-def test_a_ONE_channel_legacy_world_at_range_three_still_renders():
+-    """THE CASE THAT STOPS THE REFUSAL BEING KEYED ON RANGE.
++def test_a_legacy_recording_drawing_more_maps_than_the_panel_slots_warns(caplog):
++    """The re-record advice, formerly a refusal message, is now a WARNING."""
++    display = _display("Visual", 8, regime="legacy")
++    with caplog.at_level("WARNING", logger="src.environment.dashboard.labels"):
++        assert panel_map_slots("Visual", display) == 8
++    msgs = [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
++    assert msgs, "no warning for a legacy recording drawing 8 maps in 3 slots"
++    text = msgs[0]
++    assert "8" in text and "3" in text and "re-record" in text.lower(), text
+ 
+-    A one-channel legacy recording at range 3 is sized `max(3, 1)` = 3 maps, so
+-    it needs 254 px and fits comfortably. Since the default moved to
+-    single-channel vision this is an ordinary thing to have, and a `range >= 3`
+-    rule would refuse a recording that renders perfectly well.
+ 
+-    (Sized `max(6, 1)` = 6 for 482 px until vision's slots went 6 -> 3 on
+-    2026-09-22. It fits more comfortably now, not less, so the case still makes
+-    the point it was written for.)
+-    """
++def test_a_legacy_recording_within_the_slots_does_not_warn(caplog):
+     display = _display("Visual", 1, regime="legacy")
+-    assert panel_map_slots("Visual", display) == 3
+-    assert _painter_needs_w("Visual", 3, display) == 254
+-
+-    ctx = _full_ctx(vis_channels=1, vis_range=3, channel_display=None)
+-    lay = P.pack_or_explain(ctx)          # must NOT raise
+-    box = lay.panels["visual"]
+-    _paint("Visual", 3, box.w, panel_h=box.h, display=display)
++    with caplog.at_level("WARNING", logger="src.environment.dashboard.labels"):
++        panel_map_slots("Visual", display)
++    assert not [r for r in caplog.records if r.levelname == "WARNING"]

@@ -1,0 +1,16 @@
+# EXPERIMENTAL, NOT MAINTAINED (CLAUDE.md "Config maintenance scope"): the CONTROL world of the
+# single-channel smell hypervigilance study,
+#   docs/experiments/active/hypervigilance/SINGLE_CHANNEL_SMELL_HYPERVIGILANCE.md
+#
+# PURPOSE (plain language): level 05 unchanged -- predator and rabbit smell of two odours
+# (predator ~0.7 / 0.5, rabbit ~0.5 / 0.7 on channels 1 / 2, per-episode SD 0.3 each). It is an
+# explicit, named twin of basic/05 so the study's two worlds sit side by side in one folder and
+# the control's launch rows point at a file this study owns.
+#
+# It resolves IDENTICALLY to
+#   configs/environment/experiment/level05_body_interactions/worlds/w0000.yaml
+# (both are a bare `extends:` of basic/05), which is the world the existing seed-42 control pair
+# (rppo_l05body_w0000_{t1none,t16quad}_s42, launched 2026-09-27) trained in. Only seeds 43 and 44
+# are trained from this file. Deliberately NO overrides: anything written here would be a
+# difference from the seed-42 control.
+extends: environment/experiment/basic/05-campfire_thermal_10x10

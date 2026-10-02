@@ -1,0 +1,3 @@
+environment resets drawn (one per concept world)|8|8|100.0|core.jax_reset with PRNG key 7, the same key in every world; one draw of each world's counts
+grid cells drawn across the 8 maps|1,725|1,725|100.0|every cell of every map
+objects placed on these resets|517|517|100.0|35 food, 137 bush, 26 fire, 169 rock, 20 hunter, 130 ambusher; rabbits (harmless) are placed but not drawn

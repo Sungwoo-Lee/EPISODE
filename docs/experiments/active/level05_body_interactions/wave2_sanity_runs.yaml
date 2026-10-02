@@ -1,0 +1,11 @@
+# Run list for the §4.6 known-input check of LEVEL05_BODY_INTERACTIONS.md (added 2026-09-28 by
+# experiment-analyzer, after plan-reviewer finding A1). NOT a collection spec to launch: the stores
+# already exist (collected by configs/trajectory_collection/basicq2_wave2.yaml). It only relabels the
+# two Wave-2 level-05 runs so the level-05 analysis scripts, which require labels `w<bits>_<agent>`,
+# can read them. `w0000` here means "no body rule on" (Wave-2 level 05 predates the four rules).
+# Wave-2 labels: lvl05_control -> w0000_ordinary, lvl05_modulated -> w0000_modulated.
+name: level05_wave2_sanity
+out_root: results/trajectories_basicq2_w2
+runs:
+  - {label: w0000_ordinary,  path: results/JAX_RecurrentPPO/20260922-182534_rppo_bq2cover_lvl05_t1none_s42}
+  - {label: w0000_modulated, path: results/JAX_RecurrentPPO/20260922-182538_rppo_bq2cover_lvl05_t16quad_s42}

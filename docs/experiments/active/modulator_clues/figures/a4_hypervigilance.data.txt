@@ -1,0 +1,3 @@
+world × level cells|7|7|100.0|blind plus levels 04-06 of both waves; Wave 1 levels 02/03 unmatched, level 02 has no random injury
+episodes per agent per cell|1,000,000|1,000,000|100.0|final-checkpoint store; only episodes containing a rabbit count
+injury quarters compared|2|4|50.0|the most- and least-injured quarters

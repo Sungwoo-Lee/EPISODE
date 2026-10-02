@@ -1,0 +1,4 @@
+world × level cells fitted|7|7|100.0|blind plus levels 04-06 of both waves; Wave 1 levels 02/03 excluded (unmatched training length)
+episodes per upper-row fit|1,000,000|1,000,000|100.0|every episode of the final-checkpoint store
+episodes per smell-row fit (smallest cell)|111,211|1,000,000|11.1|only episodes with exactly one predator and one rabbit carry both smell terms
+checkpoints|1|5|20.0|final only — this regression needs the 1M sample

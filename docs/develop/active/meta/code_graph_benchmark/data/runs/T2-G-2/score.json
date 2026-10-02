@@ -1,0 +1,36 @@
+{
+ "task": "T2",
+ "run": "T2-G-2",
+ "correct": true,
+ "f2p_passed": "23/23",
+ "p2p_broken": 0,
+ "p2p_total": 21,
+ "ref_recall": 1.0,
+ "ref_files": [
+  "src/models/ppo_trainer.py",
+  "src/models/recurrent_ppo_trainer.py",
+  "train.py"
+ ],
+ "changed_files": [
+  "src/models/ppo_trainer.py",
+  "src/models/recurrent_ppo_trainer.py",
+  "tests/models/test_mc_fixed_return_mode.py",
+  "train.py"
+ ],
+ "wall_s": 390,
+ "turns": 19,
+ "input_tokens": 36,
+ "cache_read": 1040627,
+ "cache_write": 60156,
+ "output_tokens": 7275,
+ "usd_equiv": 0.5215714,
+ "is_error": false,
+ "subtype": "success",
+ "tool_calls": 18,
+ "tools": {
+  "Bash": 15,
+  "Grep": 1,
+  "Read": 2
+ },
+ "first_edit": null
+}

@@ -1,0 +1,48 @@
+# Bush-hiding history for WAVE 1 of the basic-levels neuromodulator comparison
+# (`basic_levels_q2_default`, launched 2026-09-21, superseded 2026-09-22).
+#
+# WHAT THIS MEASURES. For every saved checkpoint of each run, roll the agent out against the
+# twelve fixed avoidance probes and record how much of the 100-step probe episode it spends
+# sitting on the bush. Twelve probes = six animal scenarios x two starting injury levels, so the
+# figure shows bush hiding as a function of BOTH what is in the world and what state the body is
+# in -- which is the internal-state-dependence question the wave exists to ask.
+#
+# WHY ONLY LEVELS 02, 03 AND 04, and not all seven. The probes must produce the same observation
+# width the agent was trained on, or the checkpoint cannot be restored into them:
+#   levels 02/03/04 -> 52   MATCHES these probes (10x10, thermal off, sight radius 2)
+#   levels 00/01    -> 44   sight radius is pinned to 1 on the 5x5 worlds; needs its own battery,
+#                           and a 5x5-trained agent probed on a 10x10 scene is a further change
+#   levels 05/06    -> 58   thermal is on. A thermal probe is NOT a regeneration but a redesign:
+#                           these probe scenes contain no heat source, and with the world's
+#                           ambient at -30 the body settles at -20 against a survivable floor of
+#                           -15, so the agent FREEZES TO DEATH inside the probe. Measured, not
+#                           assumed. A thermal probe needs a fire placed in it, which changes the
+#                           scenario and is a design decision rather than a config fix.
+#
+# THE PROBES ARE REGENERATED, NOT THE ARCHIVED ONES. The originals under
+# experiment/archive/behavior_probes/ no longer load -- they carry 8-element visual vectors from
+# before visual_vector_size went 8 -> 1 (47b1b8c3). Project policy is to regenerate rather than
+# migrate the archive, so the maintained copies live at
+# configs/environment/experiment/behavior_probes/core/avoidance/ and this spec points there.
+#
+# Run with:
+#   /home/vncuser/miniconda3/envs/grid_world_pain/bin/python \
+#     scripts/eval/dwell_sweep/run_sweep.py configs/eval_sweeps/basicq2_wave1_rppo.yaml
+# `nodes` must be FREE at run time. Nodes 101 and 103-108 are running the WAVE 2 training and
+# must not be touched; 102 is excluded because a foreign tenant has killed runs on it before.
+name: basicq2_wave1
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_basicq2_wave1
+probe: configs/environment/experiment/behavior_probes/core/avoidance
+conditions: all
+episodes: 30
+nodes: [109, 110, 111, 112, 113]
+x_axis: steps
+plot_measures: [bush_hiding, spatial_spread, survival_steps]
+runs:
+  - {label: lvl02_control,   path: results/JAX_RecurrentPPO/20260921-114832_rppo_basicq2_lvl02_t1none_s42}
+  - {label: lvl02_modulated, path: results/JAX_RecurrentPPO/20260921-114836_rppo_basicq2_lvl02_t16quad_s42}
+  - {label: lvl03_control,   path: results/JAX_RecurrentPPO/20260921-114840_rppo_basicq2_lvl03_t1none_s42}
+  - {label: lvl03_modulated, path: results/JAX_RecurrentPPO/20260921-114843_rppo_basicq2_lvl03_t16quad_s42}
+  - {label: lvl04_control,   path: results/JAX_RecurrentPPO/20260921-114847_rppo_basicq2_lvl04_t1none_s42}
+  - {label: lvl04_modulated, path: results/JAX_RecurrentPPO/20260921-114851_rppo_basicq2_lvl04_t16quad_s42}

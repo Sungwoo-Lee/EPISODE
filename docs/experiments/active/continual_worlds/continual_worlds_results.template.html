@@ -1,0 +1,362 @@
+<title>Continual Worlds: Results</title>
+__HOUSE_STYLE__
+<style>
+  /* REQUIRED OVERRIDE (House Style Sheet, F11 amendment): the figures spend blue on the ordinary agent and orange on
+     the modulated agent (the convention of the sibling page "What Both Agents Compute"), so the page chrome uses a
+     greyed slate blue accent and a brown warning tone, well away from both saturated series hues. */
+  :root { --accent: #3f5b7a; --accent-text: #35506e; --warn: #7a5340; }
+  :root { --f-head: 'Pretendard', system-ui, -apple-system, "Segoe UI", sans-serif;
+          --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  figure, figcaption { min-width: 0; }
+  /* data tables: floors sum under the 688px column (160 + 2 x 130 + 75 + 190 = 685), as on the planning page (F24, F35) */
+  table.datatable td:last-child, table.datatable th:last-child { min-width: 190px; }
+  table.datatable td:last-child { overflow-wrap: anywhere; }
+  table.datatable td:first-child, table.datatable th:first-child { min-width: 160px; }
+  /* the sensitivity table: one prose column with a floor, four short mono columns (fits 688px at 1440; F24 amendment) */
+  table.senstable td:nth-child(2) { min-width: 240px; }
+  table.senstable td.n { white-space: nowrap; }
+  table.senstable span.meets, table.senstable span.status { font-size: 12.5px; color: var(--ink-2); }
+  /* align-self: a flex child is blockified and stretched, so inline-block alone renders a full-width bar */
+  p.kind { display: inline-block; align-self: flex-start; margin: 0 0 6px; padding: 2px 9px; border-radius: 3px;
+           font-size: 12.5px; letter-spacing: .02em; border: 1px solid var(--rule); color: var(--ink-2); }
+  p.kind-training { border-color: var(--accent); color: var(--accent-text); }
+  p.kind-evaluation { border-color: var(--ink-2); color: var(--ink-2); }
+  p.kind-mixed { border-color: var(--accent); color: var(--accent-text); border-style: double; border-width: 3px; }
+  p.kind-exploratory { border-color: var(--warn); color: var(--warn); border-style: dashed; }
+  /* F65: floor = canvas px x 9 / smallest label px; every figure's smallest text is 9.5 pt at 220 dpi (29.0 px) and
+     results_page/_common.save() refuses a canvas wider than 2209 px, so 685 px keeps it at >= 9 px. It stays <= the
+     688 px column so no figure shows a scroll cue on a desktop (F32 amendment). */
+  .figscroll img { min-width: 685px; }
+  ul.plainlist, ol.plainlist { margin: 0; padding-left: 1.4em; } ul.plainlist li + li, ol.plainlist li + li { margin-top: 6px; }
+</style>
+
+<div class="wrap">
+
+<section class="col">
+  <h1>Continual Worlds: Results</h1>
+  <p class="lede">Two studies asked whether an agent with a neuromodulator copes better than an ordinary agent when
+  the world keeps changing. Neither gives a clear yes. This page shows what was measured, what it can and cannot say,
+  and what to test next.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">PURPOSE</span></h2>
+<p>The project compares two reinforcement-learning agents that are identical except for one part. The
+<strong>modulated agent</strong> has a small side network (the <em>modulator</em>) that reads the agent's body state
+— hunger, injury, temperature — and rescales the main network's layers. The <strong>ordinary agent</strong> has no
+modulator. Earlier comparisons, one world at a time, found the two agents behave almost the same. The literature on
+neuromodulation reports its main benefit somewhere else: when the task keeps changing, a modulated network is said to
+forget less and relearn faster. A small probe in May 2026 seemed to show exactly that.</p>
+<p>So two studies were run. The <strong>main study</strong> kept the body's rules fixed and switched the world back
+and forth — A, B, A, B — in three pairs of worlds. The <strong>May replication</strong> re-ran the May probe's own
+schedule (a hunting predator, then a harmless world, then the hunter again, twice) with three independent seeds per
+agent. Performance is measured only in <strong>survival steps</strong>: how many steps the agent stays alive per
+episode, at most 500. Reward is never used.</p>
+<p>The plan behind the main study, with its worlds and pilot runs, is on the planning page
+<a href="https://claude.ai/artifact/Xvd13TcMHMcG31FbspxKfP">Continual Worlds</a>. A parallel study of what the two
+agents compute internally, which reads the same May-replication runs, is
+<a href="https://claude.ai/artifact/FjWWTqMcPptUpFuJcPjzfU">What Both Agents Compute</a>. The full written analyses
+are the design documents named in section 06.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">01</span> Take-home, in plain words</h2>
+<div class="callout">
+  <p class="eyebrow">The short answer</p>
+  <p><strong>Neither study shows the modulated agent coping better with a changing world.</strong> The main study's
+  rule, written before the data, does not decide either way. The May replication did not reproduce May's large
+  advantage — but its world was too easy to show one. Two small differences are worth a proper test.</p>
+</div>
+<ul class="plainlist">
+  <li><b>Main study: the pre-set rule is not decisive.</b> Whether the modulator "wins" depends on one question the
+  design answered both ways: does the foraging world, learned <em>before</em> the back-and-forth began, count when
+  scoring what the agent forgot? Count it and the rule says "supported"; leave it out and the rule says "refuted"
+  (section 02, table after Figure 4).</li>
+  <li><b>The modulated checkpoint starts ahead in new worlds.</b> Before any training in an unseen world, it survives
+  __N:r04_head_start.zs_min__ to __N:r04_head_start.zs_max__ steps longer (in the cold world Winter,
+  __N:r04_head_start.zs_winter_mod__ against __N:r04_head_start.zs_winter_ord__). Most of what first looked like
+  "coping better with the switch" is this head start; measured from its own starting level it does not improve faster
+  (Figure 4).</li>
+  <li><b>It kept more of its foraging skill after the cold world.</b> After 3 million episodes in Winter, the
+  modulated checkpoint played in the foraging world is ahead by __N:r04_head_start.samp_forage_gap__ steps (95 %
+  interval __N:r04_head_start.samp_forage_lo__ to __N:r04_head_start.samp_forage_hi__, re-checked with sampled
+  actions). This is the main study's clearest difference — but it rests on one starting pair of agents that share
+  their initial weights, it reverses once, and it concerns the world learned before the alternation (Figures 3–4).</li>
+  <li><b>May replication: not replicated, and limited by the step cap.</b> On the returns of the hunter the
+  modulated agent was ahead by __N:r06_mayrep_pairs.d3__ steps, inside the pre-set noise band of
+  ±__N:r06_mayrep_pairs.d_band__; May saw __N:r06_mayrep_pairs.may_d3__ and __N:r06_mayrep_pairs.may_d5__. But
+  __N:r05_mayrep_curves.cap_hunt_min__–__N:r05_mayrep_curves.cap_hunt_max__ % of hunting-world episodes already
+  lasted the full 500 steps, leaving room for at most about __N:r05_mayrep_curves.room__ steps of advantage (Figures
+  5–6).</li>
+  <li><b>Two hints, not findings.</b> Chosen after the data were seen, so they need a pre-registered test: in every
+  hunting stage the modulated agent died in __N:r08_learning_speed.dr_min__–__N:r08_learning_speed.dr_max__
+  percentage points fewer episodes, in all three seed pairs; and it learned faster from scratch — though counted per
+  environment step rather than per episode, that lead is about half as large (__N:r08_learning_speed.s10M_diff__
+  against __N:r08_learning_speed.a100k_diff__ steps; Figure 8).</li>
+</ul>
+<h3>The set-up in one paragraph</h3>
+<p>Both agents live on a grid, find food, avoid or hide from predators, and keep warm; the body's rules are the same
+in every world. An episode ends when the agent dies of injury, starvation or temperature, or after 500 steps. The
+agents learn with recurrent PPO, a standard reinforcement-learning method; training is counted in <em>episodes</em>
+and in <em>environment steps</em> (one action each). In the main study both agents were pre-trained for 10 million
+episodes, trained 1 million more in the foraging world, and then every sequence branched from that one pair of
+checkpoints. The May replication trained three fresh pairs from scratch.</p>
+<h3>Words used on this page</h3>
+<dl>
+  <dt>modulated agent</dt><dd>The agent with the modulator, a side network that reads body state and rescales the
+  main network's layers. <b>Ordinary agent</b>: the same agent without it.</dd>
+  <dt>survival steps</dt><dd>Steps alive per episode, at most 500 (the <b>cap</b>). The only performance measure.</dd>
+  <dt>Forage, Winter, Famine, Danger-A, Fog-B</dt><dd>The main study's worlds: a large map where finding food is the
+  task; a cold world with one fire; scarce food; several hunting predators that give up quickly; fog that shortens
+  and blurs what the agent senses, without sensor noise. Home and Nursery are the original world and an easy starter world.</dd>
+  <dt>P1, P2, P3</dt><dd>The three main sequences: Danger-A ↔ Famine, Fog-B ↔ Danger-A, Winter ↔ Famine.</dd>
+  <dt>hunting / harmless stage</dt><dd>In the May schedule: a world with a hunting predator, and the same world
+  without it.</dd>
+  <dt>checkpoint</dt><dd>The agent's saved network at a moment in training. A <b>frozen</b> checkpoint is tested
+  without further learning.</dd>
+  <dt>most-likely vs sampled actions</dt><dd>Testing a frozen checkpoint by always taking its most likely action
+  ("greedy"), or by drawing actions from its probabilities as in training.</dd>
+  <dt>noise band / yardstick</dt><dd>How large a difference must be before it counts, fixed before the data were
+  seen.</dd>
+  <dt>shared start</dt><dd>Same-seed ordinary and modulated agents begin from bitwise-identical main-network weights,
+  so a same-seed pair is one start perturbed by the modulator, not two independent agents.</dd>
+  <dt>percentage points</dt><dd>The difference between two percentages (8 % and 7 % differ by 1 percentage point).</dd>
+</dl>
+</section>
+
+<section class="col">
+<h2><span class="num">02</span> Main study: three sequences of changing worlds</h2>
+<p>Each sequence visits two worlds twice, A → B → A → B, after the shared foraging stage. Every run is one ordinary
+and one modulated agent, all six branching from the same pair of checkpoints. Four things were scored, written down
+before training: how far survival <b>drops</b> right after a switch; how fast it <b>recovers</b>; whether the agent does
+better on its <b>return</b> to a world; and how much of a world it <b>forgets</b> while training in another.</p>
+<p><b>Why look at the raw curves first.</b> Summary scores hide shape. The curves show whether a switch caused a real
+drop, whether the two agents' curves differ anywhere, and whether a world's curve is steady enough for one number to
+describe it.</p>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="r01_training_curves" id="fig-r01_training_curves" alt="Three line charts of survival over training, one per sequence, with a blue line for the ordinary agent and an orange line for the modulated agent. P1 Danger-A and Famine and P2 Fog-B and Danger-A each span 4 million episodes in four 1-million-episode stages; P3 Winter and Famine spans 8 million episodes. The two agents' lines lie nearly on top of each other everywhere except the Winter stages of P3, where both swing widely between about 60 and 220 steps."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:r01_training_curves__
+  <figcaption>
+    <span><b>Figure 1 — the two agents' training curves are nearly indistinguishable, except that Winter is turbulent for both.</b> In the hunter and fog worlds (P1, P2) both agents crash on first entry and climb back within a few hundred thousand episodes; later switches barely dent either. In Winter (P3) both curves swing by more than a hundred steps within a visit, so any single number read from them is fragile.</span>
+    <span><b>Axes.</b> Horizontal: episodes since the branch point, in millions; all three panels use the same scale per million, so P3's panel is twice as wide because its Winter visits are 3 million episodes each. Vertical: survival in steps per episode, the same 0–280 scale in every panel, starting at zero. Shaded and unshaded bands alternate stages; thin grey lines mark world switches.</span>
+    __DATA:r01_training_curves__
+    <span><b>How it is computed.</b> Each line is a running average of survival — steps alive per episode — over the most recent 20,000 training episodes. The training logs record one row roughly every 4,000 episodes, each row itself an average over up to 5,000 episodes; the running average weights every row by the number of episodes it covers, exactly as the study's own read-out script does, and the figure reads the logs through that script's functions so that curve and scored numbers share one code path. The average restarts at every world switch, so a window never mixes two worlds; each curve therefore begins 20,000 episodes after a switch. Survival here is from training, where the agent samples its actions from its probabilities, so it is noisier and a little lower than the frozen-checkpoint tests in Figures 3 and 4. The runs are one seed per agent, and all six start from one shared pair of checkpoints, so the three panels are not independent repeats. <b>What this figure does not show:</b> the foraging stage before the branch point (it is shared by all six runs); the first 20,000 episodes after each switch, where the registered drop is measured (Figure 2); and any uncertainty band, because there is one run per line.</span>
+  </figcaption>
+</figure>
+
+<p><b>Why score every switch separately.</b> The design's rule counts votes switch by switch, and a pooled number could
+hide a switch that goes the other way. Figure 2 puts every switch's reading on one scale, with the noise yardstick
+each reading had to clear and the vote it produced.</p>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="r02_switch_measures" id="fig-r02_switch_measures" alt="Dot chart with one row per switch, twelve rows grouped by sequence, and three panels: survival in the first 20,000 episodes after the switch, the drop against each agent's own level, and recovery time, all as modulated minus ordinary so that right of zero favours the modulated agent. Grey bars show each row's noise yardstick. A fourth panel below shows the six returns. Vote labels at the right read mod., ord., tie or a dash. Only one drop, the first entry into Winter, and one return, P2's return to Danger-A which favours the ordinary agent, fall outside their yardsticks."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:r02_switch_measures__
+  <figcaption>
+    <span><b>Figure 2 — only __N:r02_switch_measures.n_beyond__ of the __N:r02_switch_measures.n_read__ drop and return readings clear their noise yardstick, and they point in opposite directions.</b> The first entry into Winter favours the modulated agent by __N:r02_switch_measures.winter_dip__ steps against a yardstick of __N:r02_switch_measures.winter_thr__ — a margin of __N:r02_switch_measures.winter_margin__ steps. P2's return to Danger-A goes the other way: __N:r02_switch_measures.p2_ret__ steps against a yardstick of __N:r02_switch_measures.p2_ret_thr__. Everything else is inside noise; returns range from __N:r02_switch_measures.ret_min__ to __N:r02_switch_measures.ret_max__ steps.</span>
+    <span><b>Axes.</b> Every panel: right of zero favours the modulated agent. (a) Horizontal: survival over the first 20,000 episodes after the switch, modulated minus ordinary, in steps. (b) Horizontal: the drop measured against each agent's own settled level, ordinary's percentage drop minus modulated's, in percentage points. (c) Horizontal: how many thousand episodes sooner the modulated agent climbed back to 90 % of the level; open down-triangle against its own level, grey dot against the shared lower level; one reading beyond 145 is drawn at the edge with its value to its right. (d) Horizontal: the return, modulated agent's gain over its own first visit minus the ordinary agent's, in steps. Vertical: one row per switch (a–c) or return (d). In this figure only, a filled marker means the difference is beyond its noise yardstick.</span>
+    __DATA:r02_switch_measures__
+    <span><b>How it is computed.</b> For every switch, the <em>drop</em> compares survival in the first 20,000 episodes in the new world with that world's settled level — the last 200,000 episodes of the agent's first visit. It is read twice: against each agent's own level (panel b) and against the lower of the two agents' levels, a shared target (panel a), so that an agent with a lower target does not look better merely for having less to regain. <em>Recovery</em> counts episodes until a 20,000-episode running average reaches 90 % of the level, again both ways and also in environment steps. A switch's vote counts only if all its readings favour the same agent; if both agents recover in the same logged row, the vote is a tie. The noise <em>yardstick</em> is twice the larger of a pre-set floor (__N:r02_switch_measures.yard_floor__ steps) and √2 times the spread between 200,000-episode windows within a visit. In Winter that spread comes from just two windows, so its yardstick is itself uncertain. The <em>return</em> is the last 200,000 episodes of the second visit minus the first visit's level, for each agent. <b>What this figure does not show:</b> that most first-entry advantages are a head start the modulated checkpoint already had (Figure 4), and forgetting (Figure 3).</span>
+  </figcaption>
+</figure>
+
+<p><b>Why test frozen checkpoints.</b> Training curves show only the world being trained on. To see what an agent
+still knows about the <em>other</em> worlds, each stage-end checkpoint was frozen and played in all seven worlds.
+This is the memory test the design called the forgetting matrix.</p>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="r03_memory_matrices" id="fig-r03_memory_matrices" alt="Nine heatmaps in three rows, one row per sequence. In each row, a grey-scale grid for the ordinary agent, one for the modulated agent, and a blue-to-orange grid of their difference. Grid rows are the checkpoint at the branch point and at the end of each of stages 2 to 5; grid columns are seven worlds: Forage, Danger-A, Fog-B, Winter, Famine, Home, Nursery. Every cell prints its value. The largest difference, plus 113 in Forage after the first Winter stage of P3, is deep orange; most other differences are within about 15 steps."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:r03_memory_matrices__
+  <figcaption>
+    <span><b>Figure 3 — the alternating worlds are remembered equally; the foraging world is kept better by the modulated agent after Winter and hunter stages.</b> On the alternating worlds the forgetting differences run from __N:r03_memory_matrices.ab_min__ to __N:r03_memory_matrices.ab_max__ steps, none beyond noise. On Forage, after the first Winter stage, the ordinary checkpoint lost __N:r03_memory_matrices.p3_forage_forgot_ord__ steps and the modulated one __N:r03_memory_matrices.p3_forage_forgot_mod__. That advantage reverses once, after P1's second Danger-A visit (__N:r03_memory_matrices.p1_reversal__ steps against the modulator).</span>
+    <span><b>Axes.</b> In each small grid: horizontal, the seven worlds the checkpoint was played in (bold: the worlds of that sequence, including Forage); vertical, the checkpoint — the branch point, then the end of stages 2 to 5, named by the world just trained. Left and middle grids: each cell's number and grey shade are mean survival in steps per episode, 0 to 500. Right grid: modulated minus ordinary, in steps; orange favours the modulated agent, blue the ordinary one, colour clipped at ±120; a star marks a difference beyond test noise.</span>
+    __DATA:r03_memory_matrices__
+    <span><b>How it is computed.</b> Each cell is one frozen checkpoint played for 2,000 test episodes in one world, with the same 2,000 random seeds in every cell so that cells differ only by checkpoint and world. The agent takes its most likely action at every step (greedy play), while training samples actions; greedy play scores a few steps higher, so these numbers are compared only with each other, never with the training curves. <em>Forgetting</em> of a world is its survival at the end of the agent's latest visit there minus its survival at a later checkpoint; the registered vote compares the two agents' forgetting and calls it beyond noise when their 95 % intervals — the ranges that would contain the true value in 95 of 100 repeats — do not overlap. The stars on the difference grid use a simpler cell-level test: the difference exceeds 1.96 times the combined standard error of the two cells (the square root of the two cells' squared standard errors added), the 95 % cut-off for a difference of two means. The branch-point row is the same pair of checkpoints in all three sequences, and in Forage it sits at the cap (__N:r03_memory_matrices.forage_cap_start__ % of episodes last 500 steps), so every Forage entry shares one starting cell. <b>What this figure does not show:</b> sampled-action results (only four cells were re-checked, Figure 4), and anything about the untested eighth world, Home before the alternation.</span>
+  </figcaption>
+</figure>
+
+<p><b>Why separate head start from adaptation.</b> A smaller drop after a switch could mean the agent adapts faster, or
+simply that it arrived already playing the new world better. The branch-point row of the memory test answers the
+second question directly, before any training in the new world. A reviewer asked for exactly this check, and for the
+key cells to be re-run with sampled actions, since the memory test plays greedily.</p>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="r04_head_start" id="fig-r04_head_start" alt="Three panels. Panel a: dot chart of the two branch-point checkpoints' survival in seven worlds before any training there; the orange modulated square is to the right of the blue ordinary square in every world, most clearly in Winter and Nursery. Panel b: for each of the six first visits, four markers of the modulated-minus-ordinary difference: the head start, the start level, the first 20,000 episodes, and the gain over the agent's own start; the gain markers are mostly at or below zero. Panel c: four cells re-played with sampled and with most-likely actions, with 95 % interval bars; the difference in Forage after the first Winter stage is about 113 steps under both."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:r04_head_start__
+  <figcaption>
+    <span><b>Figure 4 — the modulated checkpoint arrives ahead; it does not then improve faster.</b> Before any training in an unseen world, it survives __N:r04_head_start.zs_min__–__N:r04_head_start.zs_max__ steps longer (a). That head start explains __N:r04_head_start.hs_winter__ of the __N:r04_head_start.s20_winter__-step first-entry gap in Winter, __N:r04_head_start.hs_danger__ of __N:r04_head_start.s20_danger__ in Danger-A and __N:r04_head_start.hs_fog__ of __N:r04_head_start.s20_fog__ in Fog-B. Measured from its own start, it improves more in __N:r04_head_start.gain_better__ of __N:r04_head_start.gain_n__ first visits and less in __N:r04_head_start.gain_worse__ (b). The Forage gap after Winter survives sampled actions: __N:r04_head_start.samp_forage_gap__ steps (c).</span>
+    <span><b>Axes.</b> (a) Horizontal: survival in steps per episode, 0–500; vertical: the seven worlds, Forage (the one already trained) last; each square carries a 95 % interval bar, in most worlds narrower than the square itself. (b) Horizontal: modulated minus ordinary, in steps, right favours the modulated agent; vertical: the six first visits, each with four markers. (c) Horizontal: modulated minus ordinary in steps, with 95 % interval bars; vertical: the four re-checked cells, each under most-likely actions (square) and sampled actions (circle), the same shapes as in (b).</span>
+    __DATA:r04_head_start__
+    <span><b>How it is computed.</b> Panel a is the branch-point row of the memory test: the two checkpoints that every sequence starts from, each frozen and played for 2,000 episodes per world with its most likely action. Panel b compares, for each first visit, four quantities: the <em>head start</em> (the frozen checkpoint the agent arrives with, played greedily in the new world); the <em>start level</em> (training survival in the first logged row after the switch, about 4,000 episodes); the registered <em>first-20,000-episode</em> survival; and the <em>gain</em>, first-20,000 survival minus the agent's own start level — how much it improved, whatever it started from. These panel-b measures were chosen after the data were seen and have no noise yardstick of their own, so they can weaken the registered reading but not replace it with a new claim. Panel c re-plays four cells with sampled actions, as in training, for both agents, with the same seeds; intervals treat the two agents' 2,000 episodes as independent. At the end of the first Winter stage, the modulated checkpoint is not worse in Winter itself (__N:r04_head_start.samp_winter_after__ steps sampled), so "it simply specialised less" does not explain its Forage advantage. <b>What this figure does not show:</b> whether the head start holds for other seeds — all of it is one shared-start pair.</span>
+  </figcaption>
+</figure>
+
+<h3>How the verdict depends on the scoring choices</h3>
+<p>The pre-set rule asks whether, in at least two of three sequences, at least three of the four measures favour the
+modulated agent with at least one beyond noise; it also has a refutation clause. It never said how a measure's several
+per-switch votes combine into one sign, nor whether the foraging world counts in the forgetting vote — both were
+chosen after the data were seen. The table below re-scores the study under every reasonable choice. Each P cell lists
+the signs of drop, recovery, return and forgetting (+ favours the modulated agent, − the ordinary agent, 0 neither)
+and whether the sequence meets the criterion. <b>The hinge is the forgetting entry set:</b> with Forage counted,
+__N:t01_sensitivity.with_forage_support__ give support; with only the alternating worlds counted,
+__N:t01_sensitivity.without_forage_support__ of the registered-consistent rules do, and P1's alternating-world
+forgetting sums to __N:t01_sensitivity.p1_ab_forget_sum__ steps <em>against</em> the modulator. So the verdict is
+<strong>not decided</strong>.</p>
+__TABLE:t01_sensitivity__
+<p class="foot">Generated by <code>scripts/<wbr>analysis/<wbr>studies/<wbr>continual_worlds/<wbr>results_page/<wbr>t01_sensitivity.py</code> from the analyzer's scoring files; R1 (highlighted) is the most literal reading. R2 reproduces a tie-rule bug since fixed in the read-out; R3 is stricter than the rule; R4 is the predicted shape rather than the rule.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">03</span> May replication: three seeds, May's schedule</h2>
+<p>In May, one run per agent suggested the modulated agent came back far better when a hunter returned after a
+harmless phase. The replication trained three independent seeds per agent from scratch on May's five-stage schedule:
+hunting for 1.5 million episodes, then harmless, hunting, harmless and hunting again, 700,000 episodes each. Its
+verdict rule was fixed before training: the return advantage or the forgetting difference had to favour the modulated
+agent in at least two of three seed pairs and exceed twice its standard error.</p>
+<p><b>Why look at the ceiling first.</b> If most episodes already last the full 500 steps, a better agent has nowhere
+to show it. Figure 5 shows how close to the cap every stage ran.</p>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="r05_mayrep_curves" id="fig-r05_mayrep_curves" alt="Three stacked line charts over 5.1 million training episodes for six runs, three blue ordinary and three orange modulated, with solid, dashed and dotted lines for seeds 42, 43 and 44. Top: survival from 0 to 500 steps; all runs climb from about 30 to about 465 steps in the first stage and stay near the 500-step cap afterwards, a little higher in the shaded harmless stages. Middle: the same curves zoomed to 420 to 505 steps, showing small drops at each return of the hunter. Bottom: the share of episodes reaching the cap, above 80 per cent in every stage after the first few hundred thousand episodes."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:r05_mayrep_curves__
+  <figcaption>
+    <span><b>Figure 5 — every stage of every run ends near the 500-step cap, so survival has almost no room to differ.</b> In the last 200,000 episodes of each stage, __N:r05_mayrep_curves.cap_hunt_min__–__N:r05_mayrep_curves.cap_hunt_max__ % of hunting-world episodes and __N:r05_mayrep_curves.cap_harm_min__–__N:r05_mayrep_curves.cap_harm_max__ % of harmless-world episodes lasted the full 500 steps. The ordinary agent averaged __N:r05_mayrep_curves.ret_ord__ steps on the first return, so no agent could beat it by more than about __N:r05_mayrep_curves.room__ steps.</span>
+    <span><b>Axes.</b> Horizontal, all panels: episodes since the start of training, in millions, 0 to 5.1. (a) Vertical: survival in steps per episode, 0 to 520, the thick grey line at the 500-step cap. (b) Vertical: the same, zoomed to 420–505 steps (does not start at zero). (c) Vertical: the share of episodes that lasted the full 500 steps, in per cent, with a grey dash-dot line at the 80 % mark used to label a stage "ceiling-limited". Shaded bands are the harmless stages.</span>
+    __DATA:r05_mayrep_curves__
+    <span><b>How it is computed.</b> Each line is one run's 20,000-episode running average of training survival, read from its training log through the read-out script's own functions and restarted at every stage switch, with log rows weighted by the episodes they cover. The share at the cap (panel c) is the same running average applied to the logged fraction of episodes that ended by reaching the 500-step limit rather than by death. The "ceiling-limited" label, 80 % or more of a stage's last 200,000 episodes at the cap, was chosen after the data were seen; it changes no verdict and only says how much a survival difference could show. By that label all __N:r05_mayrep_curves.n_stage_runs__ stage-runs are ceiling-limited. May's advantage, expressed as a share of first-stage survival as May measured it, would amount to about __N:r05_mayrep_curves.may_need_3__–__N:r05_mayrep_curves.may_need_5__ steps here (first and second return) — several times the room available. The two small dips in harmless stages belong to one modulated seed and recover. <b>What this figure does not show:</b> test survival of frozen checkpoints (Figure 7), deaths by cause, and May's own curves, which came from a different body and world.</span>
+  </figcaption>
+</figure>
+
+<p><b>Why show each seed pair.</b> The rule is a three-seed rule; the pairs show whether a mean hides disagreement, and
+putting May's number on the same axis shows the scale of what was being tested.</p>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="r06_mayrep_pairs" id="fig-r06_mayrep_pairs" alt="Two panels. Left: four rows for the registered readings — better return on the first and second return, and less forgetting on each — each with three seed-pair markers, an open diamond for the mean, a wide grey noise band and a shorter grey line for the raw spread between seeds; all means sit within 2 steps of zero, inside the band. Right: horizontal bars comparing May's return advantage, about 107 and 132 steps, with the replication's, about 1.5 steps, and dashed lines where a May-sized effect would begin."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:r06_mayrep_pairs__
+  <figcaption>
+    <span><b>Figure 6 — the replication's return advantage is under __N:r06_mayrep_pairs.share_of_may_max__ % of May's, inside the pre-set noise band.</b> The modulated agent was ahead by __N:r06_mayrep_pairs.d3__ and __N:r06_mayrep_pairs.d5__ steps on the two returns (band ±__N:r06_mayrep_pairs.d_band__) and its forgetting differed by __N:r06_mayrep_pairs.g3__ steps (band ±__N:r06_mayrep_pairs.g_band__). Verdict: __N:r06_mayrep_pairs.verdict__, worded as an underpowered null. On the second return all __N:r06_mayrep_pairs.d5_pos__ pairs are positive and the raw spread between seeds is small, so without the pre-set floor on the noise band it would have counted.</span>
+    <span><b>Axes.</b> (a) Horizontal: modulated minus ordinary, in steps, right favours the modulated agent; vertical: the four registered readings. Markers: one per seed pair; open diamond, their mean; wide grey band, the registered noise band (twice the floored standard error); thin grey line, twice the raw standard error between seeds. (b) Horizontal: return advantage in steps, from zero; vertical: the two returns; grey bars May, black bars the replication, grey dash-dot lines the "May-sized" threshold (half of May's advantage as a share of first-stage survival).</span>
+    __DATA:r06_mayrep_pairs__
+    <span><b>How it is computed.</b> For each seed pair — an ordinary and a modulated run with the same seed — the <em>return advantage</em> is the modulated run's survival over the last 200,000 episodes of a hunting return minus the ordinary run's. The <em>forgetting difference</em> compares how far each agent's return level sits from its own first-stage level. The three pair differences are averaged, and the standard error comes from the spread between the three seeds. Because a spread estimated from three values is unstable, the design fixed a minimum ("floor") for the standard error before any data existed: __N:r06_mayrep_pairs.floor_ret__ steps for returns and __N:r06_mayrep_pairs.floor_forget__ for forgetting. Every reading used the floor. On the second return the mean, __N:r06_mayrep_pairs.d5_mean2__, exceeds twice the raw standard error, __N:r06_mayrep_pairs.d5_raw_band__, so the label rests on that pre-set floor; the floor was fixed in advance, so the label stands. Same-seed agents share their starting weights, so the three pairs are three starts, each perturbed by the modulator. May's numbers are single runs under a different body and world. <b>What this figure does not show:</b> the ceiling that caps both agents (Figure 5), and frozen-agent forgetting (Figure 7).</span>
+  </figcaption>
+</figure>
+
+<p><b>Why a frozen-agent test.</b> The training curve relearns so fast that it hides forgetting. Freezing each
+stage-end checkpoint and playing it in the hunting world shows what a harmless stage actually erased — and, unlike the
+training curve, it is not pinned at the cap.</p>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="r07_retention" id="fig-r07_retention" alt="Two panels. Left: hunting-world survival of frozen checkpoints at the end of each of the five stages, six runs, forming a W shape: about 470 steps after hunting stages, falling to about 310 to 370 after each harmless stage. Blue and orange lines overlap. Right: for each harmless stage, the three seed pairs' difference in loss, their mean with its registered noise band and a wider three-seed interval, the sampled-action mean, and a grey dash-dot line near 95 to 100 steps marking a May-sized advantage. The first stage's interval stays well below that line; the second stage's reaches close to it."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:r07_retention__
+  <figcaption>
+    <span><b>Figure 7 — frozen, both agents lose about __N:r07_retention.loss_approx__ hunting-world steps per harmless stage, and the difference changes sign between seeds.</b> After a harmless stage only __N:r07_retention.cap_after_min__–__N:r07_retention.cap_after_max__ % of test episodes reach the cap, so here there is room. On average the modulated agent lost __N:r07_retention.za2_abs__ and __N:r07_retention.za4_abs__ steps less (both inside noise). On the second harmless stage the pairs differ by __N:r07_retention.za4_pairs__ — real, but in opposite directions.</span>
+    <span><b>Axes.</b> (a) Horizontal: the frozen checkpoint, from the end of stage 1 to the end of stage 5; vertical: its survival in the hunting world, in steps per episode, from 250 (not zero) to the 500-step cap. (b) Horizontal: how many steps less the modulated agent lost over the harmless stage than the ordinary agent, right favours the modulated agent; vertical: the two harmless stages. In this figure only, a filled seed marker means that pair's difference is beyond test noise; the filled diamond is the mean under most-likely actions, the open one under sampled actions.</span>
+    __DATA:r07_retention__
+    <span><b>How it is computed.</b> Each stage-end checkpoint was frozen and played for 2,000 episodes in the hunting world, taking its most likely action (the registered choice); a second run with sampled actions is the robustness check. The <em>loss</em> over a harmless stage is survival after it minus survival before it; the pair difference is the modulated run's loss minus the ordinary run's, with the sign set so that positive means the modulated agent lost less. The registered rule counts the mean as beyond noise if it exceeds twice the standard error across the three seeds; it does not. Two post-hoc scales are drawn and labelled: a three-seed 95 % interval, which needs a multiplier of __N:r07_retention.t_q__ instead of 2 because only three values are averaged, and the size of a May-sized advantage, May's forgetting reduction applied to the ordinary agent's loss (about __N:r07_retention.may2__ and __N:r07_retention.may4__ steps). The first interval reaches at most __N:r07_retention.za2_t_hi__, excluding a May-sized advantage for the first harmless stage; the second reaches __N:r07_retention.za4_t_hi__ and cannot exclude one. This is not May's measure, which was taken while learning continued. <b>What this figure does not show:</b> how fast the agents relearn after the hunter returns.</span>
+  </figcaption>
+</figure>
+
+<p><b>Why look at learning speed.</b> The parallel study "What Both Agents Compute" listed learning speed as never
+measured with seeds. Stage 1 is the one place in the replication where agents learn from scratch, far below the cap.
+A reviewer pointed out that counting training in episodes favours the agent that survives longer, since its episodes
+contain more steps and so more training; Figure 8 shows both counts.</p>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="r08_learning_speed" id="fig-r08_learning_speed" alt="Two line charts of survival during the first stage, learning from scratch, for six runs: blue ordinary and orange modulated, seeds as solid, dashed and dotted lines. Left: against training episodes up to 600 thousand; the orange lines rise earlier, most visibly between 100 and 250 thousand episodes. Right: against training environment steps up to 150 million; the orange lead is smaller and the lines mingle after about 50 million steps. A grey dash-dot vertical line marks 100 thousand episodes on the left and 10 million steps on the right."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:r08_learning_speed__
+  <figcaption>
+    <span><b>Figure 8 — the modulated agent learns faster from scratch in all three seeds, but counted per environment step the lead is about half as large and soon gone.</b> Over the first 100,000 episodes it averaged __N:r08_learning_speed.a100k_diff__ steps more; over the first 10 million environment steps, __N:r08_learning_speed.s10M_diff__ (both in __N:r08_learning_speed.s10M_pos__ of 3 pairs). By 100,000 episodes the modulated runs had used __N:r08_learning_speed.steps100k_mod_min__–__N:r08_learning_speed.steps100k_mod_max__ million steps, the ordinary runs __N:r08_learning_speed.steps100k_ord_min__–__N:r08_learning_speed.steps100k_ord_max__ million. At 60 million steps only __N:r08_learning_speed.lvl60M_pos__ of 3 pairs still favours the modulated agent.</span>
+    <span><b>Axes.</b> Vertical, both panels: survival in steps per episode, 0 to the 500-step cap, same scale. (a) Horizontal: training episodes in thousands, 0 to 600. (b) Horizontal: training environment steps in millions, 0 to 150. The grey dash-dot vertical line marks the early window used in the numbers: 100,000 episodes (a) and 10 million steps (b).</span>
+    __DATA:r08_learning_speed__
+    <span><b>How it is computed.</b> Each line is one run's 20,000-episode running average of training survival in the first stage. In panel b the same points are placed at the number of environment steps the run had used by then, the running sum over log rows of episodes times survival; this is the count of actions taken, and so of training data seen. The early-window numbers are episode-weighted mean survival: over the first 100,000 episodes (from the replication's read-out) and over every log row up to 10 million environment steps (computed here, reproducing the reviewer's check). The means are over the three seeds of each agent. This is exploratory: it was chosen after the survival results were seen, about twenty such comparisons were printed, and no noise rule was set in advance, so a difference can clear twice its standard error by chance. Same-seed agents also share their starting weights, so "3 of 3 pairs" counts matched starts. The death-rate hint quoted in section 01 — __N:r08_learning_speed.dr_min__–__N:r08_learning_speed.dr_max__ percentage points fewer deaths per hunting stage, out of __N:r08_learning_speed.dr_ord_min__–__N:r08_learning_speed.dr_ord_max__ % — is the same survival data seen as a proportion. <b>What this figure does not show:</b> relearning speed after a switch, which was inside noise throughout.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">04</span> Caveats that travel with every sentence above</h2>
+<ul class="plainlist">
+  <li><b>One shared start.</b> A same-seed ordinary and modulated agent begin from bitwise-identical main-network
+  weights. For the main study's pre-trained pair this was checked directly (__N:r01_training_curves.shared_same__ of
+  __N:r01_training_curves.shared_of__ weight arrays identical); for the May replication it was checked on the seed-42
+  pair, and for seeds 43 and 44 it follows from the same code but has not been checked. In the main study all six
+  runs branch from one such pair, so every comparison is "this one start, perturbed by the modulator". There is no
+  yardstick yet for how far two <em>different</em> starts drift apart in these worlds.</li>
+  <li><b>One seed in the main study.</b> One run per agent per sequence; the three sequences share their starting
+  agents, so they are not three independent votes.</li>
+  <li><b>Scouted worlds.</b> Danger-A and Fog-B were found by exploratory runs after the planned hunter and fog worlds
+  proved unsurvivable, and Danger-A passed its survival check for the modulated agent only.</li>
+  <li><b>The ceiling.</b> The May replication's training curves are all near the 500-step cap; its survival readings
+  could not have shown an effect of May's size. The foraging world, too, starts at the cap in the main study.</li>
+  <li><b>Most-likely vs sampled actions.</b> The memory tests play the most likely action, training samples. Only the
+  four key cells of Figure 4 were re-checked with sampled actions; the other cells are greedy only.</li>
+  <li><b>Choices made after seeing the data</b>, each flagged where it appears: how per-switch votes combine and which
+  worlds count in the forgetting vote (the table in section 02); the head-start and gain measures (Figure 4); the 80 %
+  ceiling label (Figure 5); the three-seed interval and May-sized line (Figure 7); the death-rate and learning-speed
+  hints (Figure 8).</li>
+</ul>
+<h3>What changed during the analysis</h3>
+<ul class="plainlist">
+  <li>The main study was first written up as "fragile support" for the modulator. An independent review showed the
+  pre-set rule also reaches its refutation clause, depending on the forgetting entry set; the label is now "not
+  decided".</li>
+  <li>The first write-up credited the modulated agent with "coping better with the first switch". Most of that is the
+  zero-shot head start of Figure 4; the claim now reads "its checkpoint generalises better to unseen worlds, for this
+  one pair".</li>
+  <li>The read-out script scored recovery ties as exact equality of episode counts; the rule said "the same logged
+  row". The script was fixed, and Figure 2's votes are checked against both sources.</li>
+  <li>The May replication's learning-speed hint was first reported on the episode axis only; on the environment-step
+  axis it is about half as large.</li>
+</ul>
+</section>
+
+<section class="col">
+<h2><span class="num">05</span> What to test next</h2>
+<ol class="plainlist">
+  <li><b>A world with room above the cap.</b> Re-run the double return where the hunting stage leaves the ordinary
+  agent well below 500 steps — for example with bushes the predator can enter, slower healing in cover, or a pouncing
+  predator — screening candidate worlds with the ordinary agent first.</li>
+  <li><b>Learning speed as a pre-registered outcome, on the environment-step axis.</b> Register the early-window mean
+  and the steps needed to reach a threshold, with a noise rule fixed in advance and several seeds.</li>
+  <li><b>Pairs that do not share a start.</b> Compare ordinary agents from different seeds with each other (ordinary
+  seed 42 against seeds 43 and 44) to measure how far two starts drift with no modulator at all, and pair each
+  modulated agent with an ordinary agent from a different seed.</li>
+  <li><b>Zero-shot generalisation as its own question.</b> Play several seeds' pre-trained checkpoints, both agents,
+  in unseen worlds with sampled and most-likely actions. Only if the head start is stable across seeds is a design
+  about adaptation speed worth running.</li>
+  <li><b>Settle the scoring choices before any fresh runs</b>: how votes combine, which worlds count in forgetting,
+  most-likely or sampled test play, and the ceiling-free outcomes above.</li>
+</ol>
+</section>
+
+<section class="col">
+<h2><span class="num">06</span> How to reproduce this</h2>
+<ul class="plainlist">
+  <li>Written analyses: <code>docs/<wbr>experiments/<wbr>active/<wbr>continual_worlds/<wbr>CONTINUAL_WORLDS.md</code> (sections 10–11) and <code>MAY_DOUBLE_RETURN_REPLICATION.md</code> (sections 10–11) in the same folder.</li>
+  <li>This page: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>continual_worlds/<wbr>results_page/</code> — <code>r01</code>–<code>r08</code>, one script per figure, and <code>t01</code>, which writes the table, and <code>build_page.py</code>; <code>build_page.py --figures</code> reruns every script first. Every number in the prose is written by the script that computed it into <code>figures/<wbr>&lt;script&gt;.nums.json</code> and filled in by the builder.</li>
+  <li>Read-outs the scripts read: <code>results/<wbr>analysis/<wbr>continual_worlds/</code> — <code>pilot_readout.json</code>, <code>forgetting_*.json</code>, <code>sampled_check_p3.json</code>, <code>mayrep_readout.json</code>, <code>retention_mayrep_readout.json</code> — produced by <code>pilot_readout.py</code>, <code>retention_readout.py</code> and the forgetting-matrix script; training curves from the local training logs through <code>pilot_readout.py</code>'s own reader.</li>
+  <li><b>Not in a committed location:</b> the per-switch noise yardsticks, return and forgetting votes, the rule-sensitivity scores and the head-start comparison come from the analyzer's working files <code>tmp/<wbr>20260929_cw_main_verdict.json</code>, <code>tmp/<wbr>20260930_cw_sensitivity_extra.json</code> and <code>tmp/<wbr>20260930_cw_zeroshot_relative.json</code>. Figures 2, 4 and the table cannot be rebuilt if those files are lost; moving that scoring into the read-out script is a pending hand-off.</li>
+</ul>
+<p>Departures from the House Style Sheet: the chrome accent is a greyed slate blue (<code>#3f5b7a</code>) and the warning
+tone a brown, both kept well away from the saturated blue and orange the figures spend on the two agents; headings use Pretendard; a small evidence-kind badge sits above each caption (solid:
+training logs; grey: frozen-checkpoint tests; double: both; dashed brown: exploratory); wide tables sit in scroll boxes.</p>
+</section>
+
+</div>
+__HOUSE_SCRIPT__

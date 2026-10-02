@@ -1,0 +1,1 @@
+episodes|28,000|28,000|100.0|7 gains x 2 drains x 2,000, grid 10, list placement, agent knows the pond

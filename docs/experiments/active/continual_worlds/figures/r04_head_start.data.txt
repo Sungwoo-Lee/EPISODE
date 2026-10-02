@@ -1,0 +1,3 @@
+(a) worlds played by the branch-point checkpoints|7|7|100.0|2,000 test episodes per cell, most-likely action; the same row in all three sequences
+(b) first visits|6|12|50.0|first visits only; the six returns are in Figure 2. Exploratory measures chosen after the data
+(c) cells re-checked with sampled actions|4|35|11.4|the cells the headline claims rest on, in the P3 ordinary and modulated matrices; the rest stay greedy only

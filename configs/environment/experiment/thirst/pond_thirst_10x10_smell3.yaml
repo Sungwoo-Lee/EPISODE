@@ -1,0 +1,18 @@
+# EXPERIMENTAL, NOT MAINTAINED (CLAUDE.md "Config maintenance scope"): part of the thirst-task
+# design, docs/experiments/active/thirst_task/THIRST_TASK.md.
+#
+# WORLD pond_thirst_10x10_smell3 (THIRST_TASK cell g10s3): level 06 itself (basic/06-pond_thirst_10x10.yaml),
+# with smell reaching only 3 squares instead of the whole map. ONE key differs:
+# sensory.sensor_radius 20 -> 3. Everything else, including the map, every count, the pond
+# and its smell weight, is inherited unchanged.
+#
+# What the number means: a source contributes to a smell sample only if its EUCLIDEAN distance
+# to the sampled cell is <= 3 (sensor.py, `dist <= radius`). The agent samples a five-cell
+# diamond (its own cell and the four neighbours, olfactory_grid_range 1), so a source up to
+# 3 + 1 squares away can register on the nearest neighbour cell. Same semantics as the
+# context-exploration worlds' "smell range 3" (sensory: {sensor_radius: 3}).
+# The observation width does not change (59): out-of-reach smell reads zero.
+extends: environment/experiment/basic/06-pond_thirst_10x10
+
+sensory:
+  sensor_radius: 3

@@ -1,0 +1,370 @@
+{
+ "heal_full": 16,
+ "walk": 3,
+ "hide_heal_trip": 22,
+ "n_cells": 459,
+ "n_valid": 193,
+ "warmest_valid_world": -19.0,
+ "lever": [
+  {
+   "scale": 1.0,
+   "k_ex": 0.04,
+   "k_loss": 0.01,
+   "ring": 8.09,
+   "fire": 57.9,
+   "away": 34,
+   "rewarm": 20,
+   "burn": 3,
+   "ok": true
+  },
+  {
+   "scale": 0.85,
+   "k_ex": 0.034,
+   "k_loss": 0.0085,
+   "ring": 8.09,
+   "fire": 57.9,
+   "away": 40,
+   "rewarm": 24,
+   "burn": 4,
+   "ok": true
+  },
+  {
+   "scale": 0.75,
+   "k_ex": 0.03,
+   "k_loss": 0.0075,
+   "ring": 8.09,
+   "fire": 57.9,
+   "away": 46,
+   "rewarm": 27,
+   "burn": 4,
+   "ok": true
+  },
+  {
+   "scale": 0.65,
+   "k_ex": 0.026,
+   "k_loss": 0.0065,
+   "ring": 8.09,
+   "fire": 57.9,
+   "away": 53,
+   "rewarm": 31,
+   "burn": 5,
+   "ok": true
+  },
+  {
+   "scale": 0.5,
+   "k_ex": 0.02,
+   "k_loss": 0.005,
+   "ring": 8.09,
+   "fire": 57.9,
+   "away": 69,
+   "rewarm": 40,
+   "burn": 6,
+   "ok": true
+  },
+  {
+   "scale": 0.4,
+   "k_ex": 0.016,
+   "k_loss": 0.004,
+   "ring": 8.09,
+   "fire": 57.9,
+   "away": 86,
+   "rewarm": 50,
+   "burn": 8,
+   "ok": true
+  },
+  {
+   "scale": 0.33,
+   "k_ex": 0.0132,
+   "k_loss": 0.0033,
+   "ring": 8.09,
+   "fire": 57.9,
+   "away": 104,
+   "rewarm": 61,
+   "burn": 9,
+   "ok": true
+  },
+  {
+   "scale": 0.25,
+   "k_ex": 0.01,
+   "k_loss": 0.0025,
+   "ring": 8.09,
+   "fire": 57.9,
+   "away": 138,
+   "rewarm": 80,
+   "burn": 12,
+   "ok": true
+  }
+ ],
+ "slice": [
+  {
+   "world": -40.0,
+   "away": 19,
+   "ok": true
+  },
+  {
+   "world": -39.5,
+   "away": 20,
+   "ok": true
+  },
+  {
+   "world": -39.0,
+   "away": 20,
+   "ok": true
+  },
+  {
+   "world": -38.5,
+   "away": 20,
+   "ok": true
+  },
+  {
+   "world": -38.0,
+   "away": 20,
+   "ok": true
+  },
+  {
+   "world": -37.5,
+   "away": 21,
+   "ok": true
+  },
+  {
+   "world": -37.0,
+   "away": 21,
+   "ok": true
+  },
+  {
+   "world": -36.5,
+   "away": 21,
+   "ok": true
+  },
+  {
+   "world": -36.0,
+   "away": 21,
+   "ok": true
+  },
+  {
+   "world": -35.5,
+   "away": 22,
+   "ok": true
+  },
+  {
+   "world": -35.0,
+   "away": 22,
+   "ok": true
+  },
+  {
+   "world": -34.5,
+   "away": 22,
+   "ok": true
+  },
+  {
+   "world": -34.0,
+   "away": 23,
+   "ok": true
+  },
+  {
+   "world": -33.5,
+   "away": 23,
+   "ok": true
+  },
+  {
+   "world": -33.0,
+   "away": 23,
+   "ok": true
+  },
+  {
+   "world": -32.5,
+   "away": 24,
+   "ok": true
+  },
+  {
+   "world": -32.0,
+   "away": 24,
+   "ok": true
+  },
+  {
+   "world": -31.5,
+   "away": 25,
+   "ok": true
+  },
+  {
+   "world": -31.0,
+   "away": 25,
+   "ok": true
+  },
+  {
+   "world": -30.5,
+   "away": 26,
+   "ok": true
+  },
+  {
+   "world": -30.0,
+   "away": 26,
+   "ok": true
+  },
+  {
+   "world": -29.5,
+   "away": 27,
+   "ok": true
+  },
+  {
+   "world": -29.0,
+   "away": 27,
+   "ok": true
+  },
+  {
+   "world": -28.5,
+   "away": 28,
+   "ok": true
+  },
+  {
+   "world": -28.0,
+   "away": 29,
+   "ok": true
+  },
+  {
+   "world": -27.5,
+   "away": 29,
+   "ok": true
+  },
+  {
+   "world": -27.0,
+   "away": 30,
+   "ok": true
+  },
+  {
+   "world": -26.5,
+   "away": 31,
+   "ok": true
+  },
+  {
+   "world": -26.0,
+   "away": 32,
+   "ok": true
+  },
+  {
+   "world": -25.5,
+   "away": 33,
+   "ok": true
+  },
+  {
+   "world": -25.0,
+   "away": 34,
+   "ok": true
+  },
+  {
+   "world": -24.5,
+   "away": 35,
+   "ok": true
+  },
+  {
+   "world": -24.0,
+   "away": 37,
+   "ok": true
+  },
+  {
+   "world": -23.5,
+   "away": 38,
+   "ok": true
+  },
+  {
+   "world": -23.0,
+   "away": 40,
+   "ok": true
+  },
+  {
+   "world": -22.5,
+   "away": 42,
+   "ok": true
+  },
+  {
+   "world": -22.0,
+   "away": 44,
+   "ok": true
+  },
+  {
+   "world": -21.5,
+   "away": 47,
+   "ok": true
+  },
+  {
+   "world": -21.0,
+   "away": 51,
+   "ok": true
+  },
+  {
+   "world": -20.5,
+   "away": 55,
+   "ok": true
+  },
+  {
+   "world": -20.0,
+   "away": 61,
+   "ok": true
+  },
+  {
+   "world": -19.5,
+   "away": 71,
+   "ok": true
+  },
+  {
+   "world": -19.0,
+   "away": 92,
+   "ok": false
+  },
+  {
+   "world": -18.5,
+   "away": null,
+   "ok": false
+  },
+  {
+   "world": -18.0,
+   "away": null,
+   "ok": false
+  },
+  {
+   "world": -17.5,
+   "away": null,
+   "ok": false
+  },
+  {
+   "world": -17.0,
+   "away": null,
+   "ok": false
+  },
+  {
+   "world": -16.5,
+   "away": null,
+   "ok": false
+  },
+  {
+   "world": -16.0,
+   "away": null,
+   "ok": false
+  },
+  {
+   "world": -15.5,
+   "away": null,
+   "ok": false
+  },
+  {
+   "world": -15.0,
+   "away": null,
+   "ok": false
+  },
+  {
+   "world": -14.5,
+   "away": null,
+   "ok": false
+  },
+  {
+   "world": -14.0,
+   "away": null,
+   "ok": false
+  },
+  {
+   "world": -13.5,
+   "away": null,
+   "ok": false
+  }
+ ]
+}

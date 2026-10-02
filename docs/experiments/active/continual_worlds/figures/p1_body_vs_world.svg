@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="711.36pt" height="452.16pt" viewBox="0 0 711.36 452.16" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.8, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 452.16 
+L 711.36 452.16 
+L 711.36 0 
+L 0 0 
+z
+" style="fill: #fbfbfa"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 29.4336 113.76 
+L 329.4144 113.76 
+Q 334.944 113.76 334.944 108.2304 
+L 334.944 57.0816 
+Q 334.944 51.552 329.4144 51.552 
+L 29.4336 51.552 
+Q 23.904 51.552 23.904 57.0816 
+L 23.904 108.2304 
+Q 23.904 113.76 29.4336 113.76 
+z
+" clip-path="url(#pbcaef77d75)" style="fill: #f1f2f0; stroke: #4e545e; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 29.4336 184.9536 
+L 329.4144 184.9536 
+Q 334.944 184.9536 334.944 179.424 
+L 334.944 128.2752 
+Q 334.944 122.7456 329.4144 122.7456 
+L 29.4336 122.7456 
+Q 23.904 122.7456 23.904 128.2752 
+L 23.904 179.424 
+Q 23.904 184.9536 29.4336 184.9536 
+z
+" clip-path="url(#pbcaef77d75)" style="fill: #f1f2f0; stroke: #4e545e; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 29.4336 256.1472 
+L 329.4144 256.1472 
+Q 334.944 256.1472 334.944 250.6176 
+L 334.944 199.4688 
+Q 334.944 193.9392 329.4144 193.9392 
+L 29.4336 193.9392 
+Q 23.904 193.9392 23.904 199.4688 
+L 23.904 250.6176 
+Q 23.904 256.1472 29.4336 256.1472 
+z
+" clip-path="url(#pbcaef77d75)" style="fill: #f1f2f0; stroke: #4e545e; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 29.4336 327.3408 
+L 329.4144 327.3408 
+Q 334.944 327.3408 334.944 321.8112 
+L 334.944 270.6624 
+Q 334.944 265.1328 329.4144 265.1328 
+L 29.4336 265.1328 
+Q 23.904 265.1328 23.904 270.6624 
+L 23.904 321.8112 
+Q 23.904 327.3408 29.4336 327.3408 
+z
+" clip-path="url(#pbcaef77d75)" style="fill: #f1f2f0; stroke: #4e545e; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 29.4336 398.5344 
+L 329.4144 398.5344 
+Q 334.944 398.5344 334.944 393.0048 
+L 334.944 341.856 
+Q 334.944 336.3264 329.4144 336.3264 
+L 29.4336 336.3264 
+Q 23.904 336.3264 23.904 341.856 
+L 23.904 393.0048 
+Q 23.904 398.5344 29.4336 398.5344 
+z
+" clip-path="url(#pbcaef77d75)" style="fill: #f1f2f0; stroke: #4e545e; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 381.9456 113.76 
+L 681.9264 113.76 
+Q 687.456 113.76 687.456 108.2304 
+L 687.456 57.0816 
+Q 687.456 51.552 681.9264 51.552 
+L 381.9456 51.552 
+Q 376.416 51.552 376.416 57.0816 
+L 376.416 108.2304 
+Q 376.416 113.76 381.9456 113.76 
+z
+" clip-path="url(#pbcaef77d75)" style="fill: #ffffff; stroke-dasharray: 4,2; stroke-dashoffset: 0; stroke: #c9cdc9; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 381.9456 184.9536 
+L 681.9264 184.9536 
+Q 687.456 184.9536 687.456 179.424 
+L 687.456 128.2752 
+Q 687.456 122.7456 681.9264 122.7456 
+L 381.9456 122.7456 
+Q 376.416 122.7456 376.416 128.2752 
+L 376.416 179.424 
+Q 376.416 184.9536 381.9456 184.9536 
+z
+" clip-path="url(#pbcaef77d75)" style="fill: #ffffff; stroke-dasharray: 4,2; stroke-dashoffset: 0; stroke: #c9cdc9; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 381.9456 256.1472 
+L 681.9264 256.1472 
+Q 687.456 256.1472 687.456 250.6176 
+L 687.456 199.4688 
+Q 687.456 193.9392 681.9264 193.9392 
+L 381.9456 193.9392 
+Q 376.416 193.9392 376.416 199.4688 
+L 376.416 250.6176 
+Q 376.416 256.1472 381.9456 256.1472 
+z
+" clip-path="url(#pbcaef77d75)" style="fill: #ffffff; stroke-dasharray: 4,2; stroke-dashoffset: 0; stroke: #c9cdc9; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 381.9456 327.3408 
+L 681.9264 327.3408 
+Q 687.456 327.3408 687.456 321.8112 
+L 687.456 270.6624 
+Q 687.456 265.1328 681.9264 265.1328 
+L 381.9456 265.1328 
+Q 376.416 265.1328 376.416 270.6624 
+L 376.416 321.8112 
+Q 376.416 327.3408 381.9456 327.3408 
+z
+" clip-path="url(#pbcaef77d75)" style="fill: #ffffff; stroke-dasharray: 4,2; stroke-dashoffset: 0; stroke: #c9cdc9; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 381.9456 398.5344 
+L 681.9264 398.5344 
+Q 687.456 398.5344 687.456 393.0048 
+L 687.456 341.856 
+Q 687.456 336.3264 681.9264 336.3264 
+L 381.9456 336.3264 
+Q 376.416 336.3264 376.416 341.856 
+L 376.416 393.0048 
+Q 376.416 398.5344 381.9456 398.5344 
+z
+" clip-path="url(#pbcaef77d75)" style="fill: #ffffff; stroke-dasharray: 4,2; stroke-dashoffset: 0; stroke: #c9cdc9; stroke-linejoin: miter"/>
+   </g>
+   <g id="line2d_1">
+    <path d="M 39.1104 102.7008 
+" clip-path="url(#pbcaef77d75)" style="fill: none; stroke: #b02b2b; stroke-width: 2; stroke-linecap: round"/>
+    <defs>
+     <path id="mef27a95503" d="M -0 3.889087 
+L 3.889087 0 
+L 0 -3.889087 
+L -3.889087 -0 
+z
+" style="stroke: #b02b2b; stroke-linejoin: miter"/>
+    </defs>
+    <g clip-path="url(#pbcaef77d75)">
+     <use xlink:href="#mef27a95503" x="39.1104" y="102.7008" style="fill: #b02b2b; stroke: #b02b2b; stroke-linejoin: miter"/>
+    </g>
+   </g>
+   <g id="line2d_2">
+    <path d="M 39.1104 173.8944 
+" clip-path="url(#pbcaef77d75)" style="fill: none; stroke: #b02b2b; stroke-width: 2; stroke-linecap: round"/>
+    <g clip-path="url(#pbcaef77d75)">
+     <use xlink:href="#mef27a95503" x="39.1104" y="173.8944" style="fill: #b02b2b; stroke: #b02b2b; stroke-linejoin: miter"/>
+    </g>
+   </g>
+   <g id="text_1">
+    <text style="font-weight: 600; font-size: 13px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #16181d" x="179.424" y="29.500803" transform="rotate(-0 179.424 29.500803)">fixed in every world — the body</text>
+   </g>
+   <g id="text_2">
+    <text style="font-weight: 600; font-size: 13px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #16181d" x="531.936" y="29.430725" transform="rotate(-0 531.936 29.430725)">changes between worlds — the outside</text>
+   </g>
+   <g id="text_3">
+    <text style="font-weight: 600; font-size: 12px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="34.9632" y="72.013875" transform="rotate(-0 34.9632 72.013875)">food energy</text>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #4e545e" x="323.8848" y="71.299773" transform="rotate(-0 323.8848 71.299773)">11 settings</text>
+   </g>
+   <g id="text_5">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="34.9632" y="89.270973" transform="rotate(-0 34.9632 89.270973)">hunger drain per step, overeating death</text>
+   </g>
+   <g id="text_6">
+    <text style="font-weight: 600; font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #b02b2b" x="48.7872" y="105.224237" transform="rotate(-0 48.7872 105.224237)">boundary item, kept fixed: food energy per bite = 6</text>
+   </g>
+   <g id="text_7">
+    <text style="font-weight: 600; font-size: 12px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="34.9632" y="143.277787" transform="rotate(-0 34.9632 143.277787)">injury</text>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #4e545e" x="323.8848" y="142.493373" transform="rotate(-0 323.8848 142.493373)">7 settings</text>
+   </g>
+   <g id="text_9">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="34.9632" y="160.464573" transform="rotate(-0 34.9632 160.464573)">healing only when resting, hits spread over time</text>
+   </g>
+   <g id="text_10">
+    <text style="font-weight: 600; font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #b02b2b" x="48.7872" y="176.417837" transform="rotate(-0 48.7872 176.417837)">boundary item, kept fixed: bush healing ×25</text>
+   </g>
+   <g id="text_11">
+    <text style="font-weight: 600; font-size: 12px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="34.9632" y="214.266075" transform="rotate(-0 34.9632 214.266075)">body temperature</text>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #4e545e" x="323.8848" y="213.686973" transform="rotate(-0 323.8848 213.686973)">6 settings</text>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="34.9632" y="231.709384" transform="rotate(-0 34.9632 231.709384)">warming / cooling rates, death at −15 / +15</text>
+   </g>
+   <g id="text_14">
+    <text style="font-weight: 600; font-size: 12px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="34.9632" y="285.664987" transform="rotate(-0 34.9632 285.664987)">interoception</text>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #4e545e" x="323.8848" y="284.880573" transform="rotate(-0 323.8848 284.880573)">4 settings</text>
+   </g>
+   <g id="text_16">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="34.9632" y="302.902984" transform="rotate(-0 34.9632 302.902984)">what the agent feels of its own body</text>
+   </g>
+   <g id="text_17">
+    <text style="font-weight: 600; font-size: 12px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="34.9632" y="356.653275" transform="rotate(-0 34.9632 356.653275)">reward</text>
+   </g>
+   <g id="text_18">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #4e545e" x="323.8848" y="356.074173" transform="rotate(-0 323.8848 356.074173)">5 settings</text>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="34.9632" y="374.092131" transform="rotate(-0 34.9632 374.092131)">drive reduction, death penalty, 500-step episode</text>
+   </g>
+   <g id="text_20">
+    <text style="font-weight: 600; font-size: 12px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="387.4752" y="71.878875" transform="rotate(-0 387.4752 71.878875)">layout</text>
+   </g>
+   <g id="text_21">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #4e545e" x="676.3968" y="71.299773" transform="rotate(-0 676.3968 71.299773)">3 settings</text>
+   </g>
+   <g id="text_22">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="387.4752" y="89.270973" transform="rotate(-0 387.4752 89.270973)">grid size, bushes, where things are placed</text>
+   </g>
+   <g id="text_23">
+    <text style="font-weight: 600; font-size: 12px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="387.4752" y="143.272162" transform="rotate(-0 387.4752 143.272162)">food supply</text>
+   </g>
+   <g id="text_24">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #4e545e" x="676.3968" y="142.493373" transform="rotate(-0 676.3968 142.493373)">5 settings</text>
+   </g>
+   <g id="text_25">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="387.4752" y="160.515784" transform="rotate(-0 387.4752 160.515784)">how many food items, regrowth delay</text>
+   </g>
+   <g id="text_26">
+    <text style="font-weight: 600; font-size: 12px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="387.4752" y="214.201387" transform="rotate(-0 387.4752 214.201387)">danger</text>
+   </g>
+   <g id="text_27">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #4e545e" x="676.3968" y="213.686973" transform="rotate(-0 676.3968 213.686973)">8 settings</text>
+   </g>
+   <g id="text_28">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="387.4752" y="231.598056" transform="rotate(-0 387.4752 231.598056)">hunters, ambushers, rocks</text>
+   </g>
+   <g id="text_29">
+    <text style="font-weight: 600; font-size: 12px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="387.4752" y="285.459675" transform="rotate(-0 387.4752 285.459675)">climate</text>
+   </g>
+   <g id="text_30">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #4e545e" x="676.3968" y="284.880573" transform="rotate(-0 676.3968 284.880573)">5 settings</text>
+   </g>
+   <g id="text_31">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="387.4752" y="302.902984" transform="rotate(-0 387.4752 302.902984)">cold of open ground, number of fires</text>
+   </g>
+   <g id="text_32">
+    <text style="font-weight: 600; font-size: 12px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="387.4752" y="356.7939" transform="rotate(-0 387.4752 356.7939)">sensing</text>
+   </g>
+   <g id="text_33">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #4e545e" x="676.3968" y="356.074173" transform="rotate(-0 676.3968 356.074173)">4 settings</text>
+   </g>
+   <g id="text_34">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="387.4752" y="374.045373" transform="rotate(-0 387.4752 374.045373)">smell range, blur and noise on sight and smell</text>
+   </g>
+   <g id="patch_12">
+    <path d="M 342.429491 234.72 
+Q 355.67918 234.72 368.928868 234.72 
+" style="fill: none; stroke: #4e545e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 347.629491 237.32 
+L 342.429491 234.72 
+L 347.629491 232.12 
+" style="fill: none; stroke: #4e545e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 363.728868 232.12 
+L 368.928868 234.72 
+L 363.728868 237.32 
+" style="fill: none; stroke: #4e545e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="text_35">
+    <text style="font-size: 9.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #4e545e" x="355.68" y="429.392584" transform="rotate(-0 355.68 429.392584)">solid boxes: identical in all 8 worlds (asserted on 63 body fields of the resolved configs)   ·   dashed boxes: set per world</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pbcaef77d75">
+   <rect x="10.08" y="10.08" width="691.2" height="432"/>
+  </clipPath>
+ </defs>
+</svg>

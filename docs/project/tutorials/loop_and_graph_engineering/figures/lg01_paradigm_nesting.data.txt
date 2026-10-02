@@ -1,0 +1,1 @@
+Conceptual diagram, not a measurement: 5 of 5 nested layers and 3 of 3 agents drawn (100%), with 3 hand-off arrows. Layer order follows Feng et al. (2026); no run, episode or seed is summarised.

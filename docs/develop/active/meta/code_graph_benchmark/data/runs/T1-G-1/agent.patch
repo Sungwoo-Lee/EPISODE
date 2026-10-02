@@ -1,0 +1,398 @@
+diff --git a/configs/environment/default.yaml b/configs/environment/default.yaml
+index 5dbc460..66f875b 100644
+--- a/configs/environment/default.yaml
++++ b/configs/environment/default.yaml
+@@ -325,6 +325,14 @@ thermal:
+   max_temperature: 15.0
+   k_exchange: 0.04
+   k_loss: 0.01
++  # Direction-dependent speed of the WHOLE step d = k_exchange*(field - T) + k_metabolic
++  # - k_loss*(T - setpoint): the body moves by s*d, s = warming_rate_scale when d > 0,
++  # else cooling_rate_scale. d is scaled as a whole, so every settling temperature is
++  # unchanged. Each must be > 0 and satisfy scale*(k_exchange + k_loss) <= 1. Both exactly
++  # 1.0 is the original unscaled step; equal values other than 1.0 are a uniform speed change.
++  # The metabolic-coupling nutrition drain is NOT scaled.
++  warming_rate_scale: 1.0
++  cooling_rate_scale: 1.0
+   k_metabolic: 0.0
+   metabolic_coupling: false
+   # Read ONLY when metabolic_coupling is true. Nutrition units drawn per
+diff --git a/configs/environment/experiment/archive/thermal/campfire_world.yaml b/configs/environment/experiment/archive/thermal/campfire_world.yaml
+index 97650c7..93b9515 100644
+--- a/configs/environment/experiment/archive/thermal/campfire_world.yaml
++++ b/configs/environment/experiment/archive/thermal/campfire_world.yaml
+@@ -347,6 +347,14 @@ thermal:
+   max_temperature: 15.0
+   k_exchange: 0.04
+   k_loss: 0.01
++  # Direction-dependent speed of the WHOLE step d = k_exchange*(field - T) + k_metabolic
++  # - k_loss*(T - setpoint): the body moves by s*d, s = warming_rate_scale when d > 0,
++  # else cooling_rate_scale. d is scaled as a whole, so every settling temperature is
++  # unchanged. Each must be > 0 and satisfy scale*(k_exchange + k_loss) <= 1. Both exactly
++  # 1.0 is the original unscaled step; equal values other than 1.0 are a uniform speed change.
++  # The metabolic-coupling nutrition drain is NOT scaled.
++  warming_rate_scale: 1.0
++  cooling_rate_scale: 1.0
+   k_metabolic: 0.0
+   metabolic_coupling: false
+   # Read ONLY when metabolic_coupling is true. Nutrition units drawn per
+diff --git a/configs/environment/experiment/archive/thermal/campfire_world_body_temp_hidden.yaml b/configs/environment/experiment/archive/thermal/campfire_world_body_temp_hidden.yaml
+index ec47c66..287dc71 100644
+--- a/configs/environment/experiment/archive/thermal/campfire_world_body_temp_hidden.yaml
++++ b/configs/environment/experiment/archive/thermal/campfire_world_body_temp_hidden.yaml
+@@ -358,6 +358,14 @@ thermal:
+   max_temperature: 15.0
+   k_exchange: 0.04
+   k_loss: 0.01
++  # Direction-dependent speed of the WHOLE step d = k_exchange*(field - T) + k_metabolic
++  # - k_loss*(T - setpoint): the body moves by s*d, s = warming_rate_scale when d > 0,
++  # else cooling_rate_scale. d is scaled as a whole, so every settling temperature is
++  # unchanged. Each must be > 0 and satisfy scale*(k_exchange + k_loss) <= 1. Both exactly
++  # 1.0 is the original unscaled step; equal values other than 1.0 are a uniform speed change.
++  # The metabolic-coupling nutrition drain is NOT scaled.
++  warming_rate_scale: 1.0
++  cooling_rate_scale: 1.0
+   k_metabolic: 0.0
+   metabolic_coupling: false
+   # Read ONLY when metabolic_coupling is true. Nutrition units drawn per
+diff --git a/configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml b/configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml
+index de3553f..92d9d91 100644
+--- a/configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml
++++ b/configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml
+@@ -143,7 +143,7 @@ environment:
+ # The gate, and the ONLY thermal key this world changes. Every other key under `thermal:`
+ # in default.yaml already carries the archived campfire world's value (sigma 0.7,
+ # default_temp [-28,-22], min_fire_separation 3, setpoint 0.0, min/max_temperature
+-# -15/+15, k_exchange 0.04, k_loss 0.01, grid_range 1, relative true,
++# -15/+15, k_exchange 0.04, k_loss 0.01, warming/cooling_rate_scale 1.0/1.0, grid_range 1, relative true,
+ # body_temp_observable true), so restating them here would only create drift.
+ thermal:
+   enabled: true
+diff --git a/src/environment/config_loader.py b/src/environment/config_loader.py
+index f11733c..d91c3c7 100644
+--- a/src/environment/config_loader.py
++++ b/src/environment/config_loader.py
+@@ -1556,6 +1556,25 @@ def load_env_params(config: Config) -> EnvParams:
+                 f"({_th_k_exchange} + {_th_k_loss} = {_th_k_exchange + _th_k_loss}); "
+                 f"above 1 the discrete update overshoots its own fixed point every "
+                 f"step and the body temperature oscillates instead of settling.")
++        # Direction-dependent speed of the whole step. Conditional-mandatory, no
++        # fallback. `not (x > 0)` (not `x <= 0`) so NaN is rejected too, and
++        # scale*(k_exchange + k_loss) <= 1 keeps the approach to the fixed point
++        # monotone at the scaled speed.
++        _th_warming_scale = float(config.get_mandatory('thermal.warming_rate_scale'))
++        _th_cooling_scale = float(config.get_mandatory('thermal.cooling_rate_scale'))
++        for _key, _scale in (('thermal.warming_rate_scale', _th_warming_scale),
++                             ('thermal.cooling_rate_scale', _th_cooling_scale)):
++            if not (_scale > 0.0):
++                raise ValueError(
++                    f"{_key} must be > 0 (it multiplies the whole per-step "
++                    f"body-temperature change), got {_scale}.")
++            if not (_scale * (_th_k_exchange + _th_k_loss) <= 1.0):
++                raise ValueError(
++                    f"{_key} * (thermal.k_exchange + thermal.k_loss) must be <= 1 "
++                    f"({_scale} * ({_th_k_exchange} + {_th_k_loss}) = "
++                    f"{_scale * (_th_k_exchange + _th_k_loss)}); above 1 the scaled "
++                    f"step overshoots its own fixed point and the body temperature "
++                    f"oscillates instead of settling.")
+ 
+         # ── Metabolic coupling (Stage 5) ──────────────────────────────────
+         # `metabolic_coupling` is conditional-mandatory under `thermal.enabled`;
+@@ -1628,6 +1647,7 @@ def load_env_params(config: Config) -> EnvParams:
+         _th_setpoint = 0.0
+         _th_min_temp, _th_max_temp = 0.0, 0.0
+         _th_k_exchange, _th_k_loss, _th_k_metabolic = 0.0, 0.0, 0.0
++        _th_warming_scale, _th_cooling_scale = 1.0, 1.0
+         # Metabolic coupling block (Stage 5), inert. `False` is the value that
+         # makes the drain in `update_body` untraceable on a thermal-off config:
+         # it gates a static Python `if`, so the nutrition update is the
+@@ -2330,6 +2350,8 @@ def load_env_params(config: Config) -> EnvParams:
+         thermal_k_exchange=_th_k_exchange,
+         thermal_k_loss=_th_k_loss,
+         thermal_k_metabolic=_th_k_metabolic,
++        thermal_warming_rate_scale=_th_warming_scale,
++        thermal_cooling_rate_scale=_th_cooling_scale,
+         thermal_metabolic_coupling=_th_met_coupling,
+         thermal_metabolic_coupling_rate=_th_met_coupling_rate,
+         temperature_setpoint=_th_setpoint,
+diff --git a/src/environment/core.py b/src/environment/core.py
+index 36389c2..34e6a42 100644
+--- a/src/environment/core.py
++++ b/src/environment/core.py
+@@ -298,12 +298,29 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
+     # A STATIC Python branch: a thermal-off config traces none of this.
+     if params.thermal_enabled:
+         cell_temp = state.thermal_field[new_agent_pos[0], new_agent_pos[1]]
+-        new_body_temp = (
+-            state.body_temp
+-            + params.thermal_k_exchange * (cell_temp - state.body_temp)
+-            + params.thermal_k_metabolic
+-            - params.thermal_k_loss * (state.body_temp - params.temperature_setpoint)
+-        )
++        if (params.thermal_warming_rate_scale == 1.0
++                and params.thermal_cooling_rate_scale == 1.0):
++            # Static branch: both scales exactly 1.0 keeps the original
++            # computation, so the compiled step is unchanged.
++            new_body_temp = (
++                state.body_temp
++                + params.thermal_k_exchange * (cell_temp - state.body_temp)
++                + params.thermal_k_metabolic
++                - params.thermal_k_loss * (state.body_temp - params.temperature_setpoint)
++            )
++        else:
++            # Scale the WHOLE step d, not one term, so d = 0 (every settling
++            # temperature) is untouched. Warming (d > 0) and cooling (d <= 0) run
++            # at different speeds.
++            body_temp_step = (
++                params.thermal_k_exchange * (cell_temp - state.body_temp)
++                + params.thermal_k_metabolic
++                - params.thermal_k_loss * (state.body_temp - params.temperature_setpoint)
++            )
++            rate_scale = jnp.where(body_temp_step > 0.0,
++                                   params.thermal_warming_rate_scale,
++                                   params.thermal_cooling_rate_scale)
++            new_body_temp = state.body_temp + rate_scale * body_temp_step
+         thermal_death = jnp.logical_or(new_body_temp < params.min_temperature,
+                                        new_body_temp > params.max_temperature)
+         # Folded into `done` HERE, inside update_body, so that `real_death` — which
+diff --git a/src/environment/state.py b/src/environment/state.py
+index 0c47cfc..98d45a8 100644
+--- a/src/environment/state.py
++++ b/src/environment/state.py
+@@ -396,6 +396,13 @@ class EnvParams:
+     temperature_setpoint: float
+     min_temperature: float
+     max_temperature: float
++    # Direction-dependent body speed: the body moves by s*d, where d is the WHOLE
++    # step of the recurrence above and s = warming_rate_scale if d > 0 else
++    # cooling_rate_scale. STATIC because both being exactly 1.0 selects (at trace
++    # time) the original unscaled code path, so the compiled step is unchanged.
++    # Inert (1.0) whenever `thermal_enabled` is False.
++    thermal_warming_rate_scale: float = struct.field(pytree_node=False)
++    thermal_cooling_rate_scale: float = struct.field(pytree_node=False)
+     # Metabolic coupling (Stage 5). When ON, the thermoregulatory work the body
+     # does each step — the `k_loss` term of the recurrence above — is charged to
+     # nutrition in `core.py::update_body`.
+diff --git a/tests/env/test_thermal_rate_scales.py b/tests/env/test_thermal_rate_scales.py
+new file mode 100644
+index 0000000..523f678
+--- /dev/null
++++ b/tests/env/test_thermal_rate_scales.py
+@@ -0,0 +1,217 @@
++"""Direction-dependent body-temperature speed: `thermal.warming_rate_scale` /
++`thermal.cooling_rate_scale`.
++
++In plain terms: the body can now warm and cool at different speeds. Each step the
++recurrence produces a change d (exchange with the cell, plus metabolic heat, minus
++physiological pull-back); the body moves by s*d, with s the warming scale when
++d > 0 and the cooling scale otherwise. Because the WHOLE step is scaled, d = 0 is
++untouched and every settling temperature stays where it was.
++"""
++import os
++
++os.environ.setdefault("JAX_PLATFORMS", "cpu")
++
++import copy
++import glob
++import sys
++
++import numpy as np
++import pytest
++import yaml
++
++_HERE = os.path.dirname(os.path.abspath(__file__))
++_ROOT = os.path.abspath(os.path.join(_HERE, "..", ".."))
++sys.path.insert(0, _ROOT)
++
++import jax
++
++from src.utils.config import Config
++from src.environment.config_loader import load_env_params
++from src.environment.core import jax_reset, jax_step
++
++THERMAL_CONFIG = os.path.join(
++    _ROOT, "configs", "environment", "experiment", "archive", "thermal", "campfire_world.yaml")
++DEFAULT_CONFIG = os.path.join(_ROOT, "configs", "environment", "default.yaml")
++REST = 4
++
++
++def _config(cell_temp, warming=1.0, cooling=1.0, **thermal_kw):
++    """Uniform-field thermal world (see test_thermal_body._uniform_field_config)."""
++    d = copy.deepcopy(yaml.safe_load(open(THERMAL_CONFIG)))
++    th = d["thermal"]
++    th["use_object_sources"] = False
++    th["use_random_spots"] = False
++    th["default_temp"] = [float(cell_temp), float(cell_temp)]
++    th["warming_rate_scale"] = warming
++    th["cooling_rate_scale"] = cooling
++    th.update(thermal_kw)
++    d["environment"]["entities"] = []
++    d["environment"]["obstacles"] = [
++        o for o in d["environment"]["obstacles"] if o.get("name") == "campfire"]
++    d["environment"]["resources"] = [
++        r for r in d["environment"]["resources"] if r.get("type") == "food"]
++    d["environment"]["max_steps"] = 2000
++    d["body"]["metabolic_cost"] = 0.0
++    return d
++
++
++def _params(d):
++    return load_env_params(Config(d))
++
++
++def _traj(params, n):
++    state = jax_reset(params, jax.random.PRNGKey(0))
++    out = [float(state.body_temp)]
++    for _ in range(n):
++        state, _, done, _ = jax_step(state, REST, params)
++        out.append(float(state.body_temp))
++        if bool(done):
++            break
++    return np.array(out)
++
++
++# ── params exposure ───────────────────────────────────────────────────────────
++
++def test_params_carry_the_scales_as_static_fields():
++    p = _params(_config(-10.0, warming=1.5, cooling=0.5))
++    assert p.thermal_warming_rate_scale == 1.5
++    assert p.thermal_cooling_rate_scale == 0.5
++    # static: not pytree leaves
++    import dataclasses
++    fields = {f.name: f for f in dataclasses.fields(p)}
++    for name in ("thermal_warming_rate_scale", "thermal_cooling_rate_scale"):
++        assert fields[name].metadata.get("pytree_node") is False
++
++
++def test_thermal_off_params_are_inert_ones():
++    d = yaml.safe_load(open(DEFAULT_CONFIG))
++    d["thermal"].pop("warming_rate_scale")
++    d["thermal"].pop("cooling_rate_scale")
++    p = _params(d)              # thermal off: keys are not read
++    assert p.thermal_warming_rate_scale == 1.0
++    assert p.thermal_cooling_rate_scale == 1.0
++
++
++# ── load-time validation ──────────────────────────────────────────────────────
++
++@pytest.mark.parametrize("key", ["warming_rate_scale", "cooling_rate_scale"])
++def test_missing_key_is_refused_and_named(key):
++    d = _config(-10.0)
++    del d["thermal"][key]
++    with pytest.raises(ValueError, match=key):
++        _params(d)
++
++
++@pytest.mark.parametrize("key", ["warming_rate_scale", "cooling_rate_scale"])
++@pytest.mark.parametrize("bad", [0.0, -1.0, float("nan")])
++def test_non_positive_or_nan_is_refused_and_named(key, bad):
++    d = _config(-10.0)
++    d["thermal"][key] = bad
++    with pytest.raises(ValueError, match=f"thermal.{key}"):
++        _params(d)
++
++
++@pytest.mark.parametrize("key", ["warming_rate_scale", "cooling_rate_scale"])
++def test_monotone_bound_is_refused_and_named(key):
++    d = _config(-10.0)          # k_exchange + k_loss = 0.05
++    d["thermal"][key] = 20.01
++    with pytest.raises(ValueError, match=f"thermal.{key}"):
++        _params(d)
++    d["thermal"][key] = 20.0    # boundary: scale*(k_ex+k_loss) == 1 is allowed
++    _params(d)
++
++
++# ── behaviour ─────────────────────────────────────────────────────────────────
++
++def test_cooling_step_is_scaled_whole_and_warming_scale_is_ignored():
++    # cell at -10, body starts at 0 -> d < 0 on step 1
++    k_ex, k_loss = 0.04, 0.01
++    d0 = k_ex * (-10.0 - 0.0) - k_loss * 0.0
++    base = _traj(_params(_config(-10.0)), 1)
++    fast = _traj(_params(_config(-10.0, warming=3.0, cooling=2.0)), 1)
++    np.testing.assert_allclose(base[1], d0, rtol=1e-5)
++    np.testing.assert_allclose(fast[1], 2.0 * d0, rtol=1e-5)
++
++
++def test_warming_step_is_scaled_whole_and_cooling_scale_is_ignored():
++    k_ex = 0.04
++    d0 = k_ex * 10.0
++    p = _params(_config(10.0, warming=3.0, cooling=0.5))
++    np.testing.assert_allclose(_traj(p, 1)[1], 3.0 * d0, rtol=1e-5)
++
++
++def test_settling_temperature_is_unchanged():
++    # T* = k_ex*field / (k_ex + k_loss) = -8 for a -10 cell
++    for w, c in [(1.0, 1.0), (2.0, 0.5), (0.5, 3.0)]:
++        t = _traj(_params(_config(-10.0, warming=w, cooling=c)), 1500)[-1]
++        np.testing.assert_allclose(t, -8.0, atol=1e-2)
++
++
++def test_equal_non_unit_scales_are_a_uniform_speed_change():
++    a = _traj(_params(_config(-10.0)), 5)
++    b = _traj(_params(_config(-10.0, warming=2.0, cooling=2.0)), 5)
++    assert not np.allclose(a[1:], b[1:])
++    np.testing.assert_allclose(b[1], 2.0 * a[1], rtol=1e-5)
++
++
++def test_unit_scales_use_the_original_expression():
++    """1.0/1.0 traces the original, smaller program; any other pair adds the
++    sign-select and the multiply."""
++    p1 = _params(_config(-10.0))
++    p2 = _params(_config(-10.0, warming=1.0, cooling=1.0000001))
++    state = jax_reset(p1, jax.random.PRNGKey(0))
++    j1 = jax.make_jaxpr(lambda s: jax_step(s, REST, p1))(state)
++    j2 = jax.make_jaxpr(lambda s: jax_step(s, REST, p2))(state)
++    assert len(j1.jaxpr.eqns) < len(j2.jaxpr.eqns) or str(j1) != str(j2)
++    assert str(j1).count("select_n") < str(j2).count("select_n")
++
++
++def test_metabolic_drain_is_not_scaled():
++    a = _params(_config(-10.0, metabolic_coupling=True, metabolic_coupling_rate=5.0))
++    b = _params(_config(-10.0, warming=2.0, cooling=2.0,
++                        metabolic_coupling=True, metabolic_coupling_rate=5.0))
++    # First step: the drain reads the PRE-step body temperature, which is
++    # identical (the setpoint), so nutrition must be identical too.
++    sa = jax_reset(a, jax.random.PRNGKey(0))
++    sb = jax_reset(b, jax.random.PRNGKey(0))
++    sa, *_ = jax_step(sa, REST, a)
++    sb, *_ = jax_step(sb, REST, b)
++    np.testing.assert_allclose(float(sa.nutrition), float(sb.nutrition), rtol=1e-6)
++    # Second step: pre-step temperatures differ (the body moved at different
++    # speeds), and the drain follows k_loss*(T - setpoint) of the ACTUAL
++    # temperature, not a scaled version of it.
++    ta, tb = float(sa.body_temp), float(sb.body_temp)
++    assert ta != tb
++    na0, nb0 = float(sa.nutrition), float(sb.nutrition)
++    sa, *_ = jax_step(sa, REST, a)
++    sb, *_ = jax_step(sb, REST, b)
++    drain_a = na0 - float(sa.nutrition)
++    drain_b = nb0 - float(sb.nutrition)
++    np.testing.assert_allclose(drain_b - drain_a, 5.0 * 0.01 * (abs(tb) - abs(ta)),
++                               rtol=1e-3, atol=1e-6)
++
++
++# ── shipped configs ───────────────────────────────────────────────────────────
++
++def _thermal_enabled_configs():
++    out = []
++    for f in sorted(glob.glob(os.path.join(_ROOT, "configs", "**", "*.yaml"), recursive=True)):
++        try:
++            d = yaml.safe_load(open(f))
++        except yaml.YAMLError:
++            continue
++        if isinstance(d, dict) and isinstance(d.get("thermal"), dict) \
++                and d["thermal"].get("enabled") is True:
++            out.append(f)
++    return out
++
++
++def test_every_thermal_enabled_config_ships_unit_scales():
++    files = _thermal_enabled_configs()
++    assert files
++    default = yaml.safe_load(open(DEFAULT_CONFIG))["thermal"]
++    for f in files:
++        th = yaml.safe_load(open(f))["thermal"]
++        merged = {**default, **th} if "extends" in yaml.safe_load(open(f)) else th
++        assert merged["warming_rate_scale"] == 1.0, f
++        assert merged["cooling_rate_scale"] == 1.0, f

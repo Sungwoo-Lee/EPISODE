@@ -1,0 +1,43 @@
+{
+ "task": "T1",
+ "run": "T1-G-2",
+ "correct": true,
+ "f2p_passed": "13/13",
+ "p2p_broken": 0,
+ "p2p_total": 593,
+ "ref_recall": 1.0,
+ "ref_files": [
+  "configs/environment/default.yaml",
+  "configs/environment/experiment/archive/thermal/campfire_world.yaml",
+  "configs/environment/experiment/archive/thermal/campfire_world_body_temp_hidden.yaml",
+  "src/environment/config_loader.py",
+  "src/environment/core.py",
+  "src/environment/state.py"
+ ],
+ "changed_files": [
+  "configs/environment/default.yaml",
+  "configs/environment/experiment/archive/thermal/campfire_world.yaml",
+  "configs/environment/experiment/archive/thermal/campfire_world_body_temp_hidden.yaml",
+  "src/environment/config_loader.py",
+  "src/environment/core.py",
+  "src/environment/state.py",
+  "tests/env/test_thermal_body.py",
+  "tests/env/test_thermal_validation.py"
+ ],
+ "wall_s": 518,
+ "turns": 19,
+ "input_tokens": 32,
+ "cache_read": 973323,
+ "cache_write": 68478,
+ "output_tokens": 9604,
+ "usd_equiv": 0.5646806,
+ "is_error": false,
+ "subtype": "success",
+ "tool_calls": 18,
+ "tools": {
+  "Grep": 1,
+  "Bash": 14,
+  "Read": 3
+ },
+ "first_edit": null
+}

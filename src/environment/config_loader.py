@@ -1,0 +1,3251 @@
+"""
+Configuration loader for JAX Environment.
+
+Translates YAML config files into JAX-compatible EnvParams.
+
+v2.0 changes (CP1 — unified animal entity):
+  - `_load_animals()` replaces the two legacy `predators:` / `neutral_animals:` paths.
+  - The `predator_enabled` YAML key is fully removed; configs carrying it after the
+    migration sweep raise ValueError with a clear "removed in v2.0" message.
+  - `predator_tags` / `neutral_tags` no longer passed to EnvParams constructor (M2 fix);
+    they are derived via @property accessors on EnvParams (B3 / M1 fix in state.py).
+"""
+import re as _re
+import logging
+import os as _os
+import yaml
+import numpy as np
+import jax.numpy as jnp
+from dataclasses import dataclass
+from typing import Tuple
+from src.environment.state import EnvParams, WATER_OFF_FIELDS
+
+from src.utils.config import Config
+import warnings
+
+# ── `extends:` config layering ───────────────────────────────────────────────
+# Root of all YAML configs in the repo; used to resolve `extends:` targets.
+_CONFIGS_ROOT = _os.path.abspath(
+    _os.path.join(_os.path.dirname(__file__), "..", "..", "configs")
+)
+
+
+def _resolve_extends(config_path: str, _seen: frozenset) -> Config:
+    """Recursively resolve `extends:` chains and return a merged Config.
+
+    Rules:
+    - If the YAML has a top-level ``extends:`` key (str or list[str]),
+      each named base is loaded (recursively resolving its own ``extends:``),
+      deep-merged in declared order, and THIS file's keys are merged on top.
+    - If there is no ``extends:`` key the file is loaded STANDALONE —
+      byte-for-byte today's behaviour (what every archived/full config relies on).
+    - ``extends`` targets are repo-relative paths under ``configs/`` with an
+      implicit ``.yaml`` suffix, e.g. ``extends: environment/default``
+      resolves to ``configs/environment/default.yaml``.
+    - The ``extends:`` key itself is stripped from the merged result before
+      return (it is meta, not an env param).
+    - Cycle detection: a config that (transitively) extends itself raises
+      ``ValueError``.
+    """
+    abs_path = _os.path.abspath(config_path)
+    if abs_path in _seen:
+        raise ValueError(
+            f"Config `extends:` cycle detected at {config_path!r}"
+        )
+    _seen = _seen | {abs_path}
+
+    raw = Config.load_yaml(config_path).to_dict()
+    extends = raw.pop("extends", None)  # strip meta key — not an env param
+
+    if extends is None:
+        # STANDALONE — byte-for-byte today's behaviour.
+        return Config(raw)
+
+    bases = [extends] if isinstance(extends, str) else list(extends)
+    merged = Config({})
+    for base_rel in bases:
+        base_path = _os.path.join(_CONFIGS_ROOT, base_rel + ".yaml")
+        if not _os.path.exists(base_path):
+            raise ValueError(
+                f"Config `extends:` target {base_rel!r} not found "
+                f"(looked for {base_path!r})"
+            )
+        merged.merge(_resolve_extends(base_path, _seen))
+    merged.merge(Config(raw))  # this file's keys win
+    return merged
+
+
+def load_env_config(config_path: str) -> Config:
+    """Resolve a config file to a fully-merged Config, honouring ``extends:``.
+
+    - A config with ``extends: environment/default`` (or a list) gets the
+      named base(s) deep-merged underneath it; this file's keys win.
+    - A config **without** ``extends:`` loads exactly as today (standalone,
+      byte-identical to ``Config.load_yaml(config_path)``).
+    - ``get_mandatory`` validation in ``load_env_params`` runs on the merged
+      result — the no-fallback contract is satisfied post-merge.
+
+    Authoring note (list-replace semantics):
+      ``Config.merge`` / ``deep_update`` replaces list values wholesale — the
+      override list wins; elements are NOT merged.  To *suppress* a base list
+      block (e.g. ``entities:`` or ``resources:``) a sparse config MUST
+      declare it explicitly as an empty list (``entities: []``).  Omitting the
+      key entirely causes the base's list to survive the merge unchanged.
+
+    See plan docs/develop/active/refactors/CONFIG_LAYERING_AND_EXPERIMENT_REORG.md
+    for design rationale.
+    """
+    return _resolve_extends(config_path, _seen=frozenset())
+
+_log = logging.getLogger(__name__)
+
+# Allowed characters in entity tags (used in WandB key 'Episode/MeanDist*_<tag>').
+# Slashes / spaces / dots break the WandB namespace or log key.
+_TAG_RE = _re.compile(r'^[A-Za-z0-9_-]+$')
+
+# ── Animal entity constants (v2.0) ────────────────────────────────────────────
+ANIMAL_CLASS_TO_INT = {"predator": 0, "neutral": 1}
+ANIMAL_CLASS_TO_VIS_CHANNEL = {"predator": 5, "neutral": 7}
+ANIMAL_DAMAGING_CLASSES = {"predator"}
+ANIMAL_BEHAVIOUR_TO_INT = {"wander": 0, "hunt": 1, "static": 2}
+# detection_range moved to inclusive-integer sampling (see
+# docs/develop/active/issues/INCLUSIVE_INTEGER_RANGE_SAMPLING.md);
+# only genuinely-continuous fields remain here.
+DISTRIBUTIONAL_FIELDS = (
+    "max_stamina",
+    "stamina_recovery_rate",
+    "hunt_stamina_threshold",
+    "lose_interest_multiplier",
+)
+
+# ---------------------------------------------------------------------------
+# Behavior-measure toolkit v1 schema loader
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class BehaviorMeasureCfg:
+    """Validated configuration for the behavior-measure toolkit v1."""
+    enabled: bool
+    cue_radius: float
+    obs_window: int
+    eval_n_episodes: int
+    eval_seeds: Tuple[int, ...]
+    eval_policy_mode: str            # "deterministic" | "stochastic"
+    eval_max_steps: int
+    eval_obs_noise: str              # "training" | "zero" | "custom"
+    motif_window_K: int
+    motif_features: Tuple[str, ...]
+    motif_kmeans_k: int
+    motif_kmeans_seed: int
+    motif_standardise: str           # "zscore_pooled" | "zscore_per_agent" | "none"
+    eval_output_root: str
+
+
+_ALLOWED_POLICY_MODES = {"deterministic", "stochastic"}
+_ALLOWED_NOISE_MODES = {"training", "zero", "custom"}
+_ALLOWED_STANDARDISE = {"zscore_pooled", "zscore_per_agent", "none"}
+_DEFAULT_FEATURE_NAMES = (
+    "net_displacement", "path_length", "threat_distance_change_rate",
+    "min_threat_distance", "bush_occupancy_fraction", "eat_events_per_window",
+    "action_entropy", "mode_action_fraction", "stay_in_place_fraction",
+    "drive_injury_change",
+)
+
+
+def load_behavior_measure_cfg(config) -> "BehaviorMeasureCfg | None":
+    """Load behavior_measures: from the YAML config.
+
+    Returns None if the top-level key is absent (backwards compatibility — existing
+    configs that pre-date this feature load unchanged).  If the block IS present,
+    every leaf key is mandatory and missing keys raise ValueError.
+    """
+    if config.get("behavior_measures") is None:
+        return None  # backwards-compat: feature off, online accumulators no-op.
+
+    enabled         = config.get_mandatory("behavior_measures.enabled")
+    cue_radius      = config.get_mandatory("behavior_measures.cue_radius", float)
+    obs_window      = config.get_mandatory("behavior_measures.obs_window", int)
+    eval_n_eps      = config.get_mandatory("behavior_measures.eval_n_episodes", int)
+    eval_seeds_raw  = config.get_mandatory("behavior_measures.eval_seeds")
+    eval_pol_mode   = config.get_mandatory("behavior_measures.eval_policy_mode")
+    eval_max_steps  = config.get_mandatory("behavior_measures.eval_max_steps", int)
+    eval_obs_noise  = config.get_mandatory("behavior_measures.eval_obs_noise")
+    motif_K         = config.get_mandatory("behavior_measures.motif_window_K", int)
+    motif_features  = config.get_mandatory("behavior_measures.motif_features")
+    motif_k         = config.get_mandatory("behavior_measures.motif_kmeans_k", int)
+    motif_seed      = config.get_mandatory("behavior_measures.motif_kmeans_seed", int)
+    motif_std       = config.get_mandatory("behavior_measures.motif_standardise")
+    eval_output     = config.get_mandatory("behavior_measures.eval_output_root")
+
+    # ----- eval_seeds: accept list/tuple (legacy) OR dict generator spec -----
+    if isinstance(eval_seeds_raw, dict):
+        # Generator spec form: { rng: <int>, sort: <bool> }
+        # `rng` is mandatory — missing it would silently produce wrong seeds.
+        if 'rng' not in eval_seeds_raw:
+            raise ValueError(
+                "behavior_measures.eval_seeds dict spec is missing mandatory key 'rng'. "
+                "Expected form: {rng: <int>, sort: <bool>}."
+            )
+        _rng_seed = int(eval_seeds_raw['rng'])
+        # `sort: true` is the default and is load-bearing: episode i uses eval_seeds[i],
+        # so the order must stay fixed for cross-run / cross-cell episode-index comparability.
+        _do_sort = bool(eval_seeds_raw.get('sort', True))
+        _generated = np.random.default_rng(_rng_seed).integers(
+            0, 2**31, size=eval_n_eps, dtype=np.int64
+        ).tolist()
+        eval_seeds_raw = sorted(_generated) if _do_sort else _generated
+
+    # ----- validation (runs for both list/tuple and generated-from-spec paths) -----
+    if cue_radius <= 0:
+        raise ValueError(f"behavior_measures.cue_radius must be > 0; got {cue_radius}.")
+    if obs_window < 1:
+        raise ValueError(f"behavior_measures.obs_window must be >= 1; got {obs_window}.")
+    if eval_n_eps < 1:
+        raise ValueError(f"behavior_measures.eval_n_episodes must be >= 1; got {eval_n_eps}.")
+    if not isinstance(eval_seeds_raw, (list, tuple)):
+        raise ValueError(f"behavior_measures.eval_seeds must be a list/tuple or dict spec; got {type(eval_seeds_raw)}.")
+    if len(eval_seeds_raw) != eval_n_eps:
+        raise ValueError(
+            f"behavior_measures.eval_seeds length ({len(eval_seeds_raw)}) != eval_n_episodes ({eval_n_eps})."
+        )
+    eval_seeds = tuple(int(s) for s in eval_seeds_raw)
+    if len(set(eval_seeds)) != len(eval_seeds):
+        raise ValueError("behavior_measures.eval_seeds contains duplicates.")
+    if eval_pol_mode not in _ALLOWED_POLICY_MODES:
+        raise ValueError(f"behavior_measures.eval_policy_mode must be in {_ALLOWED_POLICY_MODES}; got {eval_pol_mode!r}.")
+    if eval_max_steps < 1:
+        raise ValueError(f"behavior_measures.eval_max_steps must be >= 1; got {eval_max_steps}.")
+    if eval_obs_noise not in _ALLOWED_NOISE_MODES:
+        raise ValueError(f"behavior_measures.eval_obs_noise must be in {_ALLOWED_NOISE_MODES}; got {eval_obs_noise!r}.")
+    if motif_K < 1:
+        raise ValueError(f"behavior_measures.motif_window_K must be >= 1; got {motif_K}.")
+    if not motif_features or not all(isinstance(f, str) for f in motif_features):
+        raise ValueError("behavior_measures.motif_features must be a non-empty list of strings.")
+    unknown_features = set(motif_features) - set(_DEFAULT_FEATURE_NAMES)
+    if unknown_features:
+        raise ValueError(
+            f"behavior_measures.motif_features contains unknown names: {sorted(unknown_features)}. "
+            f"Allowed v1 features: {_DEFAULT_FEATURE_NAMES}."
+        )
+    if motif_k < 2:
+        raise ValueError(f"behavior_measures.motif_kmeans_k must be >= 2; got {motif_k}.")
+    if motif_std not in _ALLOWED_STANDARDISE:
+        raise ValueError(f"behavior_measures.motif_standardise must be in {_ALLOWED_STANDARDISE}; got {motif_std!r}.")
+
+    return BehaviorMeasureCfg(
+        enabled=bool(enabled),
+        cue_radius=float(cue_radius),
+        obs_window=int(obs_window),
+        eval_n_episodes=int(eval_n_eps),
+        eval_seeds=eval_seeds,
+        eval_policy_mode=str(eval_pol_mode),
+        eval_max_steps=int(eval_max_steps),
+        eval_obs_noise=str(eval_obs_noise),
+        motif_window_K=int(motif_K),
+        motif_features=tuple(str(f) for f in motif_features),
+        motif_kmeans_k=int(motif_k),
+        motif_kmeans_seed=int(motif_seed),
+        motif_standardise=str(motif_std),
+        eval_output_root=str(eval_output),
+    )
+
+
+def _normalise_tag(raw, idx, entity_label):
+    """Return a valid metric-suffix string.  Empty / missing → f'idx{idx}'.
+
+    The tag field is optional with a documented default, so this function uses
+    entry.get('tag', None) and normalises in Python.  Do NOT use
+    config.get_mandatory — the field is optional by design.
+    """
+    if raw is None or raw == "":
+        return f"idx{idx}"
+    s = str(raw)
+    if not _TAG_RE.match(s):
+        raise ValueError(
+            f"{entity_label} tag {s!r} must match [A-Za-z0-9_-]+ "
+            f"(used in WandB key suffix; slashes / spaces / dots break the namespace)."
+        )
+    return s
+
+
+def _read_properties(entry, entity_label):
+    """Read olfactory signature, preferring `properties` (plural)."""
+    if 'properties' in entry:
+        return entry['properties']
+    if 'property' in entry:
+        warnings.warn(
+            f"{entity_label}: YAML key 'property' is deprecated — rename to 'properties'.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return entry['property']
+    raise ValueError(f"{entity_label}: missing required key 'properties'.")
+
+def _one_hot_list(channel: int, V: int) -> list:
+    """Return a Python list encoding one-hot(channel, V)."""
+    v = [0.0] * V
+    v[channel] = 1.0
+    return v
+
+
+def _read_visual_properties(entry: dict, default_channel: int, V: int, entity_label: str) -> list:
+    """Read optional visual_properties from a config entry.
+
+    If `visual_properties` is present, validates it has length V and returns it.
+    If absent, returns one_hot(default_channel, V) as the default appearance vector.
+    Raises ValueError if the length does not match V.
+    """
+    if 'visual_properties' in entry:
+        vp = list(entry['visual_properties'])
+        if len(vp) != V:
+            raise ValueError(
+                f"{entity_label}: 'visual_properties' has length {len(vp)} "
+                f"but visual_vector_size is {V}. "
+                f"Length must equal visual_vector_size."
+            )
+        return [float(x) for x in vp]
+    # Default: one-hot of the entity's current channel
+    return _one_hot_list(default_channel, V)
+
+
+_VISUAL_MASK_CODES = {'none': 0, 'far': 1, 'all': 2}
+
+
+def _read_visual_mask(entry: dict, entity_label: str) -> int:
+    """Read optional per-entity `visual_mask` (DIRECTIONAL_SENSORS) as an int code.
+
+    none = 0 (always visible), far = 1 (visible only when the agent is co-located
+    with it), all = 2 (never visible). Absent -> 0, which is the pre-DIRECTIONAL_SENSORS
+    behaviour. An unrecognised string is an error, never a silent 'none'.
+    """
+    raw = entry.get('visual_mask', 'none')
+    key = str(raw).strip().lower()
+    if key not in _VISUAL_MASK_CODES:
+        raise ValueError(
+            f"{entity_label}: visual_mask must be one of "
+            f"{sorted(_VISUAL_MASK_CODES)}, got {raw!r}.")
+    return _VISUAL_MASK_CODES[key]
+
+
+def _read_blocks_sight(entry: dict) -> bool:
+    """Per-entity `blocks_sight` (DIRECTIONAL_SENSORS). Distinct from `blocking` (movement) and
+    `hides_agent` (concealment from predators). Absent -> False."""
+    return bool(entry.get('blocks_sight', False))
+
+
+def _read_temperature(entry: dict, entity_label: str) -> tuple:
+    """Per-entity heat-source declaration → (absolute, ratio_low, ratio_high).
+
+    Two mutually exclusive styles, same rule and same error shape as
+    `count` vs `count_low`/`count_high` in `_resolve_count_range`:
+
+      temperature: 40.0            # absolute, added straight into the field
+      temperature_ratio: [11, 13]  # per-episode multiple of |default_temp|
+
+    Absent → (0.0, 0.0, 0.0): zero is a genuine default (an entity that is not a
+    heat source), not a fallback for a critical value, so this reads like
+    `blocks_sight` rather than through `get_mandatory`.
+
+    The two styles are combined downstream as `absolute + ratio * |default_temp|`,
+    which is exact precisely because they are mutually exclusive: whichever style
+    is absent contributes zero.
+    """
+    has_abs = 'temperature' in entry
+    has_ratio = 'temperature_ratio' in entry
+    if has_abs and has_ratio:
+        raise ValueError(
+            f"{entity_label}: 'temperature' and 'temperature_ratio' are mutually exclusive. "
+            "Use either the absolute 'temperature: T' OR the ratio "
+            "'temperature_ratio: [low, high]' (a multiple of |thermal.default_temp|)."
+        )
+    if has_ratio:
+        raw = entry['temperature_ratio']
+        vals = list(raw) if isinstance(raw, (list, tuple)) else [raw, raw]
+        if len(vals) != 2:
+            raise ValueError(
+                f"{entity_label}: 'temperature_ratio' must be [low, high], got {raw!r}.")
+        lo, hi = float(vals[0]), float(vals[1])
+        if lo > hi:
+            raise ValueError(
+                f"{entity_label}: temperature_ratio low={lo} must be <= high={hi}.")
+        return 0.0, lo, hi
+    return float(entry.get('temperature', 0.0)), 0.0, 0.0
+
+
+def _apply_edge_margin(area, margin, grid_h: int, grid_w: int, entity_label: str):
+    """Inset a spawn `area` by `margin` cells on all four sides, at LOAD time.
+
+    `edge_margin` is a config-time constant, so it belongs here and not as a
+    traced condition inside the placement scan (IMPLEMENTATION_PLAN.md, F4): the
+    sampler is left untouched and a nonsensical margin fails at load rather than
+    producing a degenerate spawn box.
+
+    `area` is the raw 1-based inclusive YAML form `[[r1, c1], [r2, c2]]`; the
+    returned rectangle is in the same form. An empty intersection raises.
+    """
+    margin = int(margin)
+    if margin < 0:
+        raise ValueError(f"{entity_label}: edge_margin must be >= 0, got {margin}.")
+    if margin == 0:
+        return area
+    r1 = max(int(area[0][0]), 1 + margin)
+    c1 = max(int(area[0][1]), 1 + margin)
+    r2 = min(int(area[1][0]), grid_h - margin)
+    c2 = min(int(area[1][1]), grid_w - margin)
+    if r1 > r2 or c1 > c2:
+        raise ValueError(
+            f"{entity_label}: edge_margin={margin} leaves an EMPTY spawn area. "
+            f"Declared area {area} inset by {margin} on a {grid_h}x{grid_w} grid "
+            f"gives [[{r1}, {c1}], [{r2}, {c2}]]. Lower edge_margin or widen 'area'."
+        )
+    return [[r1, c1], [r2, c2]]
+
+
+# ── Load-time thermal structure check (temperature system, Stage 6b) ─────────
+#
+# WHAT IT IS FOR. The temperature task only exists inside a narrow band of
+# configurations. The design measured it: with sigma near 0.7 and a fire roughly
+# 11-13x the magnitude of the world's baseline coldness, standing ON the fire is
+# lethal, the ring one cell out is survivable indefinitely, and three cells out
+# the cold kills you on a clock. Drift outside that band and the run still looks
+# healthy while the agent is learning a different task — either a fire with no
+# bite, or a world with no survivable spot beside it, or a cold that never
+# actually ends an episode. `thermal.sigma` has already produced one silent
+# all-NaN training run in this project; this check is why the next one raises.
+#
+# WHERE IT RUNS. At LOAD, in `load_env_params` — not at reset. Reset runs under
+# jit on every episode of every parallel environment, and every input this check
+# needs is a config constant, so a per-episode cost would buy nothing.
+#
+# IT IS DETERMINISTIC ON PURPOSE. It evaluates the CORNERS of the sampled ranges
+# plus their midpoint, never a random draw, so a config either always loads or
+# never does. A check that passes on Monday and fails on Tuesday is worse than
+# no check at all.
+
+_THERMAL_CHECK_DISTANCES = (0, 1, 3)
+
+
+def _thermal_equilibrium(ambient, k_exchange, k_loss, k_metabolic, setpoint):
+    """Body temperature the recurrence in `core.py::update_body` settles at.
+
+        T <- T + k_ex*(T_field - T) + k_met - k_loss*(T - setpoint)
+
+    has the fixed point
+
+        T* = (k_ex*T_field + k_loss*setpoint + k_met) / (k_ex + k_loss)
+
+    This is the GENERAL form, deliberately. The special case `k_ex*T_field /
+    (k_ex + k_loss)` quoted in the design sandbox is only correct when both
+    `temperature_setpoint` and `k_metabolic` are zero; both are config keys with
+    non-zero-capable values, and with either one set the special case will pass a
+    lethal comfort ring or reject a perfectly good one.
+
+    The approach to T* is monotone from any start, so "the equilibrium lies
+    inside [min_temperature, max_temperature]" is exactly "the agent survives
+    here indefinitely", and "outside" is exactly "the agent dies here eventually".
+    That equivalence is what lets this check use the fixed point instead of
+    simulating a 4000-step trajectory the way the sandbox does.
+    """
+    return (k_exchange * ambient + k_loss * setpoint + k_metabolic) \
+        / (k_exchange + k_loss)
+
+
+def _thermal_single_fire_field(amplitude, default_temp, sigma, kernel_radius,
+                               grid_h, grid_w):
+    """The field one fire at the grid centre produces — the environment's own build.
+
+    Same three stages, same order, as `core.py::_build_thermal_field`: fill with
+    `default_temp`, ADD one stamp of `amplitude`, blur ONCE at the end with
+    `core.py::_gaussian_smooth_normalised` — the very function `jax_reset` calls.
+
+    Calling the real blur is not a stylistic preference. A numpy twin would
+    validate a field the environment never builds, which is the exact
+    circular-verification shape this check exists to avoid, and it would drift
+    silently the first time the kernel is touched.
+    """
+    from src.environment.core import _gaussian_smooth_normalised   # local: avoids
+    # any import-order coupling between the loader and the env core, and keeps
+    # jax out of the import path of configs that never reach this check.
+
+    raw = np.full((int(grid_h), int(grid_w)), float(default_temp), dtype=np.float32)
+    c_r, c_c = int(grid_h) // 2, int(grid_w) // 2
+    raw[c_r, c_c] += float(amplitude)
+    return np.asarray(_gaussian_smooth_normalised(
+        jnp.asarray(raw), float(sigma), int(kernel_radius)))
+
+
+def _thermal_radial_equilibria(amplitude, default_temp, sigma, kernel_radius,
+                               grid_h, grid_w, k_exchange, k_loss, k_metabolic,
+                               setpoint, k_exchange_boosted=None, boost_mode=None):
+    """Equilibrium body temperature at Manhattan distance 0, 1 and 3 from ONE fire.
+
+    Averages `_thermal_single_fire_field` over each Manhattan ring around the
+    fire and converts the ring's mean ambient temperature into the body
+    temperature the recurrence settles at there.
+
+    B4 (injury speeds heat exchange): with `k_exchange_boosted` set, a ring uses
+    the boosted coefficient in `boost_mode == 'both'`, and in `'cooling_only'`
+    only when the ring is on the COOLING side — the settled body is warmer than
+    the cell, i.e. `k_loss*(setpoint - T_amb) + k_metabolic > 0`. That sign does
+    not depend on k_exchange, so one coefficient per ring is consistent
+    (STATE_DEPENDENT_BODY_MECHANICS §A2, "same-side note"). Default None = today.
+
+    Returns `{distance: equilibrium}`; a distance whose ring falls entirely off
+    the grid maps to None.
+    """
+    field = _thermal_single_fire_field(
+        amplitude, default_temp, sigma, kernel_radius, grid_h, grid_w)
+    c_r, c_c = int(grid_h) // 2, int(grid_w) // 2
+
+    out = {}
+    for d in _THERMAL_CHECK_DISTANCES:
+        ring = [field[r, c]
+                for r in range(int(grid_h)) for c in range(int(grid_w))
+                if abs(r - c_r) + abs(c - c_c) == d]
+        if not ring:
+            out[d] = None
+            continue
+        t_amb = float(np.mean(ring))
+        k_ex = k_exchange
+        if k_exchange_boosted is not None and (
+                boost_mode == 'both'
+                or k_loss * (setpoint - t_amb) + k_metabolic > 0.0):
+            k_ex = k_exchange_boosted
+        out[d] = _thermal_equilibrium(t_amb, k_ex, k_loss, k_metabolic, setpoint)
+    return out
+
+
+def _thermal_structure_verdict(eq, min_temperature, max_temperature):
+    """Which of the three structural conditions hold for one radial profile.
+
+    Returns `(ok, failures)` where `failures` is a list of plain-English strings.
+    """
+    failures = []
+
+    def _survivable(t):
+        return min_temperature <= t <= max_temperature
+
+    if eq[0] is not None and _survivable(eq[0]):
+        failures.append(
+            f"the fire does not hurt: standing ON it settles at {eq[0]:+.2f}, "
+            f"inside the survivable band [{min_temperature}, {max_temperature}]")
+    if eq[1] is not None and not _survivable(eq[1]):
+        failures.append(
+            f"there is no comfort ring: one cell out settles at {eq[1]:+.2f}, "
+            f"outside the survivable band [{min_temperature}, {max_temperature}], "
+            f"so no reachable cell beside the fire is survivable")
+    if eq[3] is not None and _survivable(eq[3]):
+        failures.append(
+            f"the cold is not a clock: three cells out settles at {eq[3]:+.2f}, "
+            f"inside the survivable band [{min_temperature}, {max_temperature}], "
+            f"so the agent never has to return to the fire")
+    return (not failures), failures
+
+
+def _check_bush_fire_clearance(*, bush_min_fire_distance, obs_temperature,
+                               obs_ratio_low, obs_ratio_high, obs_hides_agent,
+                               obs_spawn_area, obs_names, res_temperature,
+                               res_ratio_low, res_ratio_high, num_total_slots):
+    """Refuse a `thermal.bush_min_fire_distance > 0` world the bush pass cannot serve.
+
+    BUSH_FIRE_CLEARANCE §A3. All numpy on config constants; costs nothing at reset.
+    Raises ``ValueError`` when:
+
+      * no obstacle slot is a heat source, or no obstacle slot hides the agent
+        (a rule that is set but has nothing to act on is a config mistake);
+      * an obstacle slot is both a heat source and `hides_agent` (self-contradictory);
+      * a RESOURCE slot is a heat source (it stamps heat, but the bush pass only sees
+        obstacle fires, so a warm bush could survive silently);
+      * the worst-case feasibility bound fails for a bush spawn area. For each
+        distinct spawn area ``A`` of a bush slot, require
+
+            |A| - n_fire_slots * D(v) - n_other_slots >= n_bush_slots
+
+        with ``D(v) = 2v^2 - 2v + 1`` (cells at Manhattan distance < v from a fire,
+        its own cell included). The counts are CONFIG-WIDE, the same for every ``A``:
+        ``n_bush_slots`` is every bush slot of every bush entry (slots are allocated at
+        ``count_high``), ``n_fire_slots`` every heat-source obstacle slot (all assumed
+        burning), ``n_other_slots`` every remaining slot (resources, animals, other
+        obstacles). A per-entry count would miss bushes of a larger-area entry sitting
+        inside a smaller area. When the bound holds, the pass's silent (0, 0) fallback
+        (`core.relocate_blocked_entities`) is unreachable.
+    """
+    from src.environment.core import heat_source_mask
+
+    v = int(bush_min_fire_distance)
+    is_fire = np.asarray(heat_source_mask(
+        np.asarray(obs_temperature), np.asarray(obs_ratio_low), np.asarray(obs_ratio_high)),
+        dtype=bool)
+    hides = np.asarray(obs_hides_agent, dtype=bool)
+    res_fire = np.asarray(heat_source_mask(
+        np.asarray(res_temperature), np.asarray(res_ratio_low), np.asarray(res_ratio_high)),
+        dtype=bool)
+    key = f"thermal.bush_min_fire_distance={v}"
+    if not is_fire.any():
+        raise ValueError(
+            f"{key} is set, but no obstacle slot is a heat source: the rule has no fire "
+            "to keep bushes away from. Set it to 0 or add a heat-source obstacle.")
+    if not hides.any():
+        raise ValueError(
+            f"{key} is set, but no obstacle slot has hides_agent: true: the rule has no "
+            "bush to move. Set it to 0 or add a hiding obstacle.")
+    both = is_fire & hides
+    if both.any():
+        names = sorted({obs_names[i] for i in np.flatnonzero(both)})
+        raise ValueError(
+            f"{key}: obstacle(s) {names} are both a heat source and hides_agent: true. "
+            "A bush that is itself a fire cannot be kept away from fires.")
+    if res_fire.any():
+        raise ValueError(
+            f"{key}: {int(res_fire.sum())} resource slot(s) are heat sources. The bush "
+            "rule only sees obstacle fires, so a bush could sit beside a warm resource "
+            "unchecked. Remove the resource temperature or set the rule to 0.")
+
+    is_bush = hides & ~is_fire
+    n_bush = int(is_bush.sum())
+    n_fire = int(is_fire.sum())
+    n_other = int(num_total_slots) - n_bush - n_fire
+    d_v = 2 * v * v - 2 * v + 1
+    areas = np.asarray(obs_spawn_area)
+    seen = {}
+    for i in np.flatnonzero(is_bush):
+        seen.setdefault(tuple(int(x) for x in areas[i]), set()).add(obs_names[i])
+    for (r0, c0, r1, c1), names in seen.items():
+        size = max(0, r1 - r0) * max(0, c1 - c0)
+        lhs = size - n_fire * d_v - n_other
+        if lhs < n_bush:
+            raise ValueError(
+                f"{key} is infeasible for bush entry {sorted(names)} (0-based spawn area "
+                f"rows [{r0},{r1}) x cols [{c0},{c1})): worst case |A| - n_fire_slots*D(v) "
+                f"- n_other_slots = {size} - {n_fire}*{d_v} - {n_other} = {lhs} < "
+                f"n_bush_slots = {n_bush} (all bush slots, config-wide, at count_high). "
+                "A bush could then be parked at cell (0, 0) silently. Lower the value, "
+                "the bush count_high or the fire count_high, or widen the bush area.")
+        _log.info(
+            "bush-fire clearance feasible for %s: |A| - n_fire*D(v) - n_other = "
+            "%d - %d*%d - %d = %d >= n_bush %d (margin %d)",
+            sorted(names), size, n_fire, d_v, n_other, lhs, n_bush, lhs - n_bush)
+
+
+def _check_thermal_structure(*, obs_temperature, obs_ratio_low, obs_ratio_high,
+                             obs_labels, res_temperature, res_ratio_low,
+                             res_ratio_high, res_labels, use_object_sources,
+                             default_temp_low, default_temp_high, sigma,
+                             kernel_radius, grid_h, grid_w, k_exchange, k_loss,
+                             k_metabolic, setpoint, min_temperature,
+                             max_temperature, min_fire_separation,
+                             raise_on_failure=True, k_exchange_boosted=None,
+                             boost_mode=None):
+    """Refuse to load a thermal config whose radial profile has lost the task.
+
+    B4 FULL-INJURY PASS (2026-09-26). With `k_exchange_boosted` / `boost_mode`
+    set, the radial profile is evaluated with the injury-boosted heat exchange
+    (see `_thermal_radial_equilibria`). That pass is called with
+    `raise_on_failure=False`: a structural failure at FULL injury is LOGGED at
+    WARNING ("at full injury — allowed by configuration") instead of raised,
+    because it is a behavioural outcome of a configured mechanic, not a broken
+    world (user decision, STATE_DEPENDENT_BODY_MECHANICS Revision 3). The
+    injury-0 call uses the default `raise_on_failure=True` and is unchanged.
+
+    WHEN IT RUNS. All four of these must hold, or the check logs one line saying
+    which precondition failed and returns:
+
+      1. `thermal.use_object_sources` is true. Mode A (`use_random_spots: true,
+         use_object_sources: false`) has no fire to check at all.
+      2. At least one allocated slot is a heat source (`core.heat_source_mask`).
+      3. At least one heat-source slot declares its heat as a
+         `temperature_ratio`.
+      4. The grid is large enough to have a distance-3 ring.
+
+    PRECONDITION 3 IS A DEPARTURE FROM THE PLAN, AND IT IS LOAD-BEARING.
+    The plan's gate was preconditions 1 and 2 only, on the stated reasoning that
+    the Stage 2-5 test configs are thermal-on but declare no heat source. That is
+    true of Stages 2, 4 and 5 — they all set `use_object_sources: false` — but it
+    is NOT true of Stage 1: `tests/env/test_thermal_field.py` builds DEGENERATE
+    single-value worlds through an absolute `temperature:` precisely so the raw
+    stamps can be reconstructed from state alone and compared against the numpy
+    oracle. Two of them (`temperature: 100` over a baseline of 0.0, and over
+    -25.0) demonstrably lack the pain-plus-comfort structure — a baseline of 0.0
+    is the setpoint, so no distance is ever cold enough to kill — and neither can
+    be retuned into the band without destroying what it tests (the 0.0 baseline
+    is documented there as load-bearing against float32 cancellation).
+
+    So an exemption is not optional; the only choice is which one. The
+    ratio/absolute split is the principled one available: `temperature_ratio` is
+    the form that locks the fire's strength to the world's coldness, it is the
+    form the calibrated band is stated in ("11-13x the world's coldness"), it is
+    the form the shipped `campfire_world.yaml` and every config derived from it
+    uses, and `temperature:` is documented in `_read_temperature` as the raw
+    escape hatch that adds a number straight into the field. A config that takes
+    the escape hatch is not certified, and says so in the log rather than
+    silently.
+
+    WHAT IT CHECKS. For the corners of the sampled ranges (`default_temp`
+    low/high x `temperature_ratio` low/high, four draws, plus the midpoint) it
+    builds a single-fire field and asserts the three-part structure: distance 0
+    is lethal, distance 1 is survivable indefinitely, distance 3 is lethal.
+
+    It also refuses to certify `min_fire_separation: 0` alongside more than one
+    heat-source slot. The single-fire model cannot see merged fires, and merged
+    fires are lethal exactly where the agent would have to stand (+33.0 at
+    separation 1 and +15.4 at separation 2, against a +15 threshold, versus +8.4
+    at the shipped separation of 3). Certifying a world the model does not cover
+    is worse than not certifying it.
+
+    ON FAILURE IT RAISES. Not a warning: a warning is what the sigma-floor
+    incident produced, and it trained silently for a full run.
+    """
+    from src.environment.core import heat_source_mask
+
+    if not use_object_sources:
+        _log.info(
+            "thermal structure check SKIPPED: thermal.use_object_sources is "
+            "false, so no entity stamps heat into the field and there is no "
+            "fire whose radial profile could be checked.")
+        return
+
+    obs_fire = np.asarray(heat_source_mask(
+        np.asarray(obs_temperature), np.asarray(obs_ratio_low),
+        np.asarray(obs_ratio_high)))
+    res_fire = np.asarray(heat_source_mask(
+        np.asarray(res_temperature), np.asarray(res_ratio_low),
+        np.asarray(res_ratio_high)))
+    n_fire_slots = int(obs_fire.sum() + res_fire.sum())
+
+    if n_fire_slots == 0:
+        _log.info(
+            "thermal structure check SKIPPED: thermal.enabled is true and "
+            "thermal.use_object_sources is true, but no allocated entity slot "
+            "declares a non-zero 'temperature' or 'temperature_ratio' — there "
+            "is no heat source to check.")
+        return
+
+    # Distinct ratio bands across every heat-source slot, in declaration order.
+    bands = []
+    for fire_mask, lo_arr, hi_arr, labels in (
+            (obs_fire, obs_ratio_low, obs_ratio_high, obs_labels),
+            (res_fire, res_ratio_low, res_ratio_high, res_labels)):
+        lo_arr = np.asarray(lo_arr)
+        hi_arr = np.asarray(hi_arr)
+        for i in np.flatnonzero(fire_mask):
+            lo, hi = float(lo_arr[i]), float(hi_arr[i])
+            if lo == 0.0 and hi == 0.0:
+                continue                       # absolute-temperature slot
+            key = (lo, hi)
+            if key not in [b[0] for b in bands]:
+                bands.append((key, str(labels[i]) if i < len(labels) else '?'))
+
+    if not bands:
+        _log.info(
+            "thermal structure check SKIPPED: every heat source declares an "
+            "ABSOLUTE 'temperature:' rather than a 'temperature_ratio:'. The "
+            "calibrated pain-plus-comfort band is stated as a multiple of the "
+            "world's coldness (11-13x |thermal.default_temp|), so an absolute "
+            "stamp is outside the band's domain and this config is NOT "
+            "certified. Declare 'temperature_ratio: [low, high]' to have the "
+            "radial profile checked at load.")
+        return
+
+    if min_fire_separation == 0 and n_fire_slots > 1:
+        raise ValueError(
+            f"thermal.min_fire_separation is 0 while {n_fire_slots} heat-source "
+            f"slots are allocated, and that combination cannot be certified. "
+            f"The load-time structure check models a SINGLE fire; with the "
+            f"separation constraint disabled two fires can spawn adjacent, "
+            f"their stamps add, and the merged comfort ring goes lethal exactly "
+            f"where the agent would have to stand (+33.0 at separation 1, +15.4 "
+            f"at separation 2, against a +15 threshold — versus +8.4 at the "
+            f"shipped separation of 3). Set thermal.min_fire_separation >= 3, "
+            f"or reduce the heat-source count_high to 1.")
+
+    if k_exchange + k_loss <= 0.0:
+        # Both rate constants zero: the recurrence has no fixed point (the body
+        # never moves at all beyond the constant `k_metabolic` drift), so there
+        # is no equilibrium to compare against the death thresholds. Stage 1
+        # validates each of the two as `>= 0` and this is the one combination
+        # that leaves the profile undefined.
+        _log.info(
+            "thermal structure check SKIPPED: thermal.k_exchange + "
+            "thermal.k_loss is 0, so the body-temperature recurrence has no "
+            "equilibrium and no radial profile can be computed.")
+        return
+
+    # Corners of the sampled ranges plus the midpoint. Deterministic by design.
+    d_lo, d_hi = float(default_temp_low), float(default_temp_high)
+    d_mid = 0.5 * (d_lo + d_hi)
+
+    for (r_lo, r_hi), label in bands:
+        r_mid = 0.5 * (r_lo + r_hi)
+        draws = [(d_lo, r_lo), (d_lo, r_hi), (d_hi, r_lo), (d_hi, r_hi),
+                 (d_mid, r_mid)]
+        for d_temp, ratio in draws:
+            amplitude = ratio * abs(d_temp)
+            eq = _thermal_radial_equilibria(
+                amplitude, d_temp, sigma, kernel_radius, grid_h, grid_w,
+                k_exchange, k_loss, k_metabolic, setpoint,
+                k_exchange_boosted=k_exchange_boosted, boost_mode=boost_mode)
+            if eq[3] is None:
+                _log.info(
+                    "thermal structure check SKIPPED: a %dx%d grid has no "
+                    "Manhattan ring at distance 3 around its centre cell, so "
+                    "the 'the cold is a real clock' condition cannot be "
+                    "evaluated.", int(grid_h), int(grid_w))
+                return
+            ok, failures = _thermal_structure_verdict(
+                eq, min_temperature, max_temperature)
+            if not ok and not raise_on_failure:
+                _log.warning(
+                    "thermal structure check at full injury — allowed by "
+                    "configuration (thermal.injury_heat_exchange_gain, mode %s): "
+                    "heat source %r, corner default_temp=%g ratio=%g -> d0=%+.2f "
+                    "d1=%+.2f d3=%+.2f against [%g, %g]: %s. A fully injured agent "
+                    "is in a world without this structure.",
+                    boost_mode, label, d_temp, ratio, eq[0], eq[1], eq[3],
+                    min_temperature, max_temperature, "; ".join(failures))
+                continue
+            if not ok:
+                raise ValueError(
+                    f"thermal structure check FAILED for heat source "
+                    f"{label!r}. Drawn corner: thermal.default_temp = "
+                    f"{d_temp:g} (declared range [{d_lo:g}, {d_hi:g}]), "
+                    f"temperature_ratio = {ratio:g} (declared range "
+                    f"[{r_lo:g}, {r_hi:g}]) -> a single fire of "
+                    f"{amplitude:+.1f} on a {int(grid_h)}x{int(grid_w)} grid "
+                    f"with thermal.sigma = {sigma:g}.\n"
+                    f"  Equilibrium body temperature by Manhattan distance "
+                    f"from the fire: d0 = {eq[0]:+.2f}, d1 = {eq[1]:+.2f}, "
+                    f"d3 = {eq[3]:+.2f}; survivable band "
+                    f"[thermal.min_temperature, thermal.max_temperature] = "
+                    f"[{min_temperature:g}, {max_temperature:g}].\n"
+                    f"  Failed: " + "; ".join(failures) + ".\n"
+                    f"  Retune thermal.default_temp, the entity's "
+                    f"temperature_ratio, or thermal.sigma. The calibrated band "
+                    f"is sigma near 0.7 with a ratio of 11-13.")
+
+    _log.info(
+        "thermal structure check %s for %d heat-source slot(s) over %d "
+        "ratio band(s), at the corners and midpoint of the sampled ranges.",
+        "PASSED" if k_exchange_boosted is None else "evaluated at full injury",
+        n_fire_slots, len(bands))
+
+
+def _thermal_first_fire_step(*, obs_temperature, obs_ratio_low, obs_ratio_high,
+                             res_temperature, res_ratio_low, res_ratio_high,
+                             use_object_sources, default_temp_low, default_temp_high,
+                             sigma, kernel_radius, grid_h, grid_w, k_exchange,
+                             k_loss, k_metabolic, setpoint, warming_scale,
+                             t_high, k_exchange_boosted=None, boost_mode=None):
+    """Worst-case body temperature after ONE step onto a single fire (B1 / B4 log).
+
+        T_1 = T_high + s_w*(k_ex'*(F - T_high) - k_loss*(T_high - T_set) + k_met)
+
+    over the corners and midpoint of every ratio band, where F is the fire-cell
+    temperature of `_thermal_single_fire_field` (the environment's own blur).
+    `k_ex'` is `k_exchange_boosted` in B4 `both` mode, else `k_exchange`. In
+    `both` mode `T_high` is raised to the full-injury ring (d1) equilibrium when
+    that is warmer: a body settled beside a fire is the calibrated starting point
+    for a step onto it.
+
+    Returns `(T_1, F, d_temp, ratio, T_high_used)` for the worst corner, or None
+    when the world has no ratio-declared fire (the same preconditions the
+    structure check skips on). The single-fire model does not see merged fires.
+    """
+    from src.environment.core import heat_source_mask
+    if not use_object_sources:
+        return None
+    ratios = set()
+    for temp, lo_arr, hi_arr in ((obs_temperature, obs_ratio_low, obs_ratio_high),
+                                 (res_temperature, res_ratio_low, res_ratio_high)):
+        fire = np.asarray(heat_source_mask(np.asarray(temp), np.asarray(lo_arr),
+                                           np.asarray(hi_arr)))
+        for i in np.flatnonzero(fire):
+            lo, hi = float(np.asarray(lo_arr)[i]), float(np.asarray(hi_arr)[i])
+            if not (lo == 0.0 and hi == 0.0):
+                ratios.add((lo, hi))
+    if not ratios:
+        return None
+    boosted = k_exchange_boosted is not None and boost_mode == 'both'
+    k_ex = k_exchange_boosted if boosted else k_exchange
+    d_lo, d_hi = float(default_temp_low), float(default_temp_high)
+    worst = None
+    for r_lo, r_hi in sorted(ratios):
+        draws = [(d_lo, r_lo), (d_lo, r_hi), (d_hi, r_lo), (d_hi, r_hi),
+                 (0.5 * (d_lo + d_hi), 0.5 * (r_lo + r_hi))]
+        for d_temp, ratio in draws:
+            amplitude = ratio * abs(d_temp)
+            field = _thermal_single_fire_field(amplitude, d_temp, sigma,
+                                               kernel_radius, grid_h, grid_w)
+            f_fire = float(field[int(grid_h) // 2, int(grid_w) // 2])
+            th = float(t_high)
+            if boosted:
+                eq = _thermal_radial_equilibria(
+                    amplitude, d_temp, sigma, kernel_radius, grid_h, grid_w,
+                    k_exchange, k_loss, k_metabolic, setpoint,
+                    k_exchange_boosted=k_exchange_boosted, boost_mode=boost_mode)
+                if eq[1] is not None:
+                    th = max(th, float(eq[1]))
+            t1 = th + warming_scale * (k_ex * (f_fire - th)
+                                       - k_loss * (th - setpoint) + k_metabolic)
+            if worst is None or t1 > worst[0]:
+                worst = (t1, f_fire, d_temp, ratio, th)
+    return worst
+
+
+def _read_properties_std(entry, entity_label):
+    """Same, for the `*_std` variant."""
+    if 'properties_std' in entry:
+        return entry['properties_std']
+    if 'property_std' in entry:
+        warnings.warn(
+            f"{entity_label}: YAML key 'property_std' is deprecated — rename to 'properties_std'.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return entry['property_std']
+    raise ValueError(f"{entity_label}: missing required key 'properties_std'.")
+
+
+def _read_visual_properties_std(entry: dict, V: int, entity_label: str) -> list:
+    """Read optional visual_properties_std from a config entry.
+
+    If `visual_properties_std` is present, validates it has length V and returns it.
+    If absent (including all archived/pre-std configs), returns zeros of length V so
+    that std=0 is the default and observations are byte-identical to pre-change.
+    Raises ValueError if the length does not match V.
+    """
+    if 'visual_properties_std' in entry:
+        vps = list(entry['visual_properties_std'])
+        if len(vps) != V:
+            raise ValueError(
+                f"{entity_label}: 'visual_properties_std' has length {len(vps)} "
+                f"but visual_vector_size is {V}. "
+                f"Length must equal visual_vector_size."
+            )
+        return [float(x) for x in vps]
+    # Default: zeros of length V → deterministic (std=0 → sampled == mean exactly)
+    return [0.0] * V
+
+def _load_animals(config: Config, visual_vector_size: int = 8):
+    """Build unified animal arrays from the YAML config (v2.0).
+
+    Supports two YAML paths, detected automatically:
+      1. `environment.predators:` + `environment.neutral_animals:` (legacy) — all 86
+         pre-v2.0 configs. Predators are re-projected with class='predator',
+         behaviour='hunt'; neutrals with class='neutral', behaviour='wander'.
+         The five distributional fields are read as scalars from the legacy YAML
+         and stored as degenerate ranges [s, s]. `attack_delay` and `damage` for
+         neutrals are internally auto-filled to 0 and [0.0, 0.0] (NC-1 fix —
+         the legacy schema never carried them on neutral entries).
+      2. `environment.entities:` (new schema) — not used by any config yet; CP3
+         activates this path fully. If detected, a deprecation warning is emitted
+         when the legacy sections are also present.
+
+    Returns a flat tuple of all unified `animal_*` arrays and dispatch tuples,
+    ordered as expected by the `load_env_params` caller.
+
+    YAML cadence notes:
+      - `damage: [lo, hi]` is per-event (re-sampled on every collision).
+      - `detection_range: [lo, hi]` is per-episode, inclusive-integer (mirrors
+        `move_interval`/`attack_delay`) — see INCLUSIVE_INTEGER_RANGE_SAMPLING.md.
+      - The four siblings in DISTRIBUTIONAL_FIELDS (`max_stamina`,
+        `stamina_recovery_rate`, `hunt_stamina_threshold`, `lose_interest_multiplier`)
+        are per-episode, float-uniform. Cadence is determined by field name.
+
+    Mandatory-key rule by behaviour:
+      - `behaviour: hunt` — all five distributional fields are MANDATORY.
+        Missing → ValueError (no fallback default, per project rule).
+      - `behaviour: wander` / `static` — distributional fields are OPTIONAL.
+        If missing, loader auto-fills [0, 0] (internal projection detail;
+        the wander/static code path never reads these arrays at runtime).
+      - Legacy `neutral_animals:` re-projection always behaves as wander/optional.
+
+    v1.x → v2.0 semantic change note: `lose_interest_multiplier` was previously
+    optional in the predator loader (soft default 2.0). It is now MANDATORY for
+    `behaviour: hunt`. All 86 pre-v2.0 predator entries carry an explicit value,
+    so no existing config breaks; this change is flagged for reference.
+    """
+    h = config.get_mandatory('environment.height')
+    w = config.get_mandatory('environment.width')
+
+    def _parse_area(area, default_h=h, default_w=w):
+        a = area if area is not None else [[1, 1], [default_h, default_w]]
+        return [a[0][0]-1, a[0][1]-1, a[1][0], a[1][1]]
+
+    def _parse_distributional(entry, field, mandatory, entity_label, idx):
+        """Read a scalar or [lo, hi] distributional field.
+        Returns (low, high) as floats.
+        """
+        val = entry.get(field)
+        if val is None:
+            if mandatory:
+                raise ValueError(
+                    f"Animal entity {entity_label!r} (index {idx}) is missing mandatory "
+                    f"distributional field '{field}' (required for behaviour='hunt'). "
+                    f"No fallback default exists."
+                )
+            else:
+                _log.debug(
+                    "Animal entity %r (index %d): '%s' not specified; auto-filling [0, 0] "
+                    "(wander/static — field is unused at runtime).", entity_label, idx, field
+                )
+                return 0.0, 0.0
+        if isinstance(val, list):
+            if len(val) != 2:
+                raise ValueError(
+                    f"Animal entity {entity_label!r} (index {idx}): '{field}' must be a scalar "
+                    f"or a 2-element list [low, high]; got {val!r}."
+                )
+            lo, hi = float(val[0]), float(val[1])
+            if hi < lo:
+                raise ValueError(
+                    f"Animal entity {entity_label!r} (index {idx}): '{field}' range "
+                    f"must satisfy low <= high; got [{lo}, {hi}]."
+                )
+        else:
+            lo = hi = float(val)
+        return lo, hi
+
+    # ── Build the expanded entry list ──────────────────────────────────────────
+    entries = []  # list of dicts with unified fields
+
+    # Check for new entities: schema (CP3 will add full support)
+    has_entities = config.get('environment.entities') is not None
+    # bool(...) → present AND non-empty; the base default.yaml never supplies legacy
+    # sections, so their presence is an unambiguous signal of user intent.
+    has_legacy = bool(config.get('environment.predators')) or \
+                 bool(config.get('environment.neutral_animals'))
+
+    if has_entities and not has_legacy:
+        # CP3 path — parse unified entities: list directly
+        raw_entities = config.get('environment.entities') or []
+        for i_raw, ent in enumerate(raw_entities):
+            _lo, count = _resolve_count_range(ent, f'Entity[{i_raw}]')
+            for _ in range(count):  # allocate count_high slots
+                cls = ent.get('class')
+                if cls is None:
+                    raise ValueError(f"entities[{i_raw}]: missing required field 'class'.")
+                beh = ent.get('behaviour')
+                if beh is None:
+                    raise ValueError(f"entities[{i_raw}]: missing required field 'behaviour'.")
+                # Validate behaviour string FIRST (before building index tuples)
+                if beh not in ANIMAL_BEHAVIOUR_TO_INT:
+                    raise ValueError(
+                        f"Unknown behaviour {beh!r} for entity tag={ent.get('tag', '?')}. "
+                        f"Must be one of {list(ANIMAL_BEHAVIOUR_TO_INT)}."
+                    )
+                mandatory_dist = (beh == 'hunt')
+                tag_raw = ent.get('tag')
+                tag_label = str(tag_raw) if tag_raw else f'entity{len(entries)}'
+                entries.append({
+                    'class': cls,
+                    'behaviour': beh,
+                    'tag_raw': tag_raw,
+                    'tag_label': tag_label,
+                    'type_label': f'Entity[{i_raw}]',
+                    'property': _read_properties(ent, f'Entity[{i_raw}]'),
+                    'property_std': _read_properties_std(ent, f'Entity[{i_raw}]'),
+                    'nociception': ent.get('nociception_intensity', 0.0),
+                    'move_interval': ent.get('move_interval'),
+                    'damage': ent.get('damage'),
+                    'attack_delay': ent.get('attack_delay'),
+                    'disengage_on_contact': bool(ent.get('disengage_on_contact', False)),
+                    'spawn_area': ent.get('spawn_area'),
+                    'patrol_area': ent.get('patrol_area'),
+                    'mandatory_dist': mandatory_dist,
+                    'dist_source': ent,
+                })
+    else:
+        # Legacy path (also runs when NEITHER schema is present → empty scene, unchanged).
+        # Legacy-scene precedence: when the user file authored legacy sections, they define
+        # the scene even if an `entities:` list arrived via the default.yaml underlay under
+        # train.py. This keeps train.py and eval_rollout.py agreeing on legacy configs.
+        if has_entities:
+            warnings.warn(
+                "Config presents legacy 'environment.predators:'/'neutral_animals:' sections "
+                "alongside an 'environment.entities:' list (typically inherited from "
+                "default.yaml under train.py). The legacy scene takes precedence. Migrate this "
+                "config to the unified 'entities:' schema.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+        # Legacy path: re-project predators (hunt) + neutrals (wander)
+        raw_predators = config.get('environment.predators') or []
+        for i_raw, p in enumerate(raw_predators):
+            _lo, count = _resolve_count_range(p, f'Predator[{i_raw}]')
+            for _ in range(count):  # allocate count_high slots
+                tag_raw = p.get('tag')
+                tag_label = str(tag_raw) if tag_raw else f'pred{len(entries)}'
+                def _p_get(key, _p=p, _label=tag_label):
+                    val = _p.get(key)
+                    if val is None:
+                        raise ValueError(
+                            f"Strict Config: Predator (tag={_label!r}) field '{key}' is required."
+                        )
+                    return val
+                entries.append({
+                    'class': 'predator',
+                    'behaviour': 'hunt',
+                    'tag_raw': tag_raw,
+                    'tag_label': tag_label,
+                    'type_label': 'Predator',
+                    'property': _read_properties(p, 'Predator'),
+                    'property_std': _read_properties_std(p, 'Predator'),
+                    'nociception': p.get('nociception_intensity', 0.9),
+                    'move_interval': _p_get('move_interval'),
+                    'damage': _p_get('damage'),
+                    'attack_delay': _p_get('attack_delay'),
+                    'disengage_on_contact': bool(p.get('disengage_on_contact', False)),
+                    'spawn_area': p.get('spawn_area'),
+                    'patrol_area': p.get('patrol_area'),
+                    'mandatory_dist': True,  # hunt — all dist fields mandatory
+                    'dist_source': p,
+                })
+
+        raw_neutrals = config.get('environment.neutral_animals') or []
+        for i_raw, n in enumerate(raw_neutrals):
+            _lo, count = _resolve_count_range(n, f'NeutralAnimal[{i_raw}]')
+            for _ in range(count):  # allocate count_high slots
+                tag_raw = n.get('tag')
+                tag_label = str(tag_raw) if tag_raw else f'rabbit{len(entries)}'
+                def _n_get(key, _n=n, _label=tag_label):
+                    val = _n.get(key)
+                    if val is None:
+                        raise ValueError(
+                            f"Strict Config: Neutral Animal (tag={_label!r}) field '{key}' is required."
+                        )
+                    return val
+                entries.append({
+                    'class': 'neutral',
+                    'behaviour': 'wander',
+                    'tag_raw': tag_raw,
+                    'tag_label': tag_label,
+                    'type_label': 'Rabbit',
+                    'property': _read_properties(n, 'Neutral Animal'),
+                    'property_std': _read_properties_std(n, 'Neutral Animal'),
+                    'nociception': n.get('nociception_intensity', 0.0),
+                    'move_interval': _n_get('move_interval'),
+                    # NC-1 fix: legacy neutrals never had damage/attack_delay;
+                    # auto-fill internally (not user-facing fallback defaults).
+                    'damage': [0.0, 0.0],
+                    'attack_delay': 0,
+                    'disengage_on_contact': bool(n.get('disengage_on_contact', False)),
+                    'spawn_area': n.get('spawn_area'),
+                    'patrol_area': n.get('patrol_area'),
+                    'mandatory_dist': False,  # wander — dist fields optional
+                    'dist_source': n,
+                })
+
+    N = len(entries)
+    chem_dim = 5  # default; updated below if entries exist
+
+    if N == 0:
+        # Zero-animal case (M6 smoke) — return empty arrays
+        animal_property = jnp.zeros((0, chem_dim))
+        animal_property_std = jnp.zeros((0, chem_dim))
+        animal_nociception = jnp.zeros(0)
+        animal_move_int = jnp.zeros(0, dtype=jnp.int32)
+        animal_move_int_low = jnp.zeros(0, dtype=jnp.int32)
+        animal_move_int_high = jnp.zeros(0, dtype=jnp.int32)
+        animal_damage = jnp.zeros((0, 2))
+        animal_attack_delay = jnp.zeros(0, dtype=jnp.int32)
+        animal_attack_delay_low = jnp.zeros(0, dtype=jnp.int32)
+        animal_attack_delay_high = jnp.zeros(0, dtype=jnp.int32)
+        animal_attack_range_low = jnp.zeros(0, dtype=jnp.int32)
+        animal_attack_range_high = jnp.zeros(0, dtype=jnp.int32)
+        animal_attack_success_rate = jnp.zeros(0)
+        has_attack_feature = False
+        animal_spawn_area = jnp.zeros((0, 4), dtype=jnp.int32)
+        animal_patrol = jnp.zeros((0, 4), dtype=jnp.int32)
+        animal_detect_low = jnp.zeros(0, dtype=jnp.int32)
+        animal_detect_high = jnp.zeros(0, dtype=jnp.int32)
+        animal_max_stamina_low = jnp.zeros(0)
+        animal_max_stamina_high = jnp.zeros(0)
+        animal_recovery_low = jnp.zeros(0)
+        animal_recovery_high = jnp.zeros(0)
+        animal_hunt_thresh_low = jnp.zeros(0)
+        animal_hunt_thresh_high = jnp.zeros(0)
+        animal_lose_interest_low = jnp.zeros(0)
+        animal_lose_interest_high = jnp.zeros(0)
+        animal_classes_int = jnp.zeros(0, dtype=jnp.int32)
+        animal_behaviours_int = jnp.zeros(0, dtype=jnp.int32)
+        animal_is_damaging = jnp.zeros(0, dtype=jnp.bool_)
+        animal_disengage_on_contact = jnp.zeros(0, dtype=jnp.bool_)
+        animal_visual_channel = jnp.zeros(0, dtype=jnp.int32)
+        animal_visual_property = jnp.zeros((0, visual_vector_size), dtype=jnp.float32)
+        animal_visual_property_std = jnp.zeros((0, visual_vector_size), dtype=jnp.float32)
+        animal_visual_mask = jnp.zeros(0, dtype=jnp.int32)
+        animal_blocks_sight = jnp.zeros(0, dtype=jnp.bool_)
+        animal_classes = ()
+        animal_behaviours = ()
+        animal_tags = ()
+        hunt_idx = ()
+        wander_idx = ()
+        static_idx = ()
+        predator_indices = ()
+        neutral_indices = ()
+        pred_spawn_area_for_placement = jnp.zeros((0, 4), dtype=jnp.int32)
+        neutral_spawn_area_for_placement = jnp.zeros((0, 4), dtype=jnp.int32)
+        return (
+            animal_property, animal_property_std, animal_nociception,
+            animal_move_int, animal_damage, animal_attack_delay,
+            animal_spawn_area, animal_patrol,
+            animal_detect_low, animal_detect_high,
+            animal_max_stamina_low, animal_max_stamina_high,
+            animal_recovery_low, animal_recovery_high,
+            animal_hunt_thresh_low, animal_hunt_thresh_high,
+            animal_lose_interest_low, animal_lose_interest_high,
+            animal_classes_int, animal_behaviours_int,
+            animal_is_damaging, animal_disengage_on_contact, animal_visual_channel,
+            animal_visual_property, animal_visual_property_std, animal_visual_mask,
+            animal_blocks_sight,
+            animal_classes, animal_behaviours, animal_tags,
+            hunt_idx, wander_idx, static_idx,
+            predator_indices, neutral_indices,
+            pred_spawn_area_for_placement, neutral_spawn_area_for_placement,
+            animal_move_int_low, animal_move_int_high,
+            animal_attack_delay_low, animal_attack_delay_high,
+            animal_attack_range_low, animal_attack_range_high,
+            animal_attack_success_rate, has_attack_feature,
+        )
+
+    # ── Build per-field arrays ─────────────────────────────────────────────────
+    props_list = [_read_properties(e, e['tag_label']) if 'property' in e and not isinstance(e.get('property'), list) else e['property'] for e in entries]
+    stds_list = [e['property_std'] for e in entries]
+    chem_dim = len(props_list[0])
+
+    noc_list = [float(e['nociception']) for e in entries]
+
+    # move_interval: scalar OR [lo, hi] integer range (per-episode sampling).
+    # A scalar s is stored as degenerate range (s, s) → always samples s (backward compat).
+    move_int_list = []  # list of (lo_int, hi_int) tuples
+    for i, e in enumerate(entries):
+        mi = e['move_interval']
+        if mi is None:
+            raise ValueError(
+                f"Animal entity {e['tag_label']!r} (index {i}) is missing mandatory field 'move_interval'."
+            )
+        if isinstance(mi, list):
+            if len(mi) != 2:
+                raise ValueError(
+                    f"Animal entity {e['tag_label']!r} (index {i}): 'move_interval' must be a scalar "
+                    f"or a 2-element list [low, high]; got {mi!r}."
+                )
+            lo, hi = int(mi[0]), int(mi[1])
+            if hi < lo:
+                raise ValueError(
+                    f"Animal entity {e['tag_label']!r} (index {i}): 'move_interval' range "
+                    f"must satisfy low <= high; got [{lo}, {hi}]."
+                )
+        else:
+            lo = hi = int(mi)
+        move_int_list.append((lo, hi))
+
+    damage_list = []
+    for i, e in enumerate(entries):
+        d = e['damage']
+        if d is None:
+            raise ValueError(
+                f"Animal entity {e['tag_label']!r} (index {i}) is missing mandatory field 'damage'."
+            )
+        damage_list.append(d if isinstance(d, list) else [float(d), float(d)])
+
+    # attack_delay: scalar OR [lo, hi] integer range (per-episode sampling).
+    # A scalar s is stored as degenerate range (s, s) → always samples s (backward compat).
+    attack_delay_list = []  # list of (lo_int, hi_int) tuples
+    for i, e in enumerate(entries):
+        a = e['attack_delay']
+        if a is None:
+            raise ValueError(
+                f"Animal entity {e['tag_label']!r} (index {i}) is missing mandatory field 'attack_delay'."
+            )
+        if isinstance(a, list):
+            if len(a) != 2:
+                raise ValueError(
+                    f"Animal entity {e['tag_label']!r} (index {i}): 'attack_delay' must be a scalar "
+                    f"or a 2-element list [low, high]; got {a!r}."
+                )
+            lo, hi = int(a[0]), int(a[1])
+            if hi < lo:
+                raise ValueError(
+                    f"Animal entity {e['tag_label']!r} (index {i}): 'attack_delay' range "
+                    f"must satisfy low <= high; got [{lo}, {hi}]."
+                )
+        else:
+            lo = hi = int(a)
+        attack_delay_list.append((lo, hi))
+
+    # ── Jump/pounce feature (predator lunge attack) — OPTIONAL for every entity ──
+    # See docs/develop/active/env_entities/PREDATOR_JUMP_MECHANISM.md.
+    # attack_range: scalar OR [lo, hi] INCLUSIVE-INTEGER Manhattan-distance jump range.
+    # Compared against integer grid distance (core.py `dist <= attack_range_s`), so a
+    # fractional bound is meaningless and is rejected loudly (see
+    # INCLUSIVE_INTEGER_RANGE_SAMPLING.md). Missing -> [0, 0] (jump disabled).
+    # Deliberately NOT mandatory for hunt (unlike detection_range) and NOT part of
+    # DISTRIBUTIONAL_FIELDS/the size-7 ep_keys split — it is sampled at reset from an
+    # INDEPENDENT fold_in key (core.py jax_reset) so the existing seven per-episode
+    # sampled arrays stay byte-identical.
+    attack_range_low_list = []
+    attack_range_high_list = []
+    for i, e in enumerate(entries):
+        lo_f, hi_f = _parse_distributional(
+            e['dist_source'], 'attack_range', mandatory=False,
+            entity_label=e['tag_label'], idx=i
+        )
+        for _b in (lo_f, hi_f):
+            if _b != int(_b):
+                raise ValueError(
+                    f"Animal entity {e['tag_label']!r} (index {i}): 'attack_range' bound "
+                    f"{_b} is not a whole number; this field is compared against integer "
+                    f"grid distance and must be integer-valued."
+                )
+        attack_range_low_list.append(int(lo_f))
+        attack_range_high_list.append(int(hi_f))
+
+    # attack_success_rate: scalar float in [0, 1]. Missing -> 0.0 (jump-disabled
+    # is a no-op regardless of this value since the trigger also gates on
+    # attack_range > 0). NOT per-episode sampled — a plain EnvParams leaf.
+    attack_success_rate_list = []
+    for i, e in enumerate(entries):
+        v = e['dist_source'].get('attack_success_rate')
+        if v is None:
+            attack_success_rate_list.append(0.0)
+        else:
+            v = float(v)
+            if not (0.0 <= v <= 1.0):
+                raise ValueError(
+                    f"Animal entity {e['tag_label']!r} (index {i}): 'attack_success_rate' "
+                    f"must be in [0, 1]; got {v}."
+                )
+            attack_success_rate_list.append(v)
+
+    spawn_list = [_parse_area(e['spawn_area'], h, w) for e in entries]
+    patrol_list = [_parse_area(e['patrol_area'], h, w) for e in entries]
+
+    # detection_range: scalar OR [lo, hi] INCLUSIVE-INTEGER HUNT-trigger Manhattan range.
+    # Mandatory for hunt entities; compared against integer grid distance (core.py
+    # `dist <= hunt_detect`), so integer-valued (see INCLUSIVE_INTEGER_RANGE_SAMPLING.md).
+    detect_range_list = []  # list of (lo_int, hi_int)
+    for i, e in enumerate(entries):
+        lo_f, hi_f = _parse_distributional(
+            e['dist_source'], 'detection_range',
+            mandatory=e['mandatory_dist'],
+            entity_label=e['tag_label'], idx=i
+        )
+        for _b in (lo_f, hi_f):
+            if _b != int(_b):
+                raise ValueError(
+                    f"Animal entity {e['tag_label']!r} (index {i}): 'detection_range' bound "
+                    f"{_b} is not a whole number; this field is compared against integer "
+                    f"grid distance and must be integer-valued."
+                )
+        lo, hi = int(lo_f), int(hi_f)
+        if hi < lo:
+            raise ValueError(
+                f"Animal entity {e['tag_label']!r} (index {i}): 'detection_range' range "
+                f"must satisfy low <= high; got [{lo}, {hi}]."
+            )
+        detect_range_list.append((lo, hi))
+
+    # Distributional fields (per entry)
+    dist_field_names = (
+        ("max_stamina", "animal_max_stamina"),
+        ("stamina_recovery_rate", "animal_recovery"),
+        ("hunt_stamina_threshold", "animal_hunt_thresh"),
+        ("lose_interest_multiplier", "animal_lose_interest"),
+    )
+    dist_lows = {k: [] for _, k in dist_field_names}
+    dist_highs = {k: [] for _, k in dist_field_names}
+    for i, e in enumerate(entries):
+        for yaml_key, arr_key in dist_field_names:
+            lo, hi = _parse_distributional(
+                e['dist_source'], yaml_key,
+                mandatory=e['mandatory_dist'],
+                entity_label=e['tag_label'], idx=i
+            )
+            dist_lows[arr_key].append(lo)
+            dist_highs[arr_key].append(hi)
+
+    # Class / behaviour codes
+    classes_int_list = []
+    behaviours_int_list = []
+    is_damaging_list = []
+    disengage_on_contact_list = []
+    visual_channel_list = []
+    visual_property_list = []
+    visual_property_std_list = []
+    visual_mask_list = []
+    blocks_sight_list = []
+    classes_tuple = []
+    behaviours_tuple = []
+    tags_tuple = []
+    hunt_idx_list = []
+    wander_idx_list = []
+    static_idx_list = []
+    predator_idx_list = []
+    neutral_idx_list = []
+
+    V = visual_vector_size  # shorthand
+
+    for i, e in enumerate(entries):
+        cls = e['class']
+        beh = e['behaviour']
+        # Validate behaviour string (for entities: path; legacy path is already validated)
+        if beh not in ANIMAL_BEHAVIOUR_TO_INT:
+            raise ValueError(
+                f"Unknown behaviour {beh!r} for entity tag={e['tag_label']!r}. "
+                f"Must be one of {list(ANIMAL_BEHAVIOUR_TO_INT)}."
+            )
+        if cls not in ANIMAL_CLASS_TO_INT:
+            raise ValueError(
+                f"Unknown class {cls!r} for entity tag={e['tag_label']!r}. "
+                f"Must be one of {list(ANIMAL_CLASS_TO_INT)}."
+            )
+        classes_int_list.append(ANIMAL_CLASS_TO_INT[cls])
+        behaviours_int_list.append(ANIMAL_BEHAVIOUR_TO_INT[beh])
+        is_damaging_list.append(cls in ANIMAL_DAMAGING_CLASSES)
+        disengage_on_contact_list.append(bool(e['disengage_on_contact']))
+        default_vis_ch = ANIMAL_CLASS_TO_VIS_CHANNEL[cls]
+        visual_channel_list.append(default_vis_ch)
+        # Visual properties live in the raw YAML source (dist_source), not the normalised entry dict.
+        _raw_src = e['dist_source']
+        if V != 8 and 'visual_properties' not in _raw_src:
+            raise ValueError(
+                f"Animal entity {e['tag_label']!r}: 'visual_properties' is required "
+                f"when visual_vector_size={V} (only the default V=8 can auto-generate "
+                f"one-hot defaults from the class→channel map)."
+            )
+        visual_property_list.append(_read_visual_properties(_raw_src, default_vis_ch, V, e['tag_label']))
+        visual_property_std_list.append(_read_visual_properties_std(_raw_src, V, e['tag_label']))
+        visual_mask_list.append(_read_visual_mask(_raw_src, e['tag_label']))
+        blocks_sight_list.append(_read_blocks_sight(_raw_src))
+        # Animals are not heat sources. The thermal field is built ONCE at reset
+        # and never updated, so a moving heat source is a promise the mechanism
+        # cannot keep. Raise rather than load an array that is read nowhere —
+        # a config key that loads and does nothing is how a future reader
+        # concludes the feature is broken (IMPLEMENTATION_PLAN.md, Stage 1,
+        # resolution (a)).
+        if 'edge_margin' in _raw_src:
+            raise ValueError(
+                f"Animal entity {e['tag_label']!r}: 'edge_margin' is supported on obstacle "
+                "entries only. Inset the animal's 'spawn_area' directly instead.")
+        _an_temp_abs, _an_ratio_lo, _an_ratio_hi = _read_temperature(_raw_src, e['tag_label'])
+        if _an_temp_abs != 0.0 or _an_ratio_lo != 0.0 or _an_ratio_hi != 0.0:
+            raise ValueError(
+                f"Animal entity {e['tag_label']!r}: animals cannot be thermal heat sources. "
+                "The thermal field is built once at reset from static positions, and animals "
+                "move — declare 'temperature'/'temperature_ratio' on an obstacle or a resource "
+                "instead, or remove the key."
+            )
+        classes_tuple.append(cls)
+        behaviours_tuple.append(beh)
+        tags_tuple.append(_normalise_tag(e['tag_raw'], i, e.get('type_label', e['tag_label'])))
+
+        if beh == 'hunt':
+            hunt_idx_list.append(i)
+        elif beh == 'wander':
+            wander_idx_list.append(i)
+        else:
+            static_idx_list.append(i)
+
+        if cls == 'predator':
+            predator_idx_list.append(i)
+        elif cls == 'neutral':
+            neutral_idx_list.append(i)
+
+    # Build JAX arrays
+    animal_property = jnp.array(props_list, dtype=jnp.float32)
+    animal_property_std = jnp.array(stds_list, dtype=jnp.float32)
+    animal_nociception = jnp.array(noc_list, dtype=jnp.float32)
+    # move_int_list and attack_delay_list are now lists of (lo, hi) tuples.
+    # Keep legacy fixed arrays using lo (degenerate range = lo == hi for scalar configs).
+    animal_move_int = jnp.array([lo for lo, hi in move_int_list], dtype=jnp.int32)
+    animal_move_int_low = jnp.array([lo for lo, hi in move_int_list], dtype=jnp.int32)
+    animal_move_int_high = jnp.array([hi for lo, hi in move_int_list], dtype=jnp.int32)
+    animal_damage = jnp.array(damage_list, dtype=jnp.float32)
+    animal_attack_delay = jnp.array([lo for lo, hi in attack_delay_list], dtype=jnp.int32)
+    animal_attack_delay_low = jnp.array([lo for lo, hi in attack_delay_list], dtype=jnp.int32)
+    animal_attack_delay_high = jnp.array([hi for lo, hi in attack_delay_list], dtype=jnp.int32)
+    animal_attack_range_low = jnp.array(attack_range_low_list, dtype=jnp.int32)
+    animal_attack_range_high = jnp.array(attack_range_high_list, dtype=jnp.int32)
+    animal_attack_success_rate = jnp.array(attack_success_rate_list, dtype=jnp.float32)
+    has_attack_feature = any(hi > 0 for hi in attack_range_high_list)
+    animal_spawn_area = jnp.array(spawn_list, dtype=jnp.int32)
+    animal_patrol = jnp.array(patrol_list, dtype=jnp.int32)
+
+    animal_detect_low = jnp.array([lo for lo, hi in detect_range_list], dtype=jnp.int32)
+    animal_detect_high = jnp.array([hi for lo, hi in detect_range_list], dtype=jnp.int32)
+    animal_max_stamina_low = jnp.array(dist_lows['animal_max_stamina'], dtype=jnp.float32)
+    animal_max_stamina_high = jnp.array(dist_highs['animal_max_stamina'], dtype=jnp.float32)
+    animal_recovery_low = jnp.array(dist_lows['animal_recovery'], dtype=jnp.float32)
+    animal_recovery_high = jnp.array(dist_highs['animal_recovery'], dtype=jnp.float32)
+    animal_hunt_thresh_low = jnp.array(dist_lows['animal_hunt_thresh'], dtype=jnp.float32)
+    animal_hunt_thresh_high = jnp.array(dist_highs['animal_hunt_thresh'], dtype=jnp.float32)
+    animal_lose_interest_low = jnp.array(dist_lows['animal_lose_interest'], dtype=jnp.float32)
+    animal_lose_interest_high = jnp.array(dist_highs['animal_lose_interest'], dtype=jnp.float32)
+
+    animal_classes_int = jnp.array(classes_int_list, dtype=jnp.int32)
+    animal_behaviours_int = jnp.array(behaviours_int_list, dtype=jnp.int32)
+    animal_is_damaging = jnp.array(is_damaging_list, dtype=jnp.bool_)
+    animal_disengage_on_contact = jnp.array(disengage_on_contact_list, dtype=jnp.bool_)
+    animal_visual_channel = jnp.array(visual_channel_list, dtype=jnp.int32)
+    animal_visual_property = jnp.array(visual_property_list, dtype=jnp.float32)      # [N, V]
+    animal_visual_property_std = jnp.array(visual_property_std_list, dtype=jnp.float32)  # [N, V]
+    animal_visual_mask = jnp.array(visual_mask_list, dtype=jnp.int32)                # [N]
+    animal_blocks_sight = jnp.array(blocks_sight_list, dtype=jnp.bool_)              # [N]
+
+    animal_classes = tuple(classes_tuple)
+    animal_behaviours = tuple(behaviours_tuple)
+    animal_tags = tuple(tags_tuple)
+
+    hunt_idx = tuple(hunt_idx_list)
+    wander_idx = tuple(wander_idx_list)
+    static_idx = tuple(static_idx_list)
+    predator_indices = tuple(predator_idx_list)
+    neutral_indices = tuple(neutral_idx_list)
+
+    # Per-class spawn areas for placement (N1 fix: jax_reset uses [res, pred, obs, neutral] order)
+    pred_spawn_area_for_placement = (
+        animal_spawn_area[jnp.array(list(predator_indices), dtype=jnp.int32)]
+        if predator_indices else jnp.zeros((0, 4), dtype=jnp.int32)
+    )
+    neutral_spawn_area_for_placement = (
+        animal_spawn_area[jnp.array(list(neutral_indices), dtype=jnp.int32)]
+        if neutral_indices else jnp.zeros((0, 4), dtype=jnp.int32)
+    )
+
+    return (
+        animal_property, animal_property_std, animal_nociception,
+        animal_move_int, animal_damage, animal_attack_delay,
+        animal_spawn_area, animal_patrol,
+        animal_detect_low, animal_detect_high,
+        animal_max_stamina_low, animal_max_stamina_high,
+        animal_recovery_low, animal_recovery_high,
+        animal_hunt_thresh_low, animal_hunt_thresh_high,
+        animal_lose_interest_low, animal_lose_interest_high,
+        animal_classes_int, animal_behaviours_int,
+        animal_is_damaging, animal_disengage_on_contact, animal_visual_channel,
+        animal_visual_property, animal_visual_property_std, animal_visual_mask,
+        animal_blocks_sight,
+        animal_classes, animal_behaviours, animal_tags,
+        hunt_idx, wander_idx, static_idx,
+        predator_indices, neutral_indices,
+        pred_spawn_area_for_placement, neutral_spawn_area_for_placement,
+        animal_move_int_low, animal_move_int_high,
+        animal_attack_delay_low, animal_attack_delay_high,
+        animal_attack_range_low, animal_attack_range_high,
+        animal_attack_success_rate, has_attack_feature,
+    )
+
+
+def _resolve_count_range(entry: dict, entity_label: str):
+    """Return (count_low, count_high) from a YAML entity entry.
+
+    Rules (per-episode count-range feature — PER_EPISODE_ENV_VARIANCE plan):
+    - Both ``count_low`` + ``count_high`` present → use them.
+      Validates 0 <= low <= high.
+    - Only ``count`` present → degenerate range (count_low = count_high = count).
+      Backward-compatible: byte-identical to pre-feature behaviour.
+    - Both styles present simultaneously → ValueError (ambiguous).
+    - Neither → degenerate (1, 1), matching the old r.get('count', 1) default.
+
+    This is an optional-fallback (not get_mandatory) because count_low/count_high are
+    genuinely optional; absence means "use the scalar count or default of 1".
+    """
+    has_range  = ('count_low'  in entry) or ('count_high' in entry)
+    has_scalar = 'count' in entry
+
+    if has_range and has_scalar:
+        raise ValueError(
+            f"{entity_label}: 'count' and 'count_low'/'count_high' are mutually exclusive. "
+            "Use either the scalar 'count: N' OR the range 'count_low: L / count_high: H'."
+        )
+    if has_range:
+        lo = int(entry.get('count_low', 0))
+        hi = int(entry.get('count_high', 0))
+        if not (0 <= lo <= hi):
+            raise ValueError(
+                f"{entity_label}: count_low={lo} and count_high={hi} must satisfy "
+                "0 <= count_low <= count_high."
+            )
+        return lo, hi
+    else:
+        n = int(entry.get('count', 1))
+        return n, n
+
+
+def load_env_params(config: Config) -> EnvParams:
+    """Loads environment parameters from a Config object with strict retrieval."""
+
+    # ── Visual vector size (V) ────────────────────────────────────────────────
+    # Read-site default of 8: preserves byte-parity for all ~86 archived configs
+    # that do not declare this key. The one permitted read-site default in this
+    # plan (see CONFIGURABLE_VISUAL_PROPERTIES_PLAN.md §D1).
+    # DIRECTIONAL_SENSORS visual options. The two enabling keys are mandatory; their sub-keys are
+    # read ONLY when enabled, per CONFIG_GUIDE.md §5's conditional-key pattern, so a
+    # config that leaves occlusion off never needs to carry the cone settings.
+    _vis_value_mode = str(config.get_mandatory('sensory.visual_value_mode')).strip().lower()
+    if _vis_value_mode not in ('sum', 'clamp'):
+        raise ValueError(
+            f"sensory.visual_value_mode must be 'sum' or 'clamp', got {_vis_value_mode!r}.")
+    # Non-negative range guard. Without it a typo like -1 loads clean and dies far
+    # downstream with "axis 1 is out of bounds for array of dimension 1", which names
+    # neither the key nor the value. Both diamond radii are checked here; collision
+    # range is left alone (pre-existing, and not part of this change).
+    for _k in ('sensory.olfactory_grid_range', 'sensory.visual_sensor_range'):
+        _v = int(config.get_mandatory(_k))
+        if _v < 0:
+            raise ValueError(f"{_k} must be >= 0 (a diamond radius), got {_v}.")
+
+    # Blur knobs are traced, so load time is the ONLY place they can be checked.
+    # The three blur knobs are CONDITIONAL-MANDATORY (CONFIG_GUIDE.md §5), read only
+    # when blur is enabled — same pattern as the occlusion sub-keys below. Making
+    # them unconditional was an inconsistency: it forced every historical run
+    # snapshot to carry three numbers it never reads, and it is what broke the
+    # trajectory collector's pre-change compatibility shim.
+    #
+    # They still must be validated WHEN READ: sigma_floor=0 with radial_scale=0
+    # produces an all-NaN observation (the kernel normalises by 2*pi*sp*st), and
+    # anisotropy=0 divides by zero and silently blinds vision.
+    _blur_on = bool(config.get_mandatory('sensory.visual_blur_enabled'))
+    if _blur_on:
+        _blur_scale = float(config.get_mandatory('sensory.visual_blur_radial_scale'))
+        _blur_rho = float(config.get_mandatory('sensory.visual_blur_anisotropy'))
+        _blur_floor = float(config.get_mandatory('sensory.visual_blur_sigma_floor'))
+        if _blur_scale < 0.0:
+            raise ValueError(
+                f"sensory.visual_blur_radial_scale must be >= 0, got {_blur_scale}.")
+        if _blur_rho <= 0.0:
+            raise ValueError(
+                f"sensory.visual_blur_anisotropy must be > 0 (it divides sigma_par), "
+                f"got {_blur_rho}.")
+        if _blur_floor <= 0.0:
+            raise ValueError(
+                f"sensory.visual_blur_sigma_floor must be > 0 (it is the only thing "
+                f"keeping the kernel's normalisation finite), got {_blur_floor}.")
+    else:
+        # Inert; never read when blur is off. Non-zero so that any future code path
+        # touching them cannot divide by zero.
+        _blur_scale, _blur_rho, _blur_floor = 0.5, 3.0, 0.5
+
+    _occ_on = bool(config.get_mandatory('sensory.visual_occlusion_enabled'))
+    if _occ_on:
+        _occ_deg = float(config.get_mandatory('sensory.visual_occlusion_cone_deg'))
+        if not (0.0 < _occ_deg < 90.0):
+            raise ValueError(
+                f"sensory.visual_occlusion_cone_deg must be in (0, 90), got {_occ_deg}.")
+        _occ_cos = float(jnp.cos(jnp.radians(_occ_deg)))
+        _occ_strength = float(config.get_mandatory('sensory.visual_occlusion_strength'))
+        if not (0.0 <= _occ_strength <= 1.0):
+            raise ValueError(
+                f"sensory.visual_occlusion_strength must be in [0, 1], got {_occ_strength}.")
+    else:
+        _occ_cos, _occ_strength = 1.0, 0.0     # inert; never read when disabled
+
+    # ── Thermal (temperature system) ──────────────────────────────────────────
+    # Grid size is read here (rather than at the grid-location block below)
+    # because `_apply_edge_margin` needs it while the obstacle areas are parsed.
+    height = config.get_mandatory('environment.height')
+    width = config.get_mandatory('environment.width')
+
+    # `thermal.enabled` is the gate and is MANDATORY; every sub-key below is
+    # conditional-mandatory (CONFIG_GUIDE.md §5) — read only when the gate is
+    # true, and validated at the point it is read. This is the same shape as the
+    # blur / occlusion blocks above, for the same recorded reason: an
+    # unvalidated sigma produced an all-NaN observation that trained silently.
+    #
+    # The `config.get('thermal.enabled', False)` route is FORBIDDEN. A fallback
+    # default on a gating key is exactly what the no-fallback rule exists to
+    # prevent — it would let a config with a misspelled `thermal:` block train
+    # as if thermal were off, and it is also what would make the lazy config
+    # migration unsafe (IMPLEMENTATION_PLAN.md, F6).
+    _thermal_on = config.get_mandatory('thermal.enabled')
+    if not isinstance(_thermal_on, bool):
+        # A quoted "false" is a non-empty string, so bool() of it is True: the gate
+        # must be a real YAML boolean (THIRST_WATER_PLAN fix batch 2026-09-30).
+        raise ValueError(
+            f"thermal.enabled must be true or false (a YAML boolean, unquoted); got "
+            f"{_thermal_on!r}.")
+    if _thermal_on:
+        _th_sigma = float(config.get_mandatory('thermal.sigma'))
+        if _th_sigma <= 0.0:
+            raise ValueError(
+                f"thermal.sigma must be > 0 (it is the only thing keeping the blur "
+                f"kernel's weight normalisation finite), got {_th_sigma}.")
+        _th_default = config.get_mandatory('thermal.default_temp')
+        _th_default_list = list(_th_default) if isinstance(_th_default, (list, tuple)) \
+            else [_th_default, _th_default]
+        if len(_th_default_list) != 2:
+            raise ValueError(
+                f"thermal.default_temp must be [low, high], got {_th_default!r}.")
+        _th_default_low, _th_default_high = float(_th_default_list[0]), float(_th_default_list[1])
+        if _th_default_low > _th_default_high:
+            raise ValueError(
+                f"thermal.default_temp low={_th_default_low} must be <= high={_th_default_high}.")
+        _th_random_spots = bool(config.get_mandatory('thermal.use_random_spots'))
+        _th_object_sources = bool(config.get_mandatory('thermal.use_object_sources'))
+        if _th_random_spots:
+            _th_spot_count = int(config.get_mandatory('thermal.random_spots.count'))
+            _th_spot_size = int(config.get_mandatory('thermal.random_spots.size'))
+            _th_spot_temp = float(config.get_mandatory('thermal.random_spots.temp'))
+            if _th_spot_count < 0:
+                raise ValueError(
+                    f"thermal.random_spots.count must be >= 0, got {_th_spot_count}.")
+            if _th_spot_size < 1:
+                raise ValueError(
+                    f"thermal.random_spots.size must be >= 1 (it is a stamp width in "
+                    f"cells), got {_th_spot_size}.")
+        else:
+            _th_spot_count, _th_spot_size, _th_spot_temp = 0, 1, 0.0
+        _th_min_fire_sep = int(config.get_mandatory('thermal.min_fire_separation'))
+        if _th_min_fire_sep < 0:
+            raise ValueError(
+                f"thermal.min_fire_separation must be >= 0 (Manhattan cells; 0 disables "
+                f"the constraint and accepts merged fires), got {_th_min_fire_sep}.")
+        _th_food_min_dist = int(config.get_mandatory('thermal.food_min_fire_distance'))
+        if _th_food_min_dist < 0:
+            raise ValueError(
+                f"thermal.food_min_fire_distance must be >= 0 (Manhattan cells; 0 is "
+                f"today's unconstrained behaviour), got {_th_food_min_dist}.")
+        # BUSH_FIRE_CLEARANCE: bushes stay at Manhattan >= value from every BURNING fire.
+        _th_bush_min_dist = int(config.get_mandatory('thermal.bush_min_fire_distance'))
+        if _th_bush_min_dist < 0 or _th_bush_min_dist == 1:
+            raise ValueError(
+                f"thermal.bush_min_fire_distance must be 0 (off) or >= 2 (Manhattan cells; a "
+                f"bush may not sit at distance < value from a fire). 1 would block only the "
+                f"fire's own cell, which is already occupied. Got {_th_bush_min_dist}.")
+        # Kernel half-width, matching the sandbox oracle's `int(ceil(3*sigma))`
+        # (docs/develop/active/thermal/temperature_system_plan/sim.py). Static,
+        # because it fixes the number of unrolled shifts in the blur.
+        _th_kernel_radius = int(np.ceil(3.0 * _th_sigma))
+
+        # ── Body (Stage 2) ────────────────────────────────────────────────
+        # The recurrence these four numbers drive lives in `core.py::update_body`:
+        #   T <- T + k_exchange*(T_field[cell] - T) + k_metabolic
+        #          - k_loss*(T - temperature_setpoint)
+        _th_setpoint = float(config.get_mandatory('thermal.temperature_setpoint'))
+        _th_min_temp = float(config.get_mandatory('thermal.min_temperature'))
+        _th_max_temp = float(config.get_mandatory('thermal.max_temperature'))
+        if _th_min_temp >= _th_max_temp:
+            raise ValueError(
+                f"thermal.min_temperature ({_th_min_temp}) must be < "
+                f"thermal.max_temperature ({_th_max_temp}); they are the two ends of "
+                f"the survivable body-temperature interval.")
+        if not (_th_min_temp <= _th_setpoint <= _th_max_temp):
+            raise ValueError(
+                f"thermal.temperature_setpoint ({_th_setpoint}) must lie inside "
+                f"[thermal.min_temperature, thermal.max_temperature] = "
+                f"[{_th_min_temp}, {_th_max_temp}]; a setpoint outside the survivable "
+                f"interval makes the body's own resting state lethal.")
+        _th_k_exchange = float(config.get_mandatory('thermal.k_exchange'))
+        _th_k_loss = float(config.get_mandatory('thermal.k_loss'))
+        _th_k_metabolic = float(config.get_mandatory('thermal.k_metabolic'))
+        if _th_k_exchange < 0.0:
+            raise ValueError(
+                f"thermal.k_exchange must be >= 0 (it is the per-step fraction of the "
+                f"gap to the cell's temperature that the body closes), got "
+                f"{_th_k_exchange}.")
+        if _th_k_loss < 0.0:
+            raise ValueError(
+                f"thermal.k_loss must be >= 0 (it is the per-step fraction of the "
+                f"deviation from setpoint that physiology undoes), got {_th_k_loss}.")
+        if _th_k_exchange + _th_k_loss > 1.0:
+            raise ValueError(
+                f"thermal.k_exchange + thermal.k_loss must be <= 1 "
+                f"({_th_k_exchange} + {_th_k_loss} = {_th_k_exchange + _th_k_loss}); "
+                f"above 1 the discrete update overshoots its own fixed point every "
+                f"step and the body temperature oscillates instead of settling.")
+
+        # ── Warming / cooling speed ───────────────────────────────────────
+        # The body's per-step change  d = k_ex*(T_field - T) + k_met
+        # - k_loss*(T - setpoint)  is applied as  scale*d, with the warming scale
+        # when d > 0 and the cooling scale otherwise (d == 0 -> cooling; s*0 == 0
+        # either way). Scaling the whole step leaves every fixed point unchanged,
+        # which is why `_thermal_equilibrium` / `_thermal_structure_verdict` take
+        # no scale. Conditional-mandatory under `thermal.enabled`, no fallback.
+        # Plan: docs/develop/active/thermal/WARMING_COOLING_RATE_SCALES.md
+        #
+        # float() BEFORE the static gate in core.update_body compares against 1.0,
+        # so YAML `1` and `1.0` trace the same graph.
+        _th_warming_scale = float(config.get_mandatory('thermal.warming_rate_scale'))
+        _th_cooling_scale = float(config.get_mandatory('thermal.cooling_rate_scale'))
+        for _key, _scale, _direction in (
+                ('thermal.warming_rate_scale', _th_warming_scale, 'warming'),
+                ('thermal.cooling_rate_scale', _th_cooling_scale, 'cooling')):
+            # Written as `not (x > 0)` so a YAML .nan is refused too.
+            if not (_scale > 0.0):
+                raise ValueError(
+                    f"{_key} must be > 0 (it multiplies the body's per-step "
+                    f"temperature change while {_direction}; 0 would freeze the body "
+                    f"in that direction and a negative value would reverse it), "
+                    f"got {_scale}.")
+            if not (_scale * (_th_k_exchange + _th_k_loss) <= 1.0):
+                raise ValueError(
+                    f"{_key} * (thermal.k_exchange + thermal.k_loss) must be <= 1 "
+                    f"({_scale} * ({_th_k_exchange} + {_th_k_loss}) = "
+                    f"{_scale * (_th_k_exchange + _th_k_loss)}); above 1 a "
+                    f"{_direction} step overshoots the body's settling temperature "
+                    f"and the approach stops being monotone, which the load-time "
+                    f"structure check relies on.")
+
+        # ── State-dependent body mechanics B1 / B2 / B4 (2026-09-26) ──────
+        # docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md. All
+        # conditional-mandatory under `thermal.enabled`, no fallback; each has an
+        # exact off value at which `jax_reset` / `update_body` trace the pre-change
+        # graph (static gates on static fields, float()-coerced so YAML ints and
+        # floats share one trace-cache entry). Sub-keys are read only when their
+        # parent is on. Outcome checks (a lethal first step onto a fire, a lethal
+        # ring at full injury) are LOGGED at the structure-check site below, never
+        # refused (user: "allow, make visible"); the numerical stability bound
+        # stays a refusal.
+        #
+        # B1 — random starting body temperature. No fixed-start key (the
+        # `start_injury` trap): pin a start with the flag on and low == high.
+        _th_rand_body_temp = config.get_mandatory('thermal.random_start_body_temp')
+        if not isinstance(_th_rand_body_temp, bool):
+            raise ValueError(
+                f"thermal.random_start_body_temp must be true or false, got "
+                f"{_th_rand_body_temp!r}.")
+        if _th_rand_body_temp:
+            _th_start_bt_low = float(config.get_mandatory('thermal.start_body_temp_low'))
+            _th_start_bt_high = float(config.get_mandatory('thermal.start_body_temp_high'))
+            if not (np.isfinite(_th_start_bt_low) and np.isfinite(_th_start_bt_high)
+                    and _th_min_temp <= _th_start_bt_low <= _th_start_bt_high
+                    <= _th_max_temp):
+                raise ValueError(
+                    f"thermal.start_body_temp_low/high must be finite and satisfy "
+                    f"min_temperature <= low <= high <= max_temperature "
+                    f"([{_th_min_temp}, {_th_max_temp}]); got low={_th_start_bt_low}, "
+                    f"high={_th_start_bt_high}.")
+        else:
+            # Never read: jax_reset's draw sits behind a static flag.
+            _th_start_bt_low = _th_start_bt_high = _th_setpoint
+        # B2 — healing needs warmth: separate cold / warm sensitivities (1/degC).
+        _th_heal_cold = float(config.get_mandatory('thermal.healing_cold_sensitivity'))
+        _th_heal_warm = float(config.get_mandatory('thermal.healing_warm_sensitivity'))
+        for _key, _val in (('thermal.healing_cold_sensitivity', _th_heal_cold),
+                           ('thermal.healing_warm_sensitivity', _th_heal_warm)):
+            if not (np.isfinite(_val) and _val >= 0.0):   # refuses NaN and inf too
+                raise ValueError(
+                    f"{_key} must be finite and >= 0 (the fraction of injury recovery lost per "
+                    f"degree away from temperature_setpoint; 0.0 = off), got {_val}.")
+        # B4 — injury speeds heat exchange: k_exchange*(1 + gain*injury/max_injury).
+        _th_inj_gain = float(config.get_mandatory('thermal.injury_heat_exchange_gain'))
+        if not (_th_inj_gain >= 0.0):
+            raise ValueError(
+                f"thermal.injury_heat_exchange_gain must be >= 0 (0.0 = off), got "
+                f"{_th_inj_gain}.")
+        if _th_inj_gain > 0.0:
+            if not bool(config.get_mandatory('body.with_injury')):
+                raise ValueError(
+                    "thermal.injury_heat_exchange_gain > 0 requires body.with_injury: "
+                    "true — with no injury system the injury level stays 0 and the "
+                    "boost would be silently inert.")
+            _th_inj_mode = config.get_mandatory('thermal.injury_heat_exchange_mode')
+            if _th_inj_mode not in ('cooling_only', 'both'):
+                raise ValueError(
+                    f"thermal.injury_heat_exchange_mode must be 'cooling_only' or "
+                    f"'both', got {_th_inj_mode!r}.")
+            # Stability at the boosted coefficient, for BOTH scales in BOTH modes:
+            # the boost can apply on a warming step even in cooling_only mode
+            # (T_cell < T < T_set, where k_loss pulls the body up). A refusal, not a
+            # log: above the bound the discrete update overshoots and oscillates,
+            # a numerical defect rather than a behavioural outcome.
+            _k_ex_max = _th_k_exchange * (1.0 + _th_inj_gain)
+            for _key, _scale in (('thermal.warming_rate_scale', _th_warming_scale),
+                                 ('thermal.cooling_rate_scale', _th_cooling_scale)):
+                if not (_scale * (_k_ex_max + _th_k_loss) <= 1.0):
+                    raise ValueError(
+                        f"{_key} * (thermal.k_exchange*(1 + "
+                        f"thermal.injury_heat_exchange_gain) + thermal.k_loss) must be "
+                        f"<= 1 ({_scale} * ({_th_k_exchange}*(1 + {_th_inj_gain}) + "
+                        f"{_th_k_loss}) = {_scale * (_k_ex_max + _th_k_loss)}); above 1 "
+                        f"a fully injured body overshoots its settling temperature.")
+        else:
+            _th_inj_mode = 'cooling_only'   # never read at gain 0
+
+        # ── Metabolic coupling (Stage 5) ──────────────────────────────────
+        # `metabolic_coupling` is conditional-mandatory under `thermal.enabled`;
+        # `metabolic_coupling_rate` is conditional-mandatory one level deeper,
+        # read ONLY when the coupling is switched on. Same shape as
+        # `random_spots.*` under `use_random_spots` (CONFIG_GUIDE.md §5): a key
+        # that nothing reads must not be able to fail a load, and a key that IS
+        # read must have no fallback default.
+        _th_met_coupling = bool(config.get_mandatory('thermal.metabolic_coupling'))
+        if _th_met_coupling:
+            _th_met_coupling_rate = float(
+                config.get_mandatory('thermal.metabolic_coupling_rate'))
+            if _th_met_coupling_rate < 0.0:
+                raise ValueError(
+                    f"thermal.metabolic_coupling_rate must be >= 0 (it is the "
+                    f"nutrition drawn per degree-per-step of thermoregulatory "
+                    f"defence; a negative rate would pay the agent for being "
+                    f"cold), got {_th_met_coupling_rate}.")
+        else:
+            # Never read: `update_body`'s drain sits behind a static
+            # `if params.thermal_metabolic_coupling:`.
+            _th_met_coupling_rate = 0.0
+
+        # Thermoceptor (Stage 3). `grid_range` is a RADIUS, not a side length,
+        # exactly like `olfactory_grid_range` and `visual_sensor_range`:
+        # 0 -> 1 cell, 1 -> 5 cells, 2 -> 13 cells (a Manhattan diamond).
+        # It fixes the observation width at 2r^2 + 2r + 1, so it is static.
+        _th_grid_range = int(config.get_mandatory('thermal.grid_range'))
+        if _th_grid_range < 0:
+            raise ValueError(
+                f"thermal.grid_range must be >= 0 (it is the RADIUS of the "
+                f"thermoceptive Manhattan diamond: 0 -> 1 cell, 1 -> 5 cells, "
+                f"2 -> 13 cells), got {_th_grid_range}.")
+        _th_relative = bool(config.get_mandatory('thermal.relative'))
+        # Conditional-mandatory under `thermal.enabled`, exactly like the four
+        # body constants above and `metabolic_coupling_rate` below. It is NOT
+        # read unconditionally like `sensory.injury_observable`: the 72
+        # byte-parity fixture configs are stand-alone (the generator and
+        # tests/env/test_thermal_parity.py build params from a RAW Config, which
+        # does not resolve `extends:`), so an unconditional read would raise on
+        # every one of them and the parity gate would go red before it compared
+        # a single byte. CONFIG_GUIDE.md sec.5.
+        # No `config.get(..., False)` fallback, ever: the 68 deliberately
+        # deferred configs are safe only because get_mandatory fails loudly and
+        # names the key.
+        _th_body_temp_observable = bool(
+            config.get_mandatory('thermal.body_temp_observable'))
+    else:
+        # Inert; never read when thermal is off.
+        #
+        # The two placement constraints MUST be 0 here. They gate static Python
+        # branches in `resolve_overlaps_global`, so a non-zero value would change
+        # the traced graph — and with it the PRNG stream — of every config in the
+        # project (hazard H10). Zero is what makes the thermal-off path provably
+        # the same graph it was before this change.
+        _th_sigma = 1.0
+        _th_default_low, _th_default_high = 0.0, 0.0
+        _th_random_spots = False
+        _th_object_sources = False
+        _th_spot_count, _th_spot_size, _th_spot_temp = 0, 1, 0.0
+        _th_min_fire_sep = 0
+        _th_food_min_dist = 0
+        _th_bush_min_dist = 0
+        _th_kernel_radius = 0
+        # Body block (Stage 2), inert. `update_body`'s recurrence is behind a
+        # static `if params.thermal_enabled:`, so none of these is ever read on a
+        # thermal-off config. `temperature_setpoint` is nevertheless the value
+        # `jax_reset` writes into `state.body_temp`, so 0.0 is the deliberate
+        # choice: a thermal-off episode carries a body temperature of exactly
+        # zero that nothing moves and nothing reads.
+        _th_setpoint = 0.0
+        _th_min_temp, _th_max_temp = 0.0, 0.0
+        _th_k_exchange, _th_k_loss, _th_k_metabolic = 0.0, 0.0, 0.0
+        # Warming / cooling speed, inert. 1.0 / 1.0 is the value at which
+        # `update_body`'s static gate traces the single-rate lines verbatim; it is
+        # never read on a thermal-off config anyway (the whole body block sits
+        # behind `if params.thermal_enabled:`).
+        _th_warming_scale, _th_cooling_scale = 1.0, 1.0
+        # Body mechanics B1 / B2 / B4, inert: the static gates in jax_reset /
+        # update_body sit behind `thermal_enabled` or are off at these values.
+        _th_rand_body_temp = False
+        _th_start_bt_low, _th_start_bt_high = 0.0, 0.0
+        _th_heal_cold, _th_heal_warm = 0.0, 0.0
+        _th_inj_gain, _th_inj_mode = 0.0, 'cooling_only'
+        # Metabolic coupling block (Stage 5), inert. `False` is the value that
+        # makes the drain in `update_body` untraceable on a thermal-off config:
+        # it gates a static Python `if`, so the nutrition update is the
+        # pre-thermal three lines verbatim.
+        _th_met_coupling = False
+        _th_met_coupling_rate = 0.0
+        # Thermoceptor block (Stage 3), inert. `get_observation` and
+        # `get_observation_breakdown` skip the modality under a static
+        # `if params.thermal_enabled:`, so the observation width is unchanged
+        # and neither of these is read. 0 / False are the sentinels the
+        # curriculum fingerprint sees on every non-thermal config.
+        _th_grid_range = 0
+        _th_relative = False
+        # Inert. `get_observation` / `get_observation_breakdown` skip the
+        # modality under a static `if params.thermal_enabled and ...`, so this
+        # is never read on a thermal-off config. False is the sentinel the
+        # curriculum fingerprint sees on every non-thermal config.
+        _th_body_temp_observable = False
+
+    # ── Water / thirst gate (THIRST_WATER_PLAN §D3) ───────────────────────────
+    # `water.enabled` is MANDATORY, like `thermal.enabled` and for the same reason:
+    # a fallback on a gating key would let a misspelled `water:` block train as if
+    # water were off. Every other water key is conditional-mandatory and is read
+    # by `_load_water` just before EnvParams is built, where the spawn areas and
+    # the start position it validates against are known. When the gate is off no
+    # other water key is read, so a water-off config may omit them.
+    _water_on = config.get_mandatory('water.enabled')
+    if not isinstance(_water_on, bool):
+        # A quoted "false" is a non-empty string, so bool() of it is True: the gate
+        # must be a real YAML boolean (THIRST_WATER_PLAN fix batch 2026-09-30).
+        raise ValueError(
+            f"water.enabled must be true or false (a YAML boolean, unquoted); got "
+            f"{_water_on!r}.")
+
+    _vis_v = config.get('sensory.visual_vector_size')
+    visual_vector_size: int = int(_vis_v) if _vis_v is not None else 8
+
+    # Build resource arrays
+    raw_resources = config.get_mandatory('environment.resources')
+    expanded_resources = []
+    # Per-entry count-range metadata (NEW — PER_EPISODE_ENV_VARIANCE)
+    res_count_low_list = []   # per-entry int32 lower bound
+    res_count_high_list = []  # per-entry int32 upper bound
+    res_entry_id_list = []    # per-slot → entry index
+    if raw_resources:
+        for i_entry, r in enumerate(raw_resources):
+            lo, hi = _resolve_count_range(r, f'Resource[{i_entry}]')
+            res_count_low_list.append(lo)
+            res_count_high_list.append(hi)
+            # Allocate count_high slots (not count); activate K in jax_reset
+            for slot_i in range(hi):
+                expanded_resources.append(r)
+                res_entry_id_list.append(i_entry)
+    
+    if expanded_resources:
+        def r_get(r, key):
+            val = r.get(key)
+            if val is None: raise ValueError(f"Strict Config: Resource field '{key}' is required.")
+            if key == 'type' and val == 'danger':
+                warnings.warn(
+                    "Resource type 'danger' is deprecated — rename to 'hiding_predator'.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+            return val
+
+        # 0: food, 1: hiding_predator
+        res_type = jnp.array([0 if r_get(r, 'type') == 'food' else 1 for r in expanded_resources], dtype=jnp.int32)
+        res_property = jnp.array([_read_properties(r, 'Resource') for r in expanded_resources])
+        chem_dim = res_property.shape[-1]
+        res_property_std = jnp.array([_read_properties_std(r, 'Resource') for r in expanded_resources])
+        # Subtract 1 for minval (0-based) but keep maxval as is for JAX's exclusive upper bound
+        res_spawn_area = jnp.array([[a[0][0]-1, a[0][1]-1, a[1][0], a[1][1]] for a in [r_get(r, 'spawn_area') for r in expanded_resources]])
+        res_max_cons = jnp.array([r_get(r, 'max_consumption') for r in expanded_resources], dtype=jnp.int32)
+        res_reg_delay = jnp.array([r_get(r, 'regeneration_delay') for r in expanded_resources], dtype=jnp.int32)
+
+        # Damage can be scalar (Feb 12) or range [min, max] (tuningEnv)
+        raw_damage = [r_get(r, 'damage') for r in expanded_resources]
+        res_damage = jnp.array([d if isinstance(d, list) else [d, d] for d in raw_damage])
+
+        res_nociception = jnp.array([r.get('nociception_intensity', 0.9 if r_get(r, 'type') in ('hiding_predator', 'danger') else 0.0) for r in expanded_resources])
+
+        # Visual property vectors: food→channel 3, hiding_predator→channel 4
+        _res_vis_list = []
+        _res_vis_std_list = []
+        _res_mask_list = []
+        _res_blocks_list = []
+        # Thermal: resources are stampable heat sources too (Stage 1,
+        # resolution (a)) — food and hiding predators can carry heat.
+        _res_temp_list = []
+        _res_ratio_lo_list = []
+        _res_ratio_hi_list = []
+        for r in expanded_resources:
+            _rtype = r_get(r, 'type')
+            _default_ch = 3 if _rtype == 'food' else 4  # food=3, hiding_predator=4
+            if visual_vector_size != 8 and 'visual_properties' not in r:
+                raise ValueError(
+                    f"Resource type={_rtype!r}: 'visual_properties' is required "
+                    f"when visual_vector_size={visual_vector_size} (only V=8 can "
+                    f"auto-generate one-hot defaults from the channel map)."
+                )
+            _res_vis_list.append(_read_visual_properties(r, _default_ch, visual_vector_size, f'Resource({_rtype})'))
+            _res_vis_std_list.append(_read_visual_properties_std(r, visual_vector_size, f'Resource({_rtype})'))
+            _res_mask_list.append(_read_visual_mask(r, f'Resource({_rtype})'))
+            _res_blocks_list.append(_read_blocks_sight(r))
+            if 'edge_margin' in r:
+                raise ValueError(
+                    f"Resource({_rtype}): 'edge_margin' is supported on obstacle entries "
+                    "only. Inset the resource's 'spawn_area' directly instead.")
+            _rt_abs, _rt_lo, _rt_hi = _read_temperature(r, f'Resource({_rtype})')
+            _res_temp_list.append(_rt_abs)
+            _res_ratio_lo_list.append(_rt_lo)
+            _res_ratio_hi_list.append(_rt_hi)
+        res_temperature = jnp.array(_res_temp_list, dtype=jnp.float32)
+        res_temp_ratio_low = jnp.array(_res_ratio_lo_list, dtype=jnp.float32)
+        res_temp_ratio_high = jnp.array(_res_ratio_hi_list, dtype=jnp.float32)
+        res_visual_property = jnp.array(_res_vis_list, dtype=jnp.float32)
+        res_visual_property_std = jnp.array(_res_vis_std_list, dtype=jnp.float32)
+        res_visual_mask = jnp.array(_res_mask_list, dtype=jnp.int32)
+        res_blocks_sight = jnp.array(_res_blocks_list, dtype=jnp.bool_)
+    else:
+        res_type = jnp.zeros(0, dtype=jnp.int32)
+        res_property = jnp.zeros((0, 5))
+        res_property_std = jnp.zeros((0, 5))
+        res_nociception = jnp.zeros(0)
+        res_spawn_area = jnp.zeros((0, 4), dtype=jnp.int32)
+        res_max_cons = jnp.zeros(0, dtype=jnp.int32)
+        res_reg_delay = jnp.zeros(0, dtype=jnp.int32)
+        res_damage = jnp.zeros((0, 2))
+        res_visual_property = jnp.zeros((0, visual_vector_size), dtype=jnp.float32)
+        res_visual_property_std = jnp.zeros((0, visual_vector_size), dtype=jnp.float32)
+        res_visual_mask = jnp.zeros(0, dtype=jnp.int32)
+        res_blocks_sight = jnp.zeros(0, dtype=jnp.bool_)
+        res_temperature = jnp.zeros(0, dtype=jnp.float32)
+        res_temp_ratio_low = jnp.zeros(0, dtype=jnp.float32)
+        res_temp_ratio_high = jnp.zeros(0, dtype=jnp.float32)
+
+    # ── Guard against stale `predator_enabled` key (removed in v2.0) ──────────
+    # The 86 migrated configs have this key stripped by the CP1 migration sweep.
+    # Any config that still carries it after migration raises a clear error.
+    if config.get('environment.predator_enabled') is not None:
+        raise ValueError(
+            "Config key 'environment.predator_enabled' was removed in v2.0. "
+            "Strip this line from your YAML (it was always True for 85 of 86 configs; "
+            "for the neutral-only case, use 'predators: []' which is already present)."
+        )
+
+    # ── Build unified animal arrays via _load_animals() ──────────────────────
+    (
+        animal_property, animal_property_std, animal_nociception,
+        animal_move_int, animal_damage, animal_attack_delay,
+        animal_spawn_area, animal_patrol,
+        animal_detect_low, animal_detect_high,
+        animal_max_stamina_low, animal_max_stamina_high,
+        animal_recovery_low, animal_recovery_high,
+        animal_hunt_thresh_low, animal_hunt_thresh_high,
+        animal_lose_interest_low, animal_lose_interest_high,
+        animal_classes_int, animal_behaviours_int,
+        animal_is_damaging, animal_disengage_on_contact, animal_visual_channel,
+        animal_visual_property, animal_visual_property_std, animal_visual_mask,
+        animal_blocks_sight,
+        animal_classes, animal_behaviours, animal_tags,
+        hunt_idx, wander_idx, static_idx,
+        predator_indices, neutral_indices,
+        pred_spawn_area_for_placement, neutral_spawn_area_for_placement,
+        animal_move_int_low, animal_move_int_high,
+        animal_attack_delay_low, animal_attack_delay_high,
+        animal_attack_range_low, animal_attack_range_high,
+        animal_attack_success_rate, has_attack_feature,
+    ) = _load_animals(config, visual_vector_size=visual_vector_size)
+
+    # ── Animal count-range metadata (NEW — PER_EPISODE_ENV_VARIANCE) ──────────
+    # Re-read the raw entity entries to extract per-entry count_low / count_high.
+    # This mirrors the expansion done in _load_animals (but here we only need counts).
+    animal_count_low_list = []   # per-entry int32 lower bound
+    animal_count_high_list = []  # per-entry int32 upper bound
+    animal_entry_id_list = []    # per-slot → entry index
+    # Mirror the SAME legacy-scene precedence used inside _load_animals() (see
+    # FIX_CONFIG_LAYER_SILENT_FAILURES_20260723 Bug 1) — this metadata must be
+    # built from whichever schema _load_animals() actually used, or the per-slot
+    # entry_id / count arrays here go out of sync with the animal_* arrays and
+    # jax_reset's activation-mask broadcast breaks with a shape mismatch.
+    _has_entities = config.get('environment.entities') is not None
+    _has_legacy = bool(config.get('environment.predators')) or \
+                  bool(config.get('environment.neutral_animals'))
+    if _has_entities and not _has_legacy:
+        _raw_ents = config.get('environment.entities') or []
+        for i_raw, ent in enumerate(_raw_ents):
+            lo, hi = _resolve_count_range(ent, f'Entity[{i_raw}]')
+            animal_count_low_list.append(lo)
+            animal_count_high_list.append(hi)
+            for _s in range(hi):
+                animal_entry_id_list.append(i_raw)
+    else:
+        # Legacy predators: each raw entry is a single-slot entry (no count_low/count_high)
+        _raw_preds = config.get('environment.predators') or []
+        for i_raw, p in enumerate(_raw_preds):
+            lo, hi = _resolve_count_range(p, f'Predator[{i_raw}]')
+            animal_count_low_list.append(lo)
+            animal_count_high_list.append(hi)
+            for _s in range(hi):
+                animal_entry_id_list.append(i_raw)
+        # Legacy neutrals: same pattern, offset entry indices
+        _raw_neutrals = config.get('environment.neutral_animals') or []
+        _n_pred_entries = len(_raw_preds)
+        for i_raw, n in enumerate(_raw_neutrals):
+            lo, hi = _resolve_count_range(n, f'NeutralAnimal[{i_raw}]')
+            animal_count_low_list.append(lo)
+            animal_count_high_list.append(hi)
+            for _s in range(hi):
+                animal_entry_id_list.append(_n_pred_entries + i_raw)
+
+    # Build Obstacle arrays
+    raw_obstacles = config.get_mandatory('environment.obstacles')
+    expanded_obstacles = []
+    # Per-entry count-range metadata (NEW — PER_EPISODE_ENV_VARIANCE)
+    obs_count_low_list = []   # per-entry int32 lower bound
+    obs_count_high_list = []  # per-entry int32 upper bound
+    obs_entry_id_list = []    # per-slot → entry index
+    for i_entry, o in enumerate(raw_obstacles):
+        lo, hi = _resolve_count_range(o, f'Obstacle[{i_entry}]')
+        obs_count_low_list.append(lo)
+        obs_count_high_list.append(hi)
+        # Allocate count_high slots (not count); activate K in jax_reset
+        for slot_i in range(hi):
+            expanded_obstacles.append(o)
+            obs_entry_id_list.append(i_entry)
+            
+    if expanded_obstacles:
+        def obs_get(o, key):
+            val = o.get(key)
+            if val is None: raise ValueError(f"Strict Config: Obstacle field '{key}' is required.")
+            return val
+        obs_blocking = jnp.array([o.get('blocking', True) for o in expanded_obstacles], dtype=jnp.bool_)
+        obs_hides_agent = jnp.array([o.get('hides_agent', False) for o in expanded_obstacles], dtype=jnp.bool_)
+        obs_blocks_animals = jnp.array([o.get('blocks_animals', False) for o in expanded_obstacles], dtype=jnp.bool_)
+        
+        # Obstacle damage ranges
+        raw_obs_damage = [o.get('damage', 0.0) for o in expanded_obstacles]
+        obs_damage = jnp.array([d if isinstance(d, list) else [d, d] for d in raw_obs_damage])
+        
+        obs_nociception = jnp.array([o.get('nociception_intensity', 0.3) for o in expanded_obstacles], dtype=jnp.float32)
+        # Unified: Obstacles can have properties too
+        chem_dim = res_property.shape[-1]
+        obs_property = jnp.array([_read_properties(o, 'Obstacle') for o in expanded_obstacles])
+        obs_property_std = jnp.array([_read_properties_std(o, 'Obstacle') for o in expanded_obstacles])
+        # Adjust for 0-based min and exclusive max.
+        # `edge_margin` (F4) is applied HERE, as a load-time inset of the declared
+        # rectangle, so the runtime sampler is untouched and an impossible margin
+        # fails at load instead of producing a degenerate spawn box.
+        _obs_area_rows = []
+        for o in expanded_obstacles:
+            _a = obs_get(o, 'area')
+            _a = _apply_edge_margin(
+                _a, o.get('edge_margin', 0), height, width,
+                f"Obstacle({o.get('name', 'rock')})")
+            _obs_area_rows.append([_a[0][0]-1, _a[0][1]-1, _a[1][0], _a[1][1]])
+        obs_spawn_area = jnp.array(_obs_area_rows)
+        
+        # Obstacle types for visual sensor
+        obstacle_names = tuple(sorted(list(set([o.get('name', 'rock') for o in expanded_obstacles]))))
+        name_to_idx = {name: i for i, name in enumerate(obstacle_names)}
+        obs_type = jnp.array([name_to_idx[o.get('name', 'rock')] for o in expanded_obstacles], dtype=jnp.int32)
+
+        # Visual property vectors: rock→channel 6
+        _obs_vis_list = []
+        _obs_vis_std_list = []
+        _obs_mask_list = []
+        _obs_blocks_list = []
+        # Thermal: the campfire is an obstacle slot with a non-zero temperature.
+        _obs_temp_list = []
+        _obs_ratio_lo_list = []
+        _obs_ratio_hi_list = []
+        for o in expanded_obstacles:
+            _oname = o.get('name', 'rock')
+            if visual_vector_size != 8 and 'visual_properties' not in o:
+                raise ValueError(
+                    f"Obstacle name={_oname!r}: 'visual_properties' is required "
+                    f"when visual_vector_size={visual_vector_size} (only V=8 can "
+                    f"auto-generate one-hot defaults from the channel map)."
+                )
+            _obs_vis_list.append(_read_visual_properties(o, 6, visual_vector_size, f'Obstacle({_oname})'))
+            _obs_vis_std_list.append(_read_visual_properties_std(o, visual_vector_size, f'Obstacle({_oname})'))
+            _obs_mask_list.append(_read_visual_mask(o, f'Obstacle({_oname})'))
+            _obs_blocks_list.append(_read_blocks_sight(o))
+            _ot_abs, _ot_lo, _ot_hi = _read_temperature(o, f'Obstacle({_oname})')
+            _obs_temp_list.append(_ot_abs)
+            _obs_ratio_lo_list.append(_ot_lo)
+            _obs_ratio_hi_list.append(_ot_hi)
+        obs_temperature = jnp.array(_obs_temp_list, dtype=jnp.float32)
+        obs_temp_ratio_low = jnp.array(_obs_ratio_lo_list, dtype=jnp.float32)
+        obs_temp_ratio_high = jnp.array(_obs_ratio_hi_list, dtype=jnp.float32)
+        obs_visual_property = jnp.array(_obs_vis_list, dtype=jnp.float32)
+        obs_visual_property_std = jnp.array(_obs_vis_std_list, dtype=jnp.float32)
+        obs_visual_mask = jnp.array(_obs_mask_list, dtype=jnp.int32)
+        obs_blocks_sight = jnp.array(_obs_blocks_list, dtype=jnp.bool_)
+    else:
+        obs_blocking = jnp.zeros(0, dtype=jnp.bool_)
+        obs_hides_agent = jnp.zeros(0, dtype=jnp.bool_)
+        obs_blocks_animals = jnp.zeros(0, dtype=jnp.bool_)
+        obs_damage = jnp.zeros((0, 2), dtype=jnp.float32)
+        obs_nociception = jnp.zeros(0, dtype=jnp.float32)
+        chem_dim = res_property.shape[-1]
+        obs_property = jnp.zeros((0, chem_dim))
+        obs_property_std = jnp.zeros((0, chem_dim))
+        obs_spawn_area = jnp.zeros((0, 4), dtype=jnp.int32)
+        obs_type = jnp.zeros(0, dtype=jnp.int32)
+        obstacle_names = ("rock",)
+        obs_visual_property = jnp.zeros((0, visual_vector_size), dtype=jnp.float32)
+        obs_visual_property_std = jnp.zeros((0, visual_vector_size), dtype=jnp.float32)
+        obs_visual_mask = jnp.zeros(0, dtype=jnp.int32)
+        obs_blocks_sight = jnp.zeros(0, dtype=jnp.bool_)
+        obs_temperature = jnp.zeros(0, dtype=jnp.float32)
+        obs_temp_ratio_low = jnp.zeros(0, dtype=jnp.float32)
+        obs_temp_ratio_high = jnp.zeros(0, dtype=jnp.float32)
+    
+    # Build Grid Location Types
+    # (numpy is imported at module scope; a function-local `import numpy as np`
+    # here would make `np` a local name for the WHOLE function and turn every
+    # earlier use into an UnboundLocalError.)
+    grid_np = np.zeros((height, width), dtype=np.int32)
+    location_areas = config.get_mandatory('environment.location_areas')
+    for area_config in location_areas:
+        a_type = area_config.get('type')
+        type_idx = 1 if a_type == 'grass' else 2 if a_type == 'sand' else 0
+        area = area_config.get('area')
+        if area:
+            # 1-based conversion: [r1, c1] to [r2, c2] inclusive maps to grid[r1-1:r2, c1-1:c2]
+            r1, c1, r2, c2 = area[0][0], area[0][1], area[1][0], area[1][1]
+            grid_np[r1-1:r2, c1-1:c2] = type_idx
+    grid_location_type = jnp.array(grid_np)
+
+    # ── Visual background property table [3, V] ───────────────────────────────
+    # Rows: grass (loc 1 → index 0), sand (loc 2 → index 1), plain (loc 0 → index 2)
+    # Default: one-hot(0/1/2, V). At V≠8, require explicit sensory.visual_background_properties.
+    _vbg_raw = config.get('sensory.visual_background_properties')
+    if visual_vector_size != 8:
+        if _vbg_raw is None:
+            raise ValueError(
+                "'sensory.visual_background_properties' is required when "
+                f"visual_vector_size={visual_vector_size} (a 3×V table of floats, "
+                "rows = [grass, sand, plain])."
+            )
+        _vbg = list(_vbg_raw)
+        if len(_vbg) != 3 or any(len(row) != visual_vector_size for row in _vbg):
+            raise ValueError(
+                f"'sensory.visual_background_properties' must be a 3×{visual_vector_size} "
+                f"table; got shape {len(_vbg)}×{[len(r) for r in _vbg]}."
+            )
+        visual_background_property = jnp.array(
+            [[float(x) for x in row] for row in _vbg], dtype=jnp.float32
+        )
+    else:
+        if _vbg_raw is not None:
+            # User explicitly supplied it at V=8 — validate and use it.
+            _vbg = list(_vbg_raw)
+            if len(_vbg) != 3 or any(len(row) != 8 for row in _vbg):
+                raise ValueError(
+                    f"'sensory.visual_background_properties' must be a 3×8 table when "
+                    f"visual_vector_size=8; got shape {len(_vbg)}×{[len(r) for r in _vbg]}."
+                )
+            visual_background_property = jnp.array(
+                [[float(x) for x in row] for row in _vbg], dtype=jnp.float32
+            )
+        else:
+            # Default: one-hot rows for grass(0), sand(1), plain(2)
+            visual_background_property = jnp.eye(8, dtype=jnp.float32)[:3]  # [3, 8]
+
+    # ── Type-Level Placement: Group entities by spawn area ──
+    # Preserve today's [res, pred, obs, neutral] index order for type_entity_map
+    # (N1 fix: jax_reset placement uses this ordering for the resolve-scan).
+    all_spawn_areas_np = np.concatenate([
+        np.array(res_spawn_area), np.array(pred_spawn_area_for_placement),
+        np.array(obs_spawn_area), np.array(neutral_spawn_area_for_placement)
+    ], axis=0)  # [N, 4]
+    num_total_entities = all_spawn_areas_np.shape[0]
+    
+    # Group by unique spawn area
+    groups_by_area = {}  # tuple(area) -> list of entity global indices
+    for eidx in range(num_total_entities):
+        area_key = tuple(all_spawn_areas_np[eidx].tolist())
+        groups_by_area.setdefault(area_key, []).append(eidx)
+    
+    # Build type-level arrays
+    area_keys_list = list(groups_by_area.keys())
+    num_types = len(area_keys_list)
+    type_counts_list = [len(groups_by_area[k]) for k in area_keys_list]
+    max_per_type = max(type_counts_list) if type_counts_list else 1
+    
+    type_areas_np = np.array([list(k) for k in area_keys_list], dtype=np.int32)
+    type_entity_map_np = np.full((num_types, max_per_type), 0, dtype=np.int32)
+    for tidx, k in enumerate(area_keys_list):
+        ents = groups_by_area[k]
+        type_entity_map_np[tidx, :len(ents)] = ents
+    
+    # Parse placement mode
+    placement_mode = config.get('environment.placement.mode', 'per_entity')
+    assert placement_mode in ('per_entity', 'per_type'), f"Unknown placement mode: {placement_mode}"
+
+    # The thermal placement constraints are implemented as extra terms in
+    # `resolve_overlaps_global`'s validity mask, which the 'per_type' mode
+    # bypasses entirely (it uses `place_in_area` under a lax.scan over type
+    # groups). Raise rather than silently ignore them: a config whose own
+    # validation says fires cannot merge, while the placement mode it selected
+    # never enforces that, is worse than a config that fails to load.
+    if placement_mode == 'per_type' and (_th_min_fire_sep > 0 or _th_food_min_dist > 0
+                                         or _th_bush_min_dist > 0):
+        raise ValueError(
+            "thermal.min_fire_separation / thermal.food_min_fire_distance / "
+            "thermal.bush_min_fire_distance are not "
+            "supported under environment.placement.mode: per_type — that mode uses "
+            "`place_in_area`, which bypasses the placement validity mask the "
+            "constraints attach to. Use placement.mode: per_entity, or set all three "
+            f"constraints to 0 (currently min_fire_separation={_th_min_fire_sep}, "
+            f"food_min_fire_distance={_th_food_min_dist}, "
+            f"bush_min_fire_distance={_th_bush_min_dist})."
+        )
+
+    # ── Load-time thermal structure check (Stage 6b) ──────────────────────────
+    # Runs here because it needs BOTH the `thermal:` block (parsed far above) and
+    # the per-slot temperature arrays (built with the obstacle/resource blocks
+    # just above), and because a config that fails it must not reach EnvParams.
+    # See `_check_thermal_structure` for when it runs, when it is skipped, and
+    # why. Everything it reads is a config constant, so it costs nothing at reset.
+    if _thermal_on:
+        _obs_names_np = np.asarray(obs_type)
+        _obs_labels = [obstacle_names[int(t)] if int(t) < len(obstacle_names) else '?'
+                       for t in _obs_names_np]
+        _res_labels = ['food' if int(t) == 0 else 'hiding_predator'
+                       for t in np.asarray(res_type)]
+        _check_thermal_structure(
+            obs_temperature=obs_temperature,
+            obs_ratio_low=obs_temp_ratio_low,
+            obs_ratio_high=obs_temp_ratio_high,
+            obs_labels=_obs_labels,
+            res_temperature=res_temperature,
+            res_ratio_low=res_temp_ratio_low,
+            res_ratio_high=res_temp_ratio_high,
+            res_labels=_res_labels,
+            use_object_sources=_th_object_sources,
+            default_temp_low=_th_default_low,
+            default_temp_high=_th_default_high,
+            sigma=_th_sigma,
+            kernel_radius=_th_kernel_radius,
+            grid_h=height,
+            grid_w=width,
+            k_exchange=_th_k_exchange,
+            k_loss=_th_k_loss,
+            k_metabolic=_th_k_metabolic,
+            setpoint=_th_setpoint,
+            min_temperature=_th_min_temp,
+            max_temperature=_th_max_temp,
+            min_fire_separation=_th_min_fire_sep,
+        )
+        # BUSH_FIRE_CLEARANCE: structure + worst-case feasibility of the bush pass.
+        if _th_bush_min_dist > 0:
+            _check_bush_fire_clearance(
+                bush_min_fire_distance=_th_bush_min_dist,
+                obs_temperature=obs_temperature, obs_ratio_low=obs_temp_ratio_low,
+                obs_ratio_high=obs_temp_ratio_high, obs_hides_agent=obs_hides_agent,
+                obs_spawn_area=obs_spawn_area, obs_names=_obs_labels,
+                res_temperature=res_temperature, res_ratio_low=res_temp_ratio_low,
+                res_ratio_high=res_temp_ratio_high,
+                num_total_slots=num_total_entities)
+        _th_struct_kwargs = dict(
+            obs_temperature=obs_temperature, obs_ratio_low=obs_temp_ratio_low,
+            obs_ratio_high=obs_temp_ratio_high, obs_labels=_obs_labels,
+            res_temperature=res_temperature, res_ratio_low=res_temp_ratio_low,
+            res_ratio_high=res_temp_ratio_high, res_labels=_res_labels,
+            use_object_sources=_th_object_sources, default_temp_low=_th_default_low,
+            default_temp_high=_th_default_high, sigma=_th_sigma,
+            kernel_radius=_th_kernel_radius, grid_h=height, grid_w=width,
+            k_exchange=_th_k_exchange, k_loss=_th_k_loss, k_metabolic=_th_k_metabolic,
+            setpoint=_th_setpoint, min_temperature=_th_min_temp,
+            max_temperature=_th_max_temp, min_fire_separation=_th_min_fire_sep)
+        # B4: the same structure evaluated at FULL injury — LOGGED, not raised.
+        if _th_inj_gain > 0.0:
+            _check_thermal_structure(
+                **_th_struct_kwargs, raise_on_failure=False,
+                k_exchange_boosted=_th_k_exchange * (1.0 + _th_inj_gain),
+                boost_mode=_th_inj_mode)
+        # B1 / B4-both: the worst-case first step onto a single fire, logged
+        # (INFO, or WARNING when it crosses max_temperature). Never refused: a lethal
+        # step onto a fire is an outcome the agent can learn to avoid. The loader
+        # has no load-summary object; this log line is the record. One combined
+        # line when both are on.
+        _b4_both = _th_inj_gain > 0.0 and _th_inj_mode == 'both'
+        if _th_rand_body_temp or _b4_both:
+            _t_high = _th_start_bt_high if _th_rand_body_temp else _th_setpoint
+            _fs_kwargs = {k: v for k, v in _th_struct_kwargs.items()
+                          if k not in ('obs_labels', 'res_labels', 'min_temperature',
+                                       'max_temperature', 'min_fire_separation')}
+            _worst = _thermal_first_fire_step(
+                **_fs_kwargs, warming_scale=_th_warming_scale, t_high=_t_high,
+                k_exchange_boosted=(_th_k_exchange * (1.0 + _th_inj_gain)
+                                    if _b4_both else None),
+                boost_mode=_th_inj_mode if _b4_both else None)
+            _what = " and ".join(
+                ([f"B1 start_body_temp_high={_th_start_bt_high:+.2f}"]
+                 if _th_rand_body_temp else [])
+                + ([f"B4 injury_heat_exchange_gain={_th_inj_gain:g} (mode both, "
+                    f"full injury)"] if _b4_both else []))
+            if _worst is None:
+                _log.info(
+                    "worst-case first step onto a fire (%s): not computed — no "
+                    "ratio-declared heat source in this world.", _what)
+            else:
+                _t1, _f, _d, _r, _th_used = _worst
+                _lethal = _t1 > _th_max_temp
+                (_log.warning if _lethal else _log.info)(
+                    "worst-case first step onto a fire (%s): body %+.2f -> %+.2f "
+                    "(single-fire model, fire cell %+.2f at default_temp=%g, "
+                    "ratio=%g; max_temperature %+.2f)%s",
+                    _what, _th_used, _t1, _f, _d, _r, _th_max_temp,
+                    " — an agent can die on its first step onto a fire; allowed by "
+                    "configuration" if _lethal else "")
+
+    _log.debug("=" * 60)
+    _log.debug("ENTITY PLACEMENT STRATEGY: %s", placement_mode)
+    _log.debug("=" * 60)
+    _log.debug("Grid: %d×%d (%d cells)", height, width, height * width)
+    _log.debug("Total entities: %d", num_total_entities)
+    if placement_mode == 'per_type':
+        _log.debug("Type groups: %d (one lax.scan step each)", num_types)
+        for tidx, k in enumerate(area_keys_list):
+            area = list(k)
+            cnt = type_counts_list[tidx]
+            area_cells = (area[2] - area[0]) * (area[3] - area[1])
+            _log.debug(
+                "  Group %d: area %s → %d entities / %d cells (%.0f%%)",
+                tidx, area, cnt, area_cells, 100 * cnt / area_cells if area_cells else 0
+            )
+        _log.debug("Max entities per group: %d", max_per_type)
+        _log.debug("Sequential steps: %d", num_types)
+    else:
+        _log.debug("Sequential steps: %d (one per entity)", num_total_entities)
+    _log.debug("=" * 60)
+    
+    # Hidden-state observability flags
+    injury_observable = bool(config.get_mandatory('sensory.injury_observable'))
+    nutrition_observable = bool(config.get_mandatory('sensory.nutrition_observable'))
+
+    # Interoceptive nociception (delayed-peak perception of hidden injury)
+    interoceptive_nociception_enabled = bool(config.get_mandatory('sensory.interoceptive_nociception_enabled'))
+    interoceptive_convolution_enabled = bool(config.get_mandatory('sensory.interoceptive_convolution_enabled'))
+    interoceptive_kernel_length = int(config.get_mandatory('sensory.interoceptive_kernel_length'))
+    interoceptive_kernel_tau = float(config.get_mandatory('sensory.interoceptive_kernel_tau'))
+
+    if interoceptive_convolution_enabled:
+        # Build normalized alpha kernel: k_raw[i] = (i/τ)·exp(1 - i/τ); k[i] = k_raw[i] / Σk_raw
+        _k_idx = np.arange(interoceptive_kernel_length, dtype=np.float32)
+        _k_raw = (_k_idx / interoceptive_kernel_tau) * np.exp(1.0 - _k_idx / interoceptive_kernel_tau)
+        _k_sum = float(_k_raw.sum())
+        if _k_sum <= 0.0:
+            raise ValueError(
+                f"interoceptive_kernel produced non-positive sum ({_k_sum}). "
+                f"Check tau ({interoceptive_kernel_tau}) and length ({interoceptive_kernel_length})."
+            )
+        interoceptive_kernel = jnp.array(_k_raw / _k_sum, dtype=jnp.float32)
+    else:
+        # Passthrough mode — kernel is unused but kept as zeros for shape stability.
+        interoceptive_kernel = jnp.zeros(interoceptive_kernel_length, dtype=jnp.float32)
+
+    # Configurable initial-state ranges (Fork B2: conditional-mandatory).
+    # Range keys are required ONLY when the matching random_start_* flag is true;
+    # when the flag is false, sentinels are used (values never read at runtime).
+    _rand_nutr = bool(config.get_mandatory('body.random_start_nutrition'))
+    _rand_inj  = bool(config.get_mandatory('body.random_start_injury'))
+    _max_nutr  = float(config.get_mandatory('body.max_nutrition'))
+    _max_inj   = float(config.get_mandatory('body.max_injury'))
+
+    # ── The satiation axis must be a usable interval (2026-09-22) ────────────
+    # Since nutrition became two-sided, the homeostatic drive divides by
+    # `range_S = max(setpoint, max_satiation - setpoint)` (core.py
+    # ::satiation_deviation_range). Both degenerate shapes load silently and
+    # fail LATER, inside a jitted step where the error is unreadable:
+    #   * `max_satiation == 0` with `satiation_setpoint == 0` gives range_S == 0,
+    #     so `drive_hunger` is 0/0 -> NaN, which propagates into every reward.
+    #   * a setpoint ABOVE the ceiling is unreachable: satiation is clipped to
+    #     the ceiling, so the drive can never reach zero and the agent is
+    #     permanently punished for a state it cannot leave.
+    # Caught here, at load, in the same shape as the start-range checks below.
+    _max_sat = float(config.get_mandatory('body.max_satiation'))
+    _setpoint = float(config.get_mandatory('body.satiation_setpoint'))
+    if not (_max_sat > 0.0):
+        raise ValueError(
+            f"body.max_satiation must be > 0 (it is the satiation axis ceiling and "
+            f"the homeostatic drive divides by a range derived from it); got {_max_sat}")
+    if not (_max_nutr > 0.0):
+        raise ValueError(
+            f"body.max_nutrition must be > 0 (nutrition is clipped into "
+            f"[0, max_nutrition] and death fires at both ends); got {_max_nutr}")
+    if not (_max_inj > 0.0):
+        raise ValueError(
+            f"body.max_injury must be > 0 (injury is clipped into [0, max_injury] "
+            f"and the drive and B4 divide by it); got {_max_inj}")
+    if not (0.0 <= _setpoint <= _max_sat):
+        raise ValueError(
+            f"body.satiation_setpoint must satisfy 0 <= setpoint <= max_satiation "
+            f"({_max_sat}); got {_setpoint}. A setpoint outside the axis is "
+            f"unreachable, so the homeostatic drive could never reach zero.")
+
+    if _rand_nutr:
+        start_nutrition_low  = float(config.get_mandatory('body.start_nutrition_low'))
+        start_nutrition_high = float(config.get_mandatory('body.start_nutrition_high'))
+        if not (0.0 <= start_nutrition_low <= start_nutrition_high <= _max_nutr):
+            raise ValueError(
+                f"body.start_nutrition_low/high must satisfy 0 <= low <= high <= max_nutrition "
+                f"({_max_nutr}); got low={start_nutrition_low}, high={start_nutrition_high}")
+    else:
+        # Sentinel: unused when random_start_nutrition is False.
+        # Keeps params pytree shape static across configs (traced floats).
+        start_nutrition_low  = 0.0
+        start_nutrition_high = _max_nutr
+
+    if _rand_inj:
+        start_injury_low  = float(config.get_mandatory('body.start_injury_low'))
+        start_injury_high = float(config.get_mandatory('body.start_injury_high'))
+        if not (0.0 <= start_injury_low <= start_injury_high <= _max_inj):
+            raise ValueError(
+                f"body.start_injury_low/high must satisfy 0 <= low <= high <= max_injury "
+                f"({_max_inj}); got low={start_injury_low}, high={start_injury_high}")
+    else:
+        # Sentinel: unused when random_start_injury is False.
+        start_injury_low  = 0.0
+        start_injury_high = _max_inj / 2.0
+
+    # ── Location premium on recovery (body.recovery_in_bush_multiplier) ───────
+    # Unconditionally mandatory: it changes how fast a resting agent heals, and a
+    # world that does not say whether resting in cover is worth more than resting
+    # in the open cannot be reproduced from its own file. `1.0` is the inert value.
+    #
+    # The `float()` is load-bearing rather than cosmetic. The field is
+    # `struct.field(pytree_node=False)` — see `state.py` — so it participates in
+    # JAX's trace-cache key, and YAML parses a bare `1` as an `int`. Without the
+    # coercion a curriculum whose stages spell the same inert value `1` and `1.0`
+    # would recompile the environment between them for no behavioural reason.
+    #
+    # Validated at the point of read, in the style of the thermal rate constants
+    # above: a zero multiplier would make resting in cover heal nothing and a
+    # negative one would make it inflict injury. Neither is a setting of this
+    # feature; both are a different feature nobody asked for.
+    _recovery_in_bush_mult = float(
+        config.get_mandatory('body.recovery_in_bush_multiplier'))
+    if _recovery_in_bush_mult <= 0.0:
+        raise ValueError(
+            f"body.recovery_in_bush_multiplier must be > 0 (it multiplies the "
+            f"injury recovered on a rest step taken on a concealing obstacle; "
+            f"1.0 means 'no difference from resting in the open'), got "
+            f"{_recovery_in_bush_mult}.")
+
+    # ── State-dependent body mechanics B3 / B5 (2026-09-26) ──────────────────
+    # docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md. Both parents
+    # are unconditionally mandatory (a world that does not say whether healing
+    # costs food cannot be reproduced from its own file); their sub-keys are read
+    # only when the parent is on. All static and float()-coerced (see state.py).
+    _with_nutr = bool(config.get_mandatory('body.with_nutrition'))
+    _with_inj = bool(config.get_mandatory('body.with_injury'))
+    # B3 — healing uses energy: nutrition per injury point healed.
+    _heal_cost = float(config.get_mandatory('body.healing_nutrition_cost'))
+    if not (np.isfinite(_heal_cost) and _heal_cost >= 0.0):   # refuses NaN and inf too
+        raise ValueError(
+            f"body.healing_nutrition_cost must be finite and >= 0 (nutrition charged per "
+            f"injury point healed; 0.0 = off), got {_heal_cost}.")
+    if _heal_cost > 0.0:
+        if not (_with_nutr and _with_inj):
+            raise ValueError(
+                "body.healing_nutrition_cost > 0 requires body.with_nutrition and "
+                "body.with_injury both true (healing is charged to nutrition; with "
+                "either system off the termination labels become untrustworthy).")
+        _heal_shortfall = config.get_mandatory('body.healing_nutrition_shortfall')
+        if _heal_shortfall not in ('partial', 'full'):
+            raise ValueError(
+                f"body.healing_nutrition_shortfall must be 'partial' or 'full', got "
+                f"{_heal_shortfall!r}.")
+    else:
+        _heal_shortfall = 'partial'     # never read at cost 0
+    # B5 — healing speed depends on (pre-step) nutrition.
+    _heal_dep = config.get_mandatory('body.healing_nutrition_dependence')
+    if not isinstance(_heal_dep, bool):
+        raise ValueError(
+            f"body.healing_nutrition_dependence must be true or false, got "
+            f"{_heal_dep!r}.")
+    if _heal_dep:
+        if not (_with_nutr and _with_inj):
+            raise ValueError(
+                "body.healing_nutrition_dependence: true requires body.with_nutrition "
+                "and body.with_injury both true (with nutrition frozen the factor is a "
+                "constant; with no injury system it does nothing).")
+        _hunger_low = float(config.get_mandatory('body.healing_hunger_low'))
+        _hunger_high = float(config.get_mandatory('body.healing_hunger_high'))
+        _hunger_floor = float(config.get_mandatory('body.healing_hunger_floor'))
+        _overfull_floor = float(config.get_mandatory('body.healing_overfull_floor'))
+        if not (0.0 <= _hunger_low < _hunger_high <= _max_nutr):
+            raise ValueError(
+                f"body.healing_hunger_low/high must satisfy 0 <= low < high <= "
+                f"max_nutrition ({_max_nutr}); got low={_hunger_low}, "
+                f"high={_hunger_high}.")
+        for _key, _val in (('body.healing_hunger_floor', _hunger_floor),
+                           ('body.healing_overfull_floor', _overfull_floor)):
+            if not (0.0 <= _val <= 1.0):
+                raise ValueError(f"{_key} must lie in [0, 1], got {_val}.")
+        if _overfull_floor < 1.0:
+            _overfull_start = float(config.get_mandatory('body.healing_overfull_start'))
+            if not (_hunger_high <= _overfull_start < _max_nutr):
+                raise ValueError(
+                    f"body.healing_overfull_start must satisfy healing_hunger_high "
+                    f"({_hunger_high}) <= start < max_nutrition ({_max_nutr}), so the "
+                    f"two ramps cannot overlap; got {_overfull_start}.")
+        else:
+            _overfull_start = 150.0     # never read at overfull_floor 1.0
+    else:
+        # Never read: update_body's B5 block sits behind a static flag.
+        _hunger_low, _hunger_high, _hunger_floor = 0.0, 100.0, 0.0
+        _overfull_floor, _overfull_start = 1.0, 150.0
+
+    # ── Water / thirst (THIRST_WATER_PLAN §D1, §D3) ───────────────────────────
+    _noise_fields = _parse_noise_config(config)
+    if _water_on:
+        _np_animal_sa = np.asarray(animal_spawn_area).reshape(-1, 4)
+        _scan_areas = (
+            [tuple(a) for a in np.asarray(res_spawn_area).reshape(-1, 4)]
+            + [tuple(_np_animal_sa[i]) for i in predator_indices]
+            + [tuple(a) for a in np.asarray(obs_spawn_area).reshape(-1, 4)]
+            + [tuple(_np_animal_sa[i]) for i in neutral_indices])
+        _water_fields = _load_water(
+            config, height=height, width=width,
+            start_pos=np.asarray(config.get_mandatory('environment.start_pos')) - 1,
+            random_start_pos=bool(config.get_mandatory('environment.random_start_pos')),
+            vector_size=int(config.get_mandatory('sensory.vector_size')),
+            visual_vector_size=visual_vector_size,
+            placement_mode=placement_mode,
+            food_min_fire_distance=_th_food_min_dist,
+            bush_min_fire_distance=_th_bush_min_dist,
+            spawn_areas_scan_order=_scan_areas)
+        # The observation gains a "Hydration" block, and apply_perceptual_noise looks
+        # every breakdown name up in the modality order. Without the entry that
+        # lookup is a bare KeyError inside a jit trace naming neither key nor fix.
+        # Required even when perceptual_noise.enabled is false (fix batch 2026-09-30,
+        # decision recorded in THIRST_WATER_PLAN): noise is switched on by a child
+        # config (level 07 extends the noise-off level 06), so a parent without the
+        # entry would only fail in its child; every other modality is listed
+        # regardless of the switch too.
+        if "Hydration" not in _noise_fields["noise_modality_order"]:
+            raise ValueError(
+                "water.enabled: true needs a perceptual_noise.modalities.hydration entry "
+                "(the observation gains a Hydration dimension and the noise code looks "
+                "every observation block up by name). The entry is required even when "
+                "perceptual_noise.enabled is false: a child config that switches noise on "
+                "(as level 07 does on level 06) inherits the table, and every modality "
+                "is listed whatever the switch. configs/environment/default.yaml carries "
+                "one; a config that replaces `modalities` wholesale must too.")
+    else:
+        _water_fields = dict(_WATER_OFF)
+
+    return EnvParams(
+        height=height,
+        width=width,
+        max_steps=config.get_mandatory('environment.max_steps'),
+        grid_location_type=grid_location_type,
+        res_type=res_type,
+        res_property=res_property,
+        res_property_std=res_property_std,
+        res_visual_property=res_visual_property,
+        res_visual_property_std=res_visual_property_std,
+        res_nociception=res_nociception,
+        res_spawn_area=res_spawn_area,
+        res_max_cons=res_max_cons,
+        res_reg_delay=res_reg_delay,
+        res_damage=res_damage,
+        # Unified animal arrays (M2 fix: no predator_tags= / neutral_tags= kwargs)
+        animal_property=animal_property,
+        animal_property_std=animal_property_std,
+        animal_nociception=animal_nociception,
+        animal_move_int=animal_move_int,
+        animal_move_int_low=animal_move_int_low,
+        animal_move_int_high=animal_move_int_high,
+        animal_damage=animal_damage,
+        animal_attack_delay=animal_attack_delay,
+        animal_attack_delay_low=animal_attack_delay_low,
+        animal_attack_delay_high=animal_attack_delay_high,
+        animal_attack_range_low=animal_attack_range_low,
+        animal_attack_range_high=animal_attack_range_high,
+        animal_attack_success_rate=animal_attack_success_rate,
+        has_attack_feature=has_attack_feature,
+        animal_spawn_area=animal_spawn_area,
+        animal_patrol=animal_patrol,
+        animal_detect_low=animal_detect_low,
+        animal_detect_high=animal_detect_high,
+        animal_max_stamina_low=animal_max_stamina_low,
+        animal_max_stamina_high=animal_max_stamina_high,
+        animal_recovery_low=animal_recovery_low,
+        animal_recovery_high=animal_recovery_high,
+        animal_hunt_thresh_low=animal_hunt_thresh_low,
+        animal_hunt_thresh_high=animal_hunt_thresh_high,
+        animal_lose_interest_low=animal_lose_interest_low,
+        animal_lose_interest_high=animal_lose_interest_high,
+        animal_classes_int=animal_classes_int,
+        animal_behaviours_int=animal_behaviours_int,
+        animal_is_damaging=animal_is_damaging,
+        animal_disengage_on_contact=animal_disengage_on_contact,
+        animal_visual_channel=animal_visual_channel,
+        animal_visual_property=animal_visual_property,
+        animal_visual_property_std=animal_visual_property_std,
+        animal_classes=animal_classes,
+        animal_behaviours=animal_behaviours,
+        animal_tags=animal_tags,
+        hunt_idx=hunt_idx,
+        wander_idx=wander_idx,
+        static_idx=static_idx,
+        predator_indices=predator_indices,
+        neutral_indices=neutral_indices,
+        # Per-episode count-range metadata (NEW — PER_EPISODE_ENV_VARIANCE)
+        res_count_low=jnp.array(res_count_low_list, dtype=jnp.int32) if res_count_low_list else jnp.zeros(0, dtype=jnp.int32),
+        res_count_high=jnp.array(res_count_high_list, dtype=jnp.int32) if res_count_high_list else jnp.zeros(0, dtype=jnp.int32),
+        res_entry_id=jnp.array(res_entry_id_list, dtype=jnp.int32) if res_entry_id_list else jnp.zeros(0, dtype=jnp.int32),
+        animal_count_low=jnp.array(animal_count_low_list, dtype=jnp.int32) if animal_count_low_list else jnp.zeros(0, dtype=jnp.int32),
+        animal_count_high=jnp.array(animal_count_high_list, dtype=jnp.int32) if animal_count_high_list else jnp.zeros(0, dtype=jnp.int32),
+        animal_entry_id=jnp.array(animal_entry_id_list, dtype=jnp.int32) if animal_entry_id_list else jnp.zeros(0, dtype=jnp.int32),
+        obs_count_low=jnp.array(obs_count_low_list, dtype=jnp.int32) if obs_count_low_list else jnp.zeros(0, dtype=jnp.int32),
+        obs_count_high=jnp.array(obs_count_high_list, dtype=jnp.int32) if obs_count_high_list else jnp.zeros(0, dtype=jnp.int32),
+        obs_entry_id=jnp.array(obs_entry_id_list, dtype=jnp.int32) if obs_entry_id_list else jnp.zeros(0, dtype=jnp.int32),
+        has_res_range=any(lo < hi for lo, hi in zip(res_count_low_list, res_count_high_list)),
+        has_animal_range=any(lo < hi for lo, hi in zip(animal_count_low_list, animal_count_high_list)),
+        has_obs_range=any(lo < hi for lo, hi in zip(obs_count_low_list, obs_count_high_list)),
+        obs_blocking=obs_blocking,
+        obs_hides_agent=obs_hides_agent,
+        obs_blocks_animals=obs_blocks_animals,
+        obs_damage=obs_damage,
+        obs_property=obs_property,
+        obs_property_std=obs_property_std,
+        obs_visual_property=obs_visual_property,
+        obs_visual_property_std=obs_visual_property_std,
+        obs_nociception=obs_nociception,
+        obs_spawn_area=obs_spawn_area,
+        obs_type=obs_type,
+        obstacle_names=obstacle_names,
+        type_areas=jnp.array(type_areas_np, dtype=jnp.int32),
+        type_counts=jnp.array(type_counts_list, dtype=jnp.int32),
+        type_entity_map=jnp.array(type_entity_map_np, dtype=jnp.int32),
+        max_per_type=max_per_type,
+        num_types=num_types,
+        num_entities=num_total_entities,
+        placement_mode=placement_mode,
+        max_satiation=config.get_mandatory('body.max_satiation'),
+        max_nutrition=config.get_mandatory('body.max_nutrition'),
+        max_injury=config.get_mandatory('body.max_injury'),
+        food_nutrition_gain=config.get_mandatory('body.food_nutrition_gain'),
+        setpoint=config.get_mandatory('body.satiation_setpoint'),
+        start_satiation=config.get_mandatory('body.start_satiation'),
+        start_nutrition=config.get_mandatory('body.start_nutrition'),
+        start_nutrition_low=start_nutrition_low,
+        start_nutrition_high=start_nutrition_high,
+        start_injury_low=start_injury_low,
+        start_injury_high=start_injury_high,
+        metabolic_cost=config.get_mandatory('body.metabolic_cost'),
+        nutrition_to_satiation_scaling_factor=config.get_mandatory('body.nutrition_to_satiation_scaling_factor'),
+        recovery_base_rate=config.get_mandatory('body.recovery_base_rate'),
+        recovery_accel_rate=config.get_mandatory('body.recovery_accel_rate'),
+        recovery_in_bush_multiplier=_recovery_in_bush_mult,
+        healing_nutrition_cost=_heal_cost,
+        healing_nutrition_shortfall=_heal_shortfall,
+        healing_nutrition_dependence=_heal_dep,
+        healing_hunger_low=_hunger_low,
+        healing_hunger_high=_hunger_high,
+        healing_hunger_floor=_hunger_floor,
+        healing_overfull_floor=_overfull_floor,
+        healing_overfull_start=_overfull_start,
+        smoothing_duration=config.get_mandatory('body.injury_smoothing_duration'),
+        death_penalty=config.get_mandatory('body.death_penalty'),
+        overeating_death=config.get_mandatory('body.overeating_death'),
+        use_homeostatic_reward=config.get_mandatory('body.use_homeostatic_reward'),
+        with_satiation=config.get_mandatory('body.with_satiation'),
+        with_nutrition=config.get_mandatory('body.with_nutrition'),
+        with_injury=config.get_mandatory('body.with_injury'),
+        random_start_satiation=config.get_mandatory('body.random_start_satiation'),
+        random_start_nutrition=config.get_mandatory('body.random_start_nutrition'),
+        random_start_injury=config.get_mandatory('body.random_start_injury'),
+        random_start_pos=config.get_mandatory('environment.random_start_pos'),
+        start_pos=jnp.array(config.get_mandatory('environment.start_pos')) - 1,
+        rest_action_enabled=config.get_mandatory('environment.rest_action_enabled'),
+        eat_action_enabled=config.get_mandatory('environment.eat_action_enabled'),
+        eating_nutrition_cost=config.get_mandatory('body.eating_nutrition_cost'),
+        eating_reward_penalty=config.get_mandatory('body.eating_reward_penalty'),
+        sensor_radius=config.get_mandatory('sensory.sensor_radius'),
+        sensor_decay=config.get_mandatory('sensory.decay_power'),
+        sensor_range=config.get_mandatory('sensory.collision_sensor_range'),
+        visual_sensor_enabled=config.get_mandatory('sensory.visual_sensor_enabled'),
+        visual_sensor_range=config.get_mandatory('sensory.visual_sensor_range'),
+        local_view_size=config.get_mandatory('visualization.local_view_size'),
+        proprioception_enabled=config.get_mandatory('sensory.proprioception_enabled'),
+        olfactory_enabled=config.get_mandatory('sensory.olfactory_enabled'),
+        nociception_enabled=config.get_mandatory('sensory.nociception_enabled'),
+        location_sensor_enabled=config.get_mandatory('sensory.location_sensor'),
+        olfactory_grid_range=int(config.get_mandatory('sensory.olfactory_grid_range')),
+        visual_blur_enabled=_blur_on,
+        visual_blur_radial_scale=_blur_scale,
+        visual_blur_anisotropy=_blur_rho,
+        visual_blur_sigma_floor=_blur_floor,
+        visual_value_mode=_vis_value_mode,
+        visual_occlusion_enabled=_occ_on,
+        visual_occlusion_cos=_occ_cos,
+        visual_occlusion_strength=_occ_strength,
+        res_blocks_sight=res_blocks_sight,
+        animal_blocks_sight=animal_blocks_sight,
+        obs_blocks_sight=obs_blocks_sight,
+        res_visual_mask=res_visual_mask,
+        animal_visual_mask=animal_visual_mask,
+        obs_visual_mask=obs_visual_mask,
+        # ── Thermal (temperature system, Stage 1) ────────────────────────────
+        thermal_enabled=_thermal_on,
+        thermal_use_random_spots=_th_random_spots,
+        thermal_use_object_sources=_th_object_sources,
+        thermal_kernel_radius=_th_kernel_radius,
+        thermal_spot_count=_th_spot_count,
+        thermal_spot_size=_th_spot_size,
+        thermal_min_fire_separation=_th_min_fire_sep,
+        thermal_food_min_fire_distance=_th_food_min_dist,
+        thermal_bush_min_fire_distance=_th_bush_min_dist,
+        thermal_sigma=_th_sigma,
+        thermal_spot_temp=_th_spot_temp,
+        thermal_default_temp_low=_th_default_low,
+        thermal_default_temp_high=_th_default_high,
+        thermal_k_exchange=_th_k_exchange,
+        thermal_k_loss=_th_k_loss,
+        thermal_k_metabolic=_th_k_metabolic,
+        thermal_warming_rate_scale=_th_warming_scale,
+        thermal_cooling_rate_scale=_th_cooling_scale,
+        thermal_metabolic_coupling=_th_met_coupling,
+        thermal_metabolic_coupling_rate=_th_met_coupling_rate,
+        thermal_random_start_body_temp=_th_rand_body_temp,
+        thermal_start_body_temp_low=_th_start_bt_low,
+        thermal_start_body_temp_high=_th_start_bt_high,
+        thermal_healing_cold_sensitivity=_th_heal_cold,
+        thermal_healing_warm_sensitivity=_th_heal_warm,
+        thermal_injury_heat_exchange_gain=_th_inj_gain,
+        thermal_injury_heat_exchange_mode=_th_inj_mode,
+        temperature_setpoint=_th_setpoint,
+        min_temperature=_th_min_temp,
+        max_temperature=_th_max_temp,
+        thermal_grid_range=_th_grid_range,
+        thermal_relative=_th_relative,
+        thermal_body_temp_observable=_th_body_temp_observable,
+        obs_temperature=obs_temperature,
+        obs_temp_ratio_low=obs_temp_ratio_low,
+        obs_temp_ratio_high=obs_temp_ratio_high,
+        res_temperature=res_temperature,
+        res_temp_ratio_low=res_temp_ratio_low,
+        res_temp_ratio_high=res_temp_ratio_high,
+        olfactory_vector_size=config.get_mandatory('sensory.vector_size'),
+        visual_vector_size=visual_vector_size,
+        visual_background_property=visual_background_property,
+        nociception_size=config.get_mandatory('sensory.nociception_size'),
+        action_dim=4 + int(config.get_mandatory('environment.rest_action_enabled')) + int(config.get_mandatory('environment.eat_action_enabled')),
+
+        # Hidden-state observability flags
+        injury_observable=injury_observable,
+        nutrition_observable=nutrition_observable,
+
+        # Interoceptive nociception (delayed-peak perception of hidden injury)
+        interoceptive_nociception_enabled=interoceptive_nociception_enabled,
+        interoceptive_convolution_enabled=interoceptive_convolution_enabled,
+        interoceptive_kernel_length=interoceptive_kernel_length,
+        interoceptive_kernel=interoceptive_kernel,
+
+        # Perceptual Noise Configuration
+        perceptual_noise_enabled=config.get('perceptual_noise.enabled', False),
+        **_noise_fields,
+
+        # Water / thirst (sentinels when water.enabled is false)
+        **_water_fields,
+    )
+
+
+# ── Water / thirst (THIRST_WATER_PLAN §D1, §D3) ──────────────────────────────
+
+_WATER_PLACEMENTS = ('list', 'random', 'center')
+
+# The water-off sentinels: ONE copy, in state.py (EnvParams.__setstate__ uses it too).
+_WATER_OFF = WATER_OFF_FIELDS
+
+
+def _water_block_cells(r, c, h, w):
+    """Array cells of the h x w block whose top-left is (r, c)."""
+    return {(r + dr, c + dc) for dr in range(h) for dc in range(w)}
+
+
+def _load_water(config, *, height, width, start_pos, random_start_pos, vector_size,
+                visual_vector_size, placement_mode, food_min_fire_distance,
+                bush_min_fire_distance, spawn_areas_scan_order):
+    """Read, validate and resolve the `water:` block. Called only when the gate is on.
+
+    Returns the EnvParams water fields. Every key is read with `get_mandatory`
+    (conditional-mandatory under `water.enabled`, CONFIG_GUIDE.md §5); every refusal is
+    a `ValueError` naming the key. Placement is resolved HERE to a static table of
+    top-left cells in 0-based ARRAY coordinates, so `jax_reset` only draws an index into
+    it: the pond's own location can never fall back to cell (0, 0) (KNOWN_BUGS ~#117).
+
+    `start_pos` is the 0-based array start; `spawn_areas_scan_order` is the post-inset
+    `[min_r, min_c, max_r, max_c)` area of every entity slot in the fixed order
+    `resolve_overlaps_global` visits them (`[res, pred, obs, neutral]`).
+    """
+    H, W = int(height), int(width)
+
+    # ── refused combinations (plan §D1, "Refused combinations") ──
+    if placement_mode != 'per_entity':
+        raise ValueError(
+            f"water.enabled: true is not supported with environment.placement.mode: "
+            f"{placement_mode!r}. The pond is kept free by seeding the occupancy mask of "
+            "the per_entity overlap scan; the per_type mode never consults it. Use "
+            "placement.mode: per_entity.")
+    if int(food_min_fire_distance) > 0 or int(bush_min_fire_distance) > 0:
+        raise ValueError(
+            "water.enabled: true cannot be combined with thermal.food_min_fire_distance > 0 "
+            "or thermal.bush_min_fire_distance > 0 (got "
+            f"{food_min_fire_distance} / {bush_min_fire_distance}): those second placement "
+            "passes rebuild occupancy from entity positions only and could move a food or "
+            "a bush onto the pond. Set both to 0.")
+
+    # ── block size and margin ──
+    size = config.get_mandatory('water.size')
+    if (not isinstance(size, (list, tuple)) or len(size) != 2
+            or not all(isinstance(v, int) and not isinstance(v, bool) and v >= 1
+                       for v in size)):
+        raise ValueError(f"water.size must be [rows, cols], two integers >= 1; got {size!r}.")
+    h, w = int(size[0]), int(size[1])
+    margin = config.get_mandatory('water.edge_margin')
+    if not isinstance(margin, int) or isinstance(margin, bool) or margin < 0:
+        raise ValueError(f"water.edge_margin must be an integer >= 0; got {margin!r}.")
+
+    # A random agent start is drawn over the whole grid and moved off the pond by
+    # jax_reset; with no pond-free cell that move would silently land on the pond at
+    # cell (0, 0) (the KNOWN_BUGS ~#117 shape). Refuse it here (code review finding 4).
+    if random_start_pos and h * w >= H * W:
+        raise ValueError(
+            f"water.size {[h, w]} covers the whole {H}x{W} grid, leaving no pond-free cell "
+            "for the random agent start (environment.random_start_pos: true). Shrink "
+            "water.size.")
+
+    fixed_start = None if random_start_pos else (int(start_pos[0]), int(start_pos[1]))
+
+    def inside_margin(r, c):
+        return (margin <= r and r + h <= H - margin
+                and margin <= c and c + w <= W - margin)
+
+    def covers_start(r, c):
+        return fixed_start is not None and fixed_start in _water_block_cells(r, c, h, w)
+
+    # ── placement → static top-left table (array coordinates) ──
+    placement = config.get_mandatory('water.placement')
+    if placement not in _WATER_PLACEMENTS:
+        raise ValueError(
+            f"water.placement must be one of {list(_WATER_PLACEMENTS)}; got {placement!r}.")
+    grid = f"{H}x{W} grid"
+    if placement == 'list':
+        cands = config.get_mandatory('water.candidates')
+        if not isinstance(cands, (list, tuple)) or len(cands) == 0:
+            raise ValueError(
+                f"water.candidates must be a non-empty list of [row, col] top-left cells "
+                f"(1-based, like environment.start_pos); got {cands!r}.")
+        table = []
+        for i, cand in enumerate(cands):
+            if (not isinstance(cand, (list, tuple)) or len(cand) != 2
+                    or not all(isinstance(v, int) and not isinstance(v, bool) for v in cand)):
+                raise ValueError(
+                    f"water.candidates[{i}] must be [row, col] integers (1-based); got "
+                    f"{cand!r}.")
+            r, c = int(cand[0]) - 1, int(cand[1]) - 1
+            if not (0 <= r and r + h <= H and 0 <= c and c + w <= W):
+                raise ValueError(
+                    f"water.candidates[{i}] = {list(cand)} (1-based) puts the {h}x{w} pond "
+                    f"off the {grid}.")
+            if not inside_margin(r, c):
+                raise ValueError(
+                    f"water.candidates[{i}] = {list(cand)} (1-based) puts the {h}x{w} pond "
+                    f"inside water.edge_margin={margin} of the {grid}.")
+            if (r, c) in table:
+                raise ValueError(
+                    f"water.candidates[{i}] = {list(cand)} is a duplicate; a repeated "
+                    "candidate silently doubles that location's probability.")
+            if covers_start(r, c):
+                raise ValueError(
+                    f"water.candidates[{i}] = {list(cand)} (1-based) covers the fixed "
+                    f"environment.start_pos (random_start_pos is false).")
+            table.append((r, c))
+    elif placement == 'random':
+        table = [(r, c) for r in range(H) for c in range(W)
+                 if 0 <= r and r + h <= H and 0 <= c and c + w <= W
+                 and inside_margin(r, c) and not covers_start(r, c)]
+        if not table:
+            raise ValueError(
+                f"water.placement: random has no legal location: the {grid} is too small "
+                f"for a {h}x{w} pond with water.edge_margin={margin}"
+                + (" that avoids the fixed environment.start_pos" if fixed_start else "")
+                + ".")
+    else:  # center
+        r, c = (H - h) // 2, (W - w) // 2
+        if not (0 <= r and r + h <= H and 0 <= c and c + w <= W) or not inside_margin(r, c):
+            raise ValueError(
+                f"water.placement: center puts the {h}x{w} pond at array ({r}, {c}), inside "
+                f"water.edge_margin={margin} of the {grid} (or off it).")
+        if covers_start(r, c):
+            raise ValueError(
+                f"water.placement: center puts the {h}x{w} pond at array ({r}, {c}), which "
+                "covers the fixed environment.start_pos (random_start_pos is false).")
+        table = [(r, c)]
+
+    # ── capacity check (KNOWN_BUGS ~#117; plan §D1) ──
+    # resolve_overlaps_global visits slots in the fixed scan order, and every earlier
+    # slot holds at most one cell. So slot i at scan position k finds a free, in-area,
+    # non-pond cell iff |A_i| - max_t |pond(t) ∩ A_i| >= k + 1. When this holds the
+    # scan's (0, 0) fallback cannot be reached because of the pond.
+    ponds = [_water_block_cells(r, c, h, w) for r, c in table]
+    for k, area in enumerate(spawn_areas_scan_order):
+        r0, c0, r1, c1 = (int(v) for v in area)
+        cells = {(r, c) for r in range(r0, r1) for c in range(c0, c1)}
+        worst = max(len(p & cells) for p in ponds)
+        if len(cells) - worst < k + 1:
+            raise ValueError(
+                f"water: capacity check failed for the entity slot at placement scan "
+                f"position {k} (spawn area rows {r0}..{r1 - 1}, cols {c0}..{c1 - 1}, "
+                f"{len(cells)} cells): with the pond covering up to {worst} of them, "
+                f"{len(cells) - worst} cells remain for {k + 1} slots. Enlarge the area, "
+                "move water.candidates, or shrink water.size.")
+
+    # ── hydration axis ──
+    max_h = float(config.get_mandatory('water.max_hydration'))
+    if not (np.isfinite(max_h) and max_h > 0.0):
+        raise ValueError(f"water.max_hydration must be finite and > 0; got {max_h}.")
+    setpoint = float(config.get_mandatory('water.hydration_setpoint'))
+    if not (0.0 <= setpoint <= max_h):
+        raise ValueError(
+            f"water.hydration_setpoint must satisfy 0 <= setpoint <= max_hydration "
+            f"({max_h}); got {setpoint}.")
+    rand_start = config.get_mandatory('water.random_start_hydration')
+    if not isinstance(rand_start, bool):
+        raise ValueError(
+            f"water.random_start_hydration must be true or false; got {rand_start!r}.")
+    if rand_start:
+        low = float(config.get_mandatory('water.start_hydration_low'))
+        high = float(config.get_mandatory('water.start_hydration_high'))
+        if not (0.0 <= low <= high <= max_h):
+            raise ValueError(
+                f"water.start_hydration_low/high must satisfy 0 <= low <= high <= "
+                f"max_hydration ({max_h}); got low={low}, high={high}.")
+        start = setpoint     # never read when the random start is on
+    else:
+        start = float(config.get_mandatory('water.start_hydration'))
+        if not (0.0 < start < max_h):
+            raise ValueError(
+                f"water.start_hydration must satisfy 0 < start < max_hydration ({max_h}): "
+                f"a start at either end is dead on arrival; got {start}.")
+        low, high = 0.0, 0.0  # never read when the random start is off
+    drain = float(config.get_mandatory('water.drain_per_step'))
+    if not (np.isfinite(drain) and drain >= 0.0):
+        raise ValueError(f"water.drain_per_step must be finite and >= 0; got {drain}.")
+    gain = float(config.get_mandatory('water.drink_gain_per_step'))
+    if not (np.isfinite(gain) and gain >= 0.0):
+        raise ValueError(f"water.drink_gain_per_step must be finite and >= 0; got {gain}.")
+
+    # ── senses ──
+    props = config.get_mandatory('water.properties')
+    if (not isinstance(props, (list, tuple)) or len(props) != int(vector_size)
+            or not all(0.0 <= float(v) <= 1.0 for v in props)):
+        raise ValueError(
+            f"water.properties must list sensory.vector_size ({vector_size}) values, each "
+            f"in [0, 1]; got {props!r}.")
+    vis = config.get_mandatory('water.visual_properties')
+    if (not isinstance(vis, (list, tuple)) or len(vis) != int(visual_vector_size)
+            or not all(float(v) >= 0.0 for v in vis)):
+        raise ValueError(
+            f"water.visual_properties must list sensory.visual_vector_size "
+            f"({visual_vector_size}) values, each >= 0; got {vis!r}.")
+    n = h * w
+    return dict(
+        water_enabled=True,
+        water_block_h=h,
+        water_block_w=w,
+        water_topleft_table=tuple(table),
+        water_max_hydration=max_h,
+        water_hydration_setpoint=setpoint,
+        water_start_hydration=start,
+        water_random_start_hydration=rand_start,
+        water_start_hydration_low=low,
+        water_start_hydration_high=high,
+        water_drain=drain,
+        water_drink_gain=gain,
+        # §A3: each of the n pond cells carries p / n, so the pond smells like ONE
+        # source of vector p in the far field, not n of them.
+        water_cell_property=tuple(float(v) / n for v in props),
+        # §A4: NOT normalised. Vision reports presence per cell.
+        water_visual_property=tuple(float(v) for v in vis),
+    )
+
+_YAML_KEY_TO_SENSOR_NAME = {
+    "injury":                    "Injury",
+    "nutrition":                 "Nutrition",
+    "satiation":                 "Satiation",
+    # Body temperature. This entry and the `body_temperature:` block in
+    # configs/environment/default.yaml are MUTUALLY BLOCKING and must land in
+    # the same change — the same pair thermoception documents below: without the
+    # entry the config raises "unknown perceptual-noise modality key(s)", and
+    # without the config block `apply_perceptual_noise` raises a bare KeyError
+    # inside a jit trace that names neither the config nor the fix.
+    "body_temperature":          "Body Temperature",
+    "extero_nociception":        "Extero Nociception",
+    "interoceptive_nociception": "Interoceptive Nociception",
+    # Thermoception (Stage 3). This entry and the `thermoception:` block in
+    # configs/environment/default.yaml are MUTUALLY BLOCKING and must land in
+    # the same change: without the entry the config raises "unknown
+    # perceptual-noise modality key(s)" below, and without the config block
+    # `apply_perceptual_noise` raises a bare KeyError inside a jit trace that
+    # names neither the config nor the fix (IMPLEMENTATION_PLAN.md F2).
+    "thermoception":             "Thermoception",
+    "olfaction":                 "Olfaction",
+    "collision":                 "Collision",
+    "proprioception":            "Proprioception",
+    "visual":                    "Visual",
+    "location":                  "Location",
+    # Hydration (THIRST_WATER_PLAN §A5). This entry and the `hydration:` block in
+    # configs/environment/default.yaml are MUTUALLY BLOCKING and must land in the
+    # same change, like body_temperature / thermoception above. The config block
+    # is appended LAST in `modalities`, so no existing noise index moves; lookups
+    # are by name, and load_env_params refuses water.enabled without it.
+    "hydration":                 "Hydration",
+}
+
+def _parse_noise_config(config: Config):
+    modalities_cfg = config.get('perceptual_noise.modalities') or {}
+
+    unknown = set(modalities_cfg) - set(_YAML_KEY_TO_SENSOR_NAME)
+    if unknown:
+        raise ValueError(
+            f"Strict Config: unknown perceptual-noise modality key(s) {sorted(unknown)}. "
+            f"Valid keys: {sorted(_YAML_KEY_TO_SENSOR_NAME)}."
+        )
+
+    _VALID_NOISE_MODES = {'none': 0, 'constant': 1, 'state_dependent': 2}
+    def _parse_mode(s):
+        if s not in _VALID_NOISE_MODES:
+            raise ValueError(
+                f"Strict Config: unknown perceptual-noise mode {s!r}. "
+                f"Must be one of {sorted(_VALID_NOISE_MODES)}."
+            )
+        return _VALID_NOISE_MODES[s]
+
+    noise_modality_order = tuple(
+        _YAML_KEY_TO_SENSOR_NAME[k]
+        for k in modalities_cfg
+        if k in _YAML_KEY_TO_SENSOR_NAME
+    )
+    # 13 is a SHAPE-STABILITY device, not a bounds check: with more modalities
+    # than slots `pad` clamps to 0 and the arrays simply become longer, which
+    # every lookup (by name, via `modality_map`) still handles correctly. What
+    # breaks is that EnvParams array shapes start varying with the config again.
+    # Worth a named error rather than a shrug — the Body Temperature modality
+    # (2026-09-14) took the 12th of the 13 slots, and Hydration
+    # (THIRST_WATER_PLAN, 2026-09-30) took the 13th and LAST. The next modality
+    # must widen the pad and EnvParams.noise_* together.
+    _NOISE_SLOTS = 13   # the padded width EnvParams declares for the noise arrays
+    if len(noise_modality_order) > _NOISE_SLOTS:
+        raise ValueError(
+            f"perceptual_noise.modalities names {len(noise_modality_order)} "
+            f"modalities but the noise arrays are padded to {_NOISE_SLOTS} "
+            f"slots. Widen the pad and the [{_NOISE_SLOTS}] shape comments on "
+            f"EnvParams.noise_* together, or EnvParams array shapes start "
+            f"varying with the config again."
+        )
+    pad = max(0, _NOISE_SLOTS - len(noise_modality_order))
+
+    noise_modes = jnp.pad(jnp.array([
+        _parse_mode(modalities_cfg[k].get('mode', 'none'))
+        for k in modalities_cfg if k in _YAML_KEY_TO_SENSOR_NAME
+    ], dtype=jnp.int32), (0, pad))
+    
+    noise_sigmas = jnp.pad(jnp.array([
+        modalities_cfg[k].get('sigma', 0.0)
+        for k in modalities_cfg if k in _YAML_KEY_TO_SENSOR_NAME
+    ], dtype=jnp.float32), (0, pad))
+    
+    noise_injury_scales = jnp.pad(jnp.array([
+        modalities_cfg[k].get('injury_noise_scale', 0.0)
+        for k in modalities_cfg if k in _YAML_KEY_TO_SENSOR_NAME
+    ], dtype=jnp.float32), (0, pad))
+    
+    noise_clip_min = jnp.pad(jnp.array([
+        modalities_cfg[k].get('clip_min', -100.0)
+        for k in modalities_cfg if k in _YAML_KEY_TO_SENSOR_NAME
+    ], dtype=jnp.float32), (0, pad))
+    
+    noise_clip_max = jnp.pad(jnp.array([
+        modalities_cfg[k].get('clip_max', 100.0)
+        for k in modalities_cfg if k in _YAML_KEY_TO_SENSOR_NAME
+    ], dtype=jnp.float32), (0, pad))
+
+    return {
+        "noise_modality_order": noise_modality_order,
+        "noise_modes": noise_modes,
+        "noise_sigmas": noise_sigmas,
+        "noise_injury_scales": noise_injury_scales,
+        "noise_clip_min": noise_clip_min,
+        "noise_clip_max": noise_clip_max,
+    }

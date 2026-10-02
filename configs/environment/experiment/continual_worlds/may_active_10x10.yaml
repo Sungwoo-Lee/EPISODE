@@ -1,0 +1,254 @@
+# EXPERIMENTAL, NOT MAINTAINED (CLAUDE.md "Config maintenance scope"): a world of the May
+# double-return replication, docs/experiments/active/continual_worlds/MAY_DOUBLE_RETURN_REPLICATION.md.
+#
+# MAY-ACTIVE (10 x 10): the May 2026 probe's "active predator" world, rebuilt on today's schema
+# with today's body.
+#
+# WHAT IT MIMICS. The external world the May run actually trained on, read from its SAVED stage
+# config (results/JAX_RecurrentPPO/20260511-174837_rppo_nmn_cont_dr_mod_s0_r2/models/
+# stage_00_01_active_predator.yaml), not from the stage YAML in configs/continual/ (which has
+# drifted since). Fixed counts and quadrant placement, exactly as May:
+#   food 2 in the top-left quadrant + 2 in the bottom-right (12 bites each, regrow at once);
+#   ambushers (hiding_predator) 1 per quadrant; rocks 3 per quadrant; bushes 5 in each of the
+#   two off-diagonal quadrants; 2 rabbits, one wandering in the top-left, one in the bottom-right;
+#   ONE hunting predator over the whole grid: notices the agent from 5 cells, chase stamina 30
+#   (recovers 1/step, hunts again once back to 70 %), gives up beyond 5 x 1.5 cells, pauses 3 steps
+#   after a hit, hit damage 15-45, moves every step, NO pounce (May predated the jump feature).
+#   The predator and both rabbits SMELL IDENTICAL ([0, 1, 0, 0, 0], no spread) -- May's
+#   "sameProp" design: smell cannot tell a hunter from a rabbit, only behaviour can.
+#
+# WHAT IT KEEPS FROM TODAY (not May). Everything not listed above is inherited unchanged from
+# level 05 through `extends:`: the body (two-sided nutrition 0-200 around setpoint 100 with
+# over-eating death, healing only when resting, base 0.2, no compounding, BUSH HEALING x25, hits
+# spread over 3 steps, felt injury through the 12-step kernel, random start nutrition 0-200 and
+# injury 0-100), the drive-reduction reward, max 500 steps, the current senses (smell sampled on a
+# 5-cell diamond with the canonical 1/distance falloff, decay_power 1.0 -- May ran 2.0; smell range
+# 20; 1-channel presence vision on a 13-cell diamond), and bushes that animals cannot enter
+# (blocks_animals: true, canonical since 2026-09-14; May's bushes were permeable).
+#
+# THERMAL OFF. May had no body-temperature system; level 05 has one. It is switched off here and
+# the campfires are dropped (design doc 3.1), so the observation is 52 numbers, not level 05's 58.
+# thermal.enabled false is the registry's canonical value; nothing in the registry changes.
+#
+# Lists (resources / entities / obstacles) are restated in full because Config.merge replaces
+# lists wholesale (CONFIG_GUIDE.md section 1). The passive world (may_passive_10x10.yaml) extends
+# THIS file and restates only `entities:`, so the two worlds differ in the predator entry alone.
+extends: environment/experiment/basic/05-campfire_thermal_10x10
+environment:
+  resources:
+  # food: May had 2 top-left + 2 bottom-right (its two zero-count food entries are omitted)
+  - name: food
+    type: food
+    count: 2
+    spawn_area: [[1, 1], [5, 5]]
+    properties: [1.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    max_consumption: 12
+    regeneration_delay: 0
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.0
+  - name: food
+    type: food
+    count: 2
+    spawn_area: [[6, 6], [10, 10]]
+    properties: [1.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    max_consumption: 12
+    regeneration_delay: 0
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.0
+  # ambushers: one per quadrant (May), same damage / regrowth as May and level 05
+  - name: hiding_predator
+    type: hiding_predator
+    count: 1
+    spawn_area: [[1, 1], [5, 5]]
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    max_consumption: -1
+    regeneration_delay: 20
+    damage: [15.0, 45.0]
+    nociception_intensity: 0.9
+  - name: hiding_predator
+    type: hiding_predator
+    count: 1
+    spawn_area: [[1, 6], [5, 10]]
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    max_consumption: -1
+    regeneration_delay: 20
+    damage: [15.0, 45.0]
+    nociception_intensity: 0.9
+  - name: hiding_predator
+    type: hiding_predator
+    count: 1
+    spawn_area: [[6, 6], [10, 10]]
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    max_consumption: -1
+    regeneration_delay: 20
+    damage: [15.0, 45.0]
+    nociception_intensity: 0.9
+  - name: hiding_predator
+    type: hiding_predator
+    count: 1
+    spawn_area: [[6, 1], [10, 5]]
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    max_consumption: -1
+    regeneration_delay: 20
+    damage: [15.0, 45.0]
+    nociception_intensity: 0.9
+  entities:
+  # THE ACTIVE PREDATOR (May stage 01/03/05 predator, tag `full` in May). Same tag `pred` in the
+  # passive world so per-tag logging keeps one label across stages (Known Bug A2).
+  - class: predator
+    behaviour: hunt
+    tag: pred
+    count: 1
+    properties: [0.0, 1.0, 0.0, 0.0, 0.0]      # sameProp: identical to the rabbits
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    move_interval: 1
+    damage: [15.0, 45.0]
+    attack_delay: 3
+    nociception_intensity: 0.9
+    spawn_area: [[1, 1], [10, 10]]
+    patrol_area: [[1, 1], [10, 10]]
+    detection_range: 5
+    max_stamina: 30
+    stamina_recovery_rate: 1
+    hunt_stamina_threshold: 0.7
+    lose_interest_multiplier: 1.5
+    attack_range: [0, 0]            # no pounce (May predates the jump feature)
+    attack_success_rate: 0.0
+  - class: neutral
+    behaviour: wander
+    tag: rabbit_tl
+    count: 1
+    properties: [0.0, 1.0, 0.0, 0.0, 0.0]      # sameProp
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    move_interval: 1
+    damage: [0.0, 0.0]
+    attack_delay: 0
+    nociception_intensity: 0.1
+    spawn_area: [[1, 1], [5, 5]]
+    patrol_area: [[1, 1], [5, 5]]
+  - class: neutral
+    behaviour: wander
+    tag: rabbit_br
+    count: 1
+    properties: [0.0, 1.0, 0.0, 0.0, 0.0]      # sameProp
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    move_interval: 1
+    damage: [0.0, 0.0]
+    attack_delay: 0
+    nociception_intensity: 0.1
+    spawn_area: [[6, 6], [10, 10]]
+    patrol_area: [[6, 6], [10, 10]]
+  obstacles:
+  # rocks: 3 per quadrant (May); no campfire (thermal off)
+  - name: rock
+    count: 3
+    area: [[1, 1], [5, 5]]
+    blocking: false
+    damage: [1, 5]
+    nociception_intensity: 0.9
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: rock
+    count: 3
+    area: [[1, 6], [5, 10]]
+    blocking: false
+    damage: [1, 5]
+    nociception_intensity: 0.9
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: rock
+    count: 3
+    area: [[6, 1], [10, 5]]
+    blocking: false
+    damage: [1, 5]
+    nociception_intensity: 0.9
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: rock
+    count: 3
+    area: [[6, 6], [10, 10]]
+    blocking: false
+    damage: [1, 5]
+    nociception_intensity: 0.9
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: tree
+    count: 0
+    area: [[5, 15], [5, 15]]
+    blocking: true
+    damage: [0.1, 0.5]
+    nociception_intensity: 0.1
+    properties: [0.0, 0.0, 0.0, 0.0, 1.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  # bushes: 5 top-right + 5 bottom-left (May; its two zero-count bush entries are omitted).
+  # blocks_animals: true is today's canonical bush (May's were permeable) -- see header.
+  - name: bush
+    count: 5
+    area: [[1, 6], [5, 10]]
+    blocking: false
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.0
+    hides_agent: true
+    blocks_animals: true
+    properties: [0.0, 0.0, 0.0, 1.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: bush
+    count: 5
+    area: [[6, 1], [10, 5]]
+    blocking: false
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.0
+    hides_agent: true
+    blocks_animals: true
+    properties: [0.0, 0.0, 0.0, 1.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+sensory:
+  # Display names only (they never touch the observation). Channel 1 is written by the predator
+  # AND both rabbits with the same value, so it is not a predator-leaning channel here;
+  # channel 2 is written by nothing in this world.
+  olfactory_channel_names:
+  - {name: "Food", qualifier: ""}
+  - {name: "Animal", qualifier: "predator = rabbit"}
+  - {name: "Odour B", qualifier: "unused"}
+  - {name: "Bush", qualifier: ""}
+  - {name: "Tree", qualifier: ""}
+thermal:
+  enabled: false

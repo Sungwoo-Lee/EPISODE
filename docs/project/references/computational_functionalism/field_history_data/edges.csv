@@ -1,0 +1,111 @@
+from_key,to_key,relation,cites_held_document,evidence
+blockfodor1972,putnam1967,critiques,yes,A1 1: the machine-table version of functionalism is the paper's target
+fodor1974,putnam1967,builds-on,yes,A1 2: 'equivalent automata can be made out of practically anything'
+block1978,putnam1967,critiques,yes,A1 3: the decomposition stipulation and 'specified only implicitly'
+block1978,blockfodor1972,critiques,yes,A1 3 n. 14 p. 300: computational-state functionalism does not escape the absent-qualia argument
+cuda1985,searle1980,critiques,yes,B 2 p. 111: quotes the brain-simulator passage as its target
+cuda1985,block1978,critiques,yes,"B 2 p. 125: Block's coarse-grained counterexamples must now turn on level, not material"
+chalmers1995qualia,searle1980,critiques,yes,B 3 s. 2 and s. 3: water-pipes and wind-machines; Searle's Rediscovery passage quoted and answered
+chalmers1995qualia,block1978,critiques,yes,"B 3 s. 2: the Chinese population stated at full strength, then answered by the homunculi chain"
+chalmers1995qualia,cuda1985,builds-on,yes,B 3 s. 3 footnote: credited among prior neural-replacement scenarios
+chalmers1994cfc,searle1980,critiques,yes,A2 5 s. 2.5: the Chinese Room answered by gradual demon replacement (Systems Reply)
+chalmers1994cfc,putnam1967,builds-on,yes,A2 5 note 1: the implementation definition described as the standard one
+chalmers1996rock,searle1990,critiques,yes,A2 1 s. 2.9: the wall does not satisfy the strong conditionals
+chalmers1996rock,searle1980,critiques,yes,"A2 1 s. 2.9: two distinct automata in the Chinese Room, so expect two minds"
+chalmers1996rock,chalmers1994cfc,builds-on,yes,A2 1 s. 2.10: 'the harder part' explicitly deferred to the companion paper
+chalmers1996rock,maudlin1989,flags-as-open,yes,A2 1 n. 3: 'This argument requires an in-depth treatment in its own right'
+shagrir2006,chalmers1996rock,builds-on,yes,A2 2: cited as a refinement of the implementation relation
+shagrir2006,fodor1974,critiques,yes,A2 2 s. 3: rejects multiple realizability as the source of computational explanatory force
+piccinini2010,chalmers1994cfc,critiques,yes,"A2 3 s. 2.7 (n. 8, p. 275): the dilemma against abstract causal organisation; concedes the point is 'fair'"
+piccinini2010,shagrir2006,critiques,yes,A2 3 s. 3 p. 282: the semantic view of computational states 'is incorrect'
+piccinini2010,blockfodor1972,builds-on,yes,A2 3 s. 2.1 p. 283: cited for the route by which functionalism came to entail computationalism
+piccinini2010,putnam1967,critiques,yes,A2 3 s. 2.2: pancomputationalism makes the weak reading nearly trivial
+piccinini2010,block1978,reinterprets,yes,"A2 3 s. 2.6 pp. 300-301: shows at most that computationalism is insufficient, leaving functionalism untouched"
+piccinini2010,searle1980,reinterprets,yes,A2 3 s. 2.6 pp. 300-301: same rereading applied to the Chinese Room
+piccinini2010,maudlin1989,reinterprets,yes,A2 3 s. 2.6 pp. 300-301: listed with Block and Searle among thought-experiment objections
+piccinini2010,bechtelmundale1999,names-as-opponent,yes,A2 3 s. 2.6 p. 297: named among the 'foes of multiple realizability' whose position strong computationalism would overturn
+sprevak2010,chalmers1996rock,reinterprets,yes,"A2 4 (PDF p. 10 n. 9): cited to show the clock-and-dial conditions are easily satisfied, not as the solution"
+sprevak2010,shagrir2006,builds-on,yes,A2 4: Shagrir cited within the semantic-individuation camp
+sprevak2010,searle1990,uses-as-evidence,yes,A2 4 s. 2.2: the brick wall used to show non-semantic realization functions yield universal realization
+piccinini2013,shagrir2006,critiques,sibling,"A2 6 s. 2.7 p. 477: names Shagrir 2010, a sibling paper, as equating computation with information processing"
+piccinini2013,piccinini2010,builds-on,yes,A2 6: the mechanistic account of computation carried into the neuroscience
+mollo2018,piccinini2010,critiques,yes,A2 7 s. 5: granting Piccinini's reply to Haimovici collapses the mechanistic view into the functional view
+mollo2018,sprevak2010,replies-to,yes,A2 7 s. 7: the dual-gate multiplicity case answered by relocating indeterminacy to the logical level
+mollo2018,shagrir2006,replies-to,yes,"A2 7 s. 7: grants that no non-semantic theory tells AND from OR, and denies this was ever about individuation"
+mollo2018,chalmers1994cfc,builds-on,yes,"A2 7 (PDF pp. 14-15): mechanism offered as the successor to causal topology, under tighter constraints"
+maudlin1989,searle1980,critiques,yes,"F 1 pp. 414-415: rejects Searle's Chinese Room inference, siding with the BBS commentators that a disjoint mentality could arise"
+dennett1988,block1978,critiques,yes,"G 1: quoted twice by name - the Louis Armstrong deflection (p. 281) as the exhibit of the presumption attacked, and 'immediate phenomenological qualities'"
+dennett1988,blockfodor1972,critiques,yes,"G 1: quoted at p. 172 on verificationist counterarguments, as the rehabilitation of the inverted-spectrum hypothesis he attacks"
+klein_maudlin,maudlin1989,replies-to,yes,"F 2 (PDF pp. 6-16): 'I do not think Maudlin's argument succeeds', then relocates the dispute to architecture"
+klein_maudlin,chalmers1996rock,critiques,yes,"F 2 (PDF pp. 8, 15): the triviality family separated from Maudlin's argument; the isomorphism account departed from, naming Chalmers 2011"
+klein_maudlin,chalmers1994cfc,critiques,sibling,"F 2 (PDF p. 16): organizational invariants do not show a virtual machine is the same as a process with that architecture; cites Chalmers 1996a, a sibling statement"
+klein_maudlin,block1978,reinterprets,yes,"F 2 (PDF pp. 8, 12): the Chinese Nation and the lookup-table objection both re-diagnosed as failures of computational structure"
+klein_maudlin,searle1980,reinterprets,yes,"F 2 (PDF pp. 8, 16): Searle's interpretation worry distinguished, then the simulation verdict conceded as 'suspiciously close'"
+klein_maudlin,tononi2015,critiques,other,F 2 (PDF p. 4): cites Fekete & Edelman 2011 against the view that inactive elements contribute to experience
+klein_maudlin,piccinini2010,builds-on,sibling,"F 2 (PDF p. 15): architectures as sets of mechanisms; cites Piccinini 2007 and 2015, sibling statements"
+tononi2015,searle1980,builds-on,yes,D 1 endnote 14: the same conclusion credited to the Chinese Room and to Leibniz's mill
+dehaene2017,tononi2015,critiques,sibling,"D 2 s. 2.2: 'mere information-theoretic quantities do not suffice'; the cited reference is Tononi et al. 2016, a sibling statement"
+graziano2017,tononi2015,critiques,sibling,"D 3 p. 7: integrated information called non-explanatory and unfalsifiable; cites Tononi 2008, a sibling statement"
+graziano2017,dehaene2017,critiques,sibling,"D 3 p. 7: global workspace judged incomplete; cites Baars 1988 and Dehaene 2014, sibling statements"
+doerig2019,tononi2015,critiques,sibling,D 4 s. 1.2: the unfolding argument's primary target; cites Oizumi et al. 2014 as the formal statement
+kleiner2021,doerig2019,replies-to,yes,D 5 (PDF p. 2): self-described 'generalization and correction' of the unfolding argument
+kleiner2021,tononi2015,critiques,sibling,"D 5: the independence horn; cites Oizumi et al. 2014, Albantakis & Tononi 2019, Koch 2019"
+kleiner2021,dehaene2017,critiques,sibling,"D 5 (PDF p. 14): global workspace listed under strict dependence; cites Baars 1997, Dehaene & Changeux 2004"
+kleiner2021,graziano2017,critiques,sibling,"D 5 (PDF p. 14): the attention schema listed among theories exposed to the strict-dependence horn; cites the theory, not this 2017 paper"
+albantakis2023,tononi2015,builds-on,yes,D 7: supersedes the earlier formulation; cited as ref. 19
+butlin2023,tononi2015,excludes,yes,"D 6 s. 2.3 (p. 5, p. 33): excluded from the survey because incompatible with computational functionalism"
+butlin2023,graziano2017,builds-on,yes,D 6 s. 2.4: AST-1 derived from the attention schema theory
+butlin2023,dehaene2017,builds-on,sibling,"D 6 s. 2.2: GWT-1 to GWT-4 derived; cites Baars, Dehaene 2014 and Mashour et al. 2020"
+butlin2023,searle1980,names-as-opponent,yes,"D 6 s. 1.2.1 p. 12: named, with Seth 2021, as the rejection case for the report's working assumption"
+shevlin2021,block1978,builds-on,yes,E 2 p. 300: the specificity problem presented as a descendant of liberalism versus chauvinism
+shevlin2021,dehaene2017,critiques,sibling,"E 2 p. 300: global workspace used as the worked illustration; quotes Dehaene 2014, a sibling statement"
+shevlin2021,tononi2015,uses-as-evidence,yes,E 2 p. 303: quoted for the claim that consciousness is widespread even in simple systems
+shevlin2021,searle1980,reinterprets,yes,E 2 p. 310: the Chinese Room recast as a weak candidate his method would exclude
+shevlin2021,graziano2017,builds-on,sibling,E 2 p. 299: the attention schema listed among the cognitive theories at issue; cites Graziano 2013
+schwitzgebel2015,searle1980,reinterprets,yes,"E 1 s. 2.4 and s. 2.6: read as an epistemic rather than metaphysical problem, and shown to overshoot its source"
+schwitzgebel2015,block1978,reinterprets,yes,E 1 s. 2.6 (ms. p. 30): the lookup-table mannequin recast as an epistemic problem
+schwitzgebel2015,cuda1985,reinterprets,yes,"E 1 n. 5 (ms. p. 11): explicitly distinguishes its own slippery slope, which assumes rather than proves preserved consciousness"
+schwitzgebel2015,chalmers1995qualia,reinterprets,other,E 1 n. 5 (ms. p. 11): same distinction; cited there as 'Chalmers 1996'
+schwitzgebel2015,bostrom2003,uses-as-evidence,yes,E 1 s. 2.1 (ms. p. 5): simulated worlds cited as a case strengthening premise 2
+godfreysmith2016,thompson2007,builds-on,yes,C 1 n. 1: 'Thompson's book has influenced this paper'
+godfreysmith2016,tononi2015,critiques,sibling,"C 1 s. 5 (PDF p. 13): characterised as near-panpsychist; the held PDF is the 2014 talk, so it cites an earlier Tononi-Koch statement, not this 2015 paper"
+seth2018beast,thompson2007,builds-on,yes,"C 2 (PDF p. 13): cited for strong continuity between life, mind and consciousness"
+cleeremans2022,seth2018beast,builds-on,yes,C 3 s. 8 (pp. 7-8): cited for the visceral grounding of the experiencing subject
+cleeremans2022,block1978,critiques,sibling,"C 3 s. 2: the access/phenomenal distinction called fundamentally misleading; cites Block 1995, a sibling paper"
+aru2023,tononi2015,uses-as-evidence,yes,C 4 s. 2.2: cited for the claim that software lacks real cause-effect power
+aru2023,dehaene2017,uses-as-evidence,sibling,C 4 s. 2.2: global neuronal workspace summarised as one of the converging theories; cites Dehaene and Baars
+seth2025,godfreysmith2016,builds-on,yes,C 5 s. 3.3: the 'differences on the inside' objection to neural replacement
+seth2025,aru2023,builds-on,yes,C 5 s. 4.1: 'skin in the game' borrowed by name
+seth2025,seth2018beast,builds-on,yes,C 5 s. 4.5: the beast-machine formulation carried forward
+seth2025,searle1980,builds-on,yes,C 5 s. 4.0: the term biological naturalism taken from Searle and redefined
+seth2025,butlin2023,critiques,yes,C 5 s. 3.1 (PDF p. 6): flags that the report's conclusions depend on an assumption it acknowledges
+seth2025,chalmers1995qualia,critiques,yes,C 5 s. 3.3 footnote: the plausibility objections extended to the dancing-qualia argument
+seth2025,tononi2015,reinterprets,sibling,"C 5 s. 5.6: if IIT is right, conventional AI is off the path but nothing is special about life; cites Tononi et al. 2016, a sibling statement"
+seth2025,albantakis2023,reinterprets,yes,C 5 s. 5.6: cited alongside Tononi et al. 2016 for IIT's sufficient conditions
+seth2025,piccinini2013,builds-on,sibling,"C 5 s. 3.4: neural computation as a broader notion; cites Piccinini 2018/2020/2023, sibling statements"
+seth2025,chalmers2023llm,names-as-opponent,yes,C 5 references: cited among the works arguing that current systems are serious candidates
+seth2025,bostrom2003,uses-as-evidence,yes,C 5 s. 2.0: the simulation argument cited as part of the technophilic framing
+seth2025,schneider2019,builds-on,yes,C 5 s. 7.0 footnote: cited as one proposal for a Garland test
+chalmers2023llm,butlin2023,builds-on,yes,E 3 references: cited as the indicator-properties report
+chalmers2023llm,tononi2015,critiques,sibling,"E 3 s. 2.3: IIT's zero-Phi prediction for feedforward systems; cites Tononi 2004, a sibling statement"
+chalmers2023llm,dehaene2017,builds-on,sibling,E 3 s. 2.3: global workspace used as an objection source; cites Baars 1988 and Dehaene 2014
+chalmers2023llm,schneider2019,builds-on,yes,"E 3 s. 2.2: the AI Consciousness Test, which motivates the untrained-description challenge"
+mollo2023vector,searle1980,builds-on,yes,E 4 n. 5: the symbol grounding problem taken as an elaboration of the Chinese Room
+mollo2023vector,milliere2024,builds-on,yes,E 4 n. 1: cited as the general introduction to language models
+mollo2023vector,chalmers2023llm,builds-on,yes,E 4 references: Chalmers 2023 and 2025 cited in the 2026 published version
+milliere2024,block1978,builds-on,other,"E 7: Blockhead as the standing null hypothesis; cites Block 1981, whose list-searcher appears in the held 1978 reprint at pp. 281-282"
+milliere2024,mollo2023vector,builds-on,yes,E 7 s. 3: cited for the vector grounding problem
+milliere2024,searle1980,reinterprets,yes,"E 7: cited only to note that some take understanding to require consciousness, deferred to Part II"
+long2024welfare,butlin2023,builds-on,yes,E 5 p. 16: the indicator list reproduced in full
+long2024welfare,chalmers2023llm,uses-as-evidence,yes,E 5 p. 18: Chalmers's credence quoted verbatim at length
+long2024welfare,birch2024,builds-on,yes,E 5: the marker method and precautionary framing; Birch is a contributing author
+long2024welfare,shevlin2021,builds-on,yes,E 5: cited on criteria for AI moral patienthood
+long2024welfare,godfreysmith2016,names-as-opponent,yes,"E 5 p. 27: listed among in-practice biology views; cites Godfrey-Smith 2016, 2020, 2024"
+long2024welfare,seth2025,names-as-opponent,sibling,"E 5 p. 27: listed among in-practice biology views; cites Seth 2021 and 2024, sibling statements"
+long2024welfare,tononi2015,names-as-opponent,sibling,E 5 p. 27: integrated information listed among views requiring absent computational features; cites Koch 2019
+long2024welfare,putnam1967,builds-on,yes,E 5 p. 15: cited in the definition of computational functionalism
+long2024welfare,piccinini2010,builds-on,sibling,"E 5 p. 15: cited in the same definition; the citation is Piccinini 2018, a sibling statement"
+long2024welfare,schneider2019,builds-on,yes,"E 5: the AI Consciousness Test discussed, with Udell & Schwitzgebel's worries noted"
+birch2024,butlin2023,builds-on,yes,E 6 s. 12: 'we must not be complacent about the risks of developing new kinds of sentient being'
+birch2024,schneider2019,critiques,yes,E 6 s. 12: regular sentience testing judged 'currently unfeasible' because of gaming
+birch2024,chalmers2023llm,critiques,yes,"E notes 4: the decoupling of sentience from intelligence, and 'no one is there' against a live chatbot credence"

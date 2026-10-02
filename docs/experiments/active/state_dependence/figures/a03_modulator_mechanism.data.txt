@@ -1,0 +1,3 @@
+arm × site combinations|60|60|100.0|every modulated arm of the two 16-cell grids, at every site it modulates
+episodes replayed per arm|128|128|100.0|a fixed episode set shared by all arms, so arms are paired rather than each seeing its own worlds
+grids represented|2|2|100.0|the Monte-Carlo and normalised-GAE twins; the figure pools them because the split is the same in both

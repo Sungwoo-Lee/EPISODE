@@ -1,0 +1,39 @@
+{
+ "task": "T6",
+ "run": "T6-A-3",
+ "correct": true,
+ "f2p_passed": "9/9",
+ "p2p_broken": 0,
+ "p2p_total": 672,
+ "ref_recall": 1.0,
+ "ref_files": [
+  "src/environment/dashboard/labels.py",
+  "src/environment/dashboard/panels.py"
+ ],
+ "changed_files": [
+  "src/environment/dashboard/labels.py",
+  "src/environment/dashboard/painters.py",
+  "src/environment/dashboard/panels.py",
+  "tests/env/test_dashboard_band_span.py"
+ ],
+ "wall_s": 498,
+ "turns": 29,
+ "input_tokens": 36,
+ "cache_read": 1454011,
+ "cache_write": 96746,
+ "output_tokens": 17625,
+ "usd_equiv": 0.8541082000000001,
+ "is_error": false,
+ "subtype": "success",
+ "tool_calls": 28,
+ "tools": {
+  "Grep": 7,
+  "Read": 8,
+  "Edit": 9,
+  "Bash": 4
+ },
+ "first_edit": {
+  "tool_calls_before": 15,
+  "seconds": 74
+ }
+}

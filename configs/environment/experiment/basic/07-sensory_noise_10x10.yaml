@@ -1,0 +1,120 @@
+# Basic curriculum — 07-sensory_noise_10x10
+# ---------------------------------------------------------------------------
+# RE-LEVELED 2026-09-30 (docs/develop/active/thirst/THIRST_WATER_PLAN.md): this file was
+# `06-sensory_noise_10x10.yaml` and extended level 05 (the campfire world). It is now level
+# 07 and extends the NEW level 06 (`06-pond_thirst_10x10.yaml`: the campfire world plus a
+# pond and thirst). THE WORLD CHANGED: it now also carries the pond and thirst — one more
+# observation number (Hydration, 59 in all), one more smell pool, codes 6/7 — on top of
+# everything below. Anything trained or recorded under the old `06-sensory_noise` name is a
+# DIFFERENT world from this file. Analysis scripts that label past runs of the noise world
+# `lvl06` keep that label (they name runs trained on the old file); check the run date.
+# Hydration noise is set to sigma 0.0 EXPLICITLY below, so interoception stays clean.
+#
+# (Older history of this file, kept as written:)
+# RE-LEVELED 2026-09-16: this file was `05-sensory_noise_10x10.yaml` and extended level 04
+# directly. It is now level 06 and extends the new level 05 (the campfire thermal world),
+# so that each rung of the ladder inherits the rung below it. THE WORLD CHANGED: it now
+# also carries body temperature, campfires and a cold baseline (see "WHAT LEVEL 05 ADDS"
+# below). Anything trained or recorded under the old `05-sensory_noise` name is a
+# DIFFERENT world from this file and is not comparable with it.
+#
+# PURPOSE (plain language): the HARDEST level and a hypervigilance probe. It stacks
+# INJURY-GATED SENSORY NOISE on top of the level-05 thermal/jump scene, so the full stack
+# here is random-init + all-combined predator pressure + jump/pounce + campfires and body
+# temperature + injury-gated noise. When the
+# agent is healthy it perceives the predator's smell clearly, but as injury rises the SMELL
+# channel becomes progressively unreliable (noise grows with injury). The intended effect — via
+# precision-weighting (predictive-coding pain model): once the agent can no longer trust
+# its distal threat cue, it should fall back on a "danger" prior and over-react
+# defensively (avoid even ambiguous cues = hypervigilance). The agent's INTEROCEPTION is
+# kept CLEAN so the "I am injured" gating signal stays reliable.
+#
+# Design rationale (see session analysis):
+#   - Couple injury to the THREAT channel (olfaction), NOT to interoception. If injury
+#     perception itself got noisy, the gating trigger would be corrupted.
+#   - Maximise the healthy<->injured CONTRAST on olfaction: low baseline sigma (clear when
+#     healthy) + high injury_noise_scale (heavily degraded when injured). Noise math:
+#     sigma_eff = sigma_base * (1 + alpha * injury/max_injury)
+#     olfaction: 0.15 -> 0.75 at max injury (alpha=4.0).
+#   - Random start injury (inherited down the chain from level 03) makes the agent VISIT the
+#     high-injury regime at episode start, so the gated olfaction is exercised across its full
+#     range without the agent first having to be bitten into a death spiral.
+#
+# NOTE: this is a first principled config, NOT a tuned sweep. The single most important
+# knob is olfaction.injury_noise_scale; a proper study would sweep olfaction.{sigma, scale}.
+#
+# extends basic/05-campfire_thermal (-> basic/04-jump_attack -> basic/03-random_init ->
+# default), so it inherits the FULL stack: random-init all-predator-pressure (hiding 2-12,
+# max_stamina [30,150], move_interval [1,1]), random start nutrition/injury, full-grid
+# spawn, the jump/pounce (attack_range {2,3}, attack_success_rate 0.5), AND level 05's
+# thermal world. Noise now sits on TOP of all of that — this is the hardest level.
+# It only adds + enables perceptual_noise. The partial modality overrides below DEEP-MERGE
+# into default.yaml's perceptual_noise block (clip ranges + modality index order preserved).
+#
+# WHAT LEVEL 05 ADDS TO THIS WORLD (new since the 2026-09-16 re-level):
+#   - OBSERVATION grows by two senses — Body Temperature (interoceptive) and Thermoception
+#     (exteroceptive, a grid of `field - body_temp` readings at grid_range 1). The agent
+#     therefore sees more channels here than it did under the old `05-sensory_noise` name.
+#   - ARENA gains 1-3 CAMPFIRES, plus `tree` (count 0). A campfire shares the obstacle
+#     visual channel with rock and bush, so only thermoception tells them apart.
+#   - The world baseline is COLD (default_temp -31..-29), so an agent that never warms up
+#     freezes: freezing/overheating is a real cause of death at this level, alongside
+#     starvation and predation.
+#   - Since 2026-09-26 each episode also STARTS AT A RANDOM BODY TEMPERATURE in [-10, +5]
+#     (B1 of docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md), inherited from
+#     level 05's `thermal:` block; nothing here overrides it. Runs trained before that date
+#     started every episode at the setpoint (0.0) and are not a like-for-like baseline.
+#
+# THE THERMAL CHANNELS ARE NOT NOISED HERE, DELIBERATELY. `body_temperature` and
+# `thermoception` are not overridden below, so they fall through to default.yaml's entries:
+# mode "state_dependent", **sigma 0.0**, injury_noise_scale 1.5, clip [-100, +100] and
+# [-100, +400] respectively. sigma 0.0 means no noise is ever added to them (the scale
+# multiplies a zero), so both arrive clean. That is the right default for this level for
+# two reasons: (a) the manipulation under test is injury-gated noise on the THREAT channel
+# (olfaction) — adding a second, uncalibrated degradation to the thermal senses would
+# confound it; and (b) no thermal-noise magnitude has ever been calibrated on the DEGREES
+# scale, and copying an interoceptive 0.1 (calibrated for a [0,1] channel) would look like
+# noise while doing nothing (default.yaml:418-423, :450-454). What DOES become live here is
+# CLIPPING: `apply_perceptual_noise` clips every modality whenever perceptual_noise.enabled
+# is true, including channels with sigma 0.0. default.yaml's thermal clip bounds were
+# derived with >2x headroom on both ends precisely so they cannot bind (the measured field
+# peak is +151.9 against a +400 ceiling), so the clip passes the signal through unchanged.
+extends: environment/experiment/basic/06-pond_thirst_10x10
+
+perceptual_noise:
+  enabled: true
+  modalities:
+    # --- Interoception kept CLEAN (no injury coupling) so the pain-gate stays reliable ---
+    # (sigma explicitly 0.0 — do not rely on inherited defaults for the clean channels;
+    # see FIX_CONFIG_LAYER_SILENT_FAILURES_20260723 — sigma used to deep-merge from
+    # default.yaml's 0.1 here, silently contradicting this "CLEAN" claim.)
+    satiation:
+      mode: "constant"
+      sigma: 0.0
+      injury_noise_scale: 0.0
+    interoceptive_nociception:
+      mode: "constant"
+      sigma: 0.0
+      injury_noise_scale: 0.0
+    extero_nociception:
+      mode: "constant"
+      sigma: 0.0
+      injury_noise_scale: 0.0
+    # Hydration (level 06's thirst) is interoception too: stated clean HERE, not inherited
+    # (KNOWN_BUGS ~#371: a noise world that claimed clean interoception inherited 10x noise).
+    hydration:
+      mode: "constant"
+      sigma: 0.0
+      injury_noise_scale: 0.0
+    # --- THREAT channel: clear when healthy, heavily degraded when injured (the lever) ---
+    olfaction:
+      mode: "state_dependent"
+      sigma: 0.15
+      injury_noise_scale: 4.0       # sigma_eff: 0.15 -> 0.75 at max injury
+    # --- Optional: mild injury-gated ambiguity on the on-contact visual ID channel ---
+    visual:
+      mode: "state_dependent"
+      sigma: 0.1
+      injury_noise_scale: 2.0
+    # injury / nutrition stay clean (default sigma 0.0); collision / proprioception /
+    # location keep their default tiny constant sensor noise.

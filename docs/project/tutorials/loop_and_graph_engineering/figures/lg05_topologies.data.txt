@@ -1,0 +1,1 @@
+Conceptual diagram, not a measurement: 5 of 5 topologies drawn (100%), as invented examples of 4, 6, 7, 5 and 5 agents. No run, episode or seed is summarised.

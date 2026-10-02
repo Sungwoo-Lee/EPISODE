@@ -1,0 +1,932 @@
+<title>What Both Agents Compute</title>
+{{HOUSE_STYLE}}
+<style>
+/* Page-specific, and a stated departure from the House Style Sheet (guide 0a): the sheet has no
+   component for an analysis that is planned but not yet run. This page is mostly such plans, so it
+   adds one: a dashed panel with a status marker. Dashed = "not measured yet"; the four status
+   markers carry their meaning in words, and the border hue only repeats it. Every colour is a
+   house token. Class names are checked by the builder not to collide with any house class (F54). */
+.plan { border:1px dashed var(--rule); background:var(--ground); padding:20px 22px;
+  display:flex; flex-direction:column; gap:12px; min-width:0; }
+.plan-top { display:flex; align-items:baseline; gap:8px 14px; flex-wrap:wrap; }
+.plan-top h3 { flex:1 1 200px; }
+.plan-id { font-family:var(--f-head); font-size:13px; font-weight:700; color:var(--accent-text);
+  letter-spacing:.07em; }
+.pstat { font-family:var(--f-head); font-size:11.5px; font-weight:600; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--ink); border:1px solid var(--rule); border-left-width:4px;
+  padding:2px 8px; white-space:nowrap; }
+.pstat.wait { border-left-color:var(--warn); }
+.pstat.build { border-left-color:var(--accent); }
+.pstat.decide { border-left-color:var(--danger); }
+.pstat.ready { border-left-color:var(--ok); }
+.plan dl { gap:8px 18px; }
+.plan dt { color:var(--ink-2); }
+.slot { border:1px dashed var(--rule); background:var(--surface); padding:14px 16px;
+  font-size:14.5px; color:var(--ink-2); }
+.slot b { color:var(--ink); }
+table.evidence { min-width:440px; }
+table.twocol { min-width:400px; }
+.plans { display:flex; flex-direction:column; gap:22px; }
+.ledger { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+@media (max-width:700px) { .ledger { grid-template-columns:1fr; } }
+.ledger ul, ul.plainlist { margin:0; padding-left:1.3em; display:flex; flex-direction:column; gap:6px; }
+.refnote { font-size:14px; color:var(--ink-3); }
+ol.refs { list-style:none; padding-left:0; margin:0; display:flex; flex-direction:column; gap:12px; }
+ol.refs li { display:grid; grid-template-columns:2.9em 1fr; gap:0 8px; align-items:start; min-width:0;
+  scroll-margin-top:24px; }
+ol.refs .rnum { font-family:var(--f-mono); font-size:12px; color:var(--accent-text); background:var(--pick);
+  text-align:center; font-variant-numeric:tabular-nums; }
+ol.refs .rnum::before { content:"["; } ol.refs .rnum::after { content:"]"; }
+ol.refs .rbody { display:flex; flex-direction:column; gap:2px; min-width:0; }
+ol.refs .rmeta, ol.refs .rprov { font-size:14px; color:var(--ink-2); overflow-wrap:anywhere; }
+ol.refs li:target { background:var(--pick); box-shadow:0 0 0 6px var(--pick); }
+ol.refs li:target .rnum { background:var(--accent); color:var(--ground); }
+a.cite { font-family:var(--f-mono); font-size:.72em; line-height:0; vertical-align:super; text-decoration:none;
+  color:var(--accent-text); background:var(--pick); padding:.18em .34em; white-space:nowrap; margin-left:2px; }
+a.cite::before { content:"["; } a.cite::after { content:"]"; }
+/* Figure data statements, emitted by the builder: the subset and why columns keep a readable width,
+   and the code chips the builder puts around paths break only at the <wbr> it inserts after / . _
+   (register F69 and its amendment). */
+table.datause td:first-child { min-width:10em; }
+table.datause td:last-child { min-width:14em; }
+table.datause td code { overflow-wrap:break-word; }
+/* A figure keeps a 640 px width floor inside its scroll box, so its labels stay at or above 9 px on
+   a phone (register F65); 640 px fits the 642 px panel column, so on a desktop nothing scrolls. The
+   cue before the box is toggled by the house measured-overflow script. */
+.figscroll img { min-width:640px; }
+/* The section-03 verdict table has four prose columns: a floor, with its own scroll cue. */
+table.verdicts { min-width:520px; }
+/* The primer: a stated addition to the house sheet, which has no collapsible component. Folded by
+   default so the results stay first; each part opens on its own. Every colour is a house token. */
+details.primer { border:1px solid var(--rule); background:var(--surface); padding:14px 18px; min-width:0; }
+details.primer > summary { font-family:var(--f-head); font-weight:600; font-size:16px; cursor:pointer;
+  color:var(--ink); }
+details.primer-sub { border-top:1px solid var(--line); padding:12px 0 4px; min-width:0; }
+details.primer-sub > summary { font-weight:600; cursor:pointer; color:var(--ink); }
+.primer-body { display:flex; flex-direction:column; gap:12px; padding-top:12px; min-width:0; }
+.primer-body pre { overflow-x:auto; font-size:13px; }
+table.prose2 td { overflow-wrap:break-word; }
+</style>
+
+<div class="wrap">
+
+<header class="col">
+  <p class="eyebrow">grid_world_pain &middot; neuromodulated vs ordinary agent &middot; first results, reviewed</p>
+  <h1>What Both Agents Compute</h1>
+  <p class="lede">For a month the agent with a neuromodulator and the agent without one have come out
+  almost identical in every world we built. Before designing a better modulator, this page asks what
+  computation the two agents share, and only then why the modulator adds nothing to it. The first
+  answers are in: at the layers the modulator acts on, the two agents are less alike than two
+  ordinary agents are, while surviving equally well.</p>
+</header>
+
+<section class="col">
+  <h2><span class="num">PURPOSE</span>Why this page exists</h2>
+  <p>The long-term goal is to find a neuromodulator that actually helps an agent. Across a month of
+  comparisons in many different worlds, the modulated and ordinary agents have come out almost the same
+  every time. That consistency is too tight to be noise. This page started from the premise that both
+  architectures converge on the same way of processing information, shaped more by the structure of
+  the world than by the network design; section 03 tests that premise, and at the layers the modulator
+  acts on it does not hold. So it is not enough to treat the result as a failed hypothesis and try another modulator at
+  random. A modulator can only help by adding something the network does not already compute, and right
+  now we do not know what that shared computation is.</p>
+  <div class="callout">
+    <p class="eyebrow">The two questions, in this order</p>
+    <p><strong>First:</strong> what computation does every architecture converge on in these worlds?</p>
+    <p><strong>Then:</strong> why does the modulator not help?</p>
+  </div>
+  <p>This page collects the evidence behind that reordering, the algorithmic explanations a review of
+  the literature turned up, and the measurements made to answer both questions. The comparison ran on
+  six freshly trained agents, three of each kind, trained on the same three random seeds.
+  Every verdict word on the page comes from decision rules written down before any number existed, and
+  two review passes checked what the page may claim from them.</p>
+  <div class="callout">
+    <p class="eyebrow">Headline so far</p>
+    <p>To judge whether two agents are alike inside, we check how well one agent's layer activity
+    predicts the other's on the same inputs, and compare that with the range spanned by pairs of
+    ordinary agents trained from different seeds (the <em>ordinary band</em>). At the end of training
+    the modulated agent's encoder output, actor hidden layer and critic hidden layer are less
+    interchangeable with an ordinary agent's than two ordinary agents are with each other (all 6 pairs
+    below the ordinary band, both directions on the encoder and actor), while both survive equally
+    well. Modulated agents are also less interchangeable with each other than ordinary agents are.
+    Whether the difference reaches the memory layers, the test cannot say: neither the carried memory
+    state, which the modulator does not act on directly, nor the memory output, which it does.</p>
+    <p>All three layers that differ are places where the modulator applies its gain and offset, so
+    they receive its input by construction. The finding is that the agents are <strong>different at
+    the layers the modulator acts on</strong>, not that the main network learned a different function.
+    Survival is equal but measured at a ceiling: both agents reach the 500-step episode limit in about
+    94&nbsp;% of episodes.</p>
+  </div>
+  <p>On Question 2, when the modulator starts to matter during training was measured in 16 worlds.
+  Some of its measures make half of their change before the agent's survival levels off; a measure
+  of the size of its weights makes half of its growth after, as the main network's own weights do.
+  The pre-registered test therefore points both ways (section 04). Freezing either its gain or its
+  offset at its time-averaged value after survival levels off costs survival in all 16 worlds: on
+  average 33 steps for the gain and 31 for the offset out of roughly 250, with per-world means from 11
+  to 54 (a descriptive number, not a registered test). Section 05 says what this changes for the search for a helpful modulator.</p>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">01</span>A month of near-identical results</h2>
+  <p>About 200 training runs compared the two agents. The <strong>ordinary agent</strong> is a recurrent
+  network trained with PPO. The <strong>modulated agent</strong> is the same network plus a small side
+  network, the neuromodulator, which at every step sends each unit in up to four places of the main
+  network a gain (a multiplier) and an offset (an added amount). Performance is always measured in
+  survival steps: how long the agent stays alive.</p>
+  <h4>What the comparisons found</h4>
+  <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways; the right-hand columns are cut off</p>
+  <div class="scroll"><table class="evidence">
+    <thead><tr><th>Comparison</th><th class="n">Runs</th><th>Seeds per cell</th><th>Modulated minus ordinary</th></tr></thead>
+    <tbody>
+      <tr><td>Where the modulator writes &times; what it reads, Monte-Carlo returns</td><td class="n">16</td><td>1</td><td>mean +1.7 steps (sd 2.2); five ordinary seeds span 4.5</td></tr>
+      <tr><td>Same grid, the other return estimator (GAE_NORM)</td><td class="n">16</td><td>1</td><td>mean &minus;0.2 steps (range &minus;3.0 to +2.5)</td></tr>
+      <tr><td>Same grid, wider smell field, both return modes</td><td class="n">32</td><td>1</td><td>behaviour: ordinary agent inside the modulated spread in 12 of 12 checks</td></tr>
+      <tr><td>Curriculum levels, Waves 1 and 2</td><td class="n">28</td><td>1</td><td>+6.8 to &minus;3.1 steps across levels</td></tr>
+      <tr><td>Level-05 body-rules factorial, 16 worlds</td><td class="n">32</td><td>1</td><td>+3.6 steps, the same sign in 16 of 16 worlds</td></tr>
+      <tr class="pick"><td>May probe, older agent, alternating predator</td><td class="n">2</td><td>1</td><td>+107 and +132 steps; the only large positive, unreplicated</td></tr>
+      <tr><td>May replication, from scratch</td><td class="n">6</td><td>3</td><td>+1.46 steps at the end of training (floored standard error 3.6); both near the 500-step cap</td></tr>
+    </tbody>
+  </table></div>
+  <p class="foot">From the cross-study dossier (see the footer). Most cells are one run per agent, so on
+  its own each null only rules out differences larger than roughly 5 to 15 survival steps.</p>
+  <div class="callout">
+    <p class="eyebrow">What the pattern says</p>
+    <p>If a real but modest difference were hidden by noise, the gaps between independently trained
+    agents would scatter: sometimes clearly positive, sometimes clearly negative, about as far apart as
+    two ordinary agents with different seeds. They do not scatter. They stay pinned near zero across
+    worlds that differ a great deal, and in the 16-world factorial the gap has the same sign every time.
+    That is the signature of something systematic making the two agents come out the same.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">02</span>Four candidate reasons the agents come out the same</h2>
+  <p>A review of this project's runs, code and the FiLM and reinforcement-learning literature it holds
+  produced four explanations. They are not exclusive. Each is a claim the planned measurements can
+  test.</p>
+
+  <h3>1. The two agents start from the same place</h3>
+  <p>The main network's layers are built before the modulator (in <code>src/models/recurrent_ppo_network.py</code>:
+  first the encoder, then the actor and critic, then the modulator), and
+  the ordering is kept deliberately so the random-number stream is unchanged. With the same seed, the
+  modulated agent's main network therefore starts with exactly the ordinary agent's weights and sees the
+  same stream of environments. The modulator's gain starts near 1 (1 &plusmn; 0.3) and its offset near 0,
+  so at the start it barely changes anything. Small, clipped PPO updates can then keep both runs in the
+  same solution.</p>
+
+  <h3>2. The worlds ask for threshold shifts, which an ordinary network already has</h3>
+  <p>Internal states (hunger, injury, temperature) do act as task variables here: the reward is the
+  change in homeostatic drive, so what counts as rewarding depends on the agent's needs, in the sense
+  of Keramati and Gutkin{{CITE:keramati}}. But the kind of task family matters. An ordinary network
+  receives the internal state as an input, and that adds a context-dependent amount to each unit:</p>
+  <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways; the right-hand end is cut off</p>
+  <pre>ordinary:   h = ReLU( W_x&middot;x + W_c&middot;c + b )
+FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
+  <p>With the gain &gamma; fixed at 1 the two are the same: feeding the condition in as an input is FiLM
+  without the gain{{CITE:perez}}. An added amount moves the point at which a unit switches on, which is
+  a threshold shift (a hungrier agent approaches fainter food, an injured one hides sooner). The gain
+  does something different: it changes <em>how strongly</em> a sense drives a unit, which is what is
+  needed when a need must change <em>which</em> senses matter. The behaviour measured in ordinary agents
+  so far looks mostly like threshold shifts. The ordinary agent's memory is also a GRU, whose gates
+  already multiply its state by functions of its inputs, internal state included.</p>
+  <p>Three more properties make these worlds easy for an ordinary network. The needs rise and fall many
+  times within every episode, so every training batch contains every context and there is no
+  interference between them to relieve. The internal state is visible at every step, so there is no
+  hidden context to infer. And the published cases where FiLM beats a plain network all involve a regime
+  that changes which behaviour is correct, such as a task switch or a hidden context. The one large
+  positive result here came from the May probe, whose predator alternated between dangerous and
+  harmless phases.</p>
+
+  <h3>3. Training gives the modulator no reason to carry context, and it may wake up late</h3>
+  <p>One optimiser updates every parameter, modulator included, with the same learning rate
+  (gradient clip 0.5, then Adam at 5&times;10<sup>&minus;4</sup>), no weight decay and no objective of its
+  own. The critic's error also trains the modulator. The main network is roughly 100 times larger and
+  absorbs the body-related part of the learning signal first. Two measured facts fit this. Only about 15%
+  of the modulator's gain variation follows the situation; the rest is a fixed per-unit setting the main
+  network could have learned itself. And its share of the gradient grows over training, reaching 40&ndash;75%
+  in some arms only by the end (in the September grid; the level-05 logged share gives no timing
+  reading, section 04). A part that starts working only in the second half of training can shape
+  the final solution but cannot shorten the early climb, where a faster-learning advantage would appear.
+  This was a candidate when the page was planned. Section 04 (B2) reports what the timing measurement
+  found: the measures of what the modulator actually outputs read "early", which under the registered
+  rule refutes the late-wake explanation for those measures; only the weights-only ceiling on its gain
+  reads "late", and the main network's own weights read "late" by the same rule. The rules do not
+  combine measures, so no single timing verdict exists.</p>
+
+  <h3>4. The measurements could not see the kind of gain FiLM usually gives</h3>
+  <p>Every comparison so far used final performance. In reinforcement learning, FiLM's reported advantage
+  is mostly faster learning, and learning speed has not been measured here with seeds.</p>
+
+  <div class="callout warn">
+    <p class="eyebrow">A puzzle any explanation has to fit</p>
+    <p>Freezing a trained modulated agent's modulation at its own average cost it up to 180 of about
+    200 survival steps in the September single-site modulators (one site frozen at a time; costs ranged
+    from near zero at some sites to 180, gain average about 63). The level-05 agents in section 04,
+    modulated at all four places, lose a smaller but consistent 31&ndash;33 of roughly 250 steps when
+    the gain, or in a separate test the offset, is frozen at every site at once; the two tests differ
+    in agents, worlds and protocol, so the sizes are not comparable. Yet the modulated agent trained end
+    to end does no better than an ordinary one. One reading that fits both: training routes part of the
+    same solution through the modulator, so freezing it removes a working part, not a benefit.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">03</span>Question 1: what do the two agents compute?</h2>
+  <p>If the two agents converge on the same information processing, the evidence should show it at the
+  level of their internal activity, not only their scores. The measures all run on identical inputs:
+  one stored episode is fed to every agent, with its memory reset at the first step, so every
+  activation is paired with the other agent's activation at the same moment. The data are the May
+  replication: three ordinary and three modulated agents trained from scratch through five stages
+  (different worlds), read at the end of training in the final world, where a predator is active.
+  A reading taken at the end of the first stage was also made and is shown beside it as interim.</p>
+  <div class="callout">
+    <p class="eyebrow">Answer so far</p>
+    <p>The two agents do not converge on interchangeable activity at the layers the modulator acts on:
+    at the encoder, actor and critic they are further apart than two ordinary agents from different
+    seeds, while surviving equally well (A1, A3). They hold the same information in broadly the same
+    places, with hunger slightly less linearly readable from the modulated agent's encoder output and
+    memory state (A2). Whether their memories differ, the registered test cannot say. Whether they
+    move together from world to world (A4) was measured but gets no verdict: a registered data-quality check failed on one world (see A4).</p>
+  </div>
+
+  <!-- PRIMER START -->
+  <details class="primer">
+  <summary>Primer: how the two similarity measures work &mdash; toy examples, the maths, and the fMRI analogy</summary>
+  <div class="primer-body">
+  <p>Figure A1 scores how alike two agents' layers are in two ways, linear predictivity and CKA. This
+  primer builds both from toy examples small enough to check by hand. Each part opens on its own. The
+  toy numbers are made up to explain the methods; none of them is a result of this study.</p>
+
+  <details class="primer-sub">
+  <summary>1. The problem: two networks' units do not line up</summary>
+  <div class="primer-body">
+  <p>Say two agents both track hunger (h) and danger (d) in a two-unit layer. Agent A stores
+  <code>[h, d]</code>; agent B stores <code>[h+d, h&minus;d]</code>. They hold exactly the same
+  information, yet unit 1 of A looks nothing like unit 1 of B. Which unit carries what, how quantities
+  are mixed, and how strongly each unit responds are arbitrary outcomes of training. So neither method
+  compares unit to unit; both compare whole layers.</p>
+  <p>The raw material is the same for both. Every agent is replayed on the <strong>same</strong>
+  recorded moments, so row i means the same moment for every agent. For one layer:</p>
+  <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>
+  <pre>X : n &times; p   agent A's activity
+Y : n &times; q   agent B's activity
+n = moments (shared), p and q = units</pre>
+  <p>The n rows are single time steps pooled from many probe episodes, not one continuous series. The
+  order of rows plays no part; episodes matter only for keeping training rows apart from held-out rows.
+  In this study n is 5,000 and p = q = 128.</p>
+  </div>
+  </details>
+
+  <details class="primer-sub">
+  <summary>2. Linear predictivity: can one layer be rebuilt from the other? (decides the verdict)</summary>
+  <div class="primer-body">
+  <div class="col stages">
+    <div class="stage"><div class="s">1</div><div class="b"><div class="t">Fit q regressions at once</div><div class="d">Each of B's q units gets its own weight vector, predicted from all p units of A. Stacked side by side they form one matrix, solved by ridge regression (least squares with a small penalty &lambda; that keeps the weights stable). The q fits share the same input and <strong>one</strong> &lambda; for the whole layer, chosen from 19 candidates by cross-validation inside the training episodes.</div></div></div>
+    <div class="stage"><div class="s">2</div><div class="b"><div class="t">Score on episodes the fit never saw, pooled over units</div><div class="d">Sum every unit's squared error and every unit's variance, then take one ratio. That equals a weighted mean of the q per-unit R&sup2; values, each weighted by how much its unit varies, so a nearly silent unit counts for almost nothing.</div></div></div>
+    <div class="stage"><div class="s">3</div><div class="b"><div class="t">Both directions; keep the smaller</div><div class="d">Repeat with B predicting A. The smaller of the two is the pair's predictivity, because &ldquo;interchangeable&rdquo; has to hold both ways.</div></div></div>
+    <div class="stage"><div class="s">4</div><div class="b"><div class="t">Repeat and resample</div><div class="d">The split into training and held-out episodes is redone 5 times and the score averaged; episodes are resampled 2,000 times per split to give the score its uncertainty.</div></div></div>
+  </div>
+  <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>
+  <pre>W = (X&#7488;X + &lambda;I)&#8315;&sup1; X&#7488;Y
+    size p &times; q, one column per unit of B
+
+R&sup2;(A&rarr;B) = 1 &minus; &Sigma;_j SSE_j / &Sigma;_j SST_j
+         = &Sigma;_j (SST_j / &Sigma;_k SST_k) &middot; R&sup2;_j
+
+P(A,B) = min( R&sup2;(A&rarr;B), R&sup2;(B&rarr;A) )</pre>
+  <p class="foot">SSE_j is unit j's squared prediction error on held-out moments; SST_j is its
+  variance around its mean. A plain, unweighted mean of the per-unit R&sup2; is shown in Figure A1b
+  as a check; on the actor and critic it is unusable, because units that fire on a fraction of a
+  percent of moments have unstable R&sup2; values (one missed spike can push a unit to &minus;7).</p>
+  <p>Why both directions matter shows in the toy scores below: when B knows something A does not,
+  B rebuilds A perfectly but A cannot rebuild B, and only the minimum catches it.</p>
+  <figure>
+    <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+    <div class="scroll figscroll"><img data-fig="pr02_toy_scores" alt="Grouped horizontal bars for five toy relationships between network A holding hunger and danger and five versions of network B. For each, four bars: R-squared predicting B from A, predicting A from B, their minimum, and linear CKA. Only the rescaled case lowers CKA alone; only the case where B knows more lowers the minimum."></div>
+    <p class="zoomhint">Click the figure to view it full size</p>
+    <figcaption>
+      <span><b>Figure P1 &mdash; The two measures on five toy relationships.</b></span>
+      <span><b>Axes.</b> Horizontal: the score, 0 to 1 with no unit, where 1 means the two layers match fully; for the R&sup2; bars it is the fraction of variance explained. Vertical: no quantity; one group of four bars per toy version of network B, named by what its units hold (h hunger, d danger, p a third quantity A does not have).</span>
+      {{DATA:pr02_toy_scores}}
+    </figcaption>
+    <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/pr02_toy_scores.py</code></p>
+    <div class="howto">
+      <p class="eyebrow">How it is computed</p>
+      <p>The script draws 2,000 toy moments in which hunger, danger and a third quantity are independent random numbers between 0 and 1. Network A's layer is the two columns hunger and danger. Each version of network B is built from the same moments: an exact copy; a mixture of the two quantities; each unit multiplied by its own factor, 3 and 0.5, which is what a modulator's per-unit gain does; the copy plus the third quantity; and a copy with danger squared. For each version the script fits an ordinary least-squares regression, a straight-line map with an intercept, from A to B and from B to A, and computes R&sup2;, the fraction of B's variance the map recovers, pooled over units so that each unit counts by its variance. The dark bar is the smaller of the two directions, the statistic that decides in this study. CKA is computed from the same two tables without fitting anything. Unlike the study, the toy scores the fit on the rows it was fitted on and uses no penalty: with at most three predictors and 2,000 rows, the difference is negligible. The figure does not show how the scores behave on real network layers, which have 128 units and far noisier structure.</p>
+    </div>
+  </figure>
+  </div>
+  </details>
+
+  <details class="primer-sub">
+  <summary>3. CKA step by step: comparing who-looks-like-whom tables</summary>
+  <div class="primer-body">
+  <p><strong>The Frobenius norm is &ldquo;length&rdquo; for a table of numbers.</strong> Line every
+  entry up into one long list and take its ordinary Pythagorean length:
+  <code style="white-space:nowrap">&#8214;M&#8214;_F&nbsp;=&nbsp;&radic;(&Sigma;&nbsp;M_ab&sup2;)</code>. For example, the table
+  <code>[[3,&nbsp;4],&nbsp;[0,&nbsp;0]]</code> has length &radic;(9 + 16) = 5. CKA uses it to measure the angle between
+  two tables.</p>
+  <div class="col stages">
+    <div class="stage"><div class="s">0</div><div class="b"><div class="t">Inputs</div><div class="d"><code>X</code>: n &times; p, network A. <code>Y</code>: n &times; q, network B. Same moments, same order.</div></div></div>
+    <div class="stage"><div class="s">1</div><div class="b"><div class="t">Centre each unit</div><div class="d">Subtract each unit's mean over the n moments. Sizes are unchanged: n &times; p and n &times; q.</div></div></div>
+    <div class="stage"><div class="s">2</div><div class="b"><div class="t">Build each network's similarity table</div><div class="d"><code>K = X X&#7488;</code> is (n &times; p)(p &times; n) = <strong>n &times; n</strong>; <code>L = Y Y&#7488;</code> is (n &times; q)(q &times; n) = <strong>n &times; n</strong>. Entry (a, b) is the dot product of moments a and b: positive when both deviate from the average in the same direction, negative when in opposite directions. p and q are used up here, so the two tables have the same size even when p &ne; q.</div></div></div>
+    <div class="stage"><div class="s">3</div><div class="b"><div class="t">Numerator: agreement</div><div class="d">Multiply matching entries of K and L and add all n &times; n products: one number. It grows when the tables agree in sign and size, and shrinks when they disagree in sign.</div></div></div>
+    <div class="stage"><div class="s">4</div><div class="b"><div class="t">Denominator: the two lengths</div><div class="d"><code>&#8214;K&#8214;_F</code> and <code>&#8214;L&#8214;_F</code>, two numbers. Dividing by them cancels how large each network's activity is, so only the direction of each table counts.</div></div></div>
+    <div class="stage"><div class="s">5</div><div class="b"><div class="t">CKA is the cosine between the two tables</div><div class="d">A number from 0 to 1: 1 when the tables point the same way, lower as they disagree.</div></div></div>
+  </div>
+  <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>
+  <pre>CKA = &Sigma;_ab K_ab L_ab / (&#8214;K&#8214;_F &middot; &#8214;L&#8214;_F)
+    (two n &times; n tables)
+
+    = &#8214;Y&#7488;X&#8214;_F&sup2; / (&#8214;X&#7488;X&#8214;_F &middot; &#8214;Y&#7488;Y&#8214;_F)
+    (q &times; p, p &times; p and q &times; q)</pre>
+  <p>The second line is the same number (the trace of a product can be cycled), computed from much
+  smaller matrices: with n = 5,000 and 128 units, 128 &times; 128 instead of two tables of 25 million
+  entries. The code uses it.</p>
+  <p>In Figure P2, network A puts three moments at three points. B1 is A rotated and B2 is A rotated
+  and enlarged: their tables are A's table or a multiple of it, so CKA is 1. B3 stretches one unit and
+  squeezes the other. It holds exactly A's information, since each unit can be scaled back, but the
+  m1&ndash;m2 pair now dominates the table, and CKA falls to 0.81. That is the modulator's per-unit gain
+  in miniature, and it is why CKA does not decide the verdict. B4 merges two moments that A kept apart,
+  a real change in what the network distinguishes, and CKA falls further.</p>
+  <figure>
+    <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+    <div class="scroll figscroll"><img data-fig="pr01_cka_toy_geometry" alt="Five columns: network A and four versions of network B. Top row: three labelled points in a two-unit activity space. Bottom row: the three-by-three table of dot products between moments, with printed values and each table's Frobenius length. Column titles give CKA with A: 1.00, 1.00, 1.00, 0.81 and 0.60."></div>
+    <p class="zoomhint">Click the figure to view it full size</p>
+    <figcaption>
+      <span><b>Figure P2 &mdash; What CKA compares, on three moments and two units.</b></span>
+      <span><b>Axes.</b> Top row: horizontal is the activity of unit 1 and vertical the activity of unit 2, in the toy's arbitrary activity units; the grey cross marks zero. Bottom row: rows and columns are the three moments m1, m2 and m3; each cell prints the dot product of the two moments' centred activity, and its shading shows the entry's size regardless of sign.</span>
+      {{DATA:pr01_cka_toy_geometry}}
+    </figcaption>
+    <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/pr01_cka_toy_geometry.py</code></p>
+    <div class="howto">
+      <p class="eyebrow">How it is computed</p>
+      <p>Network A places three moments at fixed points chosen by hand, so that each point sits in a different direction from the centre. The four versions of network B are built from A: B1 turns the whole picture a quarter turn; B2 does the same and makes everything five times larger; B3 multiplies unit 1 by 3 and unit 2 by 0.5, the kind of per-unit rescaling a modulator's gain applies; B4 moves the first two moments onto the same point, so the network no longer tells them apart. For each layer the script subtracts each unit's mean over the three moments, then fills the table with the dot product of every pair of moments: large and positive when two moments sit in the same direction from the centre, negative when they sit in opposite directions. The number under each table is its Frobenius length, the square root of the sum of its squared entries. CKA with A is the sum of the products of matching entries of the two tables, divided by the product of their lengths: the cosine of the angle between the two tables read as long lists of numbers. The figure does not show predictivity, which is trivially perfect with three moments and two units.</p>
+    </div>
+  </figure>
+  </div>
+  </details>
+
+  <details class="primer-sub">
+  <summary>4. From scores to the word printed on a panel of Figure A1</summary>
+  <div class="primer-body">
+  <p>A score alone means little: 0.85 can be high for one layer and low for another. So every score is
+  read against the same yardsticks, computed on the same moments:</p>
+  <ul class="plainlist">
+    <li><strong>The ordinary band [L, U]:</strong> the range spanned by the 3 pairs of ordinary agents
+    trained from different seeds, with their bootstrap uncertainty. It says how alike two agents of the
+    <em>same</em> design get.</li>
+    <li><strong>The test pairs:</strong> the 6 modulated-versus-ordinary pairs at different seeds.</li>
+    <li><strong>The untrained floor:</strong> pairs of untrained networks fed the same moments. If the
+    ordinary band overlaps it, training made agents no more alike than chance wiring does, the test
+    cannot discriminate, and the statistic reads &ldquo;uninformative&rdquo;.</li>
+  </ul>
+  <p>Each panel gets its word by the rule in Figure P3. If the two designs were really one population,
+  all 6 test pairs would land below every ordinary pair about 1 time in 84.</p>
+  <figure>
+    <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+    <div class="scroll figscroll"><img data-fig="pr03_verdict_rule" alt="Three made-up panels in the style of Figure A1, titled different, same and undetermined at 3 seeds. Each shows three blue ordinary pairs inside a shaded band with a dashed left edge L, six orange modulated-versus-ordinary pairs, and an orange bar for their mean's interval."></div>
+    <p class="zoomhint">Click the figure to view it full size</p>
+    <figcaption>
+      <span><b>Figure P3 &mdash; How one panel earns its word.</b></span>
+      <span><b>Axes.</b> Horizontal: a similarity score, higher meaning more alike, in the units of whichever statistic the panel shows (no unit for either). Vertical: no quantity; rows are, top to bottom, the ordinary pairs, the modulated-versus-ordinary pairs, and the interval of those pairs' mean.</span>
+      {{DATA:pr03_verdict_rule}}
+    </figcaption>
+    <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/pr03_verdict_rule.py</code></p>
+    <div class="howto">
+      <p class="eyebrow">How it is computed</p>
+      <p>The positions are invented, one panel per word the registered rule can give; the script checks each panel against the rule as the rules file states it and refuses to draw a panel whose toy values would read differently. In the study, the blue dots are the three pairs of ordinary agents trained from different seeds, and the shaded band runs from the lowest to the highest end of their bootstrap intervals, the ranges their scores take when the episodes are resampled; its left edge is L. The orange dots are the six pairs of one modulated and one ordinary agent from different seeds, and the orange bar is the 5th-to-95th percentile range of those six pairs' mean across the resamples. A panel reads &ldquo;different&rdquo; when all six dots and the whole bar sit left of L. It reads &ldquo;same&rdquo; when at most two of the six dots sit left of L and the whole bar sits at or right of L. Everything in between reads &ldquo;undetermined at 3 seeds&rdquo;, a legal outcome rather than a failure: three seeds can only call a difference when the separation is complete. The figure does not show the untrained floor or the gate that turns a panel &ldquo;uninformative&rdquo;.</p>
+    </div>
+  </figure>
+  <p><strong>Two panels per layer, one verdict.</strong> Each layer has a predictivity panel and a CKA
+  panel, and each earns its own word. A fixed table then combines them, and predictivity's word sets
+  the layer verdict:</p>
+  <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>
+  <div class="scroll"><table class="twocol">
+    <thead><tr><th>Predictivity panel</th><th>CKA panel</th><th>Layer verdict</th></tr></thead>
+    <tbody>
+      <tr><td>same</td><td>same</td><td>same</td></tr>
+      <tr><td>same</td><td>different, undetermined or uninformative</td><td>same, up to a re-weighting of units</td></tr>
+      <tr><td>different</td><td>any</td><td>different</td></tr>
+      <tr><td>undetermined</td><td>any</td><td>undetermined at 3 seeds</td></tr>
+      <tr><td>uninformative</td><td>any</td><td>uninformative &mdash; no verdict</td></tr>
+    </tbody>
+  </table></div>
+  <p>Worked example, the memory state row of Figure A1: the predictivity panel reads
+  &ldquo;uninformative&rdquo; (the grey untrained pairs sit inside the ordinary band), the CKA panel reads
+  &ldquo;different&rdquo; (all six orange dots left of the band), and the layer verdict is
+  &ldquo;uninformative (no verdict)&rdquo;. CKA's word is shown but does not count. That is the whole
+  meaning of &ldquo;CKA decides nothing&rdquo;: if it decided, a panel could read &ldquo;different&rdquo;
+  only because the modulator rescales units, as B3 in Figure P2 does.</p>
+  </div>
+  </details>
+
+  <details class="primer-sub">
+  <summary>5. The fMRI analogy, and the maths that connects them</summary>
+  <div class="primer-body">
+  <p>For a reader who knows fMRI, the setup maps almost one to one:</p>
+  <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>
+  <div class="scroll"><table class="prose2">
+    <thead><tr><th>This study</th><th>fMRI</th></tr></thead>
+    <tbody>
+      <tr><td>two agents, A and B</td><td>two subjects</td></tr>
+      <tr><td>units of one layer (p, q)</td><td>voxels of one region; no voxel-to-voxel correspondence across subjects</td></tr>
+      <tr><td>moments (the n rows)</td><td>trials or conditions (first-level beta patterns)</td></tr>
+      <tr><td>every agent replayed on the same recorded moments</td><td>every subject shown the same trials</td></tr>
+      <tr><td>the n &times; n table K</td><td>a trial-by-trial similarity matrix, as in representational similarity analysis (RSA){{CITE:kriegeskorte}}</td></tr>
+      <tr><td>CKA</td><td>comparing two subjects' similarity matrices: cross-subject RSA</td></tr>
+      <tr><td>linear predictivity</td><td>a cross-validated linear map from one subject's voxels to another's, in the spirit of hyperalignment{{CITE:haxby}}</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>The mathematical connection.</strong> An RSA dissimilarity matrix and the table K carry the
+  same information. For centred patterns, the squared Euclidean distance between two moments is built
+  from K, and K can be recovered from the distances by double centring (the step classical
+  multidimensional scaling uses):</p>
+  <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>
+  <pre>D_ab = &#8214;x_a &minus; x_b&#8214;&sup2; = K_aa + K_bb &minus; 2 K_ab
+K = &minus;&frac12; H D H
+H = I &minus; (1/n) 1 1&#7488;    (n &times; n)</pre>
+  <p>So linear CKA is RSA with three specific choices: Euclidean geometry on centred activity (so the
+  size of each response matters, where RSA often uses correlation distance), all n &times; n entries
+  including the diagonal (RSA usually uses the upper triangle only), and a cosine to compare the two
+  tables (RSA often uses a rank correlation). Linear CKA is also the same quantity as the RV coefficient
+  of multivariate statistics{{CITE:robert}}.</p>
+  <p>Linear predictivity is closer to hyperalignment, with two differences: hyperalignment maps subjects
+  into a common space with a rotation, while predictivity allows any linear map, which also absorbs a
+  rescaling of individual voxels (units); and predictivity is scored on held-out trials, like a
+  cross-validated encoding model whose features are the other subject's voxels.</p>
+  <p>What each is blind to follows from the maths. CKA is unchanged by rotations and by one overall
+  scale, but not by rescaling units one at a time. Predictivity is unchanged by any invertible linear
+  change of the predicting layer's units, because the fitted map can undo it.</p>
+  </div>
+  </details>
+
+  <details class="primer-sub">
+  <summary>6. Does the score not depend on which moments were used?</summary>
+  <div class="primer-body">
+  <p>It does. Like an RSA result, CKA and predictivity describe two networks <em>on a given set of
+  moments</em>, and a different set would give different absolute values. The study does not try to
+  remove that; it makes the moment set cancel out of the comparison, in four ways:</p>
+  <ul class="plainlist">
+    <li><strong>Identical moments for every pair.</strong> All six agents are replayed frame by frame on
+    the same recorded episodes, so any difference between two tables comes from the networks, not the
+    inputs.</li>
+    <li><strong>A relative yardstick.</strong> The verdict compares modulated-versus-ordinary pairs with
+    ordinary-versus-ordinary pairs scored on the same moments. Whatever the moment set does to the
+    scores, it does to both groups, as in asking whether between-group subject pairs are less similar
+    than within-group pairs on the same stimuli.</li>
+    <li><strong>An untrained floor.</strong> Untrained networks fed the same moments show how much
+    similarity the inputs alone produce; a layer where trained agents are no more alike than that gets
+    no verdict.</li>
+    <li><strong>Measured sampling uncertainty.</strong> Resampling whole episodes 2,000 times shows how
+    far each score moves under a different sample from the same kind of moments.</li>
+  </ul>
+  <p>What remains is a real limit: this removes dependence on <em>which sample</em> of moments, not on
+  <em>what kind</em>. The probe is the agents' own behaviour in these worlds, where about 94% of episodes
+  run to the step cap. A probe made of near-death moments, or from another world, could read
+  differently. The claim is &ldquo;different on the situations these agents actually meet&rdquo;, not
+  &ldquo;different in general&rdquo;. A4 was the planned check across worlds; it is blocked by its gate.</p>
+  </div>
+  </details>
+  </div>
+  </details>
+  <!-- PRIMER END -->
+
+  <div class="plans">
+  <div class="plan" id="a1">
+    <div class="plan-top"><span class="plan-id">A1</span><h3>Layer similarity</h3><span class="pstat ready">Measured, reviewed</span></div>
+    <p>Centred kernel alignment{{CITE:kornblith}} asks whether two layers arrange the same set of inputs
+    in the same way: whether inputs that look alike to one agent's layer also look alike to the other's.
+    It compares layers of different networks without needing their units to line up.</p>
+    <p class="foot">New to these measures? The primer just above this card builds both from toy examples.</p>
+    <dl>
+      <dt>Layers</dt><dd>Encoder output, memory state, memory output, actor and critic hidden layers; for
+      the modulated agent both before and after the gain and offset are applied.</dd>
+      <dt>Caution</dt><dd>Linear CKA ignores rotations and uniform scaling but not per-unit rescaling,
+      which is exactly what the modulator's large fixed gain does. It is paired with a rescaling-robust
+      measure (SVCCA{{CITE:raghu}}, or how well one agent's layer linearly predicts the other's).</dd>
+      <dt>Reads as</dt><dd>High similarity beyond the seed yardstick (A3): the agents represent the world
+      the same way. High only within the same seed: inherited from the shared start.</dd>
+      <dt>Registered statistic</dt><dd>Mutual linear predictivity: how much of one agent's layer activity
+      a linear map from the other agent's layer recovers on held-out episodes, taking the weaker of the
+      two directions. CKA is reported beside it and decides nothing.</dd>
+    </dl>
+    <h4>Result, end of training</h4>
+    <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways; the right-hand columns are cut off</p>
+    <div class="scroll"><table class="evidence verdicts">
+      <thead><tr><th>Layer</th><th>Modulator acts here?</th><th>End of training</th><th>End of stage 1 (interim)</th></tr></thead>
+      <tbody>
+        <tr><td>Encoder output</td><td>yes</td><td>different: all 6 modulated&ndash;ordinary pairs below the ordinary band, both directions</td><td>different</td></tr>
+        <tr><td>Memory state (carried from step to step)</td><td>no; only its input is modulated upstream</td><td>no verdict (the test cannot tell trained from untrained networks here)</td><td>different</td></tr>
+        <tr><td>Memory output</td><td>yes</td><td>no verdict (same reason)</td><td>different</td></tr>
+        <tr><td>Actor hidden layer</td><td>yes</td><td>different: all 6 pairs below the band, both directions</td><td>different</td></tr>
+        <tr><td>Critic hidden layer</td><td>yes</td><td>different: all 6 pairs below the band</td><td>undetermined</td></tr>
+      </tbody>
+    </table></div>
+    <p class="foot">Interim readings are provisional by rule; the end-of-training reading is the verdict.
+    Encoder and critic also carry the rules' qualifier that modulated agents differ among themselves
+    more than ordinary agents do; in words, the modulated&ndash;modulated pairs sit below the ordinary
+    band on every layer.</p>
+    <ul class="plainlist">
+      <li><strong>The three layers that differ are all places where the modulator acts.</strong> Each
+      receives the modulator's gain and offset by construction, so the result says the agents are
+      different at the layers the modulator acts on. It does not say the main network learned a
+      different function.</li>
+      <li><strong>Critic:</strong> different; the modulated critic carries activity the ordinary critic
+      cannot predict, and keeps more of its units active (58&ndash;66 vs 37&ndash;48 of 128).</li>
+      <li><strong>Memory:</strong> on the memory layers the registered test cannot tell trained from
+      untrained networks, so it gives no verdict; the secondary measure (CKA, reported, not
+      verdict-bearing) puts modulated-vs-ordinary below the ordinary band on all 6 pairs there too.</li>
+      <li><strong>Why the memory reading changed between stage 1 and the end.</strong> The memory
+      layers read "different" at the end of stage 1 and "no verdict" at the end of training. That is a
+      change in a gate, not in the agents: the rules refuse a verdict where untrained networks score as
+      high as trained ones, and between the two points the ordinary band moved up until it touched the
+      untrained band. The critic moved the other way, from "undetermined" to "different".</li>
+      <li><strong>Other ways of scoring it</strong> (Figure A1b, descriptive): the direction a fixed
+      per-unit gain cannot change, modulated predicting ordinary, is below every ordinary pair for all
+      6 pairs on the encoder, both memory layers and the actor; on the critic it overlaps.</li>
+    </ul>
+    <figure>
+      <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+      <div class="scroll figscroll"><img data-fig="an01_similarity_layers" alt="Five rows, one per network layer, each with two panels of horizontal dot strips: pairs of ordinary agents, modulated-versus-ordinary pairs at different seeds with their mean, pairs of modulated agents, and pairs of untrained networks, against a shaded ordinary-versus-ordinary band. The left column prints each layer's verdict text."></div>
+      <p class="zoomhint">Click the figure to view it full size</p>
+      <figcaption>
+        <span><b>Figure A1 &mdash; How alike two agents' layers are, pair by pair.</b></span>
+        <span><b>Axes.</b> Horizontal, left panel of each row: mutual linear predictivity, the held-out R&sup2; (fraction of variance explained, 0 to 1, no unit) of the weaker of the two directions in which one agent's layer linearly predicts the other's. Horizontal, right panel: linear CKA, a 0-to-1 similarity of the two layers' geometry. Vertical: no quantity; the rows inside each panel are, top to bottom, ordinary&ndash;ordinary pairs, modulated&ndash;ordinary pairs at different seeds, the bootstrap interval of their mean, modulated&ndash;modulated pairs and untrained&ndash;untrained pairs. Each panel has its own horizontal range; no axis starts at zero.</span>
+        {{DATA:an01_similarity_layers}}
+      </figcaption>
+      <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/an01_similarity_layers.py</code></p>
+      <div class="howto">
+        <p class="eyebrow">How it is computed</p>
+        <p>Every stored episode of the probe is replayed through each agent with its memory reset at the first step, so all agents see exactly the same inputs, and a few steps per episode are kept. For every pair of agents and every layer, a ridge regression, a linear map with a penalty that keeps it from overfitting, is fitted on some episodes and scored on episodes it never saw, in both directions; the figure shows the weaker direction, which is the registered statistic. CKA compares the two layers without fitting anything. Each horizontal line is a bootstrap interval: the pairs' scores recomputed on resampled groups of episodes, 5th to 95th percentile. The shaded band is the range spanned by the three ordinary&ndash;ordinary pairs, the yardstick for how alike two independently trained ordinary agents are. The words in the left column are printed verbatim from the pre-registered decision rules' evaluator, for the agents at the end of training. Beneath them is the interim reading from the end of the first of five training stages, marked as provisional; where the two differ, the rules' own wording says the verdict changed between the two points. The figure does not show where inside a layer the agents differ, and it does not show the same-seed pairs, which are Figure A3.</p>
+      </div>
+    </figure>
+    <figure>
+      <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+      <div class="scroll figscroll"><img data-fig="an04_similarity_robustness" alt="A grid of dot-strip panels: one row per layer, one column per scoring variant. Each panel has three strips, the weaker direction, ordinary to modulated, and modulated to ordinary, with ordinary pairs in blue and modulated-ordinary pairs in orange."></div>
+      <p class="zoomhint">Click the figure to view it full size</p>
+      <figcaption>
+        <span><b>Figure A1b &mdash; Whether the gap survives other ways of scoring it.</b></span>
+        <span><b>Axes.</b> Horizontal: held-out R&sup2; (fraction of variance explained, no unit) of a linear map from one agent's layer to the other's. Vertical: no quantity; three strips per panel, top to bottom, the weaker of the two directions, ordinary predicting modulated, and modulated predicting ordinary. Columns: scoring variants; rows: layers. Each panel has its own horizontal range.</span>
+        {{DATA:an04_similarity_robustness}}
+      </figcaption>
+      <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/an04_similarity_robustness.py</code></p>
+      <div class="howto">
+        <p class="eyebrow">How it is computed</p>
+        <p>The registered similarity score takes the weaker of two directions of linear prediction, which could hide a direction-specific artefact. This figure breaks the score apart. It shows each direction on its own, including the supporting read registered with the rules: how well the modulated agent's layer predicts the ordinary agent's, the one direction that a fixed per-unit gain from the modulator cannot change. Each column recomputes the scores a different way: as registered; without predictor units that are active on almost no rows, which can make the fit unstable; with a floor on the scale used to standardise each unit; and as a plain average over units instead of weighting each unit by its variance. A difference between the two agents that appears in every column, in both directions, is unlikely to be an artefact of any one scoring choice. None of these columns decides anything: they are descriptive checks written beside the verdict, and the verdict remains the one in Figure A1. The scores come from the same stored episodes, the same held-out split and the same pairs as Figure A1. The figure does not show bootstrap intervals, only point values averaged over the split repeats. An unweighted score can fall far below zero when a unit barely varies on the held-out episodes, so a panel holding such values is cut at zero and says how many it leaves out.</p>
+      </div>
+    </figure>
+    <figure>
+      <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+      <div class="scroll figscroll"><img data-fig="an03_seed_yardstick" alt="Left, five panels of dot strips per layer comparing ordinary pairs, modulated-ordinary pairs at different seeds, modulated-ordinary pairs at the same seed, and modulated pairs. Right, the six runs' survival near a line at the step cap, and the survival difference with a narrow and a wide error bar."></div>
+      <p class="zoomhint">Click the figure to view it full size</p>
+      <figcaption>
+        <span><b>Figure A3 &mdash; Same seed against different seeds, and the survival that goes with it.</b></span>
+        <span><b>Axes.</b> Left panels, horizontal: mutual linear predictivity, the held-out R&sup2; (no unit) of the weaker prediction direction between two agents' layers; vertical: the four kinds of pair, labelled on the axis. Top right, horizontal: the two kinds of agent; vertical: survival in steps, averaged over the last episodes of the stage in the training log, with the episode step cap drawn as a line. Bottom right, horizontal: modulated minus ordinary survival in steps; vertical: the two error bars. No axis starts at zero.</span>
+        {{DATA:an03_seed_yardstick}}
+      </figcaption>
+      <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/an03_seed_yardstick.py</code></p>
+      <div class="howto">
+        <p class="eyebrow">How it is computed</p>
+        <p>A modulated agent and an ordinary agent trained with the same seed start from identical main-network weights, which was checked array by array. If they end up alike only when they share a seed, the likeness was inherited from that start rather than forced by the task. The left panels therefore place four kinds of pair side by side for every layer, using the same statistic and bootstrap intervals as Figure A1. The text above each panel is the evaluator's pattern for that layer, printed verbatim, together with whether the same-seed pairs stand out above all different-seed pairs, which the rules call the same-seed excess. The pattern also depends on whether the two agents survive equally long, so the right panels show survival. Two facts qualify that comparison. Most of the probe's episodes reach the step cap, so survival is measured close to a ceiling. And the pre-registered test widens the standard error, the expected size of chance differences between the two arms' means, to a registered floor: the difference lies inside the floored band but outside the raw one. The figure does not show why the patterns arise.</p>
+      </div>
+    </figure>
+  </div>
+
+  <div class="plan" id="a2">
+    <div class="plan-top"><span class="plan-id">A2</span><h3>Decoding profiles</h3><span class="pstat ready">Measured, reviewed</span></div>
+    <p>A small linear readout is trained to recover a quantity from each layer. How well it succeeds,
+    layer by layer, is that agent's decoding profile.</p>
+    <dl>
+      <dt>Quantities</dt><dd>Hunger (<code>satiation</code>), injury (<code>injury_level</code>), distance to
+      the nearest predator, and value, measured as survival steps remaining in the episode.</dd>
+      <dt>Caution</dt><dd>Readouts are trained and tested on different <em>episodes</em>, never on
+      different steps of the same episode, because neighbouring steps are nearly identical and a
+      step-level split inflates every score.</dd>
+      <dt>Reads as</dt><dd>Matching profiles: the same information is present in the same places. A
+      mismatch shows where the modulated agent holds information differently.</dd>
+    </dl>
+    <h4>Result, end of training</h4>
+    <ul class="plainlist">
+      <li><strong>Hunger</strong> (registered reading: differs): hunger is slightly less linearly readable
+      from the modulated agent's encoder output and memory state (R&sup2; lower by ~0.02); both agents
+      encode it at every layer, far above the clock baseline.</li>
+      <li><strong>Injury</strong> (registered reading: undetermined): descriptively, the modulated
+      agent's encoder output holds the body's injury level better (R&sup2; higher by about 0.22). That
+      is one layer, and the rules do not count a one-layer difference.</li>
+      <li><strong>Distance to the nearest predator</strong> (undetermined): a one-layer difference at the
+      critic, not counted.</li>
+      <li><strong>Survival steps remaining</strong>: blocked by gate G6. Only episodes that end in death
+      have a known remaining lifetime, and too few of them remain for the minimum number of held-out
+      episode groups the rules require.</li>
+    </ul>
+    <figure>
+      <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+      <div class="scroll figscroll"><img data-fig="an02_decoding_profiles" alt="Four panels. Three show held-out R-squared across six layers from the raw input to the critic, one thin line per agent in blue or orange, shaded seed ranges and a dashed clock baseline. The fourth, survival steps remaining, is a grey box stating it is blocked by a gate."></div>
+      <p class="zoomhint">Click the figure to view it full size</p>
+      <figcaption>
+        <span><b>Figure A2 &mdash; Where each agent holds hunger, injury, predator distance and remaining lifetime.</b></span>
+        <span><b>Axes.</b> Horizontal: the layer read, from the raw network input to the critic's hidden layer; categories, not a scale. Vertical: held-out R&sup2;, the fraction of the quantity's variance a linear readout recovers on episodes it never saw (1 = perfect, 0 = no better than the average, negative = worse). Each panel has its own vertical range. The dashed line is the clock baseline in the same unit.</span>
+        {{DATA:an02_decoding_profiles}}
+      </figcaption>
+      <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/an02_decoding_profiles.py</code></p>
+      <div class="howto">
+        <p class="eyebrow">How it is computed</p>
+        <p>Every stored episode of the probe is replayed through each agent, and a ridge readout, a linear map with a penalty against overfitting, is trained to recover one quantity from one layer. It is trained on some episodes and scored on others, split by episode rather than by step, because neighbouring steps are nearly identical and a step-level split would inflate every score. The same splits are used for every agent, so the lines are directly comparable. The dashed line is what the time step alone can predict, fitted as the average of the quantity at each step; a layer that barely beats it holds little beyond a clock. Remaining survival uses only episodes that ended in death, because an episode cut off at the step cap has no known remaining lifetime; so few such episodes remain that the rules' minimum number of held-out episode groups is not met, and the panel shows that it is blocked instead of a number. The words in each title are the evaluator's, verbatim. The figure does not show the untrained networks or the all-episode version of remaining survival, which decides nothing.</p>
+      </div>
+    </figure>
+    <figure>
+      <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+      <div class="scroll figscroll"><img data-fig="an06_pilot_controls" alt="A table titled tool validation, shared seed 42, not evidence, listing eleven controls with where each is registered, its bound, and its value for the ordinary and the modulated pilot agent."></div>
+      <p class="zoomhint">Click the figure to view it full size</p>
+      <figcaption>
+        <span><b>Figure P &mdash; The tool checks, run on one pair of agents that share a seed.</b></span>
+        <span><b>Axes.</b> None: this is a table drawn as an image. Rows are controls; columns are where the bound is registered, the bound, and each pilot agent's value. Agreement values are fractions from 0 to 1; deviations are relative (no unit); R&sup2; is a fraction of variance explained.</span>
+        {{DATA:an06_pilot_controls}}
+      </figcaption>
+      <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/an06_pilot_controls.py</code></p>
+      <div class="howto">
+        <p class="eyebrow">How it is computed</p>
+        <p>Before any comparison of agents can be trusted, the tools that produce it must be shown to work. The pilot runs every analysis on one pair from an earlier study, an ordinary and a modulated agent that share seed 42, which is why its numbers are never evidence about the agents. Each row is one check. Replaying a stored episode through the agent that generated it must reproduce every stored action. The rows the analysis reads must line up with the step they claim, and shifting them by one step must break that agreement, which proves the check can fail. The captured layer activity must reconstruct the network's own outputs. The kept rows must equal a full replay, and the same comparison with rows deliberately planted one step off must fail by a wide margin. An agent compared with itself must score exactly 1. A readout must recover hunger from the raw input, since hunger is observed directly, and must fail on shuffled targets. The bounds are the ones the drivers read from the pre-registered rules and the manifest; the table prints them beside the values. The figure says nothing about whether the two agents are alike.</p>
+      </div>
+    </figure>
+  </div>
+
+  <div class="plan" id="a3">
+    <div class="plan-top"><span class="plan-id">A3</span><h3>Seed yardstick</h3><span class="pstat ready">Measured, reviewed</span></div>
+    <p>A similarity between the modulated and ordinary agent means little on its own. It is judged
+    against the similarity between two ordinary agents trained from different seeds.</p>
+    <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways; the right-hand columns are cut off</p>
+    <div class="scroll"><table class="twocol">
+      <thead><tr><th>Pattern</th><th>Reading</th></tr></thead>
+      <tbody>
+        <tr><td>modulated (seed 42) is closer to ordinary (seed 42) than ordinary seeds 42 and 43 are to each other</td><td>inherited from the shared start</td></tr>
+        <tr><td>all three distances about equal</td><td>the task forces one kind of solution</td></tr>
+        <tr><td>modulated&ndash;ordinary distance larger than the seed distance, same score</td><td>different processing, same outcome</td></tr>
+      </tbody>
+    </table></div>
+    <dl>
+      <dt>Data</dt><dd>The May replication: 3 seeds of each agent, trained to the end of all five stages.
+      It is the only design on disk with several seeds of both agents that loads under current code.
+      Same-seed agents were checked to start from bitwise identical main-network weights.</dd>
+    </dl>
+    <h4>Result, end of training</h4>
+    <p>Pattern (c), <strong>different processing, same outcome, at the ceiling</strong>: both agents
+    reach the 500-step cap in about 94&nbsp;% of episodes; the 1.5-step gap is inside the registered
+    seed-noise floor (3.6), though outside the raw standard error (0.7). The same-seed pairs are no closer than different-seed pairs, so the difference
+    is not an inheritance from the shared start. Pattern (c) holds on exactly 3 of 5 layers (encoder,
+    actor, critic), the minimum the rules require; the two memory layers get no verdict ("none of the
+    three patterns"), because A1 gives none there. The results are in Figure A3 above.</p>
+  </div>
+
+  <div class="plan" id="a4">
+    <div class="plan-top"><span class="plan-id">A4</span><h3>Across worlds</h3><span class="pstat wait">Measured &mdash; no verdict</span></div>
+    <p class="slot"><b>Status:</b> computed on all six agents at every stage end, and <b>blocked by gate G4</b>, so the registered rules allow no verdict on any layer. G4 is a check that the analysis can recover what the network is directly given: hunger (satiation) is one of the agent's own sensor readings, so a fit from the raw input must reach R&sup2; &ge; 0.99. On the passive world (the stages where the predator does not hunt) it reached 0.989; on the active world 0.992. The margin is small, but the threshold was registered before the data existed, and it is not moved after seeing the result. The data are not at fault: the stored hunger values match the sensor exactly. The shortfall comes from the check's own registered input step, a signed-log transform that costs more accuracy on the passive world, where hunger values are spread differently. Deciding how that case should read needs a revision of the rules, which is a decision for the study owner; until then the movement numbers carry no verdict and are not shown.</p>
+    <p>How far each agent's processing moves between worlds, and whether the two agents move together.
+    If both change a great deal from world to world while staying close to each other, their shared
+    processing tracks the world rather than the architecture.</p>
+    <dl>
+      <dt>Data</dt><dd>The May replication's stages, which are different worlds. The level-05 factorial has
+      16 worlds but every pair there shares seed 42, so it cannot separate the two explanations on its
+      own.</dd>
+    </dl>
+  </div>
+  </div>
+
+  <h4>How Question 1 was run</h4>
+  <div class="col stages">
+    <div class="stage"><div class="s">1</div><div class="b"><div class="t">Capture intermediate layers &mdash; done</div><div class="d">An opt-in path in the network returns each layer's activity, with a test that switching it on changes no output.</div></div></div>
+    <div class="stage"><div class="s">2</div><div class="b"><div class="t">Replay stored episodes through an agent &mdash; done</div><div class="d">Trajectory stores hold the exact observation the policy saw at each step (<code>obs_noised</code>) and the true hunger, injury and positions; every agent reproduces its own stored actions on replay.</div></div></div>
+    <div class="stage"><div class="s">3</div><div class="b"><div class="t">Similarity and decoding scripts &mdash; done</div><div class="d">Episode-level splits; a rescaling-robust measure as the registered statistic, CKA beside it.</div></div></div>
+    <div class="stage"><div class="s">4</div><div class="b"><div class="t">Pilot on a level-05 pair &mdash; done</div><div class="d">A test of the tools, not evidence: that pair shares a seed (Figure P).</div></div></div>
+    <div class="stage"><div class="s">5</div><div class="b"><div class="t">Run on the May replication &mdash; done for the end of training and for the across-worlds step (A4, blocked by gate G4)</div><div class="d">All six agents, layer by layer, at every stage end.</div></div></div>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">04</span>Question 2: why does the modulator not help?</h2>
+  <p>These test the first and third candidate reasons directly. They come second because their
+  results are easier to read once Question 1 has said what the two agents share. B2 has been measured
+  and reviewed; B1 needs new training and a decision to launch it.</p>
+
+  <div class="plans">
+  <div class="plan" id="b1">
+    <div class="plan-top"><span class="plan-id">B1</span><h3>Break the shared start</h3><span class="pstat decide">Needs a decision</span></div>
+    <p class="slot"><b>Status:</b> needs a decision. Either option means training new agents; nothing
+    has been launched.</p>
+    <p>Two ways to stop the modulated agent from beginning as a copy of the ordinary one.</p>
+    <ul class="plainlist">
+      <li>Train modulated agents whose main network starts from a <strong>different seed</strong> than
+      their paired ordinary agent.</li>
+      <li>Or keep the same seed but give the modulator a <strong>stronger start</strong>: output heads
+      initialised to zero so the gain is exactly 1 and the offset exactly 0, plus a learning rate of its
+      own so its early updates are not swamped.</li>
+    </ul>
+    <dl>
+      <dt>Reads as</dt><dd>If the gaps then scatter at the size of ordinary seed-to-seed differences, the
+      shared start produced the identical results. If they stay pinned near zero, the equivalence is real.</dd>
+    </dl>
+  </div>
+
+  <div class="plan" id="b2">
+    <div class="plan-top"><span class="plan-id">B2</span><h3>When the modulator starts to matter</h3><span class="pstat ready">Measured, reviewed</span></div>
+    <p>Four kinds of measure of when the modulator starts to matter during training, because each can
+    mislead on its own. They were read on 16 worlds of the level-05 body-rules factorial (one seed
+    each, 50 saved checkpoints) and, descriptively, on the three modulated May-replication seeds.</p>
+    <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways; the right-hand columns are cut off</p>
+    <div class="scroll"><table class="twocol">
+      <thead><tr><th>Measure</th><th>What it answers</th></tr></thead>
+      <tbody>
+        <tr><td>Share of the gradient reaching the modulator, split by loss term</td><td>How much of the learning signal it receives</td></tr>
+        <tr><td>Size of its weight updates relative to its weights, against the main network's</td><td>How fast it actually changes (Adam rescales gradients, so the share alone can mislead)</td></tr>
+        <tr><td>How much its output varies with the situation, at each checkpoint</td><td>When its output starts responding</td></tr>
+        <tr><td>Cost of freezing it, at a subset of checkpoints</td><td>When it becomes something the network relies on</td></tr>
+      </tbody>
+    </table></div>
+    <dl>
+      <dt>Summary</dt><dd><strong>Wake-up lag</strong>: the wake point minus the survival plateau, in
+      checkpoints. The wake point is the first checkpoint at which a measure has covered half of its
+      change from the untrained network's value to its final value, in the direction it actually moves,
+      and stays there; no point is named when that change is within the curve's own
+      checkpoint-to-checkpoint noise. The plateau is the checkpoint at which survival has covered 90% of
+      its rise. A lag within one checkpoint either way counts as coincident. Across worlds, a sign test
+      reads each measure as "late", "early" or "undetermined". (An earlier draft used half of the
+      final value; that version was withdrawn because several measures start above half their final
+      value, so it would be met at the very first checkpoint.)</dd>
+      <dt>Refutation</dt><dd>As registered: a measure reading "early" refutes the explanation "the
+      modulated agent does not learn faster because the modulator wakes up late"; a measure reading
+      "late" supports it. "Undetermined" does neither. The rules do not combine measures.</dd>
+      <dt>Also</dt><dd>The success test for B1's stronger start: it should pull the wake-up earlier. If the
+      lag shrinks but learning speed does not change, late wake-up was not the cause.</dd>
+    </dl>
+    <h4>Result</h4>
+    <ul class="plainlist">
+      <li><strong>Gain swing, late.</strong> The weights-only ceiling on how far the modulator could
+      move each gain (the gain swing) grows throughout training, roughly linearly, so the point where it
+      has made half of its rise comes after the survival plateau in all 16 worlds (the three May seeds
+      agree). Five sites, one measure. The main network's own total weight norm, read with the same
+      rule, is also "late" in all 16 worlds, so this reading reflects how weight norms grow in this
+      trainer, not a late awakening of the modulator.</li>
+      <li><strong>Contextual fraction, early.</strong> The share of the modulator's gain signal that
+      varies with the situation (rho) is lower at the end of training than at the untrained network, at
+      the encoder and recurrent sites in all 16 worlds; half of that fall is complete by the first saved
+      checkpoints, well before survival levels off ("early" in 15&ndash;16 of 16). At the actor and
+      critic sites no consistent timing is found.</li>
+      <li><strong>Update size and gradient probes.</strong> The modulator's relative step per
+      checkpoint interval is roughly constant (&asymp; 0.10) across training; where its small net
+      change clears the noise guard, its half-point is early. The share of the entropy-term gradient
+      reaching the modulator rises from near zero at the untrained network to 8&ndash;37&nbsp;% by the
+      first saved checkpoint (early, 12 of 12 defined). The policy- and value-term shares from the
+      single-batch probe are too noisy for the timing rule (no reading), as is the logged total
+      share.</li>
+      <li><strong>Freeze cost, no timing reading.</strong> Freezing the gain or the offset at its
+      time-averaged value gives no timing reading: the cost's checkpoint-to-checkpoint wobble
+      (11&ndash;28 survival steps) is as large as its net change over training, so the rule names no
+      wake point in 15 of 16 worlds. This says nothing about the size of the cost. Descriptively, after
+      the plateau the frozen agent survives fewer steps in every world (mean &minus;33 steps for the
+      gain, &minus;31 for the offset, against roughly 250 live); no test of that difference was
+      registered.</li>
+      <li><strong>The registered refutation, both ways.</strong> Here the modulator's realised output
+      (rho at three sites), its entropy-gradient share and its update size read "early", which refutes
+      the late-wake explanation for those measures; only the weights-only gain-swing ceiling reads
+      "late", which supports it. The rules do not combine measures, so no single timing verdict
+      exists.</li>
+    </ul>
+    <figure>
+      <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+      <div class="scroll figscroll"><img data-fig="an05_wakeup" alt="A grid of small line charts over ten million training episodes: survival with ringed plateau points, then seventeen modulator measures, each with one grey line per level-05 world and dark wake points. Below, a dot plot of each run's wake point minus its survival plateau per measure, with a shaded coincidence band and the reading text for each measure."></div>
+      <p class="zoomhint">Click the figure to view it full size</p>
+      <figcaption>
+        <span><b>Figure B2 &mdash; When the modulator starts to matter, measured seventeen ways.</b></span>
+        <span><b>Axes.</b> Small panels, horizontal: training episodes, in millions; vertical: the measure named in the panel title, each on its own scale (survival in steps; gradient shares and contextual fractions from 0 to 1; relative update size as a ratio; gain swing in gain units; freeze cost in survival steps; the main network's weight norm, the descriptive control, as a parameter norm). Lower panel, horizontal: a run's wake point minus its survival plateau, counted in saved checkpoints; vertical: the measures, as categories.</span>
+        {{DATA:an05_wakeup}}
+      </figcaption>
+      <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/an05_wakeup.py</code></p>
+      <div class="howto">
+        <p class="eyebrow">How it is computed</p>
+        <p>Each modulated training run was reloaded at every saved checkpoint and at its untrained start. At each point the analysis measured how much of the learning signal reaches the modulator, how much its weights change, how much of its output follows the situation rather than staying fixed, how large its gain swings are, and how much survival is lost when its gain or its offset is frozen. For each run and measure, a pre-registered rule names the wake point: the first checkpoint where the measure has made half of its total change and stays there, provided that change is larger than the curve's own noise. Survival from the training log gives the plateau, the checkpoint where survival reaches 90% of its rise. The lower panel shows each run's wake point minus its plateau, in checkpoints; the shaded band is where the two count as coincident. The text on the right is the reading across worlds from a sign test over the level-05 worlds, printed verbatim; no single run's point carries a word, because the registered caveat below says one run's wake point can arise from noise alone. The seeds of the May replication are shown only as lags. One panel and one row are not registered: the main network's own weight norm, put through the same rule as a control, shows how any steadily growing weight norm reads. The figure does not show whether any cost or difference is statistically significant; no such test was registered.</p>
+      </div>
+    </figure>
+  </div>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">05</span>What this changes for the modulator question</h2>
+  <p>The final goal is a modulator that helps. Three results bear on it directly; each is stated here
+  only as far as the reviews allow.</p>
+  <ul class="plainlist">
+    <li><strong>The modulator's own sites are different.</strong> At the encoder, actor and
+    critic, where it applies its gain and offset, the modulated agent's activity is less interchangeable
+    with an ordinary agent's than two ordinary agents' are with each other (A1, A3). Whether anything
+    downstream of those sites, such as the memory state, differs is not established.</li>
+    <li><strong>Freezing it costs survival.</strong> Freezing either the gain or the offset at its
+    time-averaged value after survival has levelled off shortens survival in 16 of 16 worlds, on average
+    33 steps (gain) and 31 (offset) against roughly 250 live, per-world means from 11 to 54
+    (descriptive, not a registered test; the same freeze has never been applied to an ordinary agent as
+    a control).</li>
+    <li><strong>"No benefit" is partly a measurement limit.</strong> In the May replication both agents
+    reach the 500-step episode limit in about 94&nbsp;% of episodes, so survival cannot show an
+    advantage that lies above the cap.</li>
+  </ul>
+  <div class="callout warn">
+    <p class="eyebrow">Unregistered interpretation</p>
+    <p>Taken together, these fit a modulator that is not idle: it changes the activity at the layers it
+    acts on and the trained agent depends on it, yet the agent's survival does not improve. Three
+    readings remain open and no registered test separates them: the modulator may take over part of a
+    solution the ordinary network also reaches; it may add something the capped survival measure cannot
+    see; or the modulated agents may simply be a more variable family of solutions, since they differ
+    from each other as much as from ordinary agents (the A1 qualifier), which the first two readings do
+    not explain. The next measurements that would bear on this are A4 (whether the two agents move
+    together across worlds; measured, but blocked by a registered data-quality gate), B1 (breaking the shared start), and a task with room above the step cap
+    or with learning speed as the outcome.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">06</span>Where things stand</h2>
+  <div class="ledger">
+    <div class="col">
+      <h4>Established</h4>
+      <ul>
+        <li>No modulated-vs-ordinary survival difference beyond seed noise in about 200 runs.</li>
+        <li>The gaps are pinned near zero across very different worlds, not scattered.</li>
+        <li>At the end of training, the modulated agent is different at the layers the modulator acts on
+        (encoder, actor, critic), with equal survival at the ceiling (A1, A3).</li>
+        <li>Both agents hold hunger, injury and predator distance at every layer; hunger is slightly less
+        linearly readable from the modulated encoder output and memory state (A2).</li>
+        <li>Freezing the modulator's gain or offset costs survival in every world measured
+        (descriptive; no registered test, and no matching lesion on an ordinary agent).</li>
+        <li>Both agents start from the same main-network weights under the same seed.</li>
+        <li>The modulator has no training signal or learning rate of its own.</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h4>Open</h4>
+      <ul>
+        <li>Whether the memory layers differ: the registered test gives no verdict there.</li>
+        <li>Whether the two agents' processing moves together across worlds: A4 ran, but its registered input check failed on the passive world (0.989 against 0.99), so it gives no verdict.</li>
+        <li>Whether the shared start explains the identical results (B1, needs a decision).</li>
+        <li>Whether the modulator wakes up late: the registered measures point both ways (B2).</li>
+        <li>Whether the modulated agent learns faster than the ordinary one; learning speed has not been measured with seeds.</li>
+      </ul>
+    </div>
+  </div>
+  <h4>Discussed, not yet planned</h4>
+  <ul class="plainlist">
+    <li>Train a plain network to imitate a modulated agent's recorded behaviour: if the copy matches it,
+    the modulator added nothing a plain network cannot represent.</li>
+    <li>Re-read existing runs for learning speed: area under the learning curve and time to a threshold.</li>
+    <li>Controls never run: the same freeze applied to an ordinary agent; how many units are permanently
+    switched off; whether the modulator's varying gain follows the agent's internal state.</li>
+    <li>A world-conflict measure: how often identical external situations call for different actions
+    depending on internal state.</li>
+    <li>Give the modulator its own training signal, such as predicting changes in the body.</li>
+    <li>A two-by-two design: internal-state signals hidden from the main network or visible to it,
+    crossed with a stable or an alternating world.</li>
+  </ul>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">07</span>Sources</h2>
+  <p class="refnote">Each entry says how this page used it.</p>
+  {{REFS}}
+</section>
+
+<hr>
+
+<footer class="col">
+  <p class="eyebrow">Provenance</p>
+  <p class="foot">Evidence: <code>docs/experiments/active/modulator_clues/CROSS_STUDY_NULL_DOSSIER.md</code>.
+  Reviews: <code>docs/project/critiques/20260929_nmn_null_algorithmic_film_conditions.md</code> and
+  <code>docs/project/critiques/20260929_nmn_null_algorithmic_rl_side.md</code>. The plan's source of
+  truth: <code>docs/experiments/active/modulator_clues/ALGORITHMIC_NULL_TODO.md</code>.</p>
+  <p class="foot">Results: the evidence run and its reports are in
+  <code>docs/develop/active/neuromodulation/ALGORITHMIC_NULL_ANALYSIS_TOOLING.md</code> (Stage 6); outputs
+  under <code>results/analysis/algorithmic_null/</code>. Decision rules:
+  <code>docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml</code>. Verdict reviews:
+  the plan-reviewer's analysis-verdict gates in the tooling plan, and
+  <code>docs/reviews/plan_b2_wakeup_verdict.md</code> for the wake-up timing.</p>
+  <p class="foot">Rebuild with <code>python scripts/analysis/studies/modulator_clues/build_algorithmic_null_page.py</code>.
+  Every figure is drawn by its own script (named under each figure) and embedded as a file.</p>
+</footer>
+
+</div>
+
+{{HOUSE_VIEWER}}
+
+{{HOUSE_SCRIPT}}

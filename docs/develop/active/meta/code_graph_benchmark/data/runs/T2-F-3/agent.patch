@@ -1,0 +1,173 @@
+diff --git a/src/models/ppo_trainer.py b/src/models/ppo_trainer.py
+index f79684d..17a2f6d 100644
+--- a/src/models/ppo_trainer.py
++++ b/src/models/ppo_trainer.py
+@@ -205,6 +205,11 @@ def update_step_ppo(model, optimizer, batch, config):
+ def train_iteration_ppo(model, optimizer, env_params, env_state, key, config):
+     """Performs one full PPO iteration (collect + N epochs)."""
+     return_mode = getattr(config, 'return_mode', 'GAE')
++    if return_mode.strip().upper() == "MC_FIXED":
++        raise ValueError(
++            "return_mode 'MC_FIXED' is only supported by RecurrentPPO; "
++            "plain PPO supports 'MC' and 'GAE'."
++        )
+ 
+     # 1. Collect rollouts
+     trajectories, next_env_state, key = collect_trajectories(
+diff --git a/src/models/recurrent_ppo_trainer.py b/src/models/recurrent_ppo_trainer.py
+index 953ab4e..33f3289 100644
+--- a/src/models/recurrent_ppo_trainer.py
++++ b/src/models/recurrent_ppo_trainer.py
+@@ -52,6 +52,21 @@ class PPOBatch(NamedTuple):
+     dones: jnp.ndarray
+     h_init: Any  # Can be tuple or array
+ 
++RETURN_MODES = ("MC", "MC_FIXED", "GAE")
++
++def validate_return_mode(mode):
++    """Return the canonical upper-case return mode, or raise ValueError (no silent fallback).
++
++    Accepts "MC", "MC_FIXED" and "GAE" case-insensitively, ignoring surrounding whitespace.
++    """
++    canonical = mode.strip().upper() if isinstance(mode, str) else None
++    if canonical not in RETURN_MODES:
++        raise ValueError(
++            f"Invalid return_mode {mode!r}: must be one of 'MC', 'MC_FIXED' or 'GAE' "
++            f"(case-insensitive)."
++        )
++    return canonical
++
+ def compute_gae(rewards, values, values_next, dones, terminateds, gamma, lmbda):
+     """Computes Generalized Advantage Estimation.
+ 
+@@ -200,7 +215,9 @@ def collect_trajectories(model, env_params, last_state, last_h_state, last_key,
+     # `return_mode` is a static (non-traced) string from `config`, which is itself a static
+     # jit argument (see train.py's `nnx.jit(train_iteration, static_argnums=(6,))`). This plain
+     # Python comparison is therefore resolved once at trace time, not per-step at runtime.
+-    use_gae_bootstrap = return_mode.upper() == "GAE"
++    # MC_FIXED shares MC's window-edge bootstrap (one value forward per window), so only GAE
++    # takes the per-step next-state pass.
++    use_gae_bootstrap = validate_return_mode(return_mode) == "GAE"
+ 
+     def scan_fn(carry, _):
+         state, h_state, key, _prev_next_state, _prev_h_new = carry
+@@ -356,7 +373,7 @@ def update_step(model, optimizer, batch, config):
+ def train_iteration(model, optimizer, env_params, env_state, h_state, key, config):
+     """Performs one full PPO iteration (collect + N epochs) with NNX."""
+     rnn_type = config.rnn_type
+-    return_mode = config.return_mode
++    return_mode = validate_return_mode(config.return_mode)
+     
+     # 1. Collect rollouts
+     with jax.named_scope("rppo_collect_trajectories"):
+@@ -366,7 +383,7 @@ def train_iteration(model, optimizer, env_params, env_state, h_state, key, confi
+ 
+     # 2. Compute Advantages and Targets
+     with jax.named_scope("rppo_advantages"):
+-        if return_mode.upper() == "MC":
++        if return_mode in ("MC", "MC_FIXED"):
+             # Monte Carlo Returns (PyTorch parity) with window-edge bootstrap (H4 fix).
+             # Real-death mask: same termination_reason >= 2 mapping as the GAE branch below.
+             # Use vmap over batch dimension (axis 1); bootstrap_value is (num_envs,) -> axis 0.
+@@ -374,10 +391,17 @@ def train_iteration(model, optimizer, env_params, env_state, h_state, key, confi
+             returns = jax.vmap(compute_mc_returns, in_axes=(1, 1, 1, 0, None), out_axes=1)(
+                 trajectories.reward, trajectories.done, terminateds, bootstrap_value, config.gamma
+             )
+-            # Normalize returns
+-            returns = (returns - jnp.mean(returns)) / (jnp.std(returns) + 1e-7)
+-            targets = returns
+-            advantages = returns - trajectories.value
++            if return_mode == "MC":
++                # Normalize returns
++                returns = (returns - jnp.mean(returns)) / (jnp.std(returns) + 1e-7)
++                targets = returns
++                advantages = returns - trajectories.value
++            else:
++                # MC_FIXED: same MC returns, GAE-branch bookkeeping — RAW returns are the
++                # critic target; advantages normalised exactly like the GAE branch.
++                targets = returns
++                advantages = returns - trajectories.value
++                advantages = (advantages - jnp.mean(advantages)) / (jnp.std(advantages) + 1e-8)
+         else:
+             # GAE (original JAX)
+             # Real-termination mask (Finding B, Part 2): termination_reason 2/3/4 = real death;
+diff --git a/tests/models/test_return_mode.py b/tests/models/test_return_mode.py
+new file mode 100644
+index 0000000..ba012c8
+--- /dev/null
++++ b/tests/models/test_return_mode.py
+@@ -0,0 +1,51 @@
++"""Tests for the recurrent-PPO return-mode validator and the MC_FIXED mode.
++
++Plain-language context: recurrent PPO turns a rollout into learning signals ("returns")
++in one of three ways: "MC" (Monte-Carlo returns, normalised and used as the critic
++target), "GAE" (generalised advantage estimation), and "MC_FIXED" (the same Monte-Carlo
++returns as MC, but with GAE's bookkeeping: raw returns are the critic target and the
++advantages are normalised like GAE's). A mistyped mode must fail loudly, up front, and
++the plain (non-recurrent) PPO trainer must refuse MC_FIXED rather than quietly running GAE.
++"""
++from types import SimpleNamespace
++
++import pytest
++
++from src.models import ppo_trainer, recurrent_ppo_trainer
++from src.models.recurrent_ppo_trainer import validate_return_mode
++
++
++@pytest.mark.parametrize("raw, canonical", [
++    ("MC", "MC"), ("mc", "MC"), ("Mc", "MC"),
++    ("MC_FIXED", "MC_FIXED"), ("mc_fixed", "MC_FIXED"), ("  Mc_Fixed\n", "MC_FIXED"),
++    ("GAE", "GAE"), ("gae", "GAE"), (" gae ", "GAE"),
++])
++def test_validate_return_mode_accepts_and_canonicalises(raw, canonical):
++    assert validate_return_mode(raw) == canonical
++
++
++@pytest.mark.parametrize("bad", ["", "  ", "MCFIXED", "MC-FIXED", "mc fixed", "TD", "GAE_FIXED", None, 1])
++def test_validate_return_mode_rejects_with_all_legal_modes_named(bad):
++    with pytest.raises(ValueError) as exc:
++        validate_return_mode(bad)
++    for mode in ("MC", "MC_FIXED", "GAE"):
++        assert mode in str(exc.value)
++
++
++def test_recurrent_train_iteration_rejects_invalid_mode():
++    """Validation happens before any model/env use, so placeholders suffice."""
++    config = SimpleNamespace(rnn_type="GRU", return_mode="MC_FIXD")
++    with pytest.raises(ValueError, match="MC_FIXED"):
++        recurrent_ppo_trainer.train_iteration(None, None, None, None, None, None, config)
++
++
++def test_recurrent_collect_rejects_invalid_mode():
++    with pytest.raises(ValueError, match="MC_FIXED"):
++        recurrent_ppo_trainer.collect_trajectories(None, None, None, None, None, 1, return_mode="bogus")
++
++
++@pytest.mark.parametrize("mode", ["MC_FIXED", "mc_fixed", " Mc_Fixed "])
++def test_plain_ppo_rejects_mc_fixed(mode):
++    config = SimpleNamespace(return_mode=mode)
++    with pytest.raises(ValueError, match="MC_FIXED"):
++        ppo_trainer.train_iteration_ppo(None, None, None, None, None, config)
+diff --git a/train.py b/train.py
+index c843b62..a8f6fa9 100644
+--- a/train.py
++++ b/train.py
+@@ -76,7 +76,7 @@ from src.environment.wrapper import ParallelEnv
+ from src.environment.sensor import get_observation, get_observation_breakdown
+ from src.environment.core import jax_step
+ from src.models.recurrent_ppo_network import ActorCriticRNN
+-from src.models.recurrent_ppo_trainer import train_iteration
++from src.models.recurrent_ppo_trainer import train_iteration, validate_return_mode
+ from src.models.dqn_network import DQNNetwork, get_action_dqn_nnx
+ from src.models.dqn_trainer import ReplayBuffer as DQNReplayBuffer, update_step_dqn
+ from src.models.drqn_network import DRQNNetwork, get_action_drqn_nnx
+@@ -1131,7 +1131,8 @@ def main():
+         # Read parity options from config
+         rnn_type = config.get_mandatory('agent.rnn_type')
+         activation = config.get_mandatory('agent.activation')
+-        return_mode = config.get_mandatory('agent.return_mode')
++        # Validate now so a typo fails before model/JIT setup.
++        return_mode = validate_return_mode(config.get_mandatory('agent.return_mode'))
+         
+         # Read neuromodulation config (MUST be defined in config, even if empty/null)
+         # Using get() because get_mandatory() raises ValueError for null/None values

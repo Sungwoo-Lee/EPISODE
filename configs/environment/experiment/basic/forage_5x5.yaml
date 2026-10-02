@@ -1,0 +1,38 @@
+# Basic — forage_5x5
+# Pure foraging: the agent and food only; no predators (static or chasing), no rabbits, no cover.
+# Current-schema regeneration of the deleted 00-forage_5x5.yaml (last version: commit 7ffc78fd,
+# removed in 52c89c08 when the curriculum was reframed). Scene mirrors 00-static_predator_5x5.yaml
+# with the hiding_predator resource removed.
+# Sparse override of configs/environment/default.yaml (extends:); body/sensory/noise/behavior_measures inherited.
+# Composition: hunt_predator=0 hiding_predator(static)=0 rabbit=0 food=2 bush=0 rock=0 | grid 5x5
+extends: environment/default
+
+environment:
+  height: 5
+  width: 5
+  start_pos: [3, 3]
+  location_areas:
+    - type: "grass"
+      area: [[1, 1], [5, 5]]
+    - type: "sand"
+      area: [[0, 0], [0, 0]]
+  resources:
+    - name: "food"
+      type: "food"
+      count: 2
+      spawn_area: [[1, 1], [5, 5]]
+      properties: [1.0, 0.0, 0.0, 0.0, 0.0]
+      properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      max_consumption: 12
+      regeneration_delay: 0
+      damage: [0.0, 0.0]
+      nociception_intensity: 0.0
+  entities: []
+  obstacles: []
+
+# Same pin as 00-static_predator_5x5.yaml: the default visual_sensor_range 2 covers most of a
+# 5x5 map at once, so it is held at 1 (a 5-cell diamond) on the 5x5 worlds.
+sensory:
+  visual_sensor_range: 1

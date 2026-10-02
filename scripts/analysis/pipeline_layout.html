@@ -1,0 +1,970 @@
+<title>Analysis Pipeline Layout</title>
+<style>
+:root{
+  color-scheme:light dark;
+  --paper:#f8f7f5; --card:#ffffff; --ink:#1b1b1d; --ink-2:#3d3c3a; --muted:#6f6d69;
+  --rule:#e3e0db; --rule-2:#efedea;
+  --core:#2d6a4f; --core-soft:#e7efea;
+  --warn:#b3322b; --warn-soft:#f7e9e8;
+  --amber:#8a6d1f; --amber-soft:#f6f0dd;
+  --study:#2f6f9f; --study-soft:#e7eff5;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#141416; --card:#1b1b1e; --ink:#e9e6e1; --ink-2:#c8c4bd; --muted:#918d86;
+    --rule:#2d2d32; --rule-2:#232327;
+    --core:#6fbf95; --core-soft:#18291f;
+    --warn:#e0736a; --warn-soft:#2b1d1c;
+    --amber:#d9b64e; --amber-soft:#292417;
+    --study:#79b2d8; --study-soft:#17232b;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#141416; --card:#1b1b1e; --ink:#e9e6e1; --ink-2:#c8c4bd; --muted:#918d86;
+  --rule:#2d2d32; --rule-2:#232327;
+  --core:#6fbf95; --core-soft:#18291f;
+  --warn:#e0736a; --warn-soft:#2b1d1c;
+  --amber:#d9b64e; --amber-soft:#292417;
+  --study:#79b2d8; --study-soft:#17232b;
+}
+:root[data-theme="light"]{
+  --hl-kw:#8a4b8f; --hl-str:#2d6a4f; --hl-com:#6f6d69; --hl-num:#a8562a;
+  --hl-fn:#2f6f9f; --hl-cls:#8a6d1f; --hl-op:#6f6d69; --hl-bi:#3d3c3a;
+  color-scheme:light;
+  --paper:#f8f7f5; --card:#ffffff; --ink:#1b1b1d; --ink-2:#3d3c3a; --muted:#6f6d69;
+  --rule:#e3e0db; --rule-2:#efedea;
+  --core:#2d6a4f; --core-soft:#e7efea;
+  --warn:#b3322b; --warn-soft:#f7e9e8;
+  --amber:#8a6d1f; --amber-soft:#f6f0dd;
+  --study:#2f6f9f; --study-soft:#e7eff5;
+}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16.5px;
+  line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1060px;margin:0 auto;padding:0 26px 110px}
+.col{max-width:720px;margin-left:auto;margin-right:auto}
+header{padding:70px 0 34px;border-bottom:1px solid var(--rule);margin-bottom:44px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--core);margin:0 0 18px}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(34px,5.4vw,52px);line-height:1.05;
+  letter-spacing:-.02em;margin:0 0 20px;text-wrap:balance}
+.standfirst{font-family:var(--serif);font-size:clamp(18px,2.2vw,21px);line-height:1.48;
+  color:var(--ink-2);margin:0;text-wrap:pretty}
+h2{font-family:var(--serif);font-weight:600;font-size:clamp(25px,3.2vw,31px);line-height:1.16;
+  letter-spacing:-.014em;margin:72px 0 10px;text-wrap:balance}
+h3{font-family:var(--serif);font-weight:600;font-size:20px;margin:38px 0 6px;letter-spacing:-.01em}
+p{margin:0 0 17px}
+a{color:var(--core)}
+code{font-family:var(--mono);font-size:.85em;background:var(--rule-2);padding:1px 3px;
+  border-radius:4px;overflow-wrap:anywhere}
+/* Without an author rule the UA gives <sup> vertical-align:super and a non-zero line-height, so a
+   raised inline box GROWS the line it sits on and that one line sits 4-5px lower than its
+   neighbours. line-height:0 is the part that stops it contributing. */
+sup{font-size:.72em;line-height:0;vertical-align:baseline;position:relative;top:-.5em}
+ul,ol{margin:0 0 17px;padding-left:21px}
+li{margin-bottom:8px}
+figure{margin:34px 0}
+/* A wide diagram scaled to phone width takes its labels below readability. Give it a legible
+   floor and let the container scroll instead of shrinking.
+   The floor is NOT a free constant: rendered label size is floor x fontSize / viewBoxWidth. This
+   diagram's viewBox is 1000 wide and its smallest label is 10 units, so a 660px floor rendered
+   labels at 6.6px -- the floor had been carried over from a diagram with a different viewBox and
+   silently stopped doing its job. 920px puts the smallest label back above 9px. */
+figure .dia{overflow-x:auto}
+figure svg{display:block;width:100%;min-width:920px;height:auto;color:var(--ink)}
+figcaption{margin-top:14px;font-size:14.5px;color:var(--muted);line-height:1.55;
+  max-width:720px;margin-left:auto;margin-right:auto}
+figcaption b{color:var(--ink);font-weight:640}
+.callout{border:1px solid var(--rule);border-left:3px solid var(--amber);background:var(--card);
+  border-radius:4px;padding:20px 24px;margin:30px 0}
+.callout.fix{border-left-color:var(--warn);background:var(--warn-soft)}
+.callout h4{font-family:var(--mono);font-size:11px;letter-spacing:.11em;text-transform:uppercase;
+  margin:0 0 10px;color:var(--muted)}
+.callout p{font-size:15.5px;line-height:1.57;margin:0 0 12px}
+.callout p:last-child{margin-bottom:0}
+pre{background:var(--card);border:1px solid var(--rule);border-radius:4px;padding:16px 18px;
+  overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.62;margin:22px auto;
+  max-width:720px}
+/* Prose wants a 720px measure; code does not. The longest excerpt here is ~99 characters, which
+   needs ~780px at 12.5px mono -- so inside the prose column these clipped at EVERY desktop width,
+   scrolling silently behind an overlay scrollbar. Let code break the column on wide screens. */
+/* The block escapes the prose column as a CHILD (explicit width + transform), not as a sibling.
+   That is deliberate, but it means an `overflow:hidden` added later to .col, .stage or section
+   would clip these silently -- there is no layout error to notice, the code just disappears. */
+@media (min-width:780px){
+  /* The FIGURE breaks out, not the <pre> inside it. Two reasons, one of which already bit:
+     `pre.hl{margin:0}` ties with a `.col pre` rule on specificity and wins on source order, which
+     killed `margin-left:50%` while leaving `transform:translateX(-50%)` alive -- every code block
+     then hung half its own width off the left edge of the window, into space a reader cannot
+     scroll to (defect F3, second amendment). And breaking out the figure keeps the source
+     reference with the code it labels instead of leaving it re-centred on the prose column. */
+  .col figure.code{max-width:none;box-sizing:border-box;
+    width:min(calc(100vw - 52px), 1060px);
+    margin-left:50%;transform:translateX(-50%)}
+  .col figure.code pre{max-width:none;width:auto;margin-left:0;transform:none}
+  .col figure.code .srcref{max-width:none}
+}
+/* Below the breakout the widest line still cannot fit, so shrink the code a notch rather than
+   scroll it silently -- 99 characters is the longest excerpt on the page. */
+@media (max-width:1000px){ .col pre{font-size:11.5px} }
+pre code{background:none;padding:0;font-size:inherit}
+.scroll{overflow-x:auto;margin:0 0 17px}
+table{border-collapse:collapse;width:max-content;min-width:100%;font-size:13.5px;
+  font-variant-numeric:tabular-nums}
+/* Numeric columns right-align, header included: with one-digit values nothing drifts today, but a
+   left-aligned numeric column starts every value at the same left edge, so the first two-digit
+   entry moves the digits out of line. */
+td.num,th.num{text-align:right}
+/* The caption lives OUTSIDE the scroll box, as a sibling: inside it, a table wide enough to scroll
+   drags its own caption out of view (register F4). */
+.tcap{padding:0 0 10px;font-size:13.5px;color:var(--muted);margin:0}
+th,td{padding:7px 12px;text-align:left;border-bottom:1px solid var(--rule-2);vertical-align:top}
+thead th{font-weight:600;font-size:12px;color:var(--muted);border-bottom:1px solid var(--rule)}
+td.y{color:var(--core);font-weight:600}
+td.n{color:var(--warn);font-weight:600}
+td.na{color:var(--muted)}
+.foot{margin-top:70px;padding-top:22px;border-top:1px solid var(--rule);font-size:13.5px;
+  color:var(--muted)}
+
+.pathrow{font-family:var(--mono);font-size:12px;color:var(--core);margin:0 0 4px;
+  overflow-wrap:anywhere}
+.meta{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin:0 0 14px;
+  letter-spacing:.02em;overflow-wrap:anywhere}
+.stage{border-top:1px solid var(--rule);padding-top:26px;margin-top:40px}
+.stage h3{margin-top:0}
+pre.tight{margin-top:12px}
+.pre-cap{font-size:13px;color:var(--muted);margin:16px 0 -8px;max-width:720px;
+  margin-left:auto;margin-right:auto}
+.note{border-left:3px solid var(--study);background:var(--study-soft);border-radius:4px;
+  padding:16px 20px;margin:26px 0}
+.note p{font-size:15px;margin:0 0 10px}
+.note p:last-child{margin-bottom:0}
+.note h4{font-family:var(--mono);font-size:11px;letter-spacing:.11em;text-transform:uppercase;
+  margin:0 0 9px;color:var(--study)}
+
+/* ---------- syntax highlighting ----------
+   Pygments emits SEMANTIC classes (.k keyword, .s string, .c comment) and no colour, because this
+   page has a dark theme; a palette baked into the markup at build time would be unreadable in half
+   of it. The colours are tokens, so they flip with everything else. */
+:root{
+  --hl-kw:#8a4b8f; --hl-str:#2d6a4f; --hl-com:#6f6d69; --hl-num:#a8562a;
+  --hl-fn:#2f6f9f; --hl-cls:#8a6d1f; --hl-op:#6f6d69; --hl-bi:#3d3c3a;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --hl-kw:#c78fcc; --hl-str:#6fbf95; --hl-com:#918d86; --hl-num:#e09a6a;
+  --hl-fn:#79b2d8; --hl-cls:#d9b64e; --hl-op:#918d86; --hl-bi:#c8c4bd;
+}}
+:root[data-theme="dark"]{
+  --hl-kw:#c78fcc; --hl-str:#6fbf95; --hl-com:#918d86; --hl-num:#e09a6a;
+  --hl-fn:#79b2d8; --hl-cls:#d9b64e; --hl-op:#918d86; --hl-bi:#c8c4bd;
+}
+figure.code{margin:20px 0}
+pre.hl{margin:0}
+.hl .k,.hl .kn,.hl .kc,.hl .ow{color:var(--hl-kw);font-weight:600}
+.hl .s,.hl .s1,.hl .s2,.hl .sa,.hl .sd,.hl .si,.hl .se{color:var(--hl-str)}
+.hl .c,.hl .c1,.hl .ch,.hl .cm{color:var(--hl-com);font-style:italic}
+.hl .mi,.hl .mf,.hl .m{color:var(--hl-num)}
+.hl .nf,.hl .fm{color:var(--hl-fn);font-weight:600}
+.hl .nc,.hl .ne{color:var(--hl-cls);font-weight:600}
+.hl .o,.hl .p{color:var(--hl-op)}
+.hl .bp,.hl .nb,.hl .nn,.hl .n,.hl .nv,.hl .vm{color:var(--hl-bi)}
+/* The diagram cannot fit a phone: `figure svg` carries a 920px legibility floor, so say plainly
+   that it scrolls -- an overlay scrollbar is not a cue. */
+.dia-hint{display:none;font-family:var(--mono);font-size:11px;letter-spacing:.04em;
+  color:var(--muted);margin:0 0 7px}
+@media (max-width:971px){ .dia-hint{display:block} }   /* 920 floor + 2x26 padding - 1 */
+/* The same argument applies to the code: below the breakout the longest line does not fit, and an
+   overlay scrollbar is not a cue. Shown wherever a block can still clip. */
+.code-hint{display:none;font-family:var(--mono);font-size:11px;letter-spacing:.04em;
+  color:var(--muted);margin:0 0 6px}
+@media (max-width:779px){ .code-hint{display:block} }
+/* An author `display` rule beats the UA's [hidden]{display:none} unless the page says otherwise,
+   and the media query above would keep a cue visible after the script hides it. F14. */
+[hidden]{display:none!important}
+.srcref{font-family:var(--mono);font-size:11px;color:var(--muted);margin:6px 0 0;
+  letter-spacing:.02em;text-align:right}
+/* The escape hatch belongs on the path, which is the only part that can be too long to fit; on the
+   whole caption it also let the short `lines a-b` label break across two lines at phone width. */
+.srcref .path{overflow-wrap:anywhere}
+/* A line may break after an en-dash, so gluing only the space still allowed "lines 20-" / "28". */
+.srcref .lines{white-space:nowrap}
+.srcref::before{content:"\2197\00a0"}
+</style>
+<div class="wrap">
+<header class="col">
+  <p class="eyebrow">Interoceptive AI &middot; analysis tooling</p>
+  <h1>Analysis Pipeline Layout</h1>
+  <p class="standfirst">How a trajectory store becomes a published figure, one stage at a time
+  &mdash; every script named by its real path, with the code that does the work. This describes the
+  pipeline as it exists and runs today. As of 5 September 2026 that includes the shared scan: the
+  three programs that each re-implemented the shard loop now run on one.</p>
+</header>
+
+<section class="col">
+<h2>What this is</h2>
+<p>The project trains agents, records what they did into a store of Parquet files, and turns that
+into figures and a shareable page. The turning-into-figures half is what this page documents.</p>
+<p>It runs in <strong>five stages</strong>, and the reason it is worth drawing is that the stages
+have very different shapes. One stage reads hundreds of gigabytes and takes minutes per arm. Three
+stages read a few megabytes of JSON and take seconds. Knowing which is which is most of what you
+need to work on this code without waiting on it: <strong>if you are changing how a figure looks, you
+never touch the slow stage.</strong></p>
+<p>Every path below is real and every code block is copied verbatim from the file it names, so you
+can open any of them and find what you see here.</p>
+
+<div class="note">
+<h4>This page has been wrong twice, in opposite directions</h4>
+<p>Its first version argued for <em>reorganising</em> this code. Its second version described the
+code as it stood and said the reorganisation was parked and unbuilt. On 5 September 2026 the
+refactor was resumed and <strong>completed</strong>, so this third version documents the shared
+scan as a thing that exists. If a claim here looks stale, the tree wins &mdash; every path, line
+count and excerpt below was read from it.</p>
+<p><strong>What was required before any of it shipped.</strong> Each ported sweep had to reproduce
+the pipeline it replaced, checked mechanically rather than by reading: integer fields bit-exact,
+floats inside a tolerance fixed <em>before</em> porting began. All three passed on all fourteen
+arms, and all fifteen figures came back byte-identical &mdash; then the originals were deleted and
+the figures were checked again, because "the port is complete" has to mean nothing downstream
+noticed.</p>
+</div>
+</section>
+
+<section class="col">
+<h2>The shape of it</h2>
+</section>
+
+<figure>
+<p class="dia-hint">&larr; the diagram is wider than a phone screen &mdash; scroll it sideways</p>
+<div class="dia"><svg viewBox="0 0 1000 500" role="img" aria-label="Five-stage pipeline: a Parquet trajectory store is read by three sweep programs, which write small JSON and CSV aggregates; fifteen figure scripts and a table script read those aggregates through shared plumbing modules and write PNGs and markdown; a build script combines them into one HTML page.">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+
+  <!-- column headings -->
+  <text x="78"  y="24" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-family="monospace">1 &middot; STORE</text>
+  <text x="322" y="24" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-family="monospace">2 &middot; SWEEP</text>
+  <text x="545" y="24" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-family="monospace">3 &middot; AGGREGATES</text>
+  <text x="760" y="24" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-family="monospace">4 &middot; FIGURES</text>
+  <text x="940" y="24" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-family="monospace">5 &middot; PAGE</text>
+
+  <!-- store -->
+  <rect x="18" y="150" width="120" height="120" rx="4" fill="var(--card)" stroke="var(--rule)"/>
+  <text x="78" y="196" text-anchor="middle" font-size="12" fill="var(--ink)" font-weight="600">Parquet</text>
+  <text x="78" y="213" text-anchor="middle" font-size="12" fill="var(--ink)" font-weight="600">store</text>
+  <text x="78" y="236" text-anchor="middle" font-size="10" fill="var(--warn)">452 GB</text>
+  <text x="78" y="250" text-anchor="middle" font-size="10" fill="var(--muted)">3.3 bn rows</text>
+
+  <!-- sweeps -->
+  <rect x="200" y="62"  width="244" height="74" rx="4" fill="var(--warn-soft)" stroke="var(--warn)"/>
+  <text x="214" y="86"  font-size="11.5" fill="var(--ink)" font-family="monospace">collect_arm_data.py</text>
+  <text x="214" y="104" font-size="10" fill="var(--ink-2)">per-episode + per-step aggregates</text>
+  <text x="214" y="121" font-size="10" fill="var(--warn)">~60-95 s per arm</text>
+
+  <rect x="200" y="173" width="244" height="74" rx="4" fill="var(--warn-soft)" stroke="var(--warn)"/>
+  <text x="214" y="197" font-size="11.5" fill="var(--ink)" font-family="monospace">collect_time_course.py</text>
+  <text x="214" y="215" font-size="10" fill="var(--ink-2)">step-by-step after waking wounded</text>
+  <text x="214" y="232" font-size="10" fill="var(--warn)">~4 min per arm</text>
+
+  <rect x="200" y="284" width="244" height="74" rx="4" fill="var(--warn-soft)" stroke="var(--warn)"/>
+  <text x="214" y="308" font-size="11.5" fill="var(--ink)" font-family="monospace">collect_hiding_drivers.py</text>
+  <text x="214" y="326" font-size="10" fill="var(--ink-2)">episode-level regressions</text>
+  <text x="214" y="343" font-size="10" fill="var(--warn)">minutes per arm</text>
+
+  <!-- aggregates -->
+  <rect x="486" y="70"  width="120" height="58" rx="4" fill="var(--card)" stroke="var(--rule)"/>
+  <text x="546" y="94"  text-anchor="middle" font-size="10.5" fill="var(--ink)" font-family="monospace">&lt;arm&gt;.json</text>
+  <text x="546" y="112" text-anchor="middle" font-size="10" fill="var(--core)">~7 KB</text>
+
+  <rect x="486" y="181" width="120" height="58" rx="4" fill="var(--card)" stroke="var(--rule)"/>
+  <text x="546" y="200" text-anchor="middle" font-size="10.5" fill="var(--ink)" font-family="monospace">time_course_</text>
+  <text x="546" y="214" text-anchor="middle" font-size="10.5" fill="var(--ink)" font-family="monospace">&lt;arm&gt;.json</text>
+  <text x="546" y="231" text-anchor="middle" font-size="10" fill="var(--core)">~52 KB</text>
+
+  <rect x="486" y="292" width="120" height="58" rx="4" fill="var(--card)" stroke="var(--rule)"/>
+  <text x="546" y="316" text-anchor="middle" font-size="10.5" fill="var(--ink)" font-family="monospace">multivariate</text>
+  <text x="546" y="330" text-anchor="middle" font-size="10.5" fill="var(--ink)" font-family="monospace">.csv</text>
+
+  <!-- figures + tables -->
+  <rect x="672" y="96" width="176" height="80" rx="4" fill="var(--core-soft)" stroke="var(--core)"/>
+  <text x="686" y="120" font-size="11.5" fill="var(--ink)" font-family="monospace">lad01 &hellip; lad15</text>
+  <text x="686" y="138" font-size="10" fill="var(--ink-2)">one script per figure</text>
+  <text x="686" y="155" font-size="10" fill="var(--core)">seconds each</text>
+
+  <rect x="672" y="212" width="176" height="66" rx="4" fill="var(--core-soft)" stroke="var(--core)"/>
+  <text x="686" y="236" font-size="11.5" fill="var(--ink)" font-family="monospace">make_report_</text>
+  <text x="686" y="251" font-size="11.5" fill="var(--ink)" font-family="monospace">tables.py</text>
+  <text x="686" y="268" font-size="10" fill="var(--ink-2)">every numeric table</text>
+
+  <!-- page -->
+  <rect x="884" y="140" width="98" height="96" rx="4" fill="var(--card)" stroke="var(--rule)"/>
+  <text x="933" y="178" text-anchor="middle" font-size="11" fill="var(--ink)" font-family="monospace">build_</text>
+  <text x="933" y="192" text-anchor="middle" font-size="11" fill="var(--ink)" font-family="monospace">artifact</text>
+  <text x="933" y="212" text-anchor="middle" font-size="10" fill="var(--muted)">one HTML</text>
+
+  <!-- shared plumbing -->
+  <rect x="486" y="404" width="362" height="66" rx="4" fill="var(--card)" stroke="var(--rule)" stroke-dasharray="4 3"/>
+  <text x="500" y="428" font-size="11.5" fill="var(--ink)" font-family="monospace">_ladder.py &middot; _plot.py</text>
+  <text x="500" y="446" font-size="10" fill="var(--ink-2)">loaders, arm order, colours, label placement &mdash; imported by every</text>
+  <text x="500" y="461" font-size="10" fill="var(--ink-2)">script in the dashed group and by stage 5, by none in stage 2</text>
+
+  <!-- arrows: store -> sweeps -->
+  <g stroke="currentColor" fill="none" marker-end="url(#ar)" opacity=".55">
+    <path d="M 138 195 C 170 195 170 99 196 99"/>
+    <path d="M 138 210 L 196 210"/>
+    <path d="M 138 225 C 170 225 170 321 196 321"/>
+    <path d="M 444 99 L 482 99"/>
+    <path d="M 444 210 L 482 210"/>
+    <path d="M 444 321 L 482 321"/>
+    <path d="M 606 99 C 640 99 640 130 668 130"/>
+    <path d="M 606 210 C 640 210 640 146 668 146"/>
+    <path d="M 606 321 C 640 321 640 245 668 245"/>
+    <path d="M 848 136 C 866 136 866 172 880 172"/>
+    <path d="M 848 245 C 866 245 866 205 880 205"/>
+  </g>
+  <rect x="660" y="84" width="200" height="206" rx="5" fill="none" stroke="currentColor"
+        stroke-dasharray="3 3" opacity=".28"/>
+  <g stroke="currentColor" fill="none" marker-end="url(#ar)" opacity=".33" stroke-dasharray="4 3">
+    <path d="M 740 404 L 740 294"/>
+    <path d="M 800 404 C 830 404 933 380 933 240"/>
+  </g>
+</svg></div>
+<figcaption><b>The pipeline, left to right.</b> The expensive stage is the second one, in red: it is
+the only stage that opens the store. It writes small JSON and CSV files, and everything downstream
+reads those instead &mdash; which is why a figure takes seconds to redraw while a sweep takes
+minutes &mdash; and why the whole set of per-arm aggregates is about 7 KB per arm against 452 GB of
+store. The dashed box is shared plumbing, imported by every figure script and by the page builder,
+but by none of the three sweeps. That asymmetry is the one real wart in the layout, and it is
+described at the end.</figcaption>
+</figure>
+
+<figure>
+<p class="dia-hint">&larr; the diagram is wider than a phone screen &mdash; scroll it sideways</p>
+<div class="dia"><svg viewBox="0 0 1000 430" role="img" aria-label="Inside one sweep: open_run builds a Store which checks the episode seeds are contiguous; sweep walks each Parquet shard, wraps it in a Frame which checks the shard is episode-aligned, and hands the Frame to the study's own callback; at the end the Store checks the counted steps against the episode table.">
+  <defs>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <text x="20" y="20" font-size="10.5" fill="var(--muted)" font-family="monospace">INSIDE ONE SWEEP &mdash; what core/store.py and core/scan.py actually do</text>
+
+  <rect x="20" y="44" width="196" height="66" rx="4" fill="var(--card)" stroke="var(--rule)"/>
+  <text x="34" y="66" font-size="11.5" font-family="monospace" fill="var(--ink)">open_run(roots, cols)</text>
+  <text x="34" y="82" font-size="10" fill="var(--muted)">store.py &middot; L105</text>
+  <text x="34" y="98" font-size="10" fill="var(--muted)">finds every shard, both passes</text>
+
+  <rect x="20" y="132" width="196" height="88" rx="4" fill="var(--card)" stroke="var(--warn)" stroke-width="1.6"/>
+  <text x="34" y="154" font-size="11" font-family="monospace" fill="var(--warn)" font-weight="600">GUARD 1 &mdash; at open</text>
+  <text x="34" y="172" font-size="10.5" fill="var(--ink)">seeds are contiguous,</text>
+  <text x="34" y="187" font-size="10.5" fill="var(--ink)">unique, across the union</text>
+  <text x="34" y="206" font-size="10" fill="var(--muted)">store.py &middot; L57</text>
+
+  <line x1="118" y1="110" x2="118" y2="130" stroke="var(--muted)" stroke-width="1.4" marker-end="url(#ar2)"/>
+  <line x1="216" y1="176" x2="272" y2="176" stroke="var(--muted)" stroke-width="1.4" marker-end="url(#ar2)"/>
+
+  <rect x="274" y="44" width="420" height="308" rx="5" fill="none" stroke="var(--rule)" stroke-dasharray="5 3"/>
+  <text x="288" y="66" font-size="11" font-family="monospace" fill="var(--muted)">sweep() &mdash; one pass over the shards &middot; scan.py L100</text>
+
+  <rect x="292" y="80" width="180" height="52" rx="4" fill="var(--card)" stroke="var(--rule)"/>
+  <text x="304" y="102" font-size="11" font-family="monospace" fill="var(--ink)">read shard &rarr; Frame</text>
+  <text x="304" y="118" font-size="10" fill="var(--muted)">scan.py &middot; L39</text>
+
+  <rect x="292" y="146" width="180" height="86" rx="4" fill="var(--card)" stroke="var(--warn)" stroke-width="1.6"/>
+  <text x="304" y="168" font-size="11" font-family="monospace" fill="var(--warn)" font-weight="600">GUARD 2 &mdash; per shard</text>
+  <text x="304" y="186" font-size="10.5" fill="var(--ink)">no episode is split</text>
+  <text x="304" y="201" font-size="10.5" fill="var(--ink)">across two files</text>
+  <text x="304" y="220" font-size="10" fill="var(--muted)">scan.py &middot; L53</text>
+
+  <rect x="292" y="248" width="180" height="88" rx="4" fill="var(--card)" stroke="var(--core)" stroke-width="1.6"/>
+  <text x="304" y="270" font-size="11" font-family="monospace" fill="var(--core)" font-weight="600">PROVIDES</text>
+  <text x="304" y="288" font-size="10.5" fill="var(--ink)">is_step &middot; prev &middot; initial</text>
+  <text x="304" y="303" font-size="10.5" fill="var(--ink)">estart &middot; per_episode_sum</text>
+  <text x="304" y="322" font-size="10" fill="var(--muted)">conventions, not asserts</text>
+
+  <rect x="500" y="146" width="180" height="190" rx="4" fill="var(--study-soft)" stroke="var(--study)"/>
+  <text x="512" y="168" font-size="11" font-family="monospace" fill="var(--study)" font-weight="600">on_shard(frame, acc)</text>
+  <text x="512" y="188" font-size="10.5" fill="var(--ink)">the study's own code.</text>
+  <text x="512" y="203" font-size="10.5" fill="var(--ink)">Ordinary NumPy. Counts</text>
+  <text x="512" y="218" font-size="10.5" fill="var(--ink)">whatever that study</text>
+  <text x="512" y="233" font-size="10.5" fill="var(--ink)">happens to need.</text>
+  <text x="512" y="258" font-size="10" fill="var(--muted)">e.g. collect_arm_data.py</text>
+  <text x="512" y="272" font-size="10" fill="var(--muted)">L102</text>
+  <text x="512" y="300" font-size="10.5" fill="var(--ink)">Free to ignore the</text>
+  <text x="512" y="315" font-size="10.5" fill="var(--ink)">conventions &mdash; via</text>
+  <text x="512" y="330" font-size="10.5" font-family="monospace" fill="var(--ink)">frame.raw()</text>
+
+  <line x1="382" y1="132" x2="382" y2="144" stroke="var(--muted)" stroke-width="1.4" marker-end="url(#ar2)"/>
+  <line x1="382" y1="232" x2="382" y2="246" stroke="var(--muted)" stroke-width="1.4" marker-end="url(#ar2)"/>
+  <line x1="472" y1="292" x2="498" y2="250" stroke="var(--muted)" stroke-width="1.4" marker-end="url(#ar2)"/>
+  <path d="M 590 146 L 590 108 L 476 108" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#ar2)"/>
+  <text x="600" y="128" font-size="10" fill="var(--muted)">next shard</text>
+
+  <rect x="720" y="146" width="256" height="106" rx="4" fill="var(--card)" stroke="var(--warn)" stroke-width="1.6"/>
+  <text x="734" y="168" font-size="11" font-family="monospace" fill="var(--warn)" font-weight="600">GUARD 3 &mdash; at the end</text>
+  <text x="734" y="188" font-size="10.5" fill="var(--ink)">steps counted per episode</text>
+  <text x="734" y="203" font-size="10.5" fill="var(--ink)">must equal the episode</text>
+  <text x="734" y="218" font-size="10.5" fill="var(--ink)">table's own `length` column</text>
+  <text x="734" y="240" font-size="10" fill="var(--muted)">store.py &middot; L95, called from scan.py L117</text>
+
+  <line x1="694" y1="199" x2="716" y2="199" stroke="var(--muted)" stroke-width="1.4" marker-end="url(#ar2)"/>
+  <rect x="720" y="276" width="256" height="60" rx="4" fill="var(--card)" stroke="var(--rule)"/>
+  <text x="734" y="298" font-size="11" font-family="monospace" fill="var(--ink)">acc &rarr; one small .json</text>
+  <text x="734" y="316" font-size="10" fill="var(--muted)">~7 KB per arm, from 452 GB</text>
+  <line x1="848" y1="252" x2="848" y2="274" stroke="var(--muted)" stroke-width="1.4" marker-end="url(#ar2)"/>
+
+  <text x="20" y="392" font-size="10.5" fill="var(--warn)" font-family="monospace">red outline = a guard: cannot be bypassed, cannot change a number &mdash; it either passes or it stops the run</text>
+  <text x="20" y="410" font-size="10.5" fill="var(--core)" font-family="monospace">green outline = a convention: the callback may ignore it, so the guarantee is auditable rather than structural</text>
+</svg></div>
+<figcaption><b>The slow stage, opened up.</b> Three guards and one escape hatch. The distinction
+between the red boxes and the green one is the whole design: a <b>guard</b> is a property of the
+data that either holds or stops the run, and it cannot move a published number; a
+<b>convention</b> is a service the loop offers the study's own code, which is free to ignore it.
+That is why <code>frame.raw()</code> exists and why it is deliberately conspicuous &mdash; a study
+that starts bypassing the conventions is one <code>grep</code> away, rather than invisible.</figcaption>
+</figure>
+
+<figure>
+<p class="dia-hint">&larr; the diagram is wider than a phone screen &mdash; scroll it sideways</p>
+<div class="dia"><svg viewBox="0 0 1000 300" role="img" aria-label="The row convention: each row of the step table holds the world at time t together with the action that arrived at t, so the reset row at t equals zero is not a step, and a predictor for the action taken at a row must be read from the row before it.">
+  <text x="20" y="20" font-size="10.5" fill="var(--muted)" font-family="monospace">THE ROW CONVENTION &mdash; the single easiest thing to get wrong</text>
+
+  <text x="20" y="58" font-size="11" fill="var(--muted)" font-family="monospace">row</text>
+  <g font-family="monospace" font-size="12" fill="var(--ink)" text-anchor="middle">
+    <rect x="90"  y="40" width="120" height="26" rx="3" fill="var(--amber-soft)" stroke="var(--amber)"/>
+    <text x="150" y="58">t = 0</text>
+    <rect x="230" y="40" width="120" height="26" rx="3" fill="var(--card)" stroke="var(--rule)"/><text x="290" y="58">t = 1</text>
+    <rect x="370" y="40" width="120" height="26" rx="3" fill="var(--card)" stroke="var(--rule)"/><text x="430" y="58">t = 2</text>
+    <rect x="510" y="40" width="120" height="26" rx="3" fill="var(--card)" stroke="var(--rule)"/><text x="570" y="58">t = 3</text>
+    <text x="680" y="58" fill="var(--muted)">&hellip;</text>
+  </g>
+
+  <text x="20" y="104" font-size="11" fill="var(--muted)" font-family="monospace">holds</text>
+  <g font-size="10.5" fill="var(--ink)" text-anchor="middle">
+    <text x="150" y="98">the world as</text><text x="150" y="112">handed over</text>
+    <text x="290" y="98">world at t=1</text><text x="290" y="112">+ action that</text><text x="290" y="126">arrived here</text>
+    <text x="430" y="98">world at t=2</text><text x="430" y="112">+ action that</text><text x="430" y="126">arrived here</text>
+    <text x="570" y="98">world at t=3</text><text x="570" y="112">+ action that</text><text x="570" y="126">arrived here</text>
+  </g>
+
+  <text x="20" y="176" font-size="11" fill="var(--amber)" font-family="monospace">not a step</text>
+  <path d="M 150 132 L 150 180" fill="none" stroke="var(--amber)" stroke-width="1.4"/>
+  <text x="150" y="198" font-size="10.5" fill="var(--amber)" text-anchor="middle" font-family="monospace">excluded from every rate</text>
+
+  <path d="M 290 200 L 290 224 L 430 224 L 430 200" fill="none" stroke="var(--study)" stroke-width="1.6"/>
+  <text x="360" y="244" font-size="11" fill="var(--study)" text-anchor="middle" font-family="monospace">the decision that produced row t=2</text>
+  <text x="360" y="260" font-size="10.5" fill="var(--study)" text-anchor="middle">was taken while the agent was looking at t=1</text>
+  <text x="360" y="278" font-size="10.5" fill="var(--muted)" text-anchor="middle" font-family="monospace">frame.prev &middot; scan.py L62</text>
+
+  <rect x="700" y="150" width="284" height="112" rx="4" fill="var(--card)" stroke="var(--rule)" stroke-width="1.4"/>
+  <text x="714" y="172" font-size="11" font-family="monospace" fill="var(--warn)" font-weight="600">what goes wrong without it</text>
+  <text x="714" y="192" font-size="10.5" fill="var(--ink)">Count the reset row and every</text>
+  <text x="714" y="207" font-size="10.5" fill="var(--ink)">denominator inflates. Read a</text>
+  <text x="714" y="222" font-size="10.5" fill="var(--ink)">predictor from the same row and</text>
+  <text x="714" y="237" font-size="10.5" fill="var(--ink)">you measure the wrong quantity.</text>
+  <text x="714" y="255" font-size="10" fill="var(--muted)">Both have shipped here. Neither raised.</text>
+</svg></div>
+<figcaption><b>Why every measure on this project states which row it reads from.</b> A row of the
+step table carries the world <em>at</em> that moment together with the action that <em>arrived
+at</em> it &mdash; so the action on a row is the one that produced it, not the one chosen from it.
+Two consequences follow, and both have caused a published number to be wrong here: the row at
+<code>t&nbsp;=&nbsp;0</code> is the world as handed to the agent and is not a step it took, so it
+belongs in no numerator and no denominator; and anything used to <em>predict</em> a decision must
+be read from the previous row. <code>frame.is_step</code> and <code>frame.prev</code> exist so that
+a study gets both right by default.</figcaption>
+</figure>
+
+
+<section class="col">
+<h2 id="core">The core, function by function</h2>
+<p>Four modules, 107 + 119 +
+96 + 244 lines, that every
+analysis in the project goes through. They are worth reading in this order, because each one
+assumes the one before it.</p>
+
+<div class="note">
+<h4>Six words this section uses</h4>
+<p><b>Store</b> &mdash; the recorded output of putting a trained agent back into its world for a
+million lives. Not code: files. <b>Shard</b> &mdash; one file of that store; the recording is split
+across hundreds so nothing has to be held in memory at once. <b>Parquet</b> &mdash; the file format
+they are in, which stores a table column by column, so reading three columns out of thirty costs a
+tenth of the time. <b>Sweep</b> &mdash; one complete pass over every shard of one agent's store.
+<b>Aggregate</b> &mdash; the small summary a sweep writes, in this project about 7&nbsp;KB against
+the 452&nbsp;GB it was computed from. <b>Arm</b> &mdash; one trained agent in a study; the sensor
+ladder has fourteen.</p>
+</div>
+
+<h3>store.py &mdash; find the files, and refuse to proceed if they are not one population</h3>
+<p>A single agent's million episodes may have been recorded in more than one sitting, into more
+than one directory. <code>open_run()</code> takes those directories, finds every shard under them,
+and treats the lot as <em>one</em> population &mdash; which is only legitimate if the pieces
+actually join up. The check is on the episode <b>seed</b>, the number that picks which random world
+an episode gets: across the union of directories the seeds must run without a gap and without a
+repeat.</p>
+<p>A gap means episodes are missing and the analysis will report a population it does not have. A
+repeat means some world was counted twice. Neither would raise on its own; both would produce a
+figure that looks entirely normal.</p>
+<figure class="code">
+<p class="code-hint">&larr; the block scrolls sideways at this width</p>
+<pre class="hl"><code><span class="k">if</span> <span class="n">span</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_episodes</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">seeds</span><span class="p">))</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_episodes</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;the </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">roots</span><span class="p">)</span><span class="si">}</span><span class="s2"> collection pass(es) do not form one contiguous seed range: &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_episodes</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> episodes spanning </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">seeds</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">..</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">seeds</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">span</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> seeds). A gap or an overlap means the population is not what the &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;analysis will report it to be.&quot;</span><span class="p">)</span></code></pre>
+<figcaption class="srcref"><span class="path">scripts/analysis/core/store.py</span> &middot; <span class="lines">lines&nbsp;57&ndash;62</span></figcaption>
+</figure>
+<p>The rest of the module is small readers &mdash; <code>episode()</code> for a column of the
+per-episode table, <code>episode_list()</code> for a column that holds a list per episode, and
+<code>episode_property()</code>, which deserves its own note:</p>
+<figure class="code">
+<p class="code-hint">&larr; the block scrolls sideways at this width</p>
+<pre class="hl"><code><span class="k">def</span><span class="w"> </span><span class="nf">episode_property</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">per_episode</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A ragged-looking episode column that is really (episodes x entities x channels).</span>
+
+<span class="sd">    The width of the last axis is not stored anywhere, so it is inferred - and then CHECKED,</span>
+<span class="sd">    because an inferred shape that happens to divide evenly is exactly how a silently</span>
+<span class="sd">    transposed array gets into a figure.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">flat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">c</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">zero_copy_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                           <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ep</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">chunks</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">flat</span><span class="o">.</span><span class="n">size</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_episodes</span> <span class="o">*</span> <span class="n">per_episode</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> is not (episodes x </span><span class="si">{</span><span class="n">per_episode</span><span class="si">}</span><span class="s2"> x channels): </span><span class="si">{</span><span class="n">flat</span><span class="o">.</span><span class="n">size</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> values do not &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;divide by </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_episodes</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> x </span><span class="si">{</span><span class="n">per_episode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">flat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_episodes</span><span class="p">,</span> <span class="n">per_episode</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)[</span><span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">]</span></code></pre>
+<figcaption class="srcref"><span class="path">scripts/analysis/core/store.py</span> &middot; <span class="lines">lines&nbsp;80&ndash;93</span></figcaption>
+</figure>
+<p>The shape of that array is not written down anywhere in the file, so it has to be inferred from
+the total number of values &mdash; and an inferred shape that happens to divide evenly is exactly
+how a silently transposed array reaches a figure. Hence the check rather than a bare
+<code>reshape</code>.</p>
+
+<h3>scan.py &mdash; the one loop, and what it hands the study</h3>
+<p>Three programs in this repository used to walk the shards, written months apart, each carrying
+whichever safety checks its author had in mind that day. Of the twenty applicable checks across
+them, ten were simply absent &mdash; and all three bugs this analysis has actually hit sat in an
+absent one. They now share this loop.</p>
+<p><code>Frame</code> wraps a single shard and works out, once, the things every study needs and
+most get wrong: where each episode starts, which rows are real steps, and which row a given
+decision was taken on.</p>
+<figure class="code">
+<p class="code-hint">&larr; the block scrolls sideways at this width</p>
+<pre class="hl"><code><span class="c1"># Episode boundaries. `t == 0` is the reset row: the world as handed to the agent, before it</span>
+<span class="c1"># has acted. It is not a step, and counting it as one inflates every denominator.</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">initial</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>      <span class="c1"># row indices of the reset rows</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">episodes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">episode_id</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">initial</span><span class="p">]</span>   <span class="c1"># global index of each episode in this shard</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">episodes</span><span class="p">,</span>
+                      <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">episodes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">episodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">episodes</span><span class="p">))):</span>
+    <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: episodes are not shard-aligned - an episode&#39;s rows are split &quot;</span>
+                     <span class="sa">f</span><span class="s2">&quot;across shard files, so any per-episode sum here is partial&quot;</span><span class="p">)</span>
+<span class="n">ends</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">initial</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">estart</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">initial</span><span class="p">,</span> <span class="n">ends</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial</span><span class="p">)</span>   <span class="c1"># first row of MY episode</span>
+
+<span class="n">row</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">is_step</span> <span class="o">=</span> <span class="n">row</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">estart</span>                <span class="c1"># excludes every reset row</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">prev</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">is_step</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>               <span class="c1"># the row the action was chosen on</span></code></pre>
+<figcaption class="srcref"><span class="path">scripts/analysis/core/scan.py</span> &middot; <span class="lines">lines&nbsp;49&ndash;62</span></figcaption>
+</figure>
+<p>Then <code>sweep()</code> walks the shards, hands each <code>Frame</code> to the study's own
+function, and &mdash; the important part &mdash; counts the steps itself as it goes, so it can
+check the total against the episode table at the end. The study's code cannot fake that number,
+because the driver is not asking the study for it:</p>
+<figure class="code">
+<p class="code-hint">&larr; the block scrolls sideways at this width</p>
+<pre class="hl"><code><span class="k">def</span><span class="w"> </span><span class="nf">sweep</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">on_shard</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Walk every shard once, hand each to `on_shard`, and cross-check the population at the end.</span>
+
+<span class="sd">    `on_shard(frame, acc, shard_index)` does the study&#39;s own accumulation in ordinary NumPy. The</span>
+<span class="sd">    driver counts steps per episode itself and asserts the total against the episode table, so a</span>
+<span class="sd">    callback that silently drops rows is caught even though the driver cannot see what it counted.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">acc</span> <span class="o">=</span> <span class="n">init</span><span class="p">()</span> <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">init</span><span class="p">)</span> <span class="k">else</span> <span class="p">({}</span> <span class="k">if</span> <span class="n">init</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">init</span><span class="p">)</span>
+    <span class="n">counted</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">n_episodes</span><span class="p">)</span>
+    <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">fi</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">step_files</span><span class="p">):</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">pq</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
+        <span class="n">frame</span> <span class="o">=</span> <span class="n">Frame</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">store</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="n">counted</span><span class="p">[</span><span class="n">frame</span><span class="o">.</span><span class="n">episodes</span><span class="p">]</span> <span class="o">+=</span> <span class="n">frame</span><span class="o">.</span><span class="n">steps_per_episode</span>
+        <span class="n">on_shard</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">acc</span><span class="p">,</span> <span class="n">fi</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span> <span class="ow">and</span> <span class="p">(</span><span class="n">fi</span> <span class="o">%</span> <span class="mi">15</span> <span class="o">==</span> <span class="mi">14</span> <span class="ow">or</span> <span class="n">fi</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">step_files</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: shard </span><span class="si">{</span><span class="n">fi</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">step_files</span><span class="p">)</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">t0</span><span class="si">:</span><span class="s2">5.0f</span><span class="si">}</span><span class="s2">s&quot;</span><span class="p">,</span>
+                  <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">store</span><span class="o">.</span><span class="n">assert_step_counts</span><span class="p">(</span><span class="n">counted</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">acc</span></code></pre>
+<figcaption class="srcref"><span class="path">scripts/analysis/core/scan.py</span> &middot; <span class="lines">lines&nbsp;100&ndash;119</span></figcaption>
+</figure>
+<p>Note what <code>sweep()</code> deliberately is <em>not</em>: it is a driver, not a language for
+describing measurements. An earlier design had studies declare what to count and never write a
+loop. That does not survive contact with what these sweeps do &mdash; crossed two-dimensional
+grids, per-episode-by-bin matrices, quantile-derived bin edges, a running convolution with a reset
+boundary. Either the language grows a dozen constructs, or the escape hatch becomes the normal
+path; and an abstraction everybody bypasses is worse than none.</p>
+
+<h3>env.py &mdash; facts about the world, read from the run's own saved config</h3>
+<p>Every measure needs to know things about the environment that are not in the trajectory files:
+which slot in the animal array is a predator and which a rabbit, which observation channels carry
+smell, how the agent's pain signal is built from its recent injuries. All of it is derived from the
+configuration file that the training run itself saved, so an analysis reads the world the agent
+actually lived in rather than today's defaults.</p>
+<p>This module exists because those derivations were copied into eleven places and had all drifted.
+They were merged only after proving the variants agreed on all fourteen agents and on 870,172 real
+step rows.</p>
+<figure class="code">
+<p class="code-hint">&larr; the block scrolls sideways at this width</p>
+<pre class="hl"><code><span class="k">def</span><span class="w"> </span><span class="nf">perceived_nociception</span><span class="p">(</span><span class="n">inj</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">estart</span><span class="p">,</span> <span class="n">kernel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Rebuild the scalar the nociceptor actually hands the agent, row by row.</span>
+
+<span class="sd">    Mirrors core.py:115 (roll the buffer, write the new injury at slot 0) and core.py:1112 (the</span>
+<span class="sd">    buffer is ZEROED at reset, so the reset row&#39;s injury is never in it). The `src &gt; estart` guard</span>
+<span class="sd">    is strict for exactly that reason - including the reset row was a real bug once (Known Bugs,</span>
+<span class="sd">    2026-08-25) and it leaks the randomised starting injury into the first steps as if the agent had</span>
+<span class="sd">    felt it immediately, which is precisely the claim the sensor-ladder study tests.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">kernel</span><span class="p">)):</span>
+        <span class="n">src</span> <span class="o">=</span> <span class="n">idx</span> <span class="o">-</span> <span class="n">j</span>
+        <span class="n">ok</span> <span class="o">=</span> <span class="n">src</span> <span class="o">&gt;</span> <span class="n">estart</span>
+        <span class="n">out</span><span class="p">[</span><span class="n">ok</span><span class="p">]</span> <span class="o">+=</span> <span class="n">kernel</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="n">inj</span><span class="p">[</span><span class="n">src</span><span class="p">[</span><span class="n">ok</span><span class="p">]]</span>
+    <span class="k">return</span> <span class="n">out</span></code></pre>
+<figcaption class="srcref"><span class="path">scripts/analysis/core/env.py</span> &middot; <span class="lines">lines&nbsp;74&ndash;89</span></figcaption>
+</figure>
+<p>That one is worth reading closely even if you skip the rest: the agent does not feel its wound
+directly. It feels a weighted average of the last twelve steps of damage, which means an agent that
+wakes badly hurt feels <em>nothing</em> for the first two steps and does not feel the full wound
+until about step twelve. Several published findings on this project turn on that delay, and binning
+behaviour by the injury level rather than by the felt signal measures a quantity the agent cannot
+sense.</p>
+
+<h3>golden.py &mdash; how the rewrite was allowed to ship</h3>
+<p>When the three loops were merged into one, the question was not &ldquo;does the new code look
+right&rdquo; but &ldquo;does it produce the same numbers&rdquo;. Every ported sweep wrote to a
+scratch directory and was compared, field by field, against a snapshot of the old pipeline's output
+taken beforehand.</p>
+<p>The comparison is <b>tiered</b>, and the tiers were fixed <em>before</em> any porting started:
+anything that is a whole number &mdash; a count, a sum of zeros and ones &mdash; must match exactly;
+anything else must match to twelve decimal places. Which tier a field is in is decided
+mechanically, by whether its values are whole numbers on both sides, so the gate cannot be relaxed
+after the fact by reclassifying a field that failed.</p>
+<figure class="code">
+<p class="code-hint">&larr; the block scrolls sideways at this width</p>
+<pre class="hl"><code><span class="k">def</span><span class="w"> </span><span class="nf">_is_intlike</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> \
+        <span class="ow">and</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="ow">and</span> <span class="n">v</span> <span class="o">==</span> <span class="nb">round</span><span class="p">(</span><span class="n">v</span><span class="p">)</span></code></pre>
+<figcaption class="srcref"><span class="path">scripts/analysis/core/golden.py</span> &middot; <span class="lines">lines&nbsp;33&ndash;35</span></figcaption>
+</figure>
+<p>One further guard is easy to miss and does real work: a field that is a whole number in the old
+output and not in the new one is reported as a <b>tier break</b>, not quietly demoted to the looser
+comparison. A count that has grown a fractional part is wrong however small the difference.</p>
+</section>
+
+<section class="col">
+<h2>Stage by stage</h2>
+
+<div class="stage">
+<h3>1 &middot; The store &mdash; the input, not code</h3>
+<p class="pathrow">results/trajectories_lad/ &nbsp;+&nbsp; results/trajectories_lad2/</p>
+<p class="meta">452 GB &middot; 3.32 billion step rows &middot; 14 million episodes &middot; read-only to everything below</p>
+<p>Sharded Parquet, written once by the collector and never modified by the analysis layer. Two
+directories because the population was collected in two passes; each shard directory carries a
+<code>_manifest.json</code> recording every parameter the collection used, which is what made it
+possible to reconstruct the collection specs after the fact.</p>
+<p>Nothing on this page writes here. If an analysis is wrong, re-running it costs minutes; the store
+is not at risk.</p>
+</div>
+
+<div class="stage">
+<h3>2 &middot; The scan &mdash; one loop, every guard, for all three sweeps</h3>
+<p class="pathrow">scripts/analysis/core/store.py &nbsp;&middot;&nbsp; 107 lines &nbsp;|&nbsp; scripts/analysis/core/scan.py &nbsp;&middot;&nbsp; 119 lines</p>
+<p class="meta">the only code that opens the store &middot; asserts what must be true of it</p>
+<p>Until 5 September 2026 there were three shard loops here, written months apart, each carrying a
+different subset of the same safety checks. Of twenty applicable check-cells across them, ten were
+empty &mdash; and <em>all three</em> bugs this analysis has actually hit sat in an empty cell. None
+of them raised. A third of episodes with no predator filed into the comparison group, a rebuild
+running on stale data, and a dose-response reading its predictor from the wrong row all produced
+figures that looked entirely fine.</p>
+<p>Both of those guards are set out in full in <a href="#core">the core, function by
+function</a> above. What belongs here is the distinction that section draws, because it is
+the whole design:</p>
+<p><strong>Asserts are properties of the data</strong> &mdash; shard alignment, seed contiguity, the
+step-count cross-check. They cannot be bypassed and they cannot move a number: they either pass or
+they fire. <strong>Provisions are conventions</strong> &mdash; <code>is_step</code>,
+<code>prev</code>, <code>initial</code>. A callback is free to ignore them and index the raw arrays,
+so the guarantee they offer is auditable rather than structural. <code>frame.raw()</code> is the
+deliberately conspicuous way to do that, and the plan counts its uses per sweep so a port that
+starts bypassing the driver becomes visible.</p>
+
+<p class="pathrow" style="margin-top:26px">scripts/analysis/studies/sensor_ladder/collect_arm_data.py &nbsp;&middot;&nbsp; 185 lines</p>
+<p class="meta">one arm&rsquo;s store &rarr; results/analysis/ladder/&lt;arm&gt;.json &middot; ~60 s per arm</p>
+<p>A study now supplies only its own arithmetic. The callback is ordinary NumPy in the study&rsquo;s
+own folder, and the bookkeeping it used to carry is gone:</p>
+<figure class="code">
+<p class="code-hint">&larr; the block scrolls sideways at this width</p>
+<pre class="hl"><code><span class="k">def</span><span class="w"> </span><span class="nf">collect</span><span class="p">(</span><span class="n">fr</span><span class="p">,</span> <span class="n">acc</span><span class="p">,</span> <span class="n">fi</span><span class="p">):</span>
+    <span class="n">gi</span><span class="p">,</span> <span class="n">gidx</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">episode_id</span><span class="p">,</span> <span class="n">fr</span><span class="o">.</span><span class="n">episodes</span>
+    <span class="n">bu</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="s2">&quot;agent_in_bush&quot;</span><span class="p">);</span> <span class="n">inj</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="s2">&quot;injury_level&quot;</span><span class="p">);</span> <span class="n">nut</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="s2">&quot;nutrition&quot;</span><span class="p">)</span>
+    <span class="n">ar</span><span class="p">,</span> <span class="n">ac</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="s2">&quot;agent_row&quot;</span><span class="p">),</span> <span class="n">fr</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="s2">&quot;agent_col&quot;</span><span class="p">)</span>
+    <span class="n">anr</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">list_raw</span><span class="p">(</span><span class="s2">&quot;animal_row&quot;</span><span class="p">,</span> <span class="n">na</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="n">anc</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">list_raw</span><span class="p">(</span><span class="s2">&quot;animal_col&quot;</span><span class="p">,</span> <span class="n">na</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+    <span class="n">E</span><span class="p">[</span><span class="s2">&quot;inj0&quot;</span><span class="p">][</span><span class="n">gidx</span><span class="p">]</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">at_initial</span><span class="p">(</span><span class="n">inj</span><span class="p">);</span> <span class="n">E</span><span class="p">[</span><span class="s2">&quot;nut0&quot;</span><span class="p">][</span><span class="n">gidx</span><span class="p">]</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">at_initial</span><span class="p">(</span><span class="n">nut</span><span class="p">)</span>
+    <span class="n">E</span><span class="p">[</span><span class="s2">&quot;n_steps&quot;</span><span class="p">][</span><span class="n">gidx</span><span class="p">]</span> <span class="o">+=</span> <span class="n">fr</span><span class="o">.</span><span class="n">steps_per_episode</span>
+    <span class="n">E</span><span class="p">[</span><span class="s2">&quot;bush_steps&quot;</span><span class="p">][</span><span class="n">gidx</span><span class="p">]</span> <span class="o">+=</span> <span class="n">fr</span><span class="o">.</span><span class="n">per_episode_sum</span><span class="p">(</span><span class="n">bu</span><span class="p">)</span>
+    <span class="n">E</span><span class="p">[</span><span class="s2">&quot;dmg&quot;</span><span class="p">][</span><span class="n">gidx</span><span class="p">]</span> <span class="o">+=</span> <span class="n">fr</span><span class="o">.</span><span class="n">per_episode_sum_with_initial</span><span class="p">(</span><span class="n">fr</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="s2">&quot;damage&quot;</span><span class="p">))</span>
+    <span class="n">E</span><span class="p">[</span><span class="s2">&quot;n_ate&quot;</span><span class="p">][</span><span class="n">gidx</span><span class="p">]</span> <span class="o">+=</span> <span class="n">fr</span><span class="o">.</span><span class="n">per_episode_sum_with_initial</span><span class="p">(</span><span class="n">fr</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="s2">&quot;ate_food&quot;</span><span class="p">))</span></code></pre>
+<figcaption class="srcref"><span class="path">scripts/analysis/studies/sensor_ladder/collect_arm_data.py</span> &middot; <span class="lines">lines&nbsp;102&ndash;113</span></figcaption>
+</figure>
+<p>Two conventions here are preserved rather than tidied, because tidying them would move published
+numbers: bush steps exclude the reset row while damage and eating include it &mdash; both forms are
+asked for explicitly at the call site rather than hidden in one default &mdash; and the odour
+quartile edges come from the first shard only.</p>
+
+<p class="pathrow" style="margin-top:26px">&hellip;/collect_time_course.py &nbsp;&middot;&nbsp; 99 lines &nbsp;|&nbsp; &hellip;/collect_hiding_drivers.py &nbsp;&middot;&nbsp; 157 lines</p>
+<p class="meta">the step-by-step sweep, and the episode-level regressions</p>
+<p>The time-course sweep asks a different shape of question &mdash; what happened at step <em>t</em>,
+averaged over episodes &mdash; and reconstructs the agent&rsquo;s <em>felt</em> nociception, which the
+store never records. The factor sweep fits regressions and so needs one row per episode.</p>
+<p>The factor sweep does <strong>not</strong> replace <code>scripts/analysis/hiding_drivers.py</code>
+(387 lines), which stays: the earlier study&rsquo;s README names it as that study&rsquo;s producer, and
+<code>lad06</code> decides which arms to draw by checking whether its CSV exists. It also reproduces
+that script&rsquo;s <em>contemporaneous</em> injury binning bug-for-bug &mdash; every other predictor
+in this analysis comes from the previous row, that one does not, and it feeds published cross-tabs.
+Correcting it inside a refactor would move a published number under cover of a cleanup, so it is
+registered as its own adjudicated change instead.</p>
+</div>
+
+<div class="stage">
+<h3>3 &middot; Shared code &mdash; imported by everything downstream</h3>
+<p class="pathrow">scripts/analysis/core/env.py &nbsp;&middot;&nbsp; 96 lines</p>
+<p class="meta">everything derived from a run&rsquo;s saved config</p>
+<p>Five helpers that existed in three copies each. Every copy had drifted <em>textually</em>, which
+sounds alarming until you ask the question that decides whether merging is safe, which is
+behavioural:</p>
+<p class="tcap">Measured on real configs before anything was merged</p>
+<div class="scroll">
+<table>
+  <thead><tr><th>helper</th><th class="num">copies</th><th class="num">distinct texts</th><th class="num">distinct results</th></tr></thead>
+  <tbody>
+    <tr><td><code>smell_channels</code></td><td class="num">3</td><td class="num">3</td><td class="y num">1</td></tr>
+    <tr><td><code>nociception_kernel</code></td><td class="num">2</td><td class="num">2</td><td class="y num">1</td></tr>
+    <tr><td><code>listcol</code></td><td class="num">3</td><td class="num">3</td><td class="y num">1</td></tr>
+    <tr><td><code>slot_layout</code></td><td class="num">3</td><td class="num">3</td><td class="n num">3</td></tr>
+  </tbody>
+</table>
+</div>
+<p>Three were safe to merge as written. <code>slot_layout</code> genuinely differed &mdash; and the
+difference is the kind that looks alarming and is not: all three agree on every slot list any caller
+reads, and differ only in whether they <em>also</em> return three convenience counts. So
+<code>core</code> returns the superset, which is safe only because no caller iterates the dict. That
+was checked across all four call sites rather than assumed; a caller that iterated would silently
+have gained keys.</p>
+<p>Equivalence was proven, not asserted: 112 comparisons across all fourteen arms with zero
+mismatches, plus <code>listcol</code> and the nociception reconstruction on 870,172 real step rows,
+bit-exact against every existing copy.</p>
+
+<p class="pathrow" style="margin-top:26px">scripts/analysis/ladder/_ladder.py &nbsp;&middot;&nbsp; 385 lines &nbsp;|&nbsp; scripts/analysis/ladder/_plot.py &nbsp;&middot;&nbsp; 198 lines</p>
+<p class="meta">study facts &mdash; arm order, bin edges, run paths &mdash; and the house plotting style</p>
+<p><code>_ladder</code> holds what is true of <em>this study</em> rather than of stores in general:
+the fourteen arms in reading order, the bin edges, which run directory each arm maps to. Its loaders
+fail loudly and name the script to run rather than returning something empty.
+<code>_plot</code> holds the house style, including <code>assert_labels_fit</code>, which turns
+Matplotlib&rsquo;s willingness to draw a label off the edge of a figure into a build failure.</p>
+</div>
+
+<div class="stage">
+<h3>4 &middot; The figures &mdash; one script per figure, named for its number</h3>
+<p class="pathrow">scripts/analysis/ladder/lad01_ladder_overview.py &hellip; lad15_price_of_hiding.py</p>
+<p class="meta">47-144 lines each &middot; aggregates &rarr; docs/experiments/active/sensor_ladder/figures/&lt;name&gt;.png &middot; seconds each</p>
+<p>Fifteen independent scripts. The filename carries the figure number, so Figure 8 in the report is
+always <code>lad08_*.py</code> and the page's build refuses to ship a figure whose script is
+missing. Each one opens with a docstring stating its question, why it matters, and how it is
+computed &mdash; that docstring is the source of the "How it is computed" block on the published
+page, so the two cannot drift apart by being edited separately.</p>
+<p>They all follow the same six lines of setup. Here is Figure 8's, verbatim:</p>
+<figure class="code">
+<p class="code-hint">&larr; the block scrolls sideways at this width</p>
+<pre class="hl"><code><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span><span class="o">,</span><span class="w"> </span><span class="nn">os</span><span class="p">;</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)))</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span><span class="o">,</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">_ladder</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">L</span><span class="o">,</span><span class="w"> </span><span class="nn">_plot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">PL</span>
+
+<span class="n">D</span> <span class="o">=</span> <span class="n">L</span><span class="o">.</span><span class="n">load_all</span><span class="p">();</span> <span class="n">arms</span> <span class="o">=</span> <span class="n">L</span><span class="o">.</span><span class="n">ARM_ORDER</span><span class="p">;</span> <span class="n">col</span> <span class="o">=</span> <span class="n">PL</span><span class="o">.</span><span class="n">arm_colors</span><span class="p">()</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">curves</span> <span class="o">=</span> <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="n">L</span><span class="o">.</span><span class="n">rate</span><span class="p">(</span><span class="n">D</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="s2">&quot;grids&quot;</span><span class="p">][</span><span class="s2">&quot;dw_early&quot;</span><span class="p">],</span> <span class="n">D</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="s2">&quot;grids&quot;</span><span class="p">][</span><span class="s2">&quot;dwt_early&quot;</span><span class="p">])</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">arms</span><span class="p">}</span>
+<span class="n">slope</span> <span class="o">=</span> <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="n">curves</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span> <span class="o">-</span> <span class="n">curves</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">arms</span><span class="p">}</span>
+<span class="n">GRP</span> <span class="o">=</span> <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="n">L</span><span class="o">.</span><span class="n">resolves_identity</span><span class="p">(</span><span class="n">D</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="s2">&quot;sensory&quot;</span><span class="p">])</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">arms</span><span class="p">}</span></code></pre>
+<figcaption class="srcref"><span class="path">scripts/analysis/ladder/lad08_injury_dose_response.py</span> &middot; <span class="lines">lines&nbsp;20&ndash;28</span></figcaption>
+</figure>
+<p>That is the whole contract: <code>load_all()</code> for the aggregates,
+<code>rate(numerator, denominator)</code> to turn a stored pair into a percentage, and
+<code>arm_colors()</code> so every figure agrees on which colour means which arm. A new figure is a
+new file that starts with those lines.</p>
+
+<p class="pathrow" style="margin-top:26px">scripts/analysis/ladder/make_report_tables.py &nbsp;&middot;&nbsp; 163 lines</p>
+<p class="meta">aggregates &rarr; markdown tables, consumed by the page builder</p>
+<p>Emits every numeric table in the report so that no number in the document is typed by hand. It
+reads the regression output the third sweep wrote:</p>
+<figure class="code">
+<p class="code-hint">&larr; the block scrolls sideways at this width</p>
+<pre class="hl"><code><span class="k">def</span><span class="w"> </span><span class="nf">glm</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">term</span><span class="p">):</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;results/analysis/lad/</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2">/multivariate.csv&quot;</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">p</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">model</span> <span class="ow">and</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;term&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">term</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;dpp_per_sd&quot;</span><span class="p">])</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">)</span></code></pre>
+<figcaption class="srcref"><span class="path">scripts/analysis/ladder/make_report_tables.py</span> &middot; <span class="lines">lines&nbsp;53&ndash;58</span></figcaption>
+</figure>
+</div>
+
+<div class="stage">
+<h3>5 &middot; The page &mdash; template plus real figures plus generated tables</h3>
+<p class="pathrow">scripts/analysis/ladder/build_artifact.py &nbsp;&middot;&nbsp; 238 lines</p>
+<p class="meta">template + PNGs + tables &rarr; docs/experiments/active/sensor_ladder/sensor_ladder.html (8.7 MB)</p>
+<p>The prose lives in a hand-written template; the numbers and images do not. The builder
+substitutes two kinds of token and fails if any is left over, so a renamed figure is an error rather
+than a blank panel nobody notices.</p>
+<figure class="code">
+<p class="code-hint">&larr; the block scrolls sideways at this width</p>
+<pre class="hl"><code><span class="n">html</span><span class="p">,</span> <span class="n">scripts</span> <span class="o">=</span> <span class="n">attach_provenance</span><span class="p">(</span><span class="n">html</span><span class="p">)</span>
+<span class="n">html</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\{\{FIG:([a-z0-9_]+)\}\}&quot;</span><span class="p">,</span> <span class="n">fig</span><span class="p">,</span> <span class="n">html</span><span class="p">)</span>
+<span class="n">html</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\{\{TABLE:(\d+)\}\}&quot;</span><span class="p">,</span> <span class="n">tab</span><span class="p">,</span> <span class="n">html</span><span class="p">)</span>
+
+<span class="n">left</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\{\{[^}]+\}\}&quot;</span><span class="p">,</span> <span class="n">html</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">left</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unsubstituted tokens remain: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">left</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></code></pre>
+<figcaption class="srcref"><span class="path">scripts/analysis/ladder/build_artifact.py</span> &middot; <span class="lines">lines&nbsp;209&ndash;215</span></figcaption>
+</figure>
+<p>It enforces a good deal more than substitution, and all of it as hard build failures rather than
+warnings: every figure must name an existing generating script and appear exactly once; every
+caption must carry an <code>Axes.</code> sentence and a "How it is computed" block; every figure must
+declare how much data it used; and the axes sentences mirrored into the markdown report must match
+the template verbatim, checked <em>before</em> anything is written so a stale copy cannot ship.</p>
+</div>
+</section>
+
+<section class="col">
+<h2>Running it</h2>
+<p>Two commands rebuild everything downstream of the store. The first is the slow one and is only
+needed when the store changes; the rest take seconds.</p>
+<figure class="code">
+<p class="code-hint">&larr; the block scrolls sideways at this width</p>
+<pre class="hl"><code><span class="nv">P</span><span class="o">=</span>/home/vncuser/miniconda3/envs/grid_world_pain/bin/python
+
+<span class="c1"># stage 2 - slow, only when the store changes</span>
+<span class="nv">$P</span><span class="w"> </span>scripts/analysis/studies/sensor_ladder/collect_arm_data.py<span class="w">     </span><span class="c1"># ~60 s per arm, 14 arms</span>
+<span class="nv">$P</span><span class="w"> </span>scripts/analysis/studies/sensor_ladder/collect_time_course.py<span class="w">  </span><span class="c1"># ~2.5 min per arm, 14 arms</span>
+
+<span class="c1"># stages 4 and 5 - seconds</span>
+<span class="nv">$P</span><span class="w"> </span>scripts/analysis/ladder/run_all.py<span class="w">              </span><span class="c1"># all fifteen figures</span>
+<span class="nv">$P</span><span class="w"> </span>scripts/analysis/ladder/make_report_tables.py<span class="w">   </span><span class="c1"># every table in the report</span>
+<span class="nv">$P</span><span class="w"> </span>scripts/analysis/ladder/build_artifact.py<span class="w">       </span><span class="c1"># the shareable HTML page</span></code></pre>
+<figcaption class="srcref">shell &middot; not a file</figcaption>
+</figure>
+<p>Both sweeps take <code>--arms</code> to rebuild a subset, which is what makes a fourteen-arm
+rebuild parallelisable across nodes. The figure runner is twenty-four lines and exists only to save
+typing &mdash; each figure script still runs standalone:</p>
+<figure class="code">
+<p class="code-hint">&larr; the block scrolls sideways at this width</p>
+<pre class="hl"><code><span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">HERE</span><span class="si">}</span><span class="s2">/lad*.py&quot;</span><span class="p">)):</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">78</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">78</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">runpy</span><span class="o">.</span><span class="n">run_path</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">run_name</span><span class="o">=</span><span class="s2">&quot;__main__&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[ok] </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">t</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">s&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span></code></pre>
+<figcaption class="srcref"><span class="path">scripts/analysis/ladder/run_all.py</span> &middot; <span class="lines">lines&nbsp;11&ndash;18</span></figcaption>
+</figure>
+<p>It runs every figure even after one fails, then exits non-zero with the list &mdash; so one broken
+figure gives you the other fourteen plus a report, instead of stopping at the first traceback.</p>
+</section>
+
+<section class="col">
+<h2>Adding a figure</h2>
+<ol>
+<li>Check the quantity you need is already in <code>&lt;arm&gt;.json</code>. If it is, you never
+touch stage 2, and your edit-run loop is seconds long.</li>
+<li>Create <code>ladNN_short_name.py</code> with the six-line preamble above. The number must match
+the figure's number in the report.</li>
+<li>Open with a docstring giving the question, why it matters, and how it is computed &mdash; the
+published page's method block is built from it.</li>
+<li>Save through <code>PL.finish(fig, path)</code> so the DPI and margins match the others.</li>
+<li>Add the <code>{{FIG:ladNN_short_name}}</code> token to the template with an <code>Axes.</code>
+sentence, and mirror that sentence into the markdown report. The builder fails if either is
+missing or if the two copies differ.</li>
+</ol>
+<p>If the quantity is <em>not</em> in the aggregates, you are adding a counter to stage 2 and
+re-running the sweep &mdash; minutes per arm, not seconds. That is the one expensive kind of change,
+and it is worth checking first.</p>
+</section>
+
+<section class="col">
+<h2>What the refactor fixed, and what it did not</h2>
+<p>Within the ladder&rsquo;s path there is now one shard loop, one set of config helpers, one
+population contract. The three sweeps that each carried a different subset of the same guards now
+share all of them, and <code>build_arm_data.py</code> and <code>build_time_course.py</code> no longer
+exist.</p>
+
+<div class="callout">
+<h4>The gate, because &ldquo;it should be equivalent&rdquo; is not evidence</h4>
+<p>Nothing was deleted on the strength of a careful reading. Each ported sweep had to reproduce the
+one it replaced, checked mechanically against a snapshot taken before any code moved: integer-valued
+fields bit-exact, floats inside a tolerance <em>pre-registered in the source</em> rather than chosen
+after seeing a diff. Tier membership is decided by the data, so a field that failed could not be
+quietly reclassified into a looser tier.</p>
+<p>The arm sweep reproduced 14 of 14 arms in both its JSON and its per-episode arrays; the
+time-course sweep 14 of 14; the factor sweep&rsquo;s 43 arrays exactly. All fifteen figures
+regenerated from ported data came back <strong>byte-identical</strong> &mdash; and after the
+originals were deleted they were regenerated and checked again, because &ldquo;the port is
+complete&rdquo; has to mean nothing downstream noticed the swap.</p>
+<p>The gate itself was negative-controlled before being trusted: a count off by one fails, a float
+nudged one part in 10<sup>11</sup> fails, the same float nudged one part in 10<sup>14</sup> passes, a
+count that acquires a fractional part is caught as a tier break, and a manifest matching nothing
+refuses to run rather than passing vacuously. A gate that has never rejected anything is not a
+gate.</p>
+</div>
+
+<p><strong>What it did not fix, stated because the plan said so from the start.</strong> Two folders
+are deliberately frozen &mdash; <code>scripts/analysis/figures/</code> and
+<code>scripts/analysis/supplementary/</code> &mdash; because they back an earlier published study and
+are kept to reproduce it as published. They still carry their own copies of the config helpers, as
+does <code>hiding_drivers.py</code>. So the honest count is not one copy but two, one live and one
+frozen, and that was the trade rather than an oversight.</p>
+<p>There is also a fourth store scanner, <code>scripts/analysis/context_dependence.py</code>, which
+every earlier version of the plan missed. It imports its helpers from <code>hiding_drivers</code>
+rather than copying them, so it adds no duplication, and it was out of scope here. It is the
+modulator study&rsquo;s tool, which makes it the likeliest first client of <code>core/</code> &mdash;
+and therefore the honest test of whether this was worth doing. If the next scanner is written against
+the shared scan and gets all the guards for free, the case is proven. If it is written by copying one
+of the existing ones again, it was not.</p>
+</section>
+
+<div class="col foot">
+<p>Every path and code block on this page was read from the working tree at the time of writing.
+Source: <code>scripts/analysis/pipeline_layout.html</code>. The reorganisation plan, its three
+adversarial reviews and the gate results:
+<code>docs/develop/active/refactors/analysis_pipeline_refactor.md</code>. The study this pipeline
+produces: <code>docs/experiments/active/sensor_ladder/sensor_ladder.md</code>.</p>
+</div>
+</div>
+
+<script>
+// The cue must state a fact about THIS block at THIS width, not a guess derived from the widest
+// block on the page. The stylesheet's media query is the no-JS fallback; this narrows it to the
+// blocks that actually overflow -- which also makes it correct in whatever monospace face the
+// reader's browser resolves, rather than in the one this page was measured in.
+(function () {
+  function sync() {
+    document.querySelectorAll('figure.code').forEach(function (f) {
+      var pre = f.querySelector('pre'), hint = f.querySelector('.code-hint');
+      if (pre && hint) hint.hidden = !(pre.scrollWidth > pre.clientWidth);
+    });
+  }
+  sync();
+  addEventListener('resize', sync);
+  addEventListener('load', sync);
+})();
+</script>

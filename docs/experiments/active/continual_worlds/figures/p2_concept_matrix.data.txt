@@ -1,0 +1,4 @@
+concept worlds read (resolved configs, trainer's loader)|8|8|100.0|configs/environment/experiment/continual_worlds; every cell's text is read from the loaded parameters
+body fields asserted identical in all 8 worlds|63|63|100.0|food energy, injury, body temperature, interoception and reward fields; the script stops if any differs
+parameter fields that differ between worlds|99|208|47.6|every one is an external field (layout, food, animals, obstacles, climate, sensing); asserted
+cells harder than Home / easier / as Home|38|96|39.6|14 easier and 44 as Home; shade = relative change of the range midpoint (counts per grid cell), clipped

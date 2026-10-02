@@ -1,0 +1,2 @@
+seed pairs|3|3|100.0|seeds 42, 43, 44; same-seed ordinary and modulated runs paired
+readings drawn|4|4|100.0|the four registered readings; each uses the last 200,000 episodes of a stage

@@ -1,0 +1,1 @@
+(start cell, pond position) pairs enumerated|489,034|489,034|100.0|every pair, 13 grid sizes x 3 modes; starts on the pond excluded (walk 0)

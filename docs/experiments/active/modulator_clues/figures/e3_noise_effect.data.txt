@@ -1,0 +1,5 @@
+training runs|8|8|100.0|levels 05 and 06 × two agents × two waves, one seed each
+episodes per run|1,000,000|1,000,000|100.0|final-checkpoint store; randomly assigned starting injury
+measures|4|4|100.0|injury span, hunger span, rabbit hiding shift (hypervigilance), predator hiding shift (context)
+late checkpoints in the bottom row|5|5|100.0|four 100k stores plus the final 1M store per run, paired in order between levels 06 and 05
+seed-to-seed spread|0|1|0.0|not estimable: each level is a different single run, so the difference mixes noise effect and seed

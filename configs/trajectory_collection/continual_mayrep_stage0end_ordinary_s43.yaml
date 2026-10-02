@@ -1,0 +1,27 @@
+# May replication INTERIM store, run ordinary_s43: the end of its first stage (stage_end:0 = last checkpoint
+# with saved stage 0, end of 01_active, hunting world = config.yaml's world). Tooling plan
+# (docs/develop/active/neuromodulation/ALGORITHMIC_NULL_ANALYSIS_TOOLING.md) Stage 4b, §12.
+# Read by probe active_stage0end of docs/experiments/active/modulator_clues/algorithmic_null_mayrep_interim.yaml
+# (n_per_store 5000 = block 0 -> shard_episodes 5000). Every scientific key equals
+# continual_mayrep_probes.yaml (same seed_base, so all six interim stores share episode seeds).
+# One spec per run: stage 0 is complete for every run, including those still training, so
+# launch directly (the finished-runs wrapper would refuse a run still training):
+#   /home/vncuser/miniconda3/envs/grid_world_pain/bin/python scripts/eval/traj_collect/run_collection.py \
+#     configs/trajectory_collection/continual_mayrep_stage0end_ordinary_s43.yaml
+# stage_end:0 requires a later checkpoint with a different saved stage (T8), so it cannot pick a
+# stage still in training.
+name: continual_mayrep_stage0end_ordinary_s43
+algo: rppo
+out_root: results/trajectories_cw_mayrep
+episodes: 10000
+seed_base: 1000000
+checkpoints: ["stage_end:0"]
+nodes: [109]
+obs_precision: float32
+npar: 1
+device: gpu
+batch_size: 5000
+shard_episodes: 5000
+blocks_per_cell: 2
+runs:
+  - {label: ordinary_s43, path: results/JAX_RecurrentPPO/20260929-153652_rppo_cw_mayrep_t1none_s43}

@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="838.656pt" height="334.8pt" viewBox="0 0 838.656 334.8" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.8, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 334.8 
+L 838.656 334.8 
+L 838.656 -0 
+L 0 -0 
+z
+" style="fill: #fbfbfa"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 45.824446 234.10368 
+L 98.664061 234.10368 
+Q 121.975656 234.10368 121.975656 205.78608 
+L 121.975656 185.64912 
+Q 121.975656 157.33152 98.664061 157.33152 
+L 45.824446 157.33152 
+Q 22.512851 157.33152 22.512851 185.64912 
+L 22.512851 205.78608 
+Q 22.512851 234.10368 45.824446 234.10368 
+z
+" clip-path="url(#p41918df0da)" style="fill: #fbfbfa; stroke: #16181d; stroke-width: 1.4; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 175.851342 227.1816 
+L 256.146835 227.1816 
+L 256.146835 164.2536 
+L 175.851342 164.2536 
+z
+" clip-path="url(#p41918df0da)" style="fill: #fbfbfa; stroke: #6e747e; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 124.752334 195.7176 
+Q 149.302251 195.7176 171.392493 195.7176 
+" clip-path="url(#p41918df0da)" style="fill: none; stroke: #2a78d6; stroke-width: 2.2; stroke-linecap: round"/>
+    <path d="M 165.792493 192.9176 
+L 171.392493 195.7176 
+L 165.792493 198.5176 
+z
+" clip-path="url(#p41918df0da)" style="fill: #2a78d6; stroke: #2a78d6; stroke-width: 2.2; stroke-linecap: round"/>
+   </g>
+   <g id="text_1">
+    <text style="font-weight: 600; font-size: 15px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="15.260354" y="33.78435" transform="rotate(-0 15.260354 33.78435)">Body-directed imperativism</text>
+   </g>
+   <g id="text_2">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #6e747e" x="15.260354" y="60.333744" transform="rotate(-0 15.260354 60.333744)">Klein 2007</text>
+   </g>
+   <g id="text_3">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(47.1823 192.599959)">toothache</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(44.983159 204.421178)">experience</text>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(190.42151 192.812912)">biting with</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(191.770729 204.455725)">that tooth</text>
+   </g>
+   <g id="text_5">
+    <text style="font-weight: 600; font-size: 13px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #2a78d6" x="148.654481" y="147.102781" transform="rotate(-0 148.654481 147.102781)">“Don’t bite with it!”</text>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(15.260354 291.960237)">unpleasant because it forbids</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(15.260354 305.386425)">an action involving the body</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 325.563585 234.10368 
+L 378.4032 234.10368 
+Q 401.714795 234.10368 401.714795 205.78608 
+L 401.714795 185.64912 
+Q 401.714795 157.33152 378.4032 157.33152 
+L 325.563585 157.33152 
+Q 302.25199 157.33152 302.25199 185.64912 
+L 302.25199 205.78608 
+Q 302.25199 234.10368 325.563585 234.10368 
+z
+" clip-path="url(#pb0a9c84ba7)" style="fill: #fbfbfa; stroke: #16181d; stroke-width: 1.4; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 455.590481 227.1816 
+L 535.885975 227.1816 
+L 535.885975 164.2536 
+L 455.590481 164.2536 
+z
+" clip-path="url(#pb0a9c84ba7)" style="fill: #fbfbfa; stroke: #6e747e; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 404.491473 209.8764 
+Q 429.04139 209.8764 452.137863 209.8764 
+" clip-path="url(#pb0a9c84ba7)" style="fill: none; stroke: #6e747e; stroke-width: 1.3; stroke-linecap: round"/>
+    <path d="M 447.337863 207.4764 
+L 452.137863 209.8764 
+L 447.337863 212.2764 
+z
+" clip-path="url(#pb0a9c84ba7)" style="fill: #6e747e; stroke: #6e747e; stroke-width: 1.3; stroke-linecap: round"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 404.491473 179.9856 
+Q 429.04139 179.9856 451.131632 179.9856 
+" clip-path="url(#pb0a9c84ba7)" style="fill: none; stroke: #eb6834; stroke-width: 2.2; stroke-linecap: round"/>
+    <path d="M 445.531632 177.1856 
+L 451.131632 179.9856 
+L 445.531632 182.7856 
+z
+" clip-path="url(#pb0a9c84ba7)" style="fill: #eb6834; stroke: #eb6834; stroke-width: 2.2; stroke-linecap: round"/>
+   </g>
+   <g id="text_7">
+    <text style="font-weight: 600; font-size: 15px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="294.999494" y="33.271069" transform="rotate(-0 294.999494 33.271069)">Evaluativism</text>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #6e747e" x="294.999494" y="60.442025" transform="rotate(-0 294.999494 60.442025)">Carruthers 2018, 2023</text>
+   </g>
+   <g id="text_9">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(326.921439 192.599959)">toothache</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(324.722299 204.421178)">experience</text>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(462.40479 192.812912)">the throbbing</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(467.835181 204.455725)">tooth-state</text>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #6e747e" x="428.39362" y="246.218844" transform="rotate(-0 428.39362 246.218844)">reports it</text>
+   </g>
+   <g id="text_12">
+    <text style="font-weight: 600; font-size: 13px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #eb6834" x="428.39362" y="147.102781" transform="rotate(-0 428.39362 147.102781)">“this is bad”</text>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(294.999494 291.841644)">unpleasant because it represents</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(294.999494 305.433862)">the felt bodily state as bad</text>
+   </g>
+  </g>
+  <g id="axes_3">
+   <g id="patch_9">
+    <path d="M 605.302724 234.10368 
+L 658.142339 234.10368 
+Q 681.453934 234.10368 681.453934 205.78608 
+L 681.453934 185.64912 
+Q 681.453934 157.33152 658.142339 157.33152 
+L 605.302724 157.33152 
+Q 581.991129 157.33152 581.991129 185.64912 
+L 581.991129 205.78608 
+Q 581.991129 234.10368 605.302724 234.10368 
+z
+" clip-path="url(#pe0d3fc7ede)" style="fill: #fbfbfa; stroke: #16181d; stroke-width: 1.4; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 735.32962 227.1816 
+L 815.625114 227.1816 
+L 815.625114 164.2536 
+L 735.32962 164.2536 
+z
+" clip-path="url(#pe0d3fc7ede)" style="fill: #fbfbfa; stroke: #6e747e; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 684.230612 209.8764 
+Q 708.780529 209.8764 731.877002 209.8764 
+" clip-path="url(#pe0d3fc7ede)" style="fill: none; stroke: #6e747e; stroke-width: 1.3; stroke-linecap: round"/>
+    <path d="M 727.077002 207.4764 
+L 731.877002 209.8764 
+L 727.077002 212.2764 
+z
+" clip-path="url(#pe0d3fc7ede)" style="fill: #6e747e; stroke: #6e747e; stroke-width: 1.3; stroke-linecap: round"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 659.23194 154.649521 
+Q 631.722606 106.8403 605.439992 152.517324 
+" clip-path="url(#pe0d3fc7ede)" style="fill: none; stroke: #2a78d6; stroke-width: 2.2; stroke-linecap: round"/>
+    <path d="M 610.65981 149.059941 
+L 605.439992 152.517324 
+L 605.805977 146.26704 
+z
+" clip-path="url(#pe0d3fc7ede)" style="fill: #2a78d6; stroke: #2a78d6; stroke-width: 2.2; stroke-linecap: round"/>
+   </g>
+   <g id="text_14">
+    <text style="font-weight: 600; font-size: 15px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="574.738633" y="33.78435" transform="rotate(-0 574.738633 33.78435)">Reflexive imperativism</text>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #6e747e" x="574.738633" y="60.581244" transform="rotate(-0 574.738633 60.581244)">Barlassina &amp; Hayward 2019</text>
+   </g>
+   <g id="text_16">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(606.660579 192.599959)">toothache</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(604.461438 204.421178)">experience</text>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(742.14393 192.812912)">the throbbing</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(747.57432 204.455725)">tooth-state</text>
+   </g>
+   <g id="text_18">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #6e747e" x="708.132759" y="246.218844" transform="rotate(-0 708.132759 246.218844)">reports it</text>
+   </g>
+   <g id="text_19">
+    <text style="font-weight: 600; font-size: 13px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #2a78d6" x="631.722532" y="98.333581" transform="rotate(-0 631.722532 98.333581)">“Less of me!”</text>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(574.738633 291.841644)">unpleasant because it commands</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(574.738633 305.433862)">less of this very experience</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p41918df0da">
+   <rect x="10.08" y="10.08" width="259.017722" height="314.64"/>
+  </clipPath>
+  <clipPath id="pb0a9c84ba7">
+   <rect x="289.819139" y="10.08" width="259.017722" height="314.64"/>
+  </clipPath>
+  <clipPath id="pe0d3fc7ede">
+   <rect x="569.558278" y="10.08" width="259.017722" height="314.64"/>
+  </clipPath>
+ </defs>
+</svg>

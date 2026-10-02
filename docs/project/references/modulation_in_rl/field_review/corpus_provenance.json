@@ -1,0 +1,97 @@
+{
+  "n_rows_parsed": 127,
+  "n_distinct_papers": 97,
+  "n_merged_across_digests": 29,
+  "rows_per_source_file": {
+    "digest_film.md": 64,
+    "digest_hypernet.md": 20,
+    "digest_modulation_rl.md": 16,
+    "rows_film_new.md": 5,
+    "rows_held_unreviewed.md": 3,
+    "rows_hypernet_apps.md": 4,
+    "rows_hypernet_new.md": 4,
+    "rows_modrl_classics.md": 5,
+    "rows_modrl_modern.md": 4,
+    "rows_neuromod_new.md": 2
+  },
+  "mechanism_counts": {
+    "other": 14,
+    "concatenation": 13,
+    "routing": 11,
+    "hypernetwork": 19,
+    "FiLM": 31,
+    "attention": 6,
+    "plasticity": 3
+  },
+  "venue_tier_counts": {
+    "other-peer-reviewed": 6,
+    "top-tier": 51,
+    "preprint": 31,
+    "workshop": 3,
+    "unclassified": 6
+  },
+  "claim_counts": {
+    "asserted": 18,
+    "ablated": 57,
+    "no-experiment": 10,
+    "ablated-qualified": 9,
+    "unclassified": 3
+  },
+  "rl_counts": {
+    "RL": 51,
+    "not RL": 46
+  },
+  "site_counts": {
+    "other": 23,
+    "generated weights": 11,
+    "trunk / all blocks": 18,
+    "encoder": 6,
+    "n/a": 5,
+    "actor + critic": 14,
+    "critic only": 11,
+    "actor only": 8,
+    "world model": 1
+  },
+  "conditioner_counts": {
+    "other": 13,
+    "task / goal identity": 18,
+    "language instruction": 14,
+    "own activity / statistic": 9,
+    "n/a": 4,
+    "index / noise (not a task signal)": 4,
+    "observation (raw)": 8,
+    "algorithmic knob": 4,
+    "physical parameters": 5,
+    "inferred belief / latent": 10,
+    "denoising timestep": 7,
+    "exogenous phase / clock": 1
+  },
+  "conditioner_counts_rl": {
+    "other": 8,
+    "task / goal identity": 11,
+    "own activity / statistic": 6,
+    "language instruction": 4,
+    "algorithmic knob": 4,
+    "inferred belief / latent": 9,
+    "observation (raw)": 5,
+    "denoising timestep": 1,
+    "physical parameters": 2,
+    "exogenous phase / clock": 1
+  },
+  "year_range": [
+    "2002",
+    "2026"
+  ],
+  "source_files": [
+    "digest_film.md",
+    "digest_hypernet.md",
+    "digest_modulation_rl.md",
+    "rows_film_new.md",
+    "rows_held_unreviewed.md",
+    "rows_hypernet_apps.md",
+    "rows_hypernet_new.md",
+    "rows_modrl_classics.md",
+    "rows_modrl_modern.md",
+    "rows_neuromod_new.md"
+  ]
+}

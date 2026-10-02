@@ -1,0 +1,4 @@
+thermal cells|4|4|100.0|levels 05 and 06 of both waves; the other levels have no body temperature
+episodes per agent per cell|1,000,000|1,000,000|100.0|final-checkpoint store
+minimum steps for a plotted bin|20,000|20,000|100.0|bins with fewer steps are left blank rather than drawn noisy
+temperature bins|4|4|100.0|below −10, −10 to −5, −5 to 0, 0 and above

@@ -1,0 +1,89 @@
+# Analysis manifest for the level-05 body-interactions factorial (stage 3).
+# Input to the store-reading scripts in scripts/analysis/studies/level05_body_interactions/
+# (state_contrasts.py, behavioural_combination_gain.py, factorial_effects.py).
+# Every number below is the pre-registered value of LEVEL05_BODY_INTERACTIONS.md §4.1-4.3
+# (Revision 1 fixed contrasts, Revision 2 margins). A later study reuses the scripts with a new
+# manifest, not new code. Written by developer 2026-09-28; the scripts read every key mandatorily.
+
+study: level05_body_interactions
+design_doc: docs/experiments/active/level05_body_interactions/LEVEL05_BODY_INTERACTIONS.md
+collection_spec: configs/trajectory_collection/level05_body_interactions.yaml   # runs + store root
+out_dir: results/analysis/level05_body_interactions
+
+# World code in each run label `wXXXX_<agent>`: one digit per factor, in this order (1 = on).
+factors: [B5, B3, A1, A4]
+factor_labels:
+  B5: healing slows when hungry
+  B3: healing costs food
+  A1: being away from 0 degrees costs food
+  A4: scarcer food
+agents: [ordinary, modulated]
+difference: [modulated, ordinary]          # D_w = modulated - ordinary
+reference_label: w0000_ordinary            # felt-injury and temperature cut-points are frozen from this run
+
+# Which stores: the checkpoint read by default, and the pooled late window used ONLY when a world's
+# final-checkpoint cells fall short (§4.1): the newest N checkpoints (including the final one).
+checkpoint: final
+late_window_checkpoints: 5
+
+# Measures 1 and 3: fixed contrasts (§4.1, Revision 1). Intervals are [lo, hi) for nutrition and
+# [lo, hi] (inclusive) for injury, as registered: hungry < 60, fed >= 100, low 0-20, high 60-100.
+nutrition_bands:
+  hungry: [0.0, 60.0]
+  fed: [100.0, 1.0e+9]
+injury_ranges:
+  low: [0.0, 20.0]
+  high: [60.0, 100.0]
+min_steps_per_cell: 200
+felt_injury_quantiles: [0.2, 0.8]          # bottom / top fifth of felt injury in the reference run
+felt_injury_slot: Interoceptive Nociception
+temperature_slot: Body Temperature
+
+# Measure 4: behavioural combination gain (§4.1).
+gain_bins: 10
+gain_nutrition_range: [0.0, 200.0]
+gain_injury_range: [0.0, 100.0]
+gain_temperature_percentiles: [0.5, 99.5]  # of the reference run; outer bins open-ended
+min_steps_per_gain_bin: 200                # any variable's bin below this is dropped and counted (§2.8)
+
+# Survival (measure 2): WandB local binary, `_window_n`-weighted Episode/Steps over (0.9 N, N].
+survival_readout_fraction: 0.10
+collapse_fraction: 0.60                    # §5: survival < 0.60 x w0000 of the same agent
+
+# §4.3 Lenth margins.
+lenth_alpha: 0.05
+
+# WandB run IDs (§3.0b Launch Manifest), by collection-spec label.
+wandb_ids:
+  w0000_ordinary: dg1ry2be
+  w0000_modulated: nl1h2j21
+  w0001_ordinary: qgjfgyza
+  w0001_modulated: 3ff8uvxm
+  w0010_ordinary: i89y7cmh
+  w0010_modulated: rx87xmpc
+  w0011_ordinary: 1w9v8nvh
+  w0011_modulated: cppmebro
+  w0100_ordinary: fc13issb
+  w0100_modulated: 3xy93bn9
+  w0101_ordinary: bvrf6o3f
+  w0101_modulated: be7m3u4a
+  w0110_ordinary: 9fkmn3e9
+  w0110_modulated: 3p3vxy30
+  w0111_ordinary: xnwl4cac
+  w0111_modulated: jbzap4iw
+  w1000_ordinary: ffkn03ot
+  w1000_modulated: beq5xdkx
+  w1001_ordinary: ygr4kset
+  w1001_modulated: vbxv4ezr
+  w1010_ordinary: tb31cljk
+  w1010_modulated: s9obueb0
+  w1011_ordinary: vxx52421
+  w1011_modulated: f18yd8zm
+  w1100_ordinary: hk2pvm2t
+  w1100_modulated: i1jjcr9x
+  w1101_ordinary: 5uxys00c
+  w1101_modulated: j0aafmto
+  w1110_ordinary: yg1wi9rl
+  w1110_modulated: wacnzkx4
+  w1111_ordinary: 2zg00mnl
+  w1111_modulated: rtsbklo3

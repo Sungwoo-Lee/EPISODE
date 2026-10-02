@@ -1,0 +1,1 @@
+74,000,000 of 74,000,000 episodes (100.0%) across 4 grids: 15 modulated cells, 1 in-grid unmodulated control and, for the two range-0 grids only, 5 further unmodulated reference seeds each. Every episode is read once, over its first 25 steps.

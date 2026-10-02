@@ -1,0 +1,19 @@
+status: evidence; verdict words come only from decision_rules.evaluate_*
+decision_rules: docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml 5ef6f731d15ebac2f13917e6bf801b607c2b0834e59d52b13f273aae37e1bdc1 @ 47b91611b0873f524108e112204aa04ebb59d8b2
+source: results/analysis/algorithmic_null/algorithmic_null_mayrep/decoding.json (generated 2026-09-30T00:46:10Z, run_decoding)
+row: satiation: probe rows used|148,602|148,602|100.0|every kept row
+row: satiation: held-out episode groups, smallest split repeat|1,000|5,000|20.0|of all episode groups in the probe; gate G6 requires at least 500 held out: met
+row: satiation: held-out rows without a clock value, summed over repeats|0|148,602|0.0|dropped from the layer score and the clock score alike
+row: injury_level: probe rows used|148,602|148,602|100.0|every kept row
+row: injury_level: held-out episode groups, smallest split repeat|1,000|5,000|20.0|of all episode groups in the probe; gate G6 requires at least 500 held out: met
+row: injury_level: held-out rows without a clock value, summed over repeats|0|148,602|0.0|dropped from the layer score and the clock score alike
+row: nearest_predator_manhattan: probe rows used|148,602|148,602|100.0|rows with an active predator only
+row: nearest_predator_manhattan: held-out episode groups, smallest split repeat|1,000|5,000|20.0|of all episode groups in the probe; gate G6 requires at least 500 held out: met
+row: nearest_predator_manhattan: held-out rows without a clock value, summed over repeats|0|148,602|0.0|dropped from the layer score and the clock score alike
+row: steps_remaining: probe rows used|8,002|148,602|5.4|episodes that ended in death only (truncated episodes' remaining time is censored); this biases the headline toward shorter lives
+row: steps_remaining: held-out episode groups, smallest split repeat|150|858|17.5|of episode groups with a death-ended episode; gate G6 requires at least 500 held out: BLOCKED, drawn as blocked, no R²
+row: steps_remaining: held-out rows without a clock value, summed over repeats|46|8,002|0.6|dropped from the layer score and the clock score alike
+row: trained agents drawn|6|6|100.0|every trained agent of the output
+row: untrained reference networks drawn|0|3|0.0|in the output, not drawn here: A2 compares the trained agents
+row: quantities drawn as blocked by gate G6|1|4|25.0|steps_remaining
+row: all-episode steps_remaining (sensitivity row)|0|1|0.0|not drawn: it decides nothing and truncated episodes make it a clock

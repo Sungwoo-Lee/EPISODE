@@ -1,0 +1,33 @@
+{
+ "note": "Runs attempted but not in the 54 graded runs, with the reason. Names only; the figure scripts count them from this file.",
+ "excluded": [
+  {
+   "run": "T2-A-smoke",
+   "reason": "pipeline smoke test, before stage 1"
+  },
+  {
+   "run": "T2-F-smoke",
+   "reason": "pipeline smoke test, before stage 1"
+  },
+  {
+   "run": "T3-G-smoke",
+   "reason": "pipeline smoke test (verifies Graft delivery)"
+  },
+  {
+   "run": "T6-A-1-oldprompt",
+   "reason": "old T6 prompt said to remove unreachable code; tests need pack_or_explain. Prompt fixed, run repeated"
+  },
+  {
+   "run": "T6-F-1-oldprompt",
+   "reason": "same T6 prompt fix"
+  },
+  {
+   "run": "T8-A-1-oldprompt",
+   "reason": "old T8 prompt did not pin the order of LEGAL_RETURN_MODES. Prompt fixed, run repeated"
+  },
+  {
+   "run": "T8-F-1-oldprompt",
+   "reason": "same T8 prompt fix"
+  }
+ ]
+}

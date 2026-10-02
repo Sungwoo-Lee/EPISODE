@@ -1,0 +1,38 @@
+# Part 4 run manifest - input to scripts/analysis/studies/context_exploration/part4_readout.py.
+# Rows copied from STUDY_PLAN.md "4.9 Launch Manifest"; sim values from "4.2 The worlds"
+# (Revision-2 re-run, memory warmth trip, hazard x1). The script cross-checks each run's WandB
+# tag, launch --config and seed against these rows, so a mis-mapped row fails loudly.
+# wandb_dirs pins the four runs later resumed to 5 M (R1.4) to their 2 M folder, so this
+# read-out still reproduces the 2 M results.
+study: context_exploration
+design_doc: docs/experiments/active/context_exploration/STUDY_PLAN.md
+episodes: 2000000
+readout_fraction: 0.10
+replication_gate:            # Part 4 Revision 1, R1.6 L4 (pilots P0a / P0b at 2 M)
+  C1a: {target: 228.3, tol: 4.5}
+  C1b: {target: 225.8, tol: 4.5}
+calibration:                 # 4.3 calibration guard
+  max_nutrition: 200.0
+  max_injury: 100.0
+  temperature_setpoint: 0.0
+  thermal_default_temp_high: -29.0
+  thermal_on: true
+  felt_on: true
+  early_death_max_steps: 20
+worlds:   # sim: criteria 1,2,4,5 pass(1)/fail(0); search = sim mean food search (steps)
+  lvl05ref:        {arm: reference, grid: 10, range: 20, food: "1-4 x 12", search: 4.7,  sim_c: {1: 1, 2: 1, 4: 1, 5: 1}, sim_surv: 1.00, sim_inj: 0.99, sim_starve: 0.01}
+  g10r5f1to2b36:   {arm: balanced,  grid: 10, range: 5,  food: "1-2 x 36", search: 11.8, sim_c: {1: 1, 2: 1, 4: 1, 5: 1}, sim_surv: 0.91, sim_inj: 0.81, sim_starve: 0.19}
+  g20r20f1to4b12:  {arm: balanced,  grid: 20, range: 20, food: "1-4 x 12", search: 9.4,  sim_c: {1: 1, 2: 1, 4: 1, 5: 1}, sim_surv: 0.92, sim_inj: 0.85, sim_starve: 0.15}
+  g20r5f4to16b12:  {arm: balanced,  grid: 20, range: 5,  food: "4-16 x 12", search: 9.3, sim_c: {1: 1, 2: 1, 4: 1, 5: 1}, sim_surv: 0.94, sim_inj: 0.84, sim_starve: 0.16}
+  g20r20f1to2b36:  {arm: balanced,  grid: 20, range: 20, food: "1-2 x 36", search: 11.5, sim_c: {1: 1, 2: 1, 4: 1, 5: 1}, sim_surv: 0.91, sim_inj: 0.84, sim_starve: 0.16}
+  g10r3f1to2b36:   {arm: edge,      grid: 10, range: 3,  food: "1-2 x 36", search: 26.7, sim_c: {1: 1, 2: 1, 4: 0, 5: 1}, sim_surv: 0.62, sim_inj: 0.33, sim_starve: 0.67}
+  g15r8f1to2b36:   {arm: edge,      grid: 15, range: 8,  food: "1-2 x 36", search: 23.0, sim_c: {1: 1, 2: 1, 4: 0, 5: 1}, sim_surv: 0.67, sim_inj: 0.39, sim_starve: 0.61}
+runs:
+  - {id: C1a, world: lvl05ref,       seed: 42, wandb_id: v4tbwrfn, log: logs/20260927_185703.log, tag: rppo_ctxexp_lvl05ref_t1none_s42,       config: configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml, wandb_dirs: [wandb/run-20260927_185710-v4tbwrfn]}
+  - {id: C1b, world: lvl05ref,       seed: 43, wandb_id: qxz17vr0, log: logs/20260927_191205.log, tag: rppo_ctxexp_lvl05ref_t1none_s43,       config: configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml, wandb_dirs: [wandb/run-20260927_191222-qxz17vr0]}
+  - {id: C2,  world: g10r5f1to2b36,  seed: 42, wandb_id: bci9fvu6, log: logs/20260927_201220.log, tag: rppo_ctxexp_g10r5f1to2b36_t1none_s42,  config: configs/environment/experiment/context_exploration/g10r5f1to2b36.yaml}
+  - {id: C3,  world: g20r20f1to4b12, seed: 42, wandb_id: whpmbq6l, log: logs/20260927_184748.log, tag: rppo_ctxexp_g20r20f1to4b12_t1none_s42, config: configs/environment/experiment/context_exploration/g20r20f1to4b12.yaml, wandb_dirs: [wandb/run-20260927_184755-whpmbq6l]}
+  - {id: C4,  world: g20r5f4to16b12, seed: 42, wandb_id: 7ctxxltq, log: logs/20260927_184752.log, tag: rppo_ctxexp_g20r5f4to16b12_t1none_s42, config: configs/environment/experiment/context_exploration/g20r5f4to16b12.yaml, wandb_dirs: [wandb/run-20260927_184807-7ctxxltq]}
+  - {id: C5,  world: g20r20f1to2b36, seed: 42, wandb_id: f8o1wgdw, log: logs/20260927_184755.log, tag: rppo_ctxexp_g20r20f1to2b36_t1none_s42, config: configs/environment/experiment/context_exploration/g20r20f1to2b36.yaml}
+  - {id: C6,  world: g10r3f1to2b36,  seed: 42, wandb_id: 5sqbvlko, log: logs/20260927_201223.log, tag: rppo_ctxexp_g10r3f1to2b36_t1none_s42,  config: configs/environment/experiment/context_exploration/g10r3f1to2b36.yaml}
+  - {id: C7,  world: g15r8f1to2b36,  seed: 42, wandb_id: ds54a5nw, log: logs/20260927_201216.log, tag: rppo_ctxexp_g15r8f1to2b36_t1none_s42,  config: configs/environment/experiment/context_exploration/g15r8f1to2b36.yaml}

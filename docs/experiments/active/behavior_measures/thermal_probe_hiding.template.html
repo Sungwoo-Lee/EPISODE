@@ -1,0 +1,378 @@
+<title>The Last Checkpoint Lies</title>
+__HOUSE_STYLE__
+<style>
+  /* REQUIRED OVERRIDE (House Style Sheet, register F11 amendment): the figures on this page spend
+     --series-1 blue on "the plain agent" and --series-2 orange on "the neuromodulated agent", and
+     green and red on the regimes of Figure 1. Chrome may therefore use none of the four. Section
+     numbers, links and callout rules move to a slate blue that appears in no figure. */
+  :root { --accent: #3f5b7a; --accent-text: #35506e; --warn: #7a5340; }
+  /* STATED DEPARTURE (section 09): the house sheet names IBM Plex Sans Condensed for headings and
+     IBM Plex Mono for code, but LINKS them from Google Fonts rather than embedding them. A lifted
+     page carries the @font-face rules it was given, and the artifact CSP blocks the link, so those
+     two families silently became whatever sans and mono the reader's machine has. Only Pretendard
+     is embedded here, so both tokens point at it and the page renders in the face it actually has. */
+  :root { --f-head: 'Pretendard', system-ui, -apple-system, "Segoe UI", sans-serif;
+          --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  /* A figcaption is a flex item; without this its min-content width is the widest table cell, which
+     pushes the whole page sideways on a phone (register F2). */
+  figure, figcaption { min-width: 0; }
+  table.datatable { min-width: 640px; }
+  table.datatable td:first-child,
+  table.datatable th:first-child { min-width: 170px; }
+  table.wide { min-width: 560px; }
+  table.wide-sm { min-width: 520px; }
+</style>
+
+<div class="wrap">
+
+<section class="col">
+  <h1>The Last Checkpoint Lies</h1>
+  <p class="lede">We set out to measure whether a neuromodulated agent hides from predators more
+  selectively than a plain one. The measurement turned out to be the hard part: read at the final
+  saved checkpoint, the answer was a sixty-point difference. Read properly, it is zero.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">01</span> What this page is about</h2>
+
+<p>An agent lives in a small grid world with food, injury, predators, and bushes it can sit in to
+hide. We wanted to know whether one particular addition to its brain — a <strong>neuromodulator</strong>,
+a small network that rescales the signals flowing through the rest of the network — changes
+<em>when</em> it hides. Not how much: <em>when</em>. An agent that sits in a bush all day is not
+being careful, it is just sitting. An agent that goes into the bush when something is hunting it,
+and comes out when nothing is, is doing something worth a name.</p>
+
+<p>So the quantity throughout this page is a difference, which we call the
+<strong>conditional hiding contrast</strong>:</p>
+
+<div class="callout">
+  <p class="eyebrow">The measure</p>
+  <p><code>contrast = % of steps on the bush WITH a predator &minus; % of steps on the bush in an EMPTY world</code></p>
+  <p>Large and positive means the agent hides <em>because</em> of the threat. Zero means it hides
+  the same either way, and the hiding says nothing about danger.</p>
+</div>
+
+<p>Two things came out of it, and the second is the one worth carrying away. First, in the two
+hardest worlds the agents were never measurable at all until we rebuilt the test, and once rebuilt
+they show strong threat-driven hiding, with a difference between the plain and the neuromodulated
+agent that is <strong>consistent in direction but too small, and resting on too few training runs,
+to claim</strong>. Second — and this is the finding that reaches past this
+experiment — <strong>the standard way we had been reading these numbers manufactures effects that
+are not there</strong>, and it did so in a published analysis of ours from the day before.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">02</span> Why these two worlds could not be measured at all</h2>
+
+<p>The curriculum runs from a small world with one slow predator up to two hard worlds that add a
+<strong>body temperature</strong> system: the world is cold, campfires burn in it, sitting on a fire
+cooks you and the survivable spot is the ring one cell away. An agent there has to keep warm as well
+as fed and unbitten.</p>
+
+<p>The behaviour tests — fixed little scenarios with one bush and one animal, which we call
+<strong>probes</strong> — were built for the warmer worlds and contain no fire. Switching the
+temperature system on in them without adding a fire does something we only found by measuring it:
+the body settles at two-thirds of the world's ambient temperature, which lands at about
+&minus;20&deg;, and the agent dies below &minus;15&deg;. Every probe episode therefore ended with
+the agent frozen, somewhere between step 86 and step 99 of a 100-step test. The test killed whatever
+it was trying to observe.</p>
+
+<div class="callout warn">
+  <p class="eyebrow">The awkward part</p>
+  <p>At equilibrium the agent's temperature sense reads exactly one third of the ambient temperature,
+  and its body sits at two thirds of it. So the reading the agent had when it was away from a fire
+  during training, and <em>surviving</em>, are mutually exclusive — that is precisely what makes
+  those worlds hard. <strong>Any comfortable version of the test is therefore a world the agent
+  never trained in.</strong> This cannot be engineered away, so instead of picking one comfortable
+  setting and hoping, we built four and measured how much the choice moves the answer.</p>
+</div>
+
+<p class="cue" hidden>Scroll the table sideways to see every column.</p>
+<div class="scroll">
+<table class="wide-sm">
+  <thead><tr><th>World we built</th><th>What we did to it</th><th>Can the agent survive?</th><th>Can it hide?</th></tr></thead>
+  <tbody>
+    <tr><td><b>neutral</b></td><td>warmed the whole world to the body's target</td><td>everywhere (100 of 100 cells)</td><td>freely</td></tr>
+    <tr><td><b>cool</b></td><td>warmed it most of the way; body settles 5&deg; below target</td><td>everywhere (100 of 100 cells)</td><td>freely</td></tr>
+    <tr><td><b>fire beside the bush</b></td><td>kept the trained cold, put a campfire next to the bush</td><td>only 8 of 100 cells</td><td>yes — and stay warm doing it</td></tr>
+    <tr><td><b>fire away from the bush</b></td><td>kept the trained cold, put the campfire far from the bush</td><td>only 8 of 100 cells</td><td>only at the cost of freezing</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Every one of those numbers was measured by loading the world and reading its actual temperature
+field, not computed on paper. The last row was built deliberately as the sharp case: if an agent's
+hiding is a blind habit it should sit in a lethal bush, and if it is a response it should leave.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">03</span> A defect we found before trusting any of it</h2>
+
+<p>Before running anything we had two reviewers check the new tests. One found a fault that had been
+in the probes all along and had already contaminated a completed analysis.</p>
+
+<p>The hiding bush was marked "the agent can hide here" but was <em>never</em> marked "animals
+cannot enter here". The setting that blocks animals defaults to off when it is not written down, and
+every probe rewrites its obstacle list from scratch, so the setting was simply absent. The bush in
+every test was <strong>permeable</strong>: a predator could walk onto the hiding square and bite the
+agent inside it — something that never happens in any world these agents trained in, where the bush
+blocks animals. The test was corrupting the exact thing it existed to measure. It is fixed, in all
+108 test files, and the generator now refuses to emit a bush that hides without blocking.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">04</span> The last checkpoint lies</h2>
+
+<p>Training saves the agent's brain 50 times along the way. Our analyses had been reading the
+behaviour off the <strong>final</strong> save, which seems obviously right: that is the finished
+agent. It is not right, and Figure 1 is the demonstration.</p>
+
+<figure>
+  <img data-fig="t01_window_profile" id="fig-t01_window_profile" alt="Two panels. Left: conditional hiding contrast against trailing window size on a log axis from 1 to 50, for a blue plain agent and an orange neuromodulated agent. At window 1 the blue point sits near minus 8 and the orange near 53; by window 10 both are near 38 and they stay together. Right: the difference between them against window size, starting at minus 60, rising to zero across windows 10 to 20, then falling to minus 19 by window 50.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  <figcaption>
+    <span><b>Figure 1 — the same two agents, at every window size at once.</b>
+    Instead of choosing how many checkpoints to average, this shows the answer for every choice.
+    At the far left — the final checkpoint alone, ringed — the two agents look 60 points apart.
+    Average ten or twenty checkpoints and the gap is <b>zero</b>. Average all fifty and a gap
+    reappears, 19 points and statistically significant, <em>pointing the same way as the artefact</em>.
+    That last part is the trap: a single window at either end would have read as confirmation of the
+    same wrong story. Only the middle is both settled and precise, and the middle says there is no
+    difference.</span>
+    <span><b>Axes.</b> Horizontal, both panels: the trailing window — how many of the newest saved
+    checkpoints are averaged — from 1 to 50, on a logarithmic scale. Vertical, left panel: the
+    conditional hiding contrast in percentage points, about &minus;22 to +78, where 0 means hiding
+    is unrelated to the predator. Vertical, right panel: the difference between the two agents'
+    contrasts, in percentage points, about &minus;72 to +38; the dashed line at 0 is "no difference".
+    Shaded bands are 95% confidence intervals. Windows of 2 are omitted from the bands because their
+    interval spans roughly &plusmn;400 points and would flatten everything else.</span>
+    __DATA:t01_window_profile__
+    <p class="prov">Drawn by <code>scripts/<wbr>analysis/<wbr>studies/<wbr>thermal_probes/<wbr>t01_window_profile.py</code>, which also writes <code>figures/<wbr>t01_window_profile.data.txt</code> — the table above.</p>
+    <span><b>How it is computed.</b> For each saved checkpoint we run 30 fixed evaluation episodes
+    with a predator present and 30 with an empty world, and record the share of each episode's steps
+    the agent spent standing on the bush. The contrast is the predator average minus the empty
+    average, giving one number per checkpoint. A <em>trailing window</em> of size w simply averages
+    the newest w of those numbers; w = 1 is the final checkpoint alone, w = 50 is the whole run.
+    Confidence intervals are Student t intervals, but computed on an <em>effective</em> sample size
+    rather than on w, because averaging w checkpoints only buys precision if they are independent of
+    one another. We measure the lag-1 autocorrelation — how strongly each checkpoint resembles the
+    one before it — and shrink the sample size by (1&minus;r)/(1+r) when it is positive. Measured
+    here it is near zero, so late checkpoints behave like independent samples of the finished
+    policy; that is a measurement, not an assumption. Widening the window is not simply more data:
+    variance falls roughly as one over the square root of w, while bias grows because the window
+    reaches back into training and averages in a less-trained agent. <b>What this figure does not
+    show:</b> the absolute amount of hiding, only the difference between two conditions; and it
+    describes two particular training runs, not neuromodulation in general.</span>
+  </figcaption>
+</figure>
+
+<p>Figure 2 shows where that came from, by drawing the raw series the endpoint was plucked from.</p>
+
+<figure>
+  <img data-fig="t02_checkpoint_trace" alt="Two panels sharing a vertical scale, bush occupancy against training progress in millions of steps. Left panel, empty world: the blue plain agent's line swings across almost the whole range, from 0 to about 97 percent, ending at a ringed point at 86. The orange neuromodulated line stays low, mostly under 25. Right panel, predator present: both lines are high and overlapping, the blue reaching about 97 and the orange dipping to about 27. A shaded band covers the last fifth of each panel.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  <figcaption>
+    <span><b>Figure 2 — the 86% that started it.</b>
+    In the empty world the plain agent's final checkpoint sits at 86% — which we read, the day
+    before, as "this agent is simply parked in a bush". Its ten preceding checkpoints average
+    <b>24%</b> and range from 4% to 86%. The endpoint is not a typical value of its own
+    neighbourhood; it is the <em>maximum</em> of it. The behaviour swings violently from one save to
+    the next even this late in training, which is the thing the single-number reading hides.</span>
+    <span><b>Axes.</b> Horizontal, both panels: training progress in millions of environment steps,
+    0 to about 10.5. Vertical, both panels (shared scale): the share of an episode's steps spent
+    standing on the hiding bush, as a percentage; ticks run 0 to 100, and the left panel keeps blank
+    headroom above 100 so its note is not printed over the data. Each marker is one saved checkpoint, averaged over
+    30 episodes. The ringed marker at the right of each series is the final checkpoint. The shaded
+    band marks the last 20 checkpoints — the window quoted everywhere else on this page.</span>
+    __DATA:t02_checkpoint_trace__
+    <p class="prov">Drawn by <code>scripts/<wbr>analysis/<wbr>studies/<wbr>thermal_probes/<wbr>t02_checkpoint_trace.py</code>, which also writes <code>figures/<wbr>t02_checkpoint_trace.data.txt</code> — the table above.</p>
+    <span><b>How it is computed.</b> Every saved checkpoint of both level-04 runs is replayed
+    against two fixed probe scenarios: one containing a hunting predator, one containing no animal at
+    all. Each replay is 30 episodes with fixed seeds, so two agents meet identical worlds. Within an
+    episode we count the steps on which the agent's square is the bush's square, and divide by the
+    episode's length; the plotted point averages that fraction over the 30 episodes. Nothing is
+    smoothed — consecutive points are genuinely that far apart. The empty-world panel is the more
+    informative of the two, because with no animal in the world there is nothing for hiding to be a
+    response <em>to</em>, so whatever the agent does there is its baseline habit. The shaded band is
+    drawn to show which points the rest of this page averages over, not to claim the behaviour is
+    constant inside it. <b>What this figure does not show:</b> why the behaviour swings — we have
+    not traced it to a particular change in the policy — and it covers level 04 only, the world the
+    superseded analysis used.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">05</span> Running more episodes would not have helped</h2>
+
+<p>The obvious reaction to a noisy number is to collect more of it. Figure 3 shows why that
+particular fix would have bought almost nothing here.</p>
+
+<figure>
+  <img data-fig="t04_variance_budget" alt="Grouped bar chart with eight pairs of bars. In every pair the lighter solid bar, the sampling error from thirty episodes, is much shorter than the darker hatched bar, the variation between checkpoints. Multipliers above five pairs read times four, times nineteen, times two, times five and times four; the other three pairs are labelled all thirty episodes identical.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  <figcaption>
+    <span><b>Figure 3 — the noise is in the agent, not in the sample.</b>
+    The lighter solid bar is how much uncertainty remains after 30 episodes at a single checkpoint.
+    The darker hatched bar is how much the agent's own behaviour moves between late checkpoints, with
+    the world held completely fixed. The hatched bar is 2 to 19 times the solid one — and in four of
+    the eight cells the solid bar is <b>exactly zero</b>: all 30 episodes produced the identical
+    number, while the policy still wandered by one to three points between saves. More episodes shrink a quantity that is already
+    negligible. The honest unit of replication is the checkpoint, and beyond it the training
+    seed.</span>
+    <span><b>Axes.</b> Horizontal: the eight combinations of run and probe condition, in the world
+    where the fire sits away from the bush — level 05 or 06, plain or neuromodulated agent, predator
+    or empty world. Vertical: spread in bush occupancy, in percentage points, 0 to about 15.5. The
+    two bars in each pair are two different spreads of the same underlying quantity, so they share
+    the scale.</span>
+    __DATA:t04_variance_budget__
+    <p class="prov">Drawn by <code>scripts/<wbr>analysis/<wbr>studies/<wbr>thermal_probes/<wbr>t04_variance_budget.py</code>, which also writes <code>figures/<wbr>t04_variance_budget.data.txt</code> — the table above.</p>
+    <span><b>How it is computed.</b> Two spreads are placed side by side for the same measurement.
+    The first is the <em>standard error</em> of one checkpoint's estimate: we take the 30 individual
+    episode values behind a single checkpoint, compute their standard deviation, and divide by the
+    square root of 30 — the textbook uncertainty of a mean, and exactly the quantity that running
+    more episodes would reduce. The second is the <em>standard deviation across the last 20 saved
+    checkpoints</em> of the same run and condition: how much the agent's behaviour itself moves late
+    in training, in a world that never changes. These are different kinds of quantity, which is the
+    point — one is measurement error, the other is real variation in the thing being measured. The
+    episode values are recomputed from the step-by-step recordings rather than taken from the
+    summary tables, so the two sides are not derived from one another. A solid bar of exactly zero
+    means all 30 episodes agreed to the last digit, which happens in the empty world when the agent
+    reliably never enters the bush. <b>What this figure does not show:</b> variation between
+    training seeds, which we cannot estimate at all, because there is only one seed per arm.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">06</span> What the two hardest worlds actually say</h2>
+
+<figure>
+  <img data-fig="t03_arms_result" alt="Grouped bar chart of eight pairs of bars with error bars, all well above zero, ranging from about 12 to 49 percentage points. Blue plain-agent and orange neuromodulated-agent bars overlap within their error bars in almost every pair, and which of the two is taller changes from pair to pair. Bars are lowest in the fire-beside-the-bush world.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  <figcaption>
+    <span><b>Figure 4 — strong threat-driven hiding everywhere, and no difference between the two
+    agents.</b> Every bar sits far above zero: in all four temperature worlds and both curriculum
+    levels, both agents hide substantially more when something is hunting them. The blue and orange
+    bars overlap in nearly every pair — but they do not overlap <em>symmetrically</em>: the
+    neuromodulated agent's contrast is the larger one in <b>seven of these eight cells</b>, by 3.0
+    percentage points on average. Read as eight independent comparisons that would be a sign test at
+    p = 0.07. <b>They are not eight independent comparisons.</b> The four temperature worlds measure
+    the same two pairs of training runs, so this is two comparisons measured four times each, and
+    the apparent weight of "seven of eight" is mostly the same two runs counted repeatedly. The
+    honest statement is that the direction is consistent enough to be worth replicating with several
+    seeds, and far too weak — and too entangled with a single pair of runs — to claim anything
+    from now. The separate lesson is the
+    left-to-right pattern: the contrast is about twice as large in the neutral world as in the one
+    where the fire sits beside the bush, because there the agent is already on the bush to keep warm,
+    which lifts its empty-world baseline and squeezes the difference. <b>The choice of temperature
+    fix moves the answer by more than the effect we were looking for.</b></span>
+    <span><b>Axes.</b> Horizontal: the eight combinations of temperature world and curriculum level —
+    four worlds (neutral, cool, fire beside the bush, fire away from the bush) crossed with levels 05
+    and 06. Vertical: the conditional hiding contrast in percentage points, 0 to 62 — the share of
+    steps on the bush with a predator present minus the share in an empty world, where 0 would mean
+    hiding is unrelated to the predator. Error bars are 95% confidence intervals computed across the
+    last 20 saved checkpoints.</span>
+    __DATA:t03_arms_result__
+    <p class="prov">Drawn by <code>scripts/<wbr>analysis/<wbr>studies/<wbr>thermal_probes/<wbr>t03_arms_result.py</code>, which also writes <code>figures/<wbr>t03_arms_result.data.txt</code> — the table above.</p>
+    <span><b>How it is computed.</b> Each bar is the average of 20 numbers — one per saved
+    checkpoint, over the newest 20 of the 50 saved. Each of those numbers is itself the difference
+    between two averages of 30 fixed evaluation episodes: the share of steps spent on the bush with
+    a hunting predator in the world, minus the share with no animal in the world. We use the newest
+    20 rather than the final checkpoint for the reason Figure 1 sets out, and rather than all 50
+    because the older ones average in a less-trained agent. Intervals are Student t intervals on an
+    effective sample size that accounts for any resemblance between neighbouring checkpoints. Note
+    that the two conditions are separate sets of episodes, so their sampling noise is independent and
+    adds when we subtract; pairing them by checkpoint does not cancel anything, which we checked
+    rather than assumed. <b>What this figure does not show:</b> the absolute level of hiding in each
+    condition, which the contrast deliberately removes; the noise-matched variants of these worlds,
+    which were run for the level-06 agents and agree with what is shown; and any estimate of
+    variation between training seeds.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">07</span> What this replaces</h2>
+
+<p>The claims below were made in this project on 22 September 2026 and are <strong>wrong</strong>.
+They are left here rather than deleted, because a corrected page that hides what it corrected
+teaches nobody anything.</p>
+
+<p class="cue" hidden>Scroll the table sideways to see every column.</p>
+<div class="scroll">
+<table class="wide">
+  <thead><tr><th>Claim, as made</th><th>Where it came from</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>"The plain agent hides 86% of steps with nothing in the world — it is simply parked in a bush."</td>
+        <td>final checkpoint, level 04, empty world</td>
+        <td><b>Superseded.</b> The ten checkpoints before it average 24%. The endpoint is the maximum of its neighbourhood.</td></tr>
+    <tr><td>"The neuromodulated agent hides conditionally (6% empty, 58% predator); the plain one does not."</td>
+        <td>final checkpoint, level 04</td>
+        <td><b>Superseded.</b> Over the last 20 checkpoints both agents' contrasts are 41.7 and 41.0 — indistinguishable.</td></tr>
+    <tr><td>"Threat-type discrimination: 58 / 23 / 9 against the control's 80 / 79 / 65."</td>
+        <td>final checkpoint, and a permeable bush</td>
+        <td><b>Withdrawn.</b> Both defects apply. Not re-derived here.</td></tr>
+    <tr><td>"The fire-away world is the sharp test: a parked agent should freeze, a responsive one should leave."</td>
+        <td>our own design reasoning</td>
+        <td><b>Wrong for a third reason.</b> Nobody freezes — the agents find the warm ring and visit it intermittently, so nearly every episode reaches the step cap.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>The one claim that survives untouched is the narrow one: with <em>no animal in the world</em>,
+bush permeability cannot matter, because there is nothing to walk in.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">08</span> What we would still not claim</h2>
+
+<div class="callout warn">
+  <p class="eyebrow">The binding limit</p>
+  <p><strong>One training seed per arm.</strong> Every interval on this page describes the spread of
+  <em>one</em> run across its own checkpoints. It cannot tell you how much two runs of the same
+  configuration would differ from each other, and that is exactly the comparison a claim about
+  neuromodulation needs. Nothing here is evidence that neuromodulation does not work, and nothing
+  here is evidence that it does.</p>
+  <p>This is what makes the "seven of eight cells" pattern in Figure 4 unclaimable rather than
+  merely weak. Eight cells sounds like eight chances for chance to be ruled out, but the four
+  temperature worlds re-measure the same two pairs of runs — so the pattern could be one pair of
+  runs happening to differ, re-counted four times. A handful of seeds would settle it in an
+  afternoon of compute; nothing short of that will.</p>
+</div>
+
+<ul>
+  <li><b>Every comfortable world is off-distribution.</b> Shown, not waved away: the contrast varies
+  roughly two-fold across the four temperature fixes, which is larger than the effect being looked
+  for. Agreement across all four is the reason to believe the null, not any single one of them.</li>
+  <li><b>Three of the four hiding measures carry no information</b> at level 04 and are not reported:
+  every episode eventually enters the bush, the entry step is always 3 because the bush is 3 squares
+  away, and survival is pinned at the episode cap.</li>
+  <li><b>The level-04 threat-discrimination numbers have not been re-derived</b> under the corrected
+  bush. That work is queued, not done.</li>
+</ul>
+</section>
+
+<section class="col">
+<h2><span class="num">09</span> How to reproduce this</h2>
+<p>The four temperature worlds are generated by
+<code>configs/<wbr>environment/<wbr>experiment/<wbr>behavior_probes/<wbr>thermal/<wbr>generate_thermal_probes.py</code>⁠, which
+writes 96 test files and refuses to emit one whose bush hides without blocking. The evaluation is
+<code>scripts/<wbr>eval/<wbr>dwell_sweep/<wbr>run_sweep.py</code>⁠ over the nine specifications in
+<code>configs/<wbr>eval_sweeps/<wbr>thermal_probes/<wbr></code>⁠ and
+<code>configs/<wbr>eval_sweeps/<wbr>basicq2_wave2_blocking_bush_rppo.yaml</code>⁠; it wrote 312 result tables,
+every one with all 50 checkpoints and no failed cells. The windowing is
+<code>scripts/<wbr>analysis/<wbr>studies/<wbr>basicq2_waves/<wbr>window_profile.py</code>⁠. Each figure is one script in
+<code>scripts/<wbr>analysis/<wbr>studies/<wbr>thermal_probes/<wbr></code> and emits its own data-accounting file
+alongside its image. The bush fix is commit <code>a8a9040b</code>.</p>
+<p>Departures from the House Style Sheet, all deliberate. The chrome accent and
+warning hues are moved off the figure palette, which the sheet itself requires when figures spend
+colours on data categories. Headings are set in Pretendard, and code in the reader's own system monospace, rather than in the
+sheet's IBM Plex families: the sheet links those from Google Fonts instead of embedding them, and a
+published artifact cannot fetch them, so naming them would have meant headings too rendering in an
+unpredictable system font.
+Wide tables sit in horizontal scroll boxes with an overflow cue, which is the sheet's own mechanism.</p>
+</section>
+
+</div>
+__HOUSE_SCRIPT__

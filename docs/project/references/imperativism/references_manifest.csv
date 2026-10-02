@@ -1,0 +1,90 @@
+key,batch,tier,survey_section,doi,file_stem,status,note
+klein2007,A,full,1,10.5840/jphil2007104104,Klein 2007 - An imperative theory of pain (author copy),pdf,existing
+carruthers2018,A,full,-,10.1111/phpr.12395,Carruthers 2018 - Valence and value,pdf,existing
+bh2019,A,full,1,10.1093/mind/fzz035,Barlassina and Hayward 2019 - More of me Less of me - Reflexive imperativism about affective phenomenal character (author copy),pdf,existing
+barlassina2020,A,full,1,10.1002/tht3.471,Barlassina 2020 - Beyond good and bad - Reflexive imperativism not evaluativism explains valence,pdf,existing
+carruthers2023,A,full,-,10.1086/714985,Carruthers 2023 - On valence - Imperative or representation of value (author copy),pdf,existing
+hall2008,B1,full,-,10.1080/00048400802346813,Hall 2008 - If it itches scratch,named-only,history anchor
+martinez2011,B1,full,-,10.1007/s11097-010-9172-0,Martinez 2011 - Imperative content and the painfulness of pain,pdf,history anchor
+cuttertye2011,B1,full,1,10.1111/j.1533-6077.2011.00199.x,Cutter and Tye 2011 - Tracking representationalism and the painfulness of pain,pdf,
+bain2013,B1,full,-,10.1007/s11098-012-0049-7,Bain 2013 - What makes pains unpleasant,pdf,history anchor
+jacobson2013,B1,full,-,10.1111/1467-9213.12029,Jacobson 2013 - Killing the messenger - Representationalism and the painfulness of pain,pdf,history anchor
+martinez2015,B2,full,1,10.1007/s11098-014-0408-7,Martinez 2015 - Pains as reasons,pdf,
+mk2016,B2,full,-,10.1007/s10539-015-9514-y,Martinez and Klein 2016 - Pain signals are predominantly imperative,pdf,history anchor
+bain2017,B2,full,1,10.4324/9781315742205-4,Bain 2017 - Evaluativist accounts of pains unpleasantness,pdf,
+bainreview2017,B2,short,1,10.1080/00048402.2017.1355928,Bain 2017 - Review of What the Body Commands by Colin Klein,pdf,
+klein2015,B2,short,1,10.7551/mitpress/10480.001.0001,Klein 2015 - What the body commands - The imperative theory of pain (publisher preview),pdf,book; 37-page publisher preview only
+km2018,B2,full,-,10.4324/9781351115865-2,Klein and Martinez 2018 - Imperativism and pain intensity,pdf,history anchor
+bain2019,B2,full,-,10.1111/nous.12228,Bain 2019 - Why take painkillers,pdf,history anchor
+loopy2019,B2,full,-,10.5840/philtopics201947224,Barlassina and Hayward 2019 - Loopy regulations - The motivational profile of affective phenomenology,pdf,cited by Carruthers 2023
+foltz1962,C,full,4,10.3171/jns.1962.19.2.0089,Foltz and White 1962 - Pain relief by frontal cingulumotomy,named-only,
+berthier1988,C,full,4,10.1002/ana.410240109,Berthier et al. 1988 - Asymbolia for pain - A sensory-limbic disconnection syndrome,named-only,
+ploner1999,C,full,-,10.1016/S0304-3959(99)00012-3,Ploner et al. 1999 - Pain affect without pain sensation in a patient with a postcentral lesion,named-only,history anchor
+klein2015asym,C,full,4,10.1093/mind/fzu185,Klein 2015 - What pain asymbolia really shows,pdf,
+griffithkind2023,C,full,4,10.1017/psa.2023.167,Griffith and Kind 2023 - Pain asymbolia is not pain,pdf,
+duvalklein2025,C,full,-,10.1017/psa.2025.10098,Duval and Klein 2025 - Pain asymbolia is probably still pain,pdf,current status
+melzackwall1965,D,short,-,10.1126/science.150.3699.971,Melzack and Wall 1965 - Pain mechanisms - A new theory,pdf,history anchor
+melzackcasey1968,D,short,1,,Melzack and Casey 1968 - Sensory motivational and central control determinants of pain,named-only,book chapter
+fernandezturk1992,D,short,-,10.1037/0033-2909.112.2.205,Fernandez and Turk 1992 - Sensory and affective components of pain - Separation and synthesis,named-only,history anchor
+treede1999,D,short,-,10.1016/S0304-3959(98)00184-5,Treede et al. 1999 - The cortical representation of pain,named-only,history anchor
+price2000,D,full,1,10.1126/science.288.5472.1769,Price 2000 - Psychological and neural mechanisms of the affective dimension of pain,pdf,
+leknestracey2008,D,short,-,10.1038/nrn2333,Leknes and Tracey 2008 - A common neurobiology for pain and pleasure,pdf,history anchor
+auvray2010,D,short,-,10.1016/j.neubiorev.2008.07.008,Auvray et al. 2010 - The sensory-discriminative and affective-motivational aspects of pain,named-only,history anchor
+talbot2019,D,full,2,10.1016/j.bja.2019.03.033,Talbot et al. 2019 - The sensory and affective components of pain - Differentially modifiable or inseparable,pdf,
+raja2020,D,short,-,10.1097/j.pain.0000000000001939,Raja et al. 2020 - The revised IASP definition of pain,named-only,history anchor
+rainville1997,E1,full,2,10.1126/science.277.5328.968,Rainville et al. 1997 - Pain affect encoded in human anterior cingulate but not somatosensory cortex,pdf,
+hofbauer2001,E1,full,2,10.1152/jn.2001.86.1.402,Hofbauer et al. 2001 - Cortical representation of the sensory dimension of pain,pdf,
+zubieta2001,E1,full,2,10.1126/science.1060952,Zubieta et al. 2001 - Regional mu opioid receptor regulation of sensory and affective dimensions of pain,pdf,
+bentley2004,E1,short,2,10.1016/j.clinph.2004.03.010,Bentley et al. 2004 - Differential effects on the laser evoked potential of attending to pain localisation versus unpleasantness,named-only,
+kulkarni2005,E1,full,2,10.1111/j.1460-9568.2005.04098.x,Kulkarni et al. 2005 - Attention to pain localization and unpleasantness discriminates medial and lateral pain systems,pdf,
+tiemann2014,E1,full,2,10.1371/journal.pone.0096167,Tiemann et al. 2014 - Dopamine precursor depletion influences pain affect rather than pain sensation,pdf,
+nickel2017,E2,full,2,10.1016/j.neuroimage.2017.01.011,Nickel et al. 2017 - Brain oscillations differentially encode noxious stimulus intensity and pain intensity,named-only,
+hayen2017,E2,full,4,10.1016/j.neuroimage.2017.01.005,Hayen et al. 2017 - Opioid suppression of conditioned anticipatory brain responses to breathlessness,pdf,survey cites as pain; paper is breathlessness
+singh2020,E2,full,2,10.1016/j.cub.2020.02.091,Singh et al. 2020 - Mapping cortical integration of sensory and affective pain pathways,pdf,
+stankewitz2023,E2,full,2,10.1038/s41598-023-35294-2,Stankewitz et al. 2023 - Pain and the emotional brain - Pain-related cortical processes are better reflected by affective than cognitive evaluation,pdf,the survey cites this 7T paper without naming it
+zidda2024,E2,full,2,10.1093/cercor/bhae358,Zidda et al. 2024 - Neural dynamics of pain modulation by emotional valence,pdf,
+wall1979,F,full,3,10.1016/0304-3959(79)90047-2,Wall 1979 - On the relation of injury to pain,named-only,
+bolles1980,F,full,3,10.1017/s0140525x0000491x,Bolles and Fanselow 1980 - A perceptual-defensive-recuperative model of fear and pain,named-only,
+eccleston1999,F,short,3,10.1037/0033-2909.125.3.356,Eccleston and Crombez 1999 - Pain demands attention,named-only,
+vlaeyen2000,F,short,3,10.1016/s0304-3959(99)00242-0,Vlaeyen and Linton 2000 - Fear-avoidance and its consequences in chronic musculoskeletal pain,pdf,
+craig2003,F,short,3,10.1016/s0166-2236(03)00123-1,Craig 2003 - A new view of pain as a homeostatic emotion,pdf,
+fields2006,F,short,3,,Fields 2006 - A motivation-decision model of pain - The role of opioids,named-only,conference proceedings chapter
+leeuw2006,F,short,3,10.1007/s10865-006-9085-0,Leeuw et al. 2006 - The fear-avoidance model of musculoskeletal pain - Current state of scientific evidence,pdf,
+vandamme2008,F,short,3,10.1016/j.pain.2008.07.022,Van Damme et al. 2008 - Coping with pain - A motivational perspective,named-only,
+hasenbring2010,F,short,3,10.1097/ajp.0b013e3181e104f2,Hasenbring and Verbunt 2010 - Fear-avoidance and endurance-related responses to pain,named-only,
+vlaeyen2012,F,short,3,10.1016/j.pain.2011.12.009,Vlaeyen and Linton 2012 - Fear-avoidance model of chronic musculoskeletal pain - 12 years on,named-only,
+crombez2012,F,short,3,10.1097/ajp.0b013e3182385392,Crombez et al. 2012 - Fear-avoidance model of chronic pain - The next generation,pdf,
+claes2015,F,full,3,10.1097/j.pain.0000000000000116,Claes et al. 2015 - Pain-avoidance versus reward-seeking,pdf,
+vlaeyen2016,F,short,3,10.1097/j.pain.0000000000000574,Vlaeyen et al. 2016 - The fear-avoidance model of pain,pdf,
+johansen2001,G1,full,3,10.1073/pnas.141218998,Johansen et al. 2001 - The affective component of pain in rodents - Anterior cingulate cortex,pdf,
+johansen2004,G1,full,3,10.1038/nn1207,Johansen and Fields 2004 - Glutamatergic activation of anterior cingulate cortex produces an aversive teaching signal,pdf,
+wiech2013,G2,short,3,10.3389/fnins.2013.00046,Wiech and Tracey 2013 - Pain decisions and actions - A motivational perspective,pdf,
+wang2018,G2,short,3,10.1177/2398212818772964,Wang et al. 2018 - Model-based and model-free pain avoidance learning,pdf,
+becker2018,G2,short,3,10.1155/2018/5457870,Becker et al. 2018 - Emotional and motivational pain processing,pdf,
+seymour2019,G2,full,3,10.1016/j.neuron.2019.01.055,Seymour 2019 - Pain - A precision signal for reinforcement learning and control,pdf,
+corder2019,G1,full,3,10.1126/science.aap8586,Corder et al. 2019 - An amygdalar neural ensemble that encodes the unpleasantness of pain,pdf,
+gandhi2021,G2,full,3,10.1097/j.pain.0000000000002472,Gandhi et al. 2021 - Neural and behavioral correlates of human pain avoidance,pdf,
+jepma2022,G2,full,3,10.7554/elife.74149,Jepma et al. 2022 - Different brain systems support learning from received and avoided pain,pdf,
+lee2022,G1,full,3,10.1016/j.cub.2022.04.090,Lee et al. 2022 - Role of anterior cingulate cortex inputs to periaqueductal gray for pain avoidance,pdf,
+le2024,G2,short,3,10.1523/eneuro.0437-23.2024,Le et al. 2024 - Neural correlates of individual differences in reinforcement learning during pain avoidance,pdf,
+vase2003,H,full,4,10.1016/s0304-3959(03)00073-3,Vase et al. 2003 - Suggestion desire and expectation in placebo effects in IBS patients,named-only,
+vase2005,H,full,4,10.1016/j.pain.2005.03.014,Vase et al. 2005 - Increased placebo analgesia over time in IBS patients,named-only,
+lee2024,H,full,4,10.1073/pnas.2310433121,Lee et al. 2024 - Brain representations of affective valence and intensity in sustained pleasure and pain,pdf,
+flury2025,H,full,4,10.1002/ejp.70162,Flury et al. 2025 - Differential operant conditioning of emotional-motivational and sensory-discriminative pain responses,pdf,
+vogt1992,I,short,5,10.1093/cercor/2.6.435-a,Vogt et al. 1992 - Functional heterogeneity in cingulate cortex,named-only,
+budell2010,I,short,5,10.1016/j.neuroimage.2010.05.037,Budell et al. 2010 - Brain responses to facial expressions of pain - Emotional or motor mirroring,named-only,
+shackman2011,I,short,5,10.1038/nrn2994,Shackman et al. 2011 - The integration of negative affect pain and cognitive control in the cingulate cortex,pdf,
+perini2013,I,full,5,10.1523/jneurosci.3135-12.2013,Perini et al. 2013 - Where pain meets action in the human brain,pdf,
+misra2014,I,short,5,10.1093/cercor/bhu001,Misra and Coombes 2015 - Neuroimaging evidence of motor control and pain processing in the human midcingulate cortex,pdf,
+procyk2014,I,short,5,10.1093/cercor/bhu213,Procyk et al. 2016 - Midcingulate motor map and feedback detection,pdf,
+budell2015,I,short,5,10.1371/journal.pone.0107526,Budell et al. 2015 - Mirroring pain in the brain - Emotional expression versus motor imitation,pdf,
+tolomeo2016,I,full,5,10.1093/brain/aww069,Tolomeo et al. 2016 - A causal role for the anterior mid-cingulate cortex in negative affect and cognitive control,pdf,
+han2017,I,short,5,10.1093/scan/nsx016,Han et al. 2017 - Empathy for pain motivates actions without altruistic effects,pdf,
+perini2020,I,full,5,10.1093/cercor/bhaa078,Perini et al. 2020 - Mutation carriers with reduced C-afferent density reveal cortical dynamics of pain-action relationship,pdf,
+koppel2022,I,full,5,10.1093/cercor/bhac102,Koppel et al. 2022 - Prediction and action in cortical pain processing,pdf,
+gordon2023,I,short,-,10.1038/s41586-023-05964-2,Gordon et al. 2023 - A somato-cognitive action network alternates with effector regions in motor cortex,pdf,history anchor
+tumulty2009,B1,full,-,10.5840/jphil200910635,Tumulty 2009 - Pains imperatives and intentionalism,named-only,history anchor; critique of Klein 2007
+klein2010,B1,short,-,10.5840/jphil20101071038,Klein 2010 - Response to Tumulty on pain and imperatives,named-only,history anchor
+kauppinen2021,B3,full,-,10.1093/oso/9780198845850.003.0012,Kauppinen 2021 - Relational imperativism about affective valence,pdf,current status
+barlassina_reflection,B3,full,-,,Barlassina - Valence - A reflection,pdf,current status; year from PDF
+mb2026,B3,full,-,10.1086/726998,Martinez and Barlassina 2026 - The informational profile of valence - The metasemantic argument for imperativism,pdf,current status; replies to Carruthers 2023

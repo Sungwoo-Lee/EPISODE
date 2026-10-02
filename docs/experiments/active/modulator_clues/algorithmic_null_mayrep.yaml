@@ -1,0 +1,116 @@
+# Analysis manifest — "What Both Agents Compute", May replication EVIDENCE (Stage 6 of the tooling plan).
+# The six agents (3 seeds per agent type) at every stage end. Primary verdict: final checkpoint
+# (end of 05_active, hunting world) on the active-world probe. A4 uses all five stage ends
+# replayed on both world probes; stage_end:<k> is 0-based (stage_end:3 = end of 04_passive).
+# Design: continual_worlds/MAY_DOUBLE_RETURN_REPLICATION.md. Agent roles (arm, seed) are read from
+# each run's own models/config.yaml top-level keys, not from these labels.
+name: algorithmic_null_mayrep
+evidence_status: evidence
+# ---------------------------------------------------------------------------------------------
+# decision_rules (MANDATORY). Pins the pre-registered rules, written 2026-09-29 and revised
+# 2026-09-30 (see its `revisions`), both before any number existed. The drivers must: read the file, check its sha256 equals the value below
+# (mismatch -> ValueError), and print path + sha256 + evidence_status on every data statement.
+# ---------------------------------------------------------------------------------------------
+decision_rules:
+  file: docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml
+  sha256: 5ef6f731d15ebac2f13917e6bf801b607c2b0834e59d52b13f273aae37e1bdc1
+
+# ---------------------------------------------------------------------------------------------
+# Designer-owned values (plan-reviewer re-review R4, R7, R8); reasons in algorithmic_null_pilot.yaml.
+# The developer completes the other schema keys around them and leaves these values unchanged.
+#   n_per_store: 5000 per probe (whole first shard; the collection spec writes 5000 episodes per
+#     shard). All stores of a probe share seed_base, so each pooled probe holds 5000 distinct
+#     episode_seed groups (not 30000); see the interim manifest.
+#   Checkpoints: stage_end:0..3 and final for A1–A4, plus stage_end:3:prev and final:prev (the
+#     checkpoint immediately before the last checkpoint of that stage; raise if none) for A4's
+#     within-stage drift (rules A4.within_stage_drift).
+#   inner_folds: 5 — ridge-penalty cross-validation folds; reason in algorithmic_null_pilot.yaml.
+# The UNTRAINED references are untrained.build on each of the three ordinary runs below.
+#   ridge_alphas: the same 19-value grid; reason in algorithmic_null_pilot.yaml.
+#   headline_capture: {checkpoint: final, probe: active} (set 2026-09-30; plan R4-2). The capture
+#     that keeps the descriptive layers is the rules' primary one: evidence.primary_checkpoint
+#     final on evidence.primary_probe_world active (the hunting-world probe, id `active` below).
+# ---------------------------------------------------------------------------------------------
+bootstrap_n: 2000
+inner_folds: 5
+headline_capture: {checkpoint: final, probe: active}
+ridge_alphas: [1.0e-2, 3.16228e-2, 1.0e-1, 3.16228e-1, 1.0, 3.16228, 1.0e+1, 3.16228e+1, 1.0e+2, 3.16228e+2, 1.0e+3, 3.16228e+3, 1.0e+4, 3.16228e+4, 1.0e+5, 3.16228e+5, 1.0e+6, 3.16228e+6, 1.0e+7]
+probes:
+  - id: active
+    # the six final-checkpoint stores (hunting world, 05_active), in the order of `runs`; validated 2026-09-30 (full float32 / highest,
+    # RTX 3090, self-test 1.38e-7, collection sha descends from 2d54453d; tmp/20260930_evidence_verify_stores.json)
+    stores:
+      - results/trajectories_cw_mayrep/20260929-153635_rppo_cw_mayrep_t1none_s42/5100018/3fc70ed8e4
+      - results/trajectories_cw_mayrep/20260929-153644_rppo_cw_mayrep_t16quad_s42/5100015/373102b903
+      - results/trajectories_cw_mayrep/20260929-153652_rppo_cw_mayrep_t1none_s43/5100003/24a2b1cbbe
+      - results/trajectories_cw_mayrep/20260929-153702_rppo_cw_mayrep_t16quad_s43/5100006/299fd8a879
+      - results/trajectories_cw_mayrep/20260929-153712_rppo_cw_mayrep_t1none_s44/5100017/b56f985516
+      - results/trajectories_cw_mayrep/20260929-153723_rppo_cw_mayrep_t16quad_s44/5100005/c6ce29da2e
+    n_per_store: 5000
+    # Developer-owned (tooling plan §8): same values as the pilot and interim manifests.
+    rows_per_episode: 5
+    seed: 20260930
+    store_matmul_precision: [recorded, recorded, recorded, recorded, recorded, recorded]
+  - id: passive
+    # the six stage_end:3 stores (harmless world, 04_passive), in the order of `runs`; validated 2026-09-30 (full float32 / highest,
+    # RTX 3090, self-test 1.38e-7, collection sha descends from 2d54453d; tmp/20260930_evidence_verify_stores.json)
+    stores:
+      - results/trajectories_cw_mayrep/20260929-153635_rppo_cw_mayrep_t1none_s42/4400009/c119aee260
+      - results/trajectories_cw_mayrep/20260929-153644_rppo_cw_mayrep_t16quad_s42/4400008/22edd8336b
+      - results/trajectories_cw_mayrep/20260929-153652_rppo_cw_mayrep_t1none_s43/4400024/421a7c0173
+      - results/trajectories_cw_mayrep/20260929-153702_rppo_cw_mayrep_t16quad_s43/4400006/901fd7146a
+      - results/trajectories_cw_mayrep/20260929-153712_rppo_cw_mayrep_t1none_s44/4400027/cc5d62af56
+      - results/trajectories_cw_mayrep/20260929-153723_rppo_cw_mayrep_t16quad_s44/4400030/66b694b993
+    n_per_store: 5000
+    # Developer-owned (tooling plan §8): same values as the pilot and interim manifests.
+    rows_per_episode: 5
+    seed: 20260930
+    store_matmul_precision: [recorded, recorded, recorded, recorded, recorded, recorded]
+    # rows_per_episode, seed: added by developer (tooling plan §8).
+
+# Remaining keys of the tooling plan's manifest schema (§8) are added by developer when the tooling
+# exists. Until then this file fails to load, as it should (no defaults).
+
+runs:
+  - {label: ordinary_s42,  path: results/JAX_RecurrentPPO/20260929-153635_rppo_cw_mayrep_t1none_s42,  checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3:prev", "stage_end:3", "final:prev", final]}
+  - {label: modulated_s42, path: results/JAX_RecurrentPPO/20260929-153644_rppo_cw_mayrep_t16quad_s42, checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3:prev", "stage_end:3", "final:prev", final]}
+  - {label: ordinary_s43,  path: results/JAX_RecurrentPPO/20260929-153652_rppo_cw_mayrep_t1none_s43,  checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3:prev", "stage_end:3", "final:prev", final]}
+  - {label: modulated_s43, path: results/JAX_RecurrentPPO/20260929-153702_rppo_cw_mayrep_t16quad_s43, checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3:prev", "stage_end:3", "final:prev", final]}
+  - {label: ordinary_s44,  path: results/JAX_RecurrentPPO/20260929-153712_rppo_cw_mayrep_t1none_s44,  checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3:prev", "stage_end:3", "final:prev", final]}
+  - {label: modulated_s44, path: results/JAX_RecurrentPPO/20260929-153723_rppo_cw_mayrep_t16quad_s44, checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3:prev", "stage_end:3", "final:prev", final]}
+
+# ---------------------------------------------------------------------------------------------
+# Developer-owned keys (tooling plan §8, Revision 4), added 2026-09-30 when the stores existed;
+# the same values as the pilot and interim manifests (reasons there). Designer-owned keys above
+# are unchanged.
+# ---------------------------------------------------------------------------------------------
+out_root: results/analysis/algorithmic_null
+capture_matmul_precision: highest
+assert_n_episodes: 8
+tool_checks:
+  shift_change_rows_max: 0.05
+  self_similarity_atol: 1.0e-12
+  buffer_index_rel_tol: 1.0e-3
+  row_lag_min_gap: 0.1
+layers:
+  - {key: enc.uni.raw, flatten: senses_x_units, keep: headline_only}
+  - {key: enc.uni.mod, flatten: senses_x_units, keep: headline_only}
+  - {key: enc.uni.out, flatten: senses_x_units, keep: headline_only}
+  - {key: enc.raw, flatten: none, keep: headline_only}
+  - {key: enc.mod, flatten: none, keep: headline_only}
+  - {key: enc.out, flatten: none, keep: every_capture}
+  - {key: rnn.state, flatten: none, keep: every_capture}
+  - {key: rnn.raw, flatten: none, keep: headline_only}
+  - {key: rnn.mod, flatten: none, keep: headline_only}
+  - {key: rnn.out, flatten: none, keep: every_capture}
+  - {key: actor.raw, flatten: none, keep: headline_only}
+  - {key: actor.mod, flatten: none, keep: headline_only}
+  - {key: actor.out, flatten: none, keep: every_capture}
+  - {key: critic.raw, flatten: none, keep: headline_only}
+  - {key: critic.mod, flatten: none, keep: headline_only}
+  - {key: critic.out, flatten: none, keep: every_capture}
+  - {key: logits, flatten: none, keep: every_capture}
+  - {key: value, flatten: none, keep: every_capture}
+comparisons: auto
+probe_split: {seed: 20260930, bootstrap_seed: 20260931}
+min_rows_per_column: 20

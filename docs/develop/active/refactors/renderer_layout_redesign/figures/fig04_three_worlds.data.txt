@@ -1,0 +1,2 @@
+worlds drawn	3	9	three of the nine recorded matrix cells, chosen because each changes which panels are present; the other six differ in ways the layout does not have to re-pack
+frames drawn per world	1	1	one step per world (M4 step 32/74, M1x step 32/35, M6 step 32/35); the layout is fixed for a whole episode, so a second step of the same world would re-pack identically

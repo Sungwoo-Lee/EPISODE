@@ -1,0 +1,246 @@
+diff --git a/src/environment/dashboard/labels.py b/src/environment/dashboard/labels.py
+index e4d7dfc..632c0ad 100644
+--- a/src/environment/dashboard/labels.py
++++ b/src/environment/dashboard/labels.py
+@@ -164,3 +164,32 @@ def display_channel(sense: str, code: str) -> tuple[str, str]:
+         f"{sorted(table)}. A channel code must never reach a rendered frame: the "
+         f"frame carries no key to it."
+     )
++
++
++#: The three visual channels that are one thing seen three ways. A square is
++#: grass OR sand OR plain, never two, so the approved design draws them as a
++#: single "Terrain" map in three flat colours instead of three maps that are
++#: empty wherever the other two are not.
++TERRAIN_CHANNELS = ("GRS", "SND", "PLN")
++
++
++def map_plan(sense, codes):
++    """Which maps a sense draws: ``[(name, qualifier, kind, channel), ...]``.
++
++    One map per channel, except that vision's three terrain channels become a
++    single categorical map (the sketch's own arrangement). The composite applies
++    only when the vector really is the standard 8 channels in the standard order;
++    any other width gets one map per channel, because a composite keyed by index
++    is a lie as soon as the layout changes -- the same scope rule
++    ``labels.visual_labels`` already follows.
++    """
++    out = []
++    composite = sense == "Visual" and tuple(codes[:3]) == TERRAIN_CHANNELS
++    if composite:
++        out.append(("Terrain", "", "terrain", None))
++    for i, code in enumerate(codes):
++        if composite and i < 3:
++            continue
++        name, qualifier = display_channel(sense, code)
++        out.append((name, qualifier, "seq", i))
++    return out
+diff --git a/src/environment/dashboard/painters.py b/src/environment/dashboard/painters.py
+index ada4838..f2206d3 100644
+--- a/src/environment/dashboard/painters.py
++++ b/src/environment/dashboard/painters.py
+@@ -29,8 +29,10 @@ from matplotlib.collections import PatchCollection
+ 
+ from . import cells as C
+ from . import palette as P
++from .labels import TERRAIN_CHANNELS, map_plan
+ from .labels import display_channel as channel_display
+ from .layout import LayoutOverflowError
++from .panels import MAP_GAP_PX as MAP_GAP
+ from .style import PT, TITLE_BASE, rrect, signed, text
+ from .text_fit import CAPTION_FLOOR_PX, PLAYBACK_FLOOR_PX, fit_text
+ 
+@@ -535,9 +537,9 @@ CHANNEL_ROW_PITCH = {"Olfaction": 40, "Visual": 38}
+ CHANNEL_BAR_H = 6
+ 
+ #: The sensor band's own spacing, from the approved sketch's `b_band`: the gap
+-#: between two maps, the gap between the two senses, and the width of the ramp
++#: between two maps (``MAP_GAP``, imported from the panel registry so the painter
++#: and the registry cannot disagree), the gap between the two senses, and the width of the ramp
+ #: drawn beside a sense's title.
+-MAP_GAP = 6
+ BAND_DIVIDER = 32
+ RAMP_W = 96
+ 
+@@ -624,33 +626,7 @@ def build_channel_rows(dash, ax, x0, w, h, sense, title, codes, colour_stops):
+     dash.updates.append(upd)
+ 
+ 
+-#: The three visual channels that are one thing seen three ways. A square is
+-#: grass OR sand OR plain, never two, so the approved design draws them as a
+-#: single "Terrain" map in three flat colours instead of three maps that are
+-#: empty wherever the other two are not.
+-TERRAIN_CHANNELS = ("GRS", "SND", "PLN")
+-
+-
+-def _map_plan(sense, codes):
+-    """Which maps a sense draws: ``[(name, qualifier, kind, channel), ...]``.
+-
+-    One map per channel, except that vision's three terrain channels become a
+-    single categorical map (the sketch's own arrangement). The composite applies
+-    only when the vector really is the standard 8 channels in the standard order;
+-    any other width gets one map per channel, because a composite keyed by index
+-    is a lie as soon as the layout changes -- the same scope rule
+-    ``labels.visual_labels`` already follows.
+-    """
+-    out = []
+-    composite = sense == "Visual" and tuple(codes[:3]) == TERRAIN_CHANNELS
+-    if composite:
+-        out.append(("Terrain", "", "terrain", None))
+-    for i, code in enumerate(codes):
+-        if composite and i < 3:
+-            continue
+-        name, qualifier = channel_display(sense, code)
+-        out.append((name, qualifier, "seq", i))
+-    return out
++_map_plan = map_plan  # kept importable under its old private name
+ 
+ 
+ def build_channel_maps(dash, ax, x0, w, h, sense, title, codes, colour_stops,
+@@ -667,7 +643,7 @@ def build_channel_maps(dash, ax, x0, w, h, sense, title, codes, colour_stops,
+     band_head(dash, ax, x0, w, {"reach": f"range {sensor_range}"}, title, cmap, vmax)
+ 
+     n_ch = len(codes)
+-    maps = _map_plan(sense, codes)
++    maps = map_plan(sense, codes)
+     k = 2 * int(sensor_range) + 1
+     n = len(maps)
+     slot = (w - MAP_GAP * (n - 1)) / n
+diff --git a/src/environment/dashboard/panels.py b/src/environment/dashboard/panels.py
+index b6a4aea..576d927 100644
+--- a/src/environment/dashboard/panels.py
++++ b/src/environment/dashboard/panels.py
+@@ -42,6 +42,7 @@ from __future__ import annotations
+ from dataclasses import dataclass, field
+ from typing import Callable, Mapping
+ 
++from .labels import map_plan, olfactory_labels, visual_labels
+ from .layout import (
+     CARD_TITLE_H,
+     LEFT_W,
+@@ -132,7 +133,10 @@ BAND_CHROME_BOTTOM: int = PAD
+ 
+ #: Smallest legible cell in a per-channel diamond map (plan section D7.2).
+ MAP_CELL_MIN_PX: int = 10
+-MAP_GAP_PX: int = 8
++#: The gap between two maps in a sense's band card. The ONE definition: the
++#: painter imports it as ``MAP_GAP``, so the width declared here is the width it
++#: draws at.
++MAP_GAP_PX: int = 6
+ 
+ #: Sentinel returned by :func:`_recording_flag` when an archived recording's
+ #: params simply do not have the attribute.
+@@ -360,7 +364,7 @@ def _vital_row_size(ctx: LayoutContext) -> Size:
+ 
+ def _olf_min_size(ctx: LayoutContext) -> Size:
+     if ctx.olfactory_range >= 1:
+-        n = ctx.olfactory_channels
++        n = len(map_plan("Olfaction", olfactory_labels(ctx.olfactory_channels)))
+         span = _span(n, ctx.olfactory_range)
+         return Size(span, CARD_TITLE_H + _map_h(ctx.olfactory_range) + PAD)
+     return Size(0, OLF_ROWS_H)
+@@ -368,15 +372,17 @@ def _olf_min_size(ctx: LayoutContext) -> Size:
+ 
+ def _visual_min_size(ctx: LayoutContext) -> Size:
+     if ctx.visual_range >= 1:
+-        n = ctx.visual_vector_size
++        n = len(map_plan("Visual", visual_labels(ctx.visual_vector_size)))
+         span = _span(n, ctx.visual_range)
+         return Size(span, CARD_TITLE_H + _map_h(ctx.visual_range) + PAD)
+     return Size(0, VISUAL_ROWS_H)
+ 
+ 
+ def _span(n_maps: int, r: int) -> int:
++    """The card width a sense's maps need: the maps and the gaps between them,
++    plus the padding either side (the painter is handed the width minus 2 * PAD)."""
+     cells = 2 * r + 1
+-    return n_maps * cells * MAP_CELL_MIN_PX + MAP_GAP_PX * (n_maps - 1)
++    return n_maps * cells * MAP_CELL_MIN_PX + MAP_GAP_PX * (n_maps - 1) + 2 * PAD
+ 
+ 
+ def _map_h(r: int) -> int:
+diff --git a/tests/env/test_dashboard_layout.py b/tests/env/test_dashboard_layout.py
+index 7fa4b8f..fa1716c 100644
+--- a/tests/env/test_dashboard_layout.py
++++ b/tests/env/test_dashboard_layout.py
+@@ -53,6 +53,7 @@ from src.environment.dashboard import layout as L  # noqa: E402
+ from src.environment.dashboard import panels as P  # noqa: E402
+ from src.environment.dashboard.layout import Box, LayoutOverflowError, pack  # noqa: E402
+ from src.environment.dashboard.panels import LayoutContext  # noqa: E402
++from src.environment.dashboard.labels import olfactory_labels, visual_labels  # noqa: E402
+ 
+ MAINTAINED = [
+     "configs/environment/default.yaml",
+@@ -748,3 +749,72 @@ def test_the_channel_row_heights_agree_with_the_painter_that_draws_them():
+         assert 64 + per_col * PN.CHANNEL_ROW_PITCH[sense] + 16 == pinned, (
+             f"{key}: {per_col} rows at {PN.CHANNEL_ROW_PITCH[sense]}px no longer "
+             f"makes the pinned {pinned}px")
++
++
++@pytest.mark.parametrize("key,sense,title", [("olfactory", "Olfaction", "Olfaction"),
++                                              ("visual", "Visual", "Vision")])
++@pytest.mark.parametrize("rng", [1, 2, 3])
++def test_a_map_panel_declares_exactly_the_width_the_painter_needs(key, sense, title, rng):
++    """The declared minimum is the painter's real requirement: it draws at
++    exactly that width and refuses one pixel less (the painter is handed the
++    card width minus 2 * PAD)."""
++    import matplotlib
++    matplotlib.use("Agg")
++    import matplotlib.pyplot as plt
++
++    from src.environment.dashboard import painters as PN
++    from src.environment.dashboard.layout import LayoutOverflowError
++    from src.environment.sensor import get_visual_offsets
++
++    assert PN.MAP_GAP is P.MAP_GAP_PX
++    ctx = _synthetic(10, thermal=False, olf_range=rng if key == "olfactory" else 1,
++                     vis_range=rng if key == "visual" else 0,
++                     visual_present=True)
++    spec = {s.key: s for s in P.PANELS}[key]
++    declared = spec.min_size(ctx).w
++    codes = (olfactory_labels(ctx.olfactory_channels) if key == "olfactory"
++             else visual_labels(ctx.visual_vector_size))
++    offs = [tuple(o) for o in get_visual_offsets(rng)]
++
++    class _Text:
++        def set(self, s):
++            return 10.0
++
++    class _Dash:
++        sense_max: dict = {}
++        updates: list = []
++
++        def viz_name(self, s):
++            return s
++
++        def fit(self, *a, **k):
++            return _Text()
++
++        def width(self, *a, **k):
++            return 10.0
++
++    def draw(card_w):
++        fig, ax = plt.subplots()
++        ax._px_w, ax._px_h = card_w, 236
++        try:
++            PN.build_channel_maps(_Dash(), ax, 0, card_w - 2 * PN.PAD, 236, sense,
++                                  title, codes, ["#000", "#fff"], offs, rng)
++        finally:
++            plt.close(fig)
++
++    draw(declared)
++    with pytest.raises(LayoutOverflowError):
++        draw(declared - 1)
++
++
++def test_the_map_count_comes_from_map_plan_and_off_standard_widths_get_one_map_each():
++    from src.environment.dashboard.labels import map_plan
++    from src.environment.dashboard import painters as PN
++
++    assert PN._map_plan is map_plan
++    std = _synthetic(10, thermal=False, olf_range=1, vis_range=2, visual_present=True)
++    assert len(map_plan("Visual", visual_labels(8))) == 6
++    odd = LayoutContext(**{**std.__dict__, "visual_vector_size": 5})
++    vis = {s.key: s for s in P.PANELS}["visual"]
++    assert vis.min_size(odd).w == 5 * 5 * 10 + P.MAP_GAP_PX * 4 + 2 * P.PAD
++    assert vis.min_size(std).w == 6 * 5 * 10 + P.MAP_GAP_PX * 5 + 2 * P.PAD

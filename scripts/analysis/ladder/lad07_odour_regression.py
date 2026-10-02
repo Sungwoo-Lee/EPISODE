@@ -1,0 +1,104 @@
+"""FIGURE 7 - The false alarm, with everything else held fixed.
+
+QUESTION. Figure 5 showed the agent hiding more when a rabbit is near, in some arms. That is already
+causal, because the smell is drawn at random. But it is a raw contrast: a world with strong-smelling
+rabbits might differ in other ways too. This figure repeats the test inside a regression that
+adjusts for the number of bushes, the number of food patches, how far the agent spawned from cover,
+the predator's detection range, attack delay, attack range and stamina, the predator's own smell,
+and the wound and hunger the agent woke up with.
+
+WHAT THE TWO BARS MEAN. `pred_olf_intensity` is how strongly this episode's predator smelled;
+`rab_olf_intensity` is how strongly its rabbit smelled. A positive predator bar is the agent doing
+its job. A positive rabbit bar is the agent hiding from an animal that has never hurt it and cannot.
+The rabbit bar is the false-alarm rate expressed in percentage points of lost foraging time.
+
+WHAT "STRONG" MEANS. An animal's odour intensity is the SUM of its two odour channels, redrawn for
+it every episode. It runs 0 to 2 and averages 1.17. Splitting into quartiles of that sum splits by
+how LOUDLY the animal smells, not by what it is: a predator averages 0.7 on one channel and 0.5 on
+the other and a rabbit the reverse, so both classes have the same expected intensity of 1.2 and
+differ only in WHICH channel is larger. A typical strongest-quarter animal sits at 1.58 against 0.75
+in the weakest - about 2.1x as loud. The nose receives intensity divided by distance, so at equal
+distance the loud one reads 2.1x higher, and equivalently reaches further: a strong-smelling rabbit
+six cells away produces the same reading as a weak-smelling one at about three cells.
+
+HOW IT IS COMPUTED. A MULTIVARIATE quasi-binomial regression on the episode-level bush-hiding
+rate - 16 regressors entered together in one fit over one set of episodes, so each bar is that
+odour's effect with the other 15 held fixed. The full list is in the page's caption for this
+figure and is the term column of the "M3" rows in each arm's multivariate.csv; it is NOT summarised
+by hand here, because a hand summary of it was wrong for a while (it said "the predator's own
+smell", which is two different regressors - how LOUDLY the predator smells and how PREDATOR-LIKE
+it smells - and omitted three others entirely).
+
+Restricted to episodes with exactly one predator and one rabbit so that "the predator's smell" and
+"the rabbit's smell" are each a single well-defined number rather than an average over several
+animals. n_predators and n_rabbits are therefore absent from the model: inside this subset both
+are constant. Standard errors are scaled by the Pearson overdispersion. Bars are the effect of a
+one-standard-deviation change in odour intensity, in percentage points.
+"""
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import csv, numpy as np, matplotlib.pyplot as plt
+import _ladder as L, _plot as PL
+
+MODEL = "M3 + rabbit smell, 1 predator + 1 rabbit"
+GLM_ROOT = "results/analysis/lad"
+arms = [a for a in L.ARM_ORDER if os.path.exists(f"{GLM_ROOT}/{a}/multivariate.csv")]
+
+def get(a):
+    rows = [r for r in csv.DictReader(open(f"{GLM_ROOT}/{a}/multivariate.csv"))
+            if r["model"] == MODEL]
+    d = {r["term"]: (float(r["dpp_per_sd"]), float(r["p"])) for r in rows}
+    return d.get("pred_olf_intensity", (np.nan, 1)), d.get("rab_olf_intensity", (np.nan, 1))
+
+P = np.array([get(a)[0][0] for a in arms]); Pp = np.array([get(a)[0][1] for a in arms])
+R = np.array([get(a)[1][0] for a in arms]); Rp = np.array([get(a)[1][1] for a in arms])
+
+fig, ax = plt.subplots(figsize=(11.2, 0.40 * len(arms) + 2.9))
+y = np.arange(len(arms)); h = 0.36
+ax.barh(y + h/2, P, height=h, color=PL.THREAT, edgecolor="none",
+        label="stronger PREDATOR smell  (a real cue - hiding is correct)")
+ax.barh(y - h/2, R, height=h, color=PL.HARMLESS, edgecolor="none",
+        label="stronger RABBIT smell  (harmless - hiding is a false alarm)")
+ax.axvline(0, color=PL.INK, lw=1)
+ax.set_yticks(y); ax.set_yticklabels(PL.arm_ylabels(arms), fontsize=8)
+ax.set_ylabel("sensor-ladder arm  (poorest senses at the bottom)")
+ax.set_xlabel("effect on bush hiding of a one-standard-deviation stronger smell  "
+              "(percentage points)\nMULTIVARIATE fit: each bar is adjusted for the 15 other "
+              "regressors, which the caption names in full")
+ax.grid(axis="y", visible=False)
+for i in range(len(arms)):
+    for val, off, pv in ((P[i], +h/2, Pp[i]), (R[i], -h/2, Rp[i])):
+        if np.isfinite(val):
+            ax.text(val + np.sign(val) * 0.06, y[i] + off,
+                    f"{val:+.2f}" + ("" if pv < 0.001 else "  not significant"),
+                    va="center", ha="left" if val >= 0 else "right", fontsize=7, color=PL.INK)
+hi = np.nanmax(np.concatenate([P, R])); lo = min(np.nanmin(np.concatenate([P, R])), 0.0)
+ax.set_xlim(lo - 0.35 - abs(lo) * 0.5, hi * 1.42 + 0.35)
+hl = [plt.Rectangle((0, 0), 1, 1, color=PL.THREAT,
+                    label="stronger PREDATOR smell  (a real cue - hiding is correct)"),
+      plt.Rectangle((0, 0), 1, 1, color=PL.HARMLESS,
+                    label="stronger RABBIT smell  (harmless - hiding is a false alarm)"),
+      plt.Line2D([], [], color="none",
+                 label="\"not significant\" beside a value = not distinguishable from zero at "
+                       "p < 0.001,\nafter the standard errors are scaled for overdispersion")]
+ax.legend(handles=hl, loc="lower center", bbox_to_anchor=(0.5, 1.02), ncol=1, fontsize=8.5,
+          handlelength=1.6)
+fig.text(0.5, -0.09,
+         "Each bar is CONTINUOUS odour intensity, not a loud/quiet split: the regressor is the sum "
+         "of the animal's two odour channels,\nwhich runs 0 to 2 with a standard deviation of 0.38. "
+         "The bar is the effect of moving that number up by one standard deviation.",
+         ha="center", fontsize=7.6, color=PL.MUTED)
+POP = L.population()
+_n = sum(int(r["n"]) for a in arms
+         for r in csv.DictReader(open(f"{GLM_ROOT}/{a}/multivariate.csv"))
+         if r["model"] == MODEL and r["term"] == "const")
+L.record_samples("lad07_odour_regression", [
+    dict(what="episodes entering the regressions", used=_n, total=POP["episodes"],
+         note="restricted to episodes with EXACTLY one predator and one rabbit, so that each "
+              "animal's odour is a single number rather than an average over several animals. "
+              "This is the smallest sample behind any figure on the page")])
+
+PL.assert_labels_fit(fig, ax)
+PL.finish(fig, f"{L.FIG_ROOT}/lad07_odour_regression.png")
+print(f"{'arm':22}{'predator smell':>16}{'rabbit smell':>15}")
+for i, a in enumerate(arms):
+    print(f"{a:22}{P[i]:>+16.3f}{R[i]:>+15.3f}")

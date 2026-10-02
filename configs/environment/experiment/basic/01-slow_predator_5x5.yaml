@@ -1,0 +1,96 @@
+# Basic curriculum — 01-slow_predator_5x5
+# a SLOW moving predator (moves 1-in-3 steps) chases; cover (bush/rock) added.
+# Sparse override of configs/environment/default.yaml (extends:); body/sensory/noise/behavior_measures inherited.
+# Composition: hunt_predator=1 hiding_predator(static)=2 rabbit=0 food=2 bush=3 rock=3 | grid 5x5
+extends: environment/default
+
+environment:
+  height: 5
+  width: 5
+  start_pos: [3, 3]
+  location_areas:
+    - type: "grass"
+      area: [[1, 1], [5, 5]]
+    - type: "sand"
+      area: [[0, 0], [0, 0]]
+  resources:
+    - name: "food"
+      type: "food"
+      count: 2
+      spawn_area: [[1, 1], [5, 5]]
+      properties: [1.0, 0.0, 0.0, 0.0, 0.0]
+      properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      max_consumption: 12
+      regeneration_delay: 0
+      damage: [0.0, 0.0]
+      nociception_intensity: 0.0
+    - name: "hiding_predator"
+      type: "hiding_predator"
+      count: 2
+      spawn_area: [[1, 1], [5, 5]]
+      properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+      properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      max_consumption: -1
+      regeneration_delay: 20
+      damage: [15.0, 45.0]
+      nociception_intensity: 0.9
+  entities:
+    - class: "predator"
+      behaviour: "hunt"
+      tag: "pred"
+      count: 1
+      properties: [0.0, 0.7, 0.5, 0.0, 0.0]
+      properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      move_interval: 3
+      damage: [15.0, 45.0]
+      attack_delay: 3
+      nociception_intensity: 0.9
+      spawn_area: [[1, 1], [5, 5]]
+      patrol_area: [[1, 1], [5, 5]]
+      detection_range: 3
+      max_stamina: 30
+      stamina_recovery_rate: 1
+      hunt_stamina_threshold: 0.7
+      lose_interest_multiplier: 1.5
+      attack_range: [0, 0]           # explicit: no jump/pounce at this level (policy: no implicit defaults)
+      attack_success_rate: 0.0       # explicit: no jump/pounce at this level (policy: no implicit defaults)
+  obstacles:
+    - name: "bush"
+      count: 3
+      area: [[1, 1], [5, 5]]
+      blocking: false
+      hides_agent: true
+      blocks_animals: true   # matches environment/default; this file redeclares obstacles,
+                             # so the key must be explicit (list-replace, CONFIG_GUIDE §1)
+      damage: [0.0, 0.0]
+      nociception_intensity: 0.0
+      properties: [0.0, 0.0, 0.0, 1.0, 0.0]
+      properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+    - name: "rock"
+      count: 3
+      area: [[1, 1], [5, 5]]
+      blocking: false
+      damage: [1, 5]
+      nociception_intensity: 0.9
+      properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+      properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+
+# 2026-09-19: the default moved to visual_sensor_range 2, a 13-cell diamond of radius 2. On a
+# 5x5 map that is most of the world at once, so the visual sensor would stop being a staged step
+# up from nothing. Pinned to 1 (a 5-cell diamond) here; 02 onward are 10x10 and take the default.
+# 2026-09-21: "keeps sight local" was the original wording and it overstates what the pin does.
+# visual_sensor_range limits the cells the sensor SAMPLES, not the entities that contribute to
+# them: _psf_weights applies no radius gate, so on a 5x5 map every entity still leaks attenuated
+# blur into the 5-cell diamond. The pin bounds the READOUT, not the reach.
+sensory:
+  visual_sensor_range: 1

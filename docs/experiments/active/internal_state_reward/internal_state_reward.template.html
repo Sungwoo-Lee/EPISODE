@@ -1,0 +1,426 @@
+<title>The Body's Arithmetic</title>
+__HOUSE_STYLE__
+<style>
+  /* REQUIRED OVERRIDE, not a departure (House Style Sheet, register F11 amendment): this page's
+     figures spend --series-1 blue on "the world as it now stands" and --series-2 orange on "the
+     world before the change". Chrome may therefore use neither. Section numbers, links and
+     callout rules move to a violet and a plum that appear in none of the five figures. */
+  :root { --accent: #6b4d9b; --accent-text: #5c4189; --warn: #8a4b6b; }
+  /* STATED ADDITION (noted in section 10): the house sets code{overflow-wrap:anywhere}, which is
+     right for prose but splits identifiers mid-word inside a narrow table cell. Inside a table the
+     chip breaks only where this page marks a <wbr>. */
+  td code { overflow-wrap: normal; word-break: keep-all; }
+</style>
+
+<div class="wrap">
+
+<section class="col">
+  <h1>The Body's Arithmetic</h1>
+  <p class="lede">How this agent's reward is computed from the state of its own body — and what
+  changed on 22 September 2026, when being too full became as dangerous as being too empty.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">01</span> What this page is about</h2>
+
+<p>The agent in this project is not scored for collecting things. It is scored for keeping its own
+body near a target. Three quantities describe that body: how <strong>full</strong> it is, how
+<strong>injured</strong> it is, and — in the one world that has a temperature system — how
+<strong>warm</strong> it is. Those three are combined into a single number called the
+<strong>homeostatic drive</strong>: the distance between where the body is and where it wants to be.
+Reward is then just the drop in that distance from one step to the next.</p>
+
+<div class="callout">
+  <p class="eyebrow">The whole rule</p>
+  <p><code>reward at this step = drive before the step &minus; drive after the step</code></p>
+</div>
+
+<p>So nothing in the code ever says "eating is good". Eating is good when the agent is hungry and
+bad when it is full, and both fall out of that one subtraction.</p>
+
+<p>Until 22 September 2026 that was only half true, because fullness could not <em>be</em> too high.
+Its target sat at the very top of its range, so more food was always better and the only way to die
+of hunger was to run out. This page documents the arithmetic as it now stands, with the change and
+its consequences stated where they arise. Every number and every curve here is read from the live
+environment code, not re-derived from these formulas — a page describing how reward is computed is
+worth nothing if it describes what its author believed.</p>
+
+<div class="callout">
+  <p class="eyebrow">The one thing to take away</p>
+  <p>The body now has a <strong>target in the middle of its range</strong> rather than at the end
+  of it. That turns feeding from something to maximise into something to regulate, which is the
+  entire reason for the change — internal state only drives behaviour if getting it wrong in
+  <em>either</em> direction costs something.</p>
+</div>
+</section>
+
+<section class="col">
+<h2><span class="num">02</span> How three unlike things are added up</h2>
+
+<p>The drive has to combine fullness points, injury points and degrees into one number. It does that
+the way you would combine the sides of a right-angled triangle — but first each axis is divided by
+its own scale, so that the three are measuring the same thing before they are added.</p>
+
+<p class="cue" hidden>&larr; the formula is wider than the screen &mdash; scroll it sideways</p>
+<pre class="prov"><code>drive  =  &radic;[  ((fullness &minus; target) / range_S)&sup2;
+          +  (injury / max_injury)&sup2;
+          +  ((temperature &minus; target) / max_temp)&sup2;  ]
+
+as implemented, multiplied through by range_S
+so that today&rsquo;s reward units survive:
+
+drive  =  &radic;[  (fullness &minus; target)&sup2;
+          +  injury&sup2;
+          +  ((temperature &minus; target) &times; range_S / max_temp)&sup2;  ]</code></pre>
+
+<p><strong>Each divisor is the distance at which that axis kills the agent.</strong> That is the
+whole trick, and it is why the three terms become comparable: a value of 1 on any axis means "as far
+from target as this axis lets me get before I die". Every constant comes from the configuration, so
+a world that moves a ceiling gets a correctly rescaled drive without anybody editing a formula.</p>
+
+__AXES_TABLE__
+
+<p>The one that is computed rather than read directly is fullness, and it is the one the
+2026-09-22 change was about. Its target sits <em>inside</em> its range now, so the distance to death
+is not the ceiling — it is the larger of the two distances to the two lethal ends,
+<code>max(target&nbsp;&minus;&nbsp;0,&nbsp;ceiling&nbsp;&minus;&nbsp;target)</code>. At the shipped numbers that is
+<b>__RANGE_S__</b>, while the ceiling is 200. Before the change the target sat exactly on the
+ceiling, so those two numbers were equal and the difference could not show.</p>
+
+<div class="callout">
+  <p class="eyebrow">Why the code does not look like the formula above</p>
+  <p>Written literally, that expression divides every reward in the project by __RANGE_S__ while the
+  penalty for dying stays at 100 — a hundredfold change in how much dying matters, on every world,
+  including the ones with no temperature system at all. So the implementation multiplies the whole
+  expression through by <code>range_S</code> &mdash; the second line above. It is algebraically
+  identical and leaves the first two axes in their existing units. Only the temperature term carries a visible factor, and that
+  factor is <code>range_S&nbsp;/&nbsp;max_temperature</code> = __RANGE_S__ / __MAX_TEMP__ =
+  <b>__THERMAL_FACTOR__</b> — one degree of cold costs the same drive as __THERMAL_FACTOR__ points of
+  fullness. Figure 4 is what happens if that factor is computed from the ceiling instead.</p>
+</div>
+
+<div class="callout warn">
+  <p class="eyebrow">Where this reasoning is not yet finished</p>
+  <p>Temperature is still divided by its <em>ceiling</em>, <code>max_temperature</code>, rather than
+  by a computed range. That equals the correct distance-to-death only because its target is 0 and its
+  survivable band is symmetric — precisely the assumption that was just removed from fullness. It is
+  exactly right at every value that ships today, and it would silently become wrong the first time a
+  world moves the temperature target or makes the band lopsided.</p>
+</div>
+</section>
+
+<section class="col">
+<h2><span class="num">03</span> The shape of the problem</h2>
+
+<figure>
+  <img data-fig="f01_drive_vs_nutrition" alt="Homeostatic drive against fullness. A V-shaped blue line falls from 100 at fullness 0 to 0 at fullness 100 and rises back to 100 at fullness 200. A thick pale orange underlay follows the same left arm but stops at fullness 100. Red crosses mark death at both ends.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  <figcaption>
+    <span><b>Figure 1 — the target moved from the end of the range to its middle.</b>
+    The blue line is the world as it now stands: one best fullness in the middle, and a symmetric
+    penalty for straying either way. The pale orange underlay is the world as it shipped before,
+    and the thing to notice is that it <em>coincides</em> with the blue line on the left arm and
+    then simply stops. The change did not alter how hunger is punished; it added a right-hand arm
+    that did not exist, because the old ceiling and the old target were the same number.
+    </span>
+    <span><b>Axes.</b> Horizontal: the agent's fullness (nutrition), in nutrition
+    points, 0 to 200. Vertical: homeostatic drive — the distance from the body's target — in
+    satiation units, 0 to about 110. Both curves are drawn on the same scales.</span>
+  </figcaption>
+  __DATA_f01_drive_vs_nutrition__
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>Both curves come from calling the environment's own <code>calculate_drive</code> — the same
+    function the trainer calls on every step — with injury held at zero and the temperature system
+    switched off, so fullness is the only quantity that can move the number. Fullness is swept
+    across the whole range each world allows, one nutrition point at a time.</p>
+    <p>The "before" curve is not a formula typed from memory. It is produced by resolving the same
+    world with three configuration values put back to what they were before the change
+    (<code>max_nutrition</code> and <code>max_satiation</code> to 100, the start-range ceiling with
+    them) and then running the identical sweep. That matters because the pre-change world is the
+    thing being compared against, and re-deriving it by hand is exactly how a comparison quietly
+    starts describing something that never existed.</p>
+    <p>One wrinkle explains the shape. Fullness reaches the drive through a derived quantity called
+    <em>satiation</em>: the ceiling times <code>(nutrition / ceiling)</code> raised to a configured
+    power. That power ships at 1, so satiation and nutrition are numerically equal both before and
+    after — which is why the left arm is identical rather than merely similar.</p>
+    <p>What this figure does <em>not</em> show is injury or temperature. Both are held at their own
+    targets so that fullness is the only thing moving; a real body carries all three at once, and
+    the drive is their combined distance rather than any one of them.</p>
+  </div>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">04</span> What a single action is worth</h2>
+
+<figure>
+  <img data-fig="f02_reward_per_action" alt="Reward for one action against fullness before the action. The eat curve sits at +4 below fullness 100 and drops to minus 4 above it. The rest curve sits at minus 1 below 100 and rises to plus 1 above it. Both flip sign at fullness 100.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  <figcaption>
+    <span><b>Figure 2 — the same action is worth opposite amounts on either side of the target.</b>
+    Eating is worth <b>+4</b> while the agent is below its target and <b>&minus;4</b> once it is at
+    or above it. No rule anywhere says "stop eating" — eating simply moves the body away from where
+    it wants to be, and that is a negative reward by construction. The green curve carries the
+    surprise: <b>resting is rewarded above the target</b>, because doing nothing lets metabolism
+    carry the body back down.
+    </span>
+    <span><b>Axes.</b> Horizontal: the agent's fullness (nutrition) before the
+    action, in nutrition points, 0 to 200. Vertical: the reward for that one action, in satiation
+    units of drive removed, about &minus;6 to +6; positive is an improvement. The flat sections at
+    the extreme ends are where the body hits its own floor or ceiling and the action moves it less
+    than a full step.</span>
+  </figcaption>
+  __DATA_f02_reward_per_action__
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>For every starting fullness, the live <code>calculate_drive</code> is called twice — once at
+    that fullness and once at the fullness the action leads to — and the difference is plotted. That
+    difference <em>is</em> the reward: the environment computes it the same way.</p>
+    <p>How far each action moves the body is read from the resolved configuration rather than typed
+    here. Eating nets the food's nutrition gain minus the cost of eating minus the ordinary
+    metabolic cost of the step; resting pays only the metabolic cost. At the shipped values that is
+    +4 and &minus;1. Both endpoints are clipped into the legal range exactly as the environment
+    clips them, which is what flattens the curves at 0 and at 200.</p>
+    <p>This shows the reward <em>rule</em> across the state space, not a measurement of what any
+    trained agent did. Those are different claims, so the data note above says so too. It has been
+    checked against the other kind of evidence: an independent run of a complete environment step
+    gave &minus;4.0 for eating at the target and +4.0 at fullness 50, matching this curve.</p>
+    <p>The resting curve is the one to carry away. Below the target, resting costs a unit of drive
+    per step because metabolism is carrying the agent further from where it wants to be. Above the
+    target that same drain is <em>helping</em>, so an overfed agent is paid about a unit per step
+    for doing nothing, until it comes back down. Correct, but new, and the most likely thing to
+    surprise someone reading a training curve. What this figure does <em>not</em> show is which action an
+    agent would choose: reward per action is not policy.</p>
+  </div>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">05</span> Do hunger, injury and cold weigh the same?</h2>
+
+<p>The drive adds three unlike things: fullness points, injury points, and degrees. For that sum to
+mean anything, being equally close to death on any one of them has to count equally. This is the
+check the September change could most easily have broken, so it is worth doing rather than
+assuming.</p>
+
+<figure>
+  <img data-fig="f03_axes_commensurate" alt="Drive against fractional deviation for four axes: fullness falling, fullness rising, injury, and body temperature. All four traces lie exactly on top of one another and read as one solid black straight line from 0 at deviation 0 to 100 at deviation 1. The legend shows the four different dash patterns each trace is drawn in.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  <figcaption>
+    <span><b>Figure 3 — all four coincide, and that single line is the result.</b>
+    Each axis is pushed a given fraction of the way from its target to the value at which the agent
+    dies, with the others held exactly at target. If the axes are commensurate the four traces must
+    lie on top of each other, so they are drawn in one ink with four different dash patterns —
+    shown in the legend. They coincide so exactly that the four patterns fill each other in and the
+    result reads as a single <em>solid</em> line. That solid line is the finding, not a plot with
+    three curves missing. At full scale every axis reads <b>100.000</b>, which is also the penalty
+    for dying.
+    </span>
+    <span><b>Axes.</b> Horizontal: how far the body has strayed from its target,
+    as a fraction of the distance to death on that axis, 0 to 1 — dimensionless. Vertical:
+    homeostatic drive, in satiation units, 0 to about 110. A single visible line here means the
+    axes agree, not that three curves are missing.</span>
+  </figcaption>
+  __DATA_f03_axes_commensurate__
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>For each fraction between 0 and 1, one axis at a time is displaced that fraction of the way
+    from its setpoint to its lethal value, with the other two pinned exactly at their setpoints, and
+    the live <code>calculate_drive</code> is called. Fullness appears twice because it is the only
+    axis with two lethal ends — it can be fatally low or fatally high — and they are drawn
+    separately so that an asymmetry between them would be visible.</p>
+    <p>The campfire world is used because it is the only maintained world whose drive has all three
+    axes; the other six have no temperature system, so a figure drawn on one of them could not
+    check the third axis at all.</p>
+    <p>The reason this is not circular: the conversion factor that puts degrees into fullness units
+    is a quantity the code computes, and this figure does not use that quantity. It varies the raw
+    body state and reads the resulting drive, so if the factor were wrong the temperature trace
+    would separate from the others. Figure 4 shows what that separation would have looked like.</p>
+    <p>What this figure does <em>not</em> show is how often each axis is actually displaced in play.
+    Equal weight per unit of deviation is not equal influence on behaviour: an agent that is
+    routinely hungry and rarely injured is driven mostly by hunger, and nothing here speaks to
+    that.</p>
+  </div>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">06</span> The conversion that had to change with it</h2>
+
+<figure>
+  <img data-fig="f04_thermal_scale" alt="Grouped bar chart. For one degree from the temperature target, the shipped conversion costs 6.67 satiation units and the counterfactual using the ceiling costs 13.33. For ten degrees the values are 66.67 and 133.33.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  <figcaption>
+    <span><b>Figure 4 — keeping the old formula would have doubled the weight of cold, silently.</b>
+    Temperature is converted into fullness units so the drive can add them. The conversion divides
+    by "how far fullness can stray from its target" — which used to equal the ceiling, because the
+    target <em>was</em> the ceiling. Moving the target to the middle separated those two numbers.
+    The blue bars are what ships; the red bars are what the untouched formula would have produced,
+    exactly <b>twice</b> as much, on the two worlds that have a temperature system.
+    </span>
+    <span><b>Axes.</b> Horizontal: two illustrative deviations from the
+    temperature target — one degree and ten degrees — as labelled categories, not a continuous
+    scale. Vertical: the cost of that deviation in homeostatic drive, in satiation units, 0 to about
+    160. Bars within a pair share the scale and are directly comparable.</span>
+  </figcaption>
+  __DATA_f04_thermal_scale__
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>Both conversion factors are computed from the campfire world's resolved configuration. The
+    shipped one calls the environment's own helper for the deviation range — the furthest fullness
+    can get from its own setpoint, which is the larger of the distance down to zero and the distance
+    up to the ceiling. At the shipped values that is 100, so the factor is 100 divided by the
+    15 degrees at which the agent dies of temperature, giving 6.67. The counterfactual substitutes
+    the ceiling, 200, giving 13.33.</p>
+    <p>Why the shipped choice is the right one rather than merely the smaller one: for the axes to
+    be commensurate, each axis's scale must be the distance at which <em>that</em> axis kills. For
+    fullness that is 100 in either direction from the middle, not the 200-point width of the whole
+    range. Using the width would have put both fullness deaths at half the weight of an injury
+    death, and using the ceiling puts temperature at double. Only the maximum one-sided excursion
+    puts every death at the same drive.</p>
+    <p>This is the one change that alters behaviour on a world not otherwise touched, which is why
+    it is called out separately. Without it the campfire agent would have become twice as averse to
+    cold relative to hunger, and the two thermal worlds would have changed for two reasons at once.</p>
+    <p>What this figure does <em>not</em> show is how cold the agent actually gets. It prices a
+    deviation; how often a deviation of that size occurs is a property of the world's temperature
+    field, not of this conversion, and it is not measured here.</p>
+  </div>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">07</span> What the agent actually receives</h2>
+
+<p>The drive is computed in raw body units, but the agent never sees those. Each body channel is
+divided by its own ceiling before it reaches the network, so everything arrives between 0 and 1.
+That rescaling is where the change does something that is easy to miss.</p>
+
+<figure>
+  <img data-fig="f05_observation_channels" alt="The fullness observation channel against fullness. The blue line rises linearly from 0 at fullness 0 to 1 at fullness 200, crossing 0.5 at fullness 100 where a marker sits. A thick pale orange line rises twice as steeply and reaches 1 at fullness 100.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  <figcaption>
+    <span><b>Figure 5 — the same body now reports half the number, and the value to aim for moved to the
+    middle of the channel.</b>
+    Two things change at once. The obvious one: at any given fullness the channel reads half what it
+    used to, so a network trained before the change loads without complaint and is reading a
+    different quantity. The subtle one: the value the agent should steer toward moved from the top
+    of the channel to <b>0.5</b>. "Push this number up" was a winning policy and is now a losing
+    one, and nothing in the observation announces that — it has to be learned.
+    </span>
+    <span><b>Axes.</b> Horizontal: the agent's fullness (nutrition), in nutrition
+    points, 0 to 200. Vertical: the fullness channel as the agent receives it, dimensionless, 0 to
+    1. The dashed rule marks 0.5, the value corresponding to the body's target.</span>
+  </figcaption>
+  __DATA_f05_observation_channels__
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>Each curve is the sensor's own expression — satiation divided by the satiation ceiling —
+    evaluated on the resolved configuration, swept across each world's reachable fullness range. The
+    "before" curve again comes from resolving the same world with the pre-change values rather than
+    from re-deriving the line by hand.</p>
+    <p>The observation's <em>width</em> does not change: the agent receives the same number of
+    values as before, in the same order, so a saved network restores without error. That is exactly
+    what makes this worth a figure. An interface that changed shape would fail loudly; an interface
+    that keeps its shape and changes its meaning fails silently, and the only warning is a
+    performance number that makes no sense.</p>
+    <p>One consequence for anyone comparing runs across the change: survival figures from before it
+    are not comparable with figures from after, and not because the task got harder or easier in
+    some measurable way. The agent is solving a different problem — one where the body has an
+    interior target — and its observations are on a different scale. The project's practice of
+    keeping each run's fully resolved configuration beside its results is what makes that
+    recoverable rather than a guess.</p>
+    <p>What this figure does <em>not</em> show is the other interoceptive channels. Injury is unchanged and
+    its target has always been at the bottom of its range; the temperature channel is reported as a
+    difference from the body's own temperature rather than an absolute, and is likewise untouched.</p>
+  </div>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">08</span> Where an episode ends</h2>
+
+<p>Four of these are body states; the fifth is the clock. The two in bold are what the change
+added — or rather, one is new and one had been written down for months without ever working.</p>
+
+<table>
+  <thead><tr><th>Ends because</th><th>Condition</th><th>Since</th></tr></thead>
+  <tbody>
+    <tr><td>ran out of time</td><td>the step limit is reached</td><td>always</td></tr>
+    <tr><td>starved</td><td>fullness falls to 0</td><td>always</td></tr>
+    <tr><td><b>ate itself to death</b></td><td>fullness reaches 200</td><td style="white-space:nowrap"><b>2026-09-22</b></td></tr>
+    <tr><td>injured</td><td>injury reaches its maximum</td><td>always</td></tr>
+    <tr><td>froze or overheated</td><td>body temperature leaves its survivable band</td><td>the temperature worlds only</td></tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <p class="eyebrow">A correction worth recording</p>
+  <p>Death by over-eating had been a configurable option in this environment since June. It did not
+  work. The setting wrote a "died of over-eating" label onto the step and never actually ended the
+  episode — and because the label was keyed to a quantity that sits at its ceiling whenever the
+  agent is merely full, that label appeared routinely on ordinary steps where nothing had happened.
+  Three separate comments in the source described the feature as working.</p>
+  <p>Both halves are now fixed, and fixed in a way that cannot come apart again: the label and the
+  ending read the <em>same</em> condition, so a label without a death is no longer possible.
+  Measured afterwards, the label appeared on zero non-terminal steps across 1,630 steps of play.</p>
+</div>
+</section>
+
+<section class="col">
+<h2><span class="num">09</span> Settled, and still open</h2>
+
+<table>
+  <thead><tr><th>Settled</th><th>Still open</th></tr></thead>
+  <tbody>
+    <tr><td>Fullness runs 0 to 200 with its target at 100, and both ends are lethal.</td>
+        <td>The temperature axis still uses its ceiling as its scale. That equals the correct
+        deviation range only because its target sits at zero in a symmetric band &mdash; the same
+        assumption just removed from fullness. Harmless at every shipped value; it would need
+        revisiting if a world ever moved the temperature target.</td></tr>
+    <tr><td>Every axis sits exactly 100 drive units from its own death, equal to the death penalty.</td>
+        <td>Being paid to rest while overfed is correct but untested in training. Whether it
+        produces a visible &ldquo;sit still and digest&rdquo; behaviour is an empirical question
+        nobody has asked yet.</td></tr>
+    <tr><td>The temperature conversion is unchanged in value (6.67) and now correct in derivation.</td>
+        <td>One analysis figure that counts how episodes end recognises only three outcomes, so
+        over-eating deaths will silently score zero and its totals will not add up. Recorded, not
+        yet fixed.</td></tr>
+    <tr><td>Over-eating genuinely ends the episode, with the label and the ending sharing one
+        condition.</td>
+        <td>A fullness-to-satiation power other than 1 would put the target off-centre in nutrition
+        while keeping it centred in satiation. Nothing ships that way and nothing checks it.</td></tr>
+    <tr><td>Degenerate configurations &mdash; a zero-width fullness axis, a target outside its own
+        range &mdash; are rejected when the configuration loads rather than producing a silent
+        non-number during training.</td>
+        <td></td></tr>
+  </tbody>
+</table>
+</section>
+
+<section class="col">
+<h2><span class="num">10</span> Where this came from</h2>
+<p class="foot">Every figure on this page is drawn by its own Python script under
+<code>scripts/analysis/studies/internal_state_reward/</code>, reading the live environment through
+the project's configuration loader. Regenerate them, then rebuild this page, with:</p>
+<p class="cue" hidden>&larr; the commands are wider than the screen &mdash; scroll them sideways</p>
+<pre class="prov"><code>for f in scripts/analysis/studies/internal_state_reward/f0*.py; do
+  /home/vncuser/miniconda3/envs/grid_world_pain/bin/python "$f"
+done
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python \
+  scripts/analysis/studies/internal_state_reward/build_page.py</code></pre>
+<p class="foot">This page follows the project's House Style Sheet. It makes one stated addition:
+inside a table cell, an inline code chip breaks only where the markup marks a break point, because
+the house rule that lets prose chips break anywhere splits identifiers like
+<code>satiation_setpoint</code> mid&#8209;word in a narrow column. Nothing else about the page's
+look departs from the sheet, except that the accent and warning hues are moved off the figure
+palette, which the sheet itself requires when a figure spends a colour on a category.</p>
+<p class="foot">The change this page documents is commit <code>379ec8fc</code> on branch
+<code>v4.0</code>, reviewed independently for mathematics and for implementation correctness before
+it landed; both returned no critical findings. The settings themselves, with their reasons, are in
+the project's critical-settings registry, and the reward and termination rules are in
+<code>docs/environment/06_reward_and_termination.md</code>.</p>
+</section>
+
+</div>
+__HOUSE_SCRIPT__

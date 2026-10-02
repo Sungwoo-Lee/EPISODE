@@ -1,0 +1,906 @@
+<title>Running the Right Program</title>
+{{HOUSE_STYLE}}
+<style>
+/* ---- page-specific additions to the House Style Sheet ----
+   DEPARTURES, stated on the page (guide 0a; register F11 amendment):
+   * Figure 3 spends blue on "supports the thesis" and orange on "rejects it";
+   * every other figure spends six hues on research communities (purple, brown, teal, red, slate, green).
+   So page chrome uses no hue at all: section numbers, links, box borders and reference badges take the
+   ink greys, and the page uses no .warn / .pick / .danger box, because those hues are data here. */
+:root { --accent: var(--ink-2); --accent-text: var(--ink); }
+.callout ul { margin:0; padding-left:1.2em; }
+.callout li + li { margin-top:6px; }
+/* debate cards: stacked rows, so nothing depends on a column fitting a phone */
+.debate { padding:18px 0; border-bottom:1px solid var(--line); display:flex; flex-direction:column; gap:8px; }
+.debate:last-child { border-bottom:0; }
+.debate .dnum { font-family:var(--f-mono); font-size:12px; color:var(--ink-3); margin:0; letter-spacing:.02em; }
+.debate .dq { font-family:var(--f-head); font-weight:700; font-size:18.5px; line-height:1.3; margin:0; }
+.debate .ds { font-family:var(--f-mono); font-size:12.5px; color:var(--ink); background:var(--sunk);
+  padding:3px 9px; border-radius:3px; align-self:flex-start; margin:0; }
+.debate .dd { color:var(--ink-2); font-size:15.5px; margin:0; }
+.debate .dlimit { color:var(--ink-2); font-size:14.5px; border-left:2px solid var(--rule); padding-left:10px;
+  margin:0; }
+/* the not-held table has four prose columns, so it needs a wider floor than the shared one:
+   at 560px its "Named by" column fell to 136px and printed seven-line author lists */
+table.nh { min-width: 640px; }
+/* era rows */
+.era { padding:16px 0; border-bottom:1px solid var(--line); display:flex; flex-direction:column; gap:6px; }
+.era:last-child { border-bottom:0; }
+.era .ey { font-family:var(--f-mono); font-size:12.5px; color:var(--ink-3); }
+.era .et { font-family:var(--f-head); font-weight:700; font-size:17.5px; line-height:1.3; }
+/* reference list - guide 12b, rendered number, never the list marker */
+a.cite{font-family:var(--f-mono);font-size:.72em;line-height:0;vertical-align:super;
+  text-decoration:none;color:var(--ink);background:var(--surface);
+  padding:.18em .34em;border-radius:3px;white-space:nowrap;margin-left:.15em}
+a.cite::before{content:"["} a.cite::after{content:"]"}
+ol.refs{list-style:none;padding-left:0;margin:0;display:flex;flex-direction:column;gap:12px}
+ol.refs li{display:grid;grid-template-columns:2.9em 1fr;gap:0 8px;align-items:start;min-width:0;
+  scroll-margin-top:24px}
+ol.refs .rnum{font-family:var(--f-mono);font-size:12px;color:var(--ink);background:var(--surface);
+  border-radius:3px;text-align:center;font-variant-numeric:tabular-nums;line-height:1.9}
+ol.refs .rnum::before{content:"["} ol.refs .rnum::after{content:"]"}
+ol.refs .rbody{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:15px}
+ol.refs .rmeta{color:var(--ink-2);font-size:14px}
+ol.refs .rmeta a{overflow-wrap:anywhere}
+ol.refs .rtag{font-family:var(--f-mono);font-size:11px;padding:1px 6px;border-radius:3px;
+  white-space:nowrap;vertical-align:1px}
+ol.refs .rtag.read{background:var(--ink);color:var(--ground)}
+ol.refs .rtag.short{background:var(--rule);color:var(--ink)}
+ol.refs .rtag.unread{background:var(--surface);color:var(--ink-2);border:1px solid var(--line)}
+ol.refs li:target{background:var(--sunk);border-radius:4px;box-shadow:0 0 0 6px var(--sunk)}
+ol.refs li:target .rnum{background:var(--ink);color:var(--ground)}
+</style>
+
+<div class="wrap">
+
+<header class="col">
+  <p class="eyebrow">grid_world_pain &middot; reference topic &middot; field review</p>
+  <h1>Running the Right Program</h1>
+  <p class="lede">Sixty years of argument about whether a machine carrying out the right computation would
+  have a mind: how the idea was stated, what has been thrown at it, and which questions are still open in
+  2026.</p>
+</header>
+
+<section class="col">
+  <h2><span class="num">PURPOSE</span></h2>
+  <p>Since the 1960s a family of views has held that what makes something a mind is not what it is made of
+  but what it <strong>does</strong> &mdash; specifically, the computation it carries out. If that is right,
+  the same mind could run on neurons, on silicon, on water pipes, or on a billion people passing radio
+  messages. Philosophers call this <strong>computational functionalism</strong>, and its best-known
+  consequence is that a machine running the right program would have a mind, and might feel things.</p>
+  <p>For fifty years the argument was conducted with imaginary machines. Then systems arrived that people
+  talk to as though they were minds, and the question acquired a bill: whether to assess machines for
+  consciousness, whether to build them, what would be owed to them. This page puts six research communities
+  on one timeline, names the debates that cut across them, and records what their arguments can and cannot
+  show.</p>
+  <p>It is a <strong>review of a field, not an argument for a position</strong>. It is built from
+  {{N_REFS}} works, {{N_READ}} of them read from the PDF, and it states each position at its strongest. The
+  headline is that <strong>none of the {{N_DEBATES}} debates traced here is settled</strong> &mdash; and
+  that the loudest disagreement may not be the load-bearing one. Almost nobody in this collection says
+  machines could never have minds; Searle, the most-engaged opponent here, writes that "only a machine could
+  think"{{CITE:searle1980}}. What stays open is narrower: whether organisation <em>by itself</em> is
+  enough, and at what level of detail a copy would have to be made.</p>
+</section>
+
+<section class="col">
+  <div class="howto">
+    <p class="eyebrow">How to read this page</p>
+    <p>&sect;1 shows the whole collection at a glance. &sect;2 separates three claims that are constantly
+    run together. &sect;3 shows where the collection stands and why that is not a vote. &sect;4 tells the
+    history in five eras. &sect;5 is the dial nobody sets, which is the page's central figure. &sect;6 maps
+    the {{N_DEBATES}} debates one by one. &sect;7 shows who reads whom, &sect;8 one verdict reached by four
+    unrelated routes, and &sect;9 what these works are routinely said to have shown, checked against what
+    they say. The last sections list what is missing, where things stand, and every reference. Click any
+    figure to open it full size.</p>
+    <p><strong>Colour.</strong> On the figures, colour and marker shape mean <em>research community</em>,
+    and a filled mark means the work was read while an open mark means it is only named. Figure 3 alone
+    uses blue for "supports the thesis" and orange for "rejects it". Because the hues carry data, nothing
+    else on the page is coloured.</p>
+    <p><strong>Scope.</strong> Every count, status and "nobody argues" statement on this page describes
+    <em>this collection of {{N_REFS}} works</em>, never the whole literature.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">01</span> The field at a glance</h2>
+  <p>The earliest work here is Putnam's 1967 statement of functionalism, known only by name; the latest are
+  2025 and 2026 papers about systems you can type at. In between, the argument changes hands: philosophers
+  of mind hold it alone for two decades, philosophers of computation take over the middle, and from 2014
+  consciousness scientists, neuroscientists, AI researchers and ethicists arrive together. The density on
+  the right of figure 1 is the point &mdash; over half the collection is from the last twelve years.</p>
+  <p>One lane needs a warning before you read it. <strong>Biology and neuroscience has exactly one
+  work</strong> here{{CITE:aru2023}}, because the biological challenge in this collection is mostly written
+  by philosophers and consciousness scientists. That lane is not a field; it is a paper.</p>
+</section>
+
+<figure>
+  <img data-fig="fig01_timeline" alt="Timeline from 1964 to 2029 with six horizontal lanes: philosophy of mind, philosophy of computation, consciousness science, biology and neuroscience, AI and machine learning, and ethics and policy. Five alternating grey bands mark eras 1967 to 1978, 1979 to 1995, 1996 to 2013, 2014 to 2021 and 2022 to 2026. Philosophy of mind marks run across the whole span, nineteen of them. Philosophy of computation marks cluster between 1996 and 2017. Consciousness science marks all fall after 2014. Biology and neuroscience has a single mark in 2023. AI and machine learning has two marks after 2023, ethics and policy three after 2015. Most marks are filled; six are open, meaning named only.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 1 &mdash; Every work in the collection, by community and era.</b> Each mark is one work.
+    Filled marks were reviewed from the PDF; open marks are only named, and this page never attributes a
+    position to one. Grey bands are the five eras of &sect;4.</span>
+    <span><b>Axes.</b> Horizontal: the year the work first appeared, from 1964 to 2029, using the online year
+    where it came out before print. Vertical: research community, one lane each; the number after a
+    community is its count of works. Vertical position inside a lane only separates works of the same year
+    and carries no value.</span>
+    <span><b>Data.</b> {{DATA:fig01_timeline}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/computational_functionalism/page/fig01_timeline.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script reads <code>works.csv</code>, one row per work, which gives each work's plotting year, its
+    community and how deeply it was read. All three fields come from the per-paper reviews: each reviewer
+    filled in a fixed record block at the end of every entry, and the synthesis gathered them. Where a paper
+    appeared online before its printed issue, the online year is used, so five marks sit earlier than the
+    date usually cited &mdash; Chalmers's implementation paper is drawn at 1993, the year of its text, not
+    2011 or 2012. One draft chapter carries no publication year at all and is drawn at the compile date
+    printed on the file. A work belongs to one lane, and three were close calls that the synthesis records:
+    two papers whose reviewers wrote "philosophy of mind (with philosophy of computation)" are drawn in
+    philosophy of mind, and a joint philosophy-and-neuroscience paper on what the brain computes is drawn in
+    philosophy of computation. Marks sharing a lane and year are stacked slightly so none hides another.
+    What the figure does not show is how large each community's literature actually is: this collection was
+    assembled to trace one thesis, so a thin lane means thin coverage here.</p>
+  </div>
+</figure>
+
+<figure>
+  <img data-fig="fig02_corpus_composition" alt="Stacked horizontal bars, one per era, counting works by reading depth. Era 1, 1967 to 1978: 2 reviewed in full, 1 short summary, 1 named only. Era 2, 1979 to 1995: 6 full and 2 named only, with no short summaries. Era 3, 1996 to 2013: 3 full, 3 short, 2 named only. Era 4, 2014 to 2021: 5 full, 6 short, 1 named only. Era 5, 2022 to 2026: 6 full, 4 short, no named only.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 2 &mdash; How much of each era was actually read.</b> The thought-experiment era is read
+    entirely in full; the two recent eras lean more on short structured summaries, because several of
+    their works are long multi-author reports.</span>
+    <span><b>Axes.</b> Horizontal: number of works in the collection, 0 to about 12. Vertical: the five
+    eras, oldest at the top. Each bar is split into works reviewed in full (black), reviewed as a short
+    summary from the PDF (mid grey) and named only, with no PDF held (light grey).</span>
+    <span><b>Data.</b> {{DATA:fig02_corpus_composition}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/computational_functionalism/page/fig02_corpus_composition.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script counts works in <code>works.csv</code> by era and by reading depth and draws one stacked
+    bar per era. There are three depths. "Reviewed in full" means a reviewer read the PDF and wrote a plain
+    overview, a reconstruction of the argument, and a section-by-section summary. "Short summary from the
+    PDF" means the PDF was read and summarised in a fixed structure &mdash; claim, argument, key move, place
+    in the history, what it would take to be wrong &mdash; which was the tier used for background and survey
+    works. "Named only" means no PDF is held, so the work is mentioned solely as something other papers
+    cite. Which named-only works those are matters more than the count: the standard challenge to multiple
+    realizability is one of them, which is why that premise looks unopposed on this page, and Block's 1995
+    paper is another, which is why Block reads here as a 1970s figure rather than as the author of the
+    distinction the later literature runs on. Era membership follows the plotting year, so a work can sit
+    one era away from where its print year would put it.</p>
+  </div>
+</figure>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">02</span> Three claims that are not the same claim</h2>
+  <p>Most confusion in this literature comes from running together three claims of increasing strength. The
+  collection's own ladder, which should not be collapsed:</p>
+  <ul>
+    <li><strong>Multiple realizability.</strong> The same psychological state can be realised by many
+    different physical states. This is satisfied even in an all-carbon world, because two brains differ. It
+    is assumed by every reviewed work here and contested by none &mdash; but only because the standard
+    challenge to it is one of the works this collection does not hold.</li>
+    <li><strong>Substrate independence.</strong> Mental states "can supervene on any of a <em>broad
+    class</em> of physical substrates"{{CITE:bostrom2003}}. This adds the class, and the clearest statement
+    of it in the collection is also the one that declines to defend it.</li>
+    <li><strong>Organizational invariance.</strong> The property is preserved under every change that
+    preserves <em>causal topology</em> &mdash; the pattern of interaction among a system's parts, abstracted
+    from what the parts are made of{{CITE:chalmers1994cfc}}. This names what the class has in common, and it
+    is the strongest rung.</li>
+  </ul>
+  <p>Two further distinctions do a lot of work. <strong>Computational sufficiency</strong> &mdash; "there is
+  a class of automata such that any implementation of an automaton in that class will possess a
+  mind"{{CITE:chalmers1996rock}} &mdash; is a metaphysical claim, and is not the same as
+  <strong>computational explanation</strong>, the scientific programme of explaining cognition
+  computationally. Separating them is one work's central contribution: functionalism is metaphysics,
+  computationalism is science, and neither entails the other once function is cashed out
+  mechanistically{{CITE:piccinini2010}}.</p>
+  <p>One caveat travels with every quotation of computational sufficiency from the canonical source. The
+  version held here is the author's web text of 1993 with a footnote added in 2011, and that footnote
+  restricts sufficiency and organizational invariance to <em>nomological</em> rather than metaphysical
+  necessity &mdash; leaving philosophical zombies metaphysically possible{{CITE:chalmers1994cfc}}. A
+  citation that drops it claims something the paper no longer says.</p>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">03</span> Where the collection stands &mdash; and why that is not a vote</h2>
+  <p>Figure 3 counts how each work stands on the thesis. Read it as a description of <em>this
+  collection</em>. The collection was assembled to trace one thesis, so works that engage it are
+  over-represented by construction, and a work that never mentions computational functionalism is absent
+  whatever its influence. Two further cautions. <strong>"Restricts" is not "rejects"</strong>: it marks a
+  work that narrows the thesis or declines its stronger form in its own words, which is where the entire
+  biological literature here sits. And two of the fourteen supports are narrow &mdash; one work supports
+  only indirectly, by arguing that psychology does not reduce to physics without ever saying the
+  autonomous level is computational{{CITE:fodor1974}}, and one only defensively, by arguing that the felt
+  quality the whole debate is about is not a well-defined target{{CITE:dennett1988}}.</p>
+</section>
+
+<figure>
+  <img data-fig="fig03_stance" alt="Stacked horizontal bars, one per era, splitting works by stance. Era 1, 1967 to 1978: 1 supports, 1 restricts, 1 rejects, 1 no stance. Era 2, 1979 to 1995: 4 supports, 2 rejects, 2 no stance. Era 3, 1996 to 2013: 2 supports, 4 restricts, 2 no stance. Era 4, 2014 to 2021: 4 supports, 4 restricts, 1 rejects, 2 decline to take a side, 1 no stance. Era 5, 2022 to 2026: 3 supports, 4 restricts, 1 rejects, 2 decline. Blue marks support, dark grey restriction, orange rejection.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 3 &mdash; Stance on the thesis, era by era. This is not a vote.</b> Outright rejection
+    is rare and never grows; what grows is restriction &mdash; works that accept the framework and narrow
+    what it can deliver.</span>
+    <span><b>Axes.</b> Horizontal: number of works in the collection, 0 to about 12. Vertical: the five
+    eras, oldest at the top. Each bar is split by the work's corpus-wide stance: supports (blue), restricts
+    or narrows (dark grey), rejects (orange), declines to take a side (mid grey), and no stance recorded,
+    which is every named-only work (light grey).</span>
+    <span><b>Data.</b> {{DATA:fig03_stance}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/computational_functionalism/page/fig03_stance.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>Each reviewer recorded a stance for every work in a fixed field at the end of its entry, and those
+    values are carried into <code>works.csv</code> unchanged; the script counts them by era. The five values
+    are defined by the reviews, not by the page. "Supports" means the work argues for the thesis or uses it
+    as a working assumption it defends. "Restricts" means it accepts the framework and narrows it &mdash;
+    the biological works are the clearest case, each declining the stronger claim in its own words while
+    granting that machines might qualify. "Rejects" means the work argues the thesis is false. "Declines to
+    take a side" marks works that assign the thesis a credence and design around it instead of arguing for
+    or against. "No stance recorded" is every named-only work, which carries none by rule. Two coding
+    decisions are worth knowing: the Olympia paper is recorded as rejecting, although what it kills is
+    exactly one thesis and it grants that a silicon brain may be conscious; and the deflationary paper is
+    recorded as supporting, although it argues about the target of the debate rather than about programs.
+    The bar heights are counts, not weights.</p>
+  </div>
+</figure>
+
+<figure>
+  <img data-fig="fig04_evidence_base" alt="Horizontal bar chart of works by the kind of evidence they bring: conceptual analysis 15, thought experiment 6, review 6, position piece 6, formal proof 3, and named only with no evidence recorded 6.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 4 &mdash; What the field runs on.</b> Three works turn on a formal proof; not one
+    category is measurement. The dispute is conducted almost entirely in argument.</span>
+    <span><b>Axes.</b> Horizontal: number of works in the collection, 0 to about 17. Vertical: the kind of
+    evidence a work brings, one bar each, most common at the top, with named-only works last.</span>
+    <span><b>Data.</b> {{DATA:fig04_evidence_base}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/computational_functionalism/page/fig04_evidence_base.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script counts the <code>evidence_type</code> field in <code>works.csv</code>, which each reviewer
+    filled in for their own batch: the kind of thing the work puts on the table. "Conceptual analysis" is
+    the largest group and covers papers whose work is done by distinguishing claims. "Thought experiment"
+    marks the works carried by an imagined case &mdash; the Chinese Room, the Chinese nation, gradual
+    neuron replacement, fading and dancing qualia, Olympia, the swamp model. "Formal proof" marks the three
+    works whose central move is a construction or theorem. "Review" and "position piece" cover surveys of
+    several theories and statements of a programme. The figure is not a quality ranking: a thought
+    experiment is not a weaker instrument than a proof here, and both sides of every debate use them. What
+    the figure does show is an absence. Exactly one reviewed work reaches its verdict from published
+    measurements &mdash; spike-timing precision, synaptic delay, stochastic channels &mdash; and its verdict
+    is about what kind of computation the brain performs, not about whether computation suffices for a
+    mind{{CITE:piccinini2013}}. Several works cite experiments to support a premise; none tests the
+    thesis.</p>
+  </div>
+</figure>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">04</span> Five eras</h2>
+  <p>Boundaries fall where the question being asked changed, and are approximate. They are the synthesis's,
+  not the field's.</p>
+
+  <div class="era">
+    <span class="ey">1967&ndash;1978 &middot; 4 works</span>
+    <span class="et">Functionalism stated, and attacked from inside</span>
+    <p>Mental states as states in a machine table. The attack comes immediately, and from the architects:
+    the machine-table level is simultaneously too fine &mdash; "if you and I differ only in the respect that
+    your most probable response to the pain of stubbing your toe is to say 'damn' and mine is to say
+    'darn'", our pains are different types &mdash; and too coarse{{CITE:blockfodor1972}}. The same pair
+    raise the possibility that two systems could share functional organisation while one feels nothing,
+    call it deeper than their other arguments, and set it aside. Six years later it is cashed: the
+    population of China, wired by radio, would have your organisation for an hour, and every version of
+    functionalism falls into either <em>liberalism</em> (attributing minds too freely) or
+    <em>chauvinism</em> (denying them too freely){{CITE:block1978}}. The author is careful about what this
+    is: "a burden-of-proof argument", not a refutation.</p>
+  </div>
+
+  <div class="era">
+    <span class="ey">1979&ndash;1995 &middot; 8 works</span>
+    <span class="et">Is running the right program sufficient? The thought-experiment era</span>
+    <p>The medium is the imagined case. The Chinese Room is built to establish exactly one of its author's
+    five numbered propositions &mdash; that instantiating a program is never <em>by itself</em> sufficient
+    for intentionality{{CITE:searle1980}}. The reply that becomes standard is gradual replacement: swap
+    neurons one at a time for parts that do the same job, and anyone who says the endpoint is unconscious
+    must name the neuron at which the lights went out{{CITE:cuda1985}}. Fading and dancing qualia sharpen it
+    into a dilemma about whether a subject could be systematically wrong about his own
+    experience{{CITE:chalmers1995qualia}}. From an unexpected angle, Olympia attacks the defence rather than
+    the thesis: whether a system runs a program depends on what it <em>would</em> do, while what you feel
+    seems to depend on what is actually happening, and a machine can support every counterfactual with
+    apparatus that does nothing during the run{{CITE:maudlin1989}}. And one paper denies that the thing
+    being argued over is well defined at all{{CITE:dennett1988}}.</p>
+  </div>
+
+  <div class="era">
+    <span class="ey">1996&ndash;2013 &middot; 8 works</span>
+    <span class="et">What is it to run a computation at all?</span>
+    <p>The question moves down a level. If a rock can be described as running your brain's program, saying a
+    mind is a program says nothing &mdash; so implementation is re-stated to require transitions that would
+    have held had things gone otherwise, and the formalism is replaced when the author's own counterexample
+    shows a clock and a dial recovering a weakened version of the problem{{CITE:chalmers1996rock}}. Others
+    concede the point and relocate the answer: we take the computational stance towards brains because the
+    regularities we care about are specified by what the signals are <em>about</em>{{CITE:shagrir2006}}, or
+    because nothing physical decides whether a circuit is an AND gate or an OR gate{{CITE:sprevak2010}}. The
+    era ends with the collection's one data-driven verdict: neural processes are computations in a generic
+    sense but neither digital nor analog{{CITE:piccinini2013}} &mdash; removing, on empirical grounds and by
+    its own defenders, the brain-as-digital-computer analogy that many arguments had quietly assumed.</p>
+  </div>
+
+  <div class="era">
+    <span class="ey">2014&ndash;2021 &middot; 12 works</span>
+    <span class="et">Theories of consciousness become machine tests, and the testability crisis opens</span>
+    <p>A leading theory states in one sentence that it contradicts functionalism: digital computers, even if
+    functionally equivalent to us, "would experience next to nothing"{{CITE:tononi2015}}. Another answers
+    from the same starting point that consciousness is two computations and nothing
+    more{{CITE:dehaene2017}}. A third changes the explanandum, explaining why a machine <em>claims</em> to
+    have experience and stating that it "emphatically does not explain" how we have
+    one{{CITE:graziano2017}}. Then the floor moves: because recurrent and feedforward networks are both
+    universal function approximators, any experiment supporting a causal-structure theory can be reproduced
+    by a system with the opposite structure{{CITE:doerig2019}}, and a generalisation catches both camps in a
+    dilemma between already-falsified and unfalsifiable{{CITE:kleiner2021}}. Biology returns as an immanent
+    correction &mdash; metabolism is part of a human's functional profile{{CITE:godfreysmith2016}}, and
+    perception exists to keep a body viable{{CITE:seth2018beast}} &mdash; and ethics arrives without
+    committing to any theory{{CITE:schwitzgebel2015}}.</p>
+  </div>
+
+  <div class="era">
+    <span class="ey">2022&ndash;2026 &middot; 10 works</span>
+    <span class="et">Systems that talk back: assessment, precaution, and the biological alternative</span>
+    <p>All six communities contribute, and several works are jointly authored across them. The thesis
+    becomes load-bearing and visible: one report states it, adopts it as a working hypothesis, and uses it
+    to decide which theories are admitted &mdash; excluding integrated information theory "because it is not
+    compatible with computational functionalism" &mdash; then extracts fourteen indicator properties and
+    finds no current system a strong candidate{{CITE:butlin2023}}. Another converts every objection into an
+    engineering challenge with explicit, self-described "extremely rough"
+    credences{{CITE:chalmers2023llm}}. Neuroscience answers that the obstacles are architectural, while
+    disclaiming the stronger reading three times{{CITE:aru2023}}. A grounding argument asks whether these
+    systems' states <em>mean</em> anything before asking whether they feel{{CITE:mollo2023vector}}, and a
+    companion names the Redescription Fallacy that dismissals keep committing{{CITE:milliere2024}}. And the
+    question acquires institutions: a governance programme{{CITE:long2024welfare}}, a sentience-candidature
+    framework with a citizens' panel{{CITE:birch2024}}, and the systematic statement of the biological
+    alternative{{CITE:seth2025}}.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">05</span> The dial nobody sets</h2>
+  <p>Every argument on this page needs an answer to one question: copied at what level of detail? The
+  computations a brain performs, single neurons, individual synapses, sub-neuronal receptors? Each
+  participant needs a setting, hardly anyone argues for theirs, and <strong>no reviewed work argues that
+  another's setting is wrong</strong>. They simply assume different ones.</p>
+  <p>The settings that are stated run from the input&ndash;output level &mdash; "what it does, not
+  how"{{CITE:doerig2019}} &mdash; through information-processing computations{{CITE:dehaene2017}} and
+  Marr's algorithmic level{{CITE:butlin2023}}, down through each neuron's functional
+  role{{CITE:cuda1985}}, individual synapses{{CITE:bostrom2003}}, and sub-neuronal detail such as
+  dual-compartment pyramidal neurons and metabotropic receptors{{CITE:aru2023}}. One work maps the axis
+  explicitly as a four-rung ladder and concedes the first three rungs, denying only a connection that is
+  merely counterfactual{{CITE:maudlin1989}} &mdash; which is why reading Olympia as an argument against
+  substrate independence gets it backwards.</p>
+  <p>The figure's real content is the lower half. <strong>Nine works deny that this is a scale at
+  all</strong>: their claim is about the parameter rather than a setting of it. Two more deny there is any
+  bottom, because metabolism does not stop anywhere{{CITE:godfreysmith2016}}{{CITE:seth2025}}. Two have a
+  grain fall out of their theory's own postulate rather than choosing one{{CITE:tononi2015}}. One commits
+  without argument{{CITE:schwitzgebel2015}}. <em>Offered as a reading, not as anyone's stated claim:</em>
+  this is plausibly the debate whose openness explains the others', since sufficiency, biology and the
+  language-model question each turn on a setting of it. The nearest support is the three works that say
+  only that the parameter cannot be read off the human case{{CITE:shevlin2021}}{{CITE:birch2024}}{{CITE:long2024welfare}}.
+  One empirical route is proposed &mdash; causal and informational closure measures{{CITE:seth2025}} &mdash;
+  and it has not been run.</p>
+</section>
+
+<figure>
+  <img data-fig="fig05_grain_ladder" alt="Two stacked panels. The top panel, On the scale, has two rows: coarse, above the neural level, with three works between 2017 and 2019; and fine, at or finer than the neural level, with seven works between 1985 and 2023. The bottom panel, Off the scale, has five rows: the claim is about the dial rather than a setting of it, nine works from 1972 to 2025; commits to a level but never locates it, seven works from 1980 to 2023; the level falls out of the theory's own postulate, two works in 2015 and 2023; denies there is a bottom level at all, two works in 2016 and 2025; and commits without argument, one work in 2015. Marks are coloured and shaped by community.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 5 &mdash; How finely would a copy have to be made? Ten works answer; twenty-one do
+    not.</b> The lower panel is the field's unresolved axis: most of the collection either cannot place
+    itself on this scale or argues that the scale is the wrong picture.</span>
+    <span><b>Axes.</b> Horizontal, in both panels: the year the work first appeared, 1968 to 2034, using the
+    online year where it differs from print. Vertical: the code recorded for that work's level of
+    functional equivalence, one row each, with its count in brackets. Vertical position inside a row only
+    separates works of nearby years and carries no value. Colour and marker shape are research community,
+    as in figure 1.</span>
+    <span><b>Data.</b> {{DATA:fig05_grain_ladder}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/computational_functionalism/page/fig05_grain_ladder.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script reads <code>grain.csv</code>, which has one row for every reviewed work that commits to or
+    comments on a level of functional equivalence, with the level in the work's own words, the page or
+    section it is stated on, and a code. The code, not the page, decides which panel a work is drawn in.
+    "Fine" and "coarse" are defined against the neural level, and only those ten rows sit on the ordered
+    scale; the other twenty-one are drawn below it, because placing them on an axis would invent a position
+    for a work that declines to take one. Inside a row the works are not ranked against each other, since
+    no reviewed work argues another's setting is wrong. These codes were re-worked once during review, after
+    a reader found them inconsistent: "no bottom at all" had been coded as fine for one work and as a
+    meta-claim for another, and a grain derived from a theory's own postulate had been filed as unspecified.
+    One more caution: the nodes here are every work that says something about the level, which is a larger
+    and older set than the works the reviews place inside the grain debate proper.</p>
+  </div>
+</figure>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">06</span> Nine debates, one at a time</h2>
+  <p>The {{N_DEBATES}} debates below cut across the eras. Each card gives the question in plain words, the state of the debate
+  <em>in this collection</em>, and &mdash; always attached, never hidden &mdash; what this collection cannot
+  show about it. "Open" means substantive positions remain in dispute and new argument is still arriving.
+  "Leaning" means the reviewed works converge in a direction, which is always named, while dissent or a
+  missing test remains. <strong>No debate here is settled.</strong></p>
+  {{DEBATES}}
+</section>
+
+<figure>
+  <img data-fig="fig06_debate_status" alt="Nine horizontal rows, one per debate, each a thin line from the first to the latest year of a work holding a position in it, with marks coloured and shaped by community. The sufficiency debate runs 1972 to 2025 with the most marks. Triviality runs 1989 to 2017, individuation 1993 to 2023, grain 1980 to 2025, biology 1980 to 2025, testability 2015 to 2025, evidence 1988 to 2025, language models 2017 to 2025, precaution 2015 to 2025. The status word for each is printed on the right: open for six, leaning for three. The direction of a leaning debate is not on the chart; it is in the status cards above.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 6 &mdash; The nine debates: span, participants, and where each stands.</b> The old
+    questions are still receiving new positions, which is what "open" means here; the three young debates
+    are the ones about the machines now in front of us.</span>
+    <span><b>Axes.</b> Horizontal: the year the work first appeared, 1968 to 2030, using the online year
+    where it differs from print. Vertical: the nine debates, one row each, with the count of works and
+    positions under each title. Each mark is one work holding a position in that debate, coloured and
+    shaped by community as in figure 1 and drawn open if the work is only named. Vertical offsets inside a
+    row separate works of the same year and carry no value. The status word on the right is a label, not a
+    position on the axis, and the direction of a leaning debate is given in the cards above, not here.</span>
+    <span><b>Data.</b> {{DATA:fig06_debate_status}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/computational_functionalism/page/fig06_debate_status.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script joins <code>positions.csv</code> to <code>works.csv</code>: for each debate it collects
+    every work holding any position in it, draws one mark per work at that work's plotting year, and runs
+    the line from the earliest to the latest. The span is recomputed here rather than read from the debate
+    table, and the build fails if the two disagree &mdash; a guard added after a stale hand-entered count
+    was found in that table. A work counts once per debate however many positions it holds there, so the
+    marks are works, not positions; the counts under each title give both. No colour encodes status,
+    because a colour would imply a ranking the page does not make; the status is written out in words. The
+    direction of a leaning debate runs to several lines, and setting it beside a row overprinted the row
+    below, so it is rendered in the status cards above the figure instead. One row starts later than its argument does: the
+    triviality debate begins at 1989 here only because the two works that state the challenge are named-only
+    and hold no position.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <p>The next three figures open the debates up. Each row is a position as the synthesis words it, each
+  mark a work holding it, and each arrow a documented critique or reply. Agreement is not drawn as an
+  arrow: two works sharing a row already show it.</p>
+</section>
+
+<figure>
+  <img data-fig="fig07_debates_foundations" alt="Three stacked panels of debate maps. Panel one, is running the right computation sufficient for a mind, has eleven position rows and twenty-nine work marks from 1972 to 2025, with many curved arrows converging on Searle 1980 and on the two integrated-information works. Panel two, does every ordinary object implement every computation, has seven rows, one of them empty and marked no work held in this corpus takes this position, and eight marks between 1989 and 2017. Panel three, which computation is a given system running, has seven rows and nine marks between 1993 and 2023.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 7 &mdash; The three foundational debates.</b> The sufficiency panel holds eleven
+    positions, not two; the triviality panel has a position nobody in the collection holds, because the
+    works that state it are named only.</span>
+    <span><b>Axes.</b> Horizontal: the year the work first appeared, 1968 to 2034, using the online year
+    where it differs from print. Vertical, within each panel: the positions recorded for that debate, one
+    row each, in the synthesis's wording. Marks are works, coloured and shaped by community as in figure 1;
+    vertical offsets inside a row separate works of nearby years. Arrows are documented critiques (solid)
+    and replies (dashed).</span>
+    <span><b>Data.</b> {{DATA:fig07_debates_foundations}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/computational_functionalism/page/fig07_debates_foundations.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>Positions come from <code>positions.csv</code>, one row per position with the keys of the works
+    holding it; marks are placed at each work's plotting year and fanned vertically when two fall within
+    two years. Arrows come from <code>edges.csv</code>, and only two of its eight relation types are drawn
+    &mdash; critiques and replies &mdash; because drawing the supportive ones as well turned the busiest
+    panel into a hairball while adding nothing a shared row does not already say. An arrow appears only
+    when both of its ends sit in the same panel, so this is not the full engagement record; figures 10 and
+    11 count all of it. A position held by no work in the collection is drawn as a dashed empty row rather
+    than left blank, so an absence reads as an absence rather than as a drawing error. Labels are placed by
+    a routine that treats every mark as an obstacle and joins a label to its mark with a thin leader when
+    the nearby space is full; if any label cannot be placed without overlapping, the script stops rather
+    than shipping an ambiguous figure.</p>
+  </div>
+</figure>
+
+<figure>
+  <img data-fig="fig08_debates_grain_biology_testing" alt="Three stacked panels of debate maps. Panel one, how fine must functional equivalence be, has eleven position rows and seventeen marks from 1980 to 2025. Panel two, does being alive matter, has six rows and twelve marks from 1980 to 2025, with the biological works clustered after 2016. Panel three, can theories of consciousness be tested, has seven rows and ten marks between 2015 and 2025, with arrows between the integrated-information works and the unfolding-argument works.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 8 &mdash; What would have to be copied, whether life matters, and whether any of it can
+    be tested.</b> The testability panel is entirely consciousness science: no philosopher of computation in
+    this collection engages it.</span>
+    <span><b>Axes.</b> Horizontal: the year the work first appeared, 1968 to 2034, using the online year
+    where it differs from print. Vertical, within each panel: the positions recorded for that debate, one
+    row each. Marks are works, coloured and shaped by community as in figure 1; vertical offsets inside a
+    row separate works of nearby years. Arrows are documented critiques (solid) and replies (dashed).</span>
+    <span><b>Data.</b> {{DATA:fig08_debates_grain_biology_testing}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/computational_functionalism/page/fig08_debates_grain_biology_testing.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>Drawn by the same routine as figure 7, from the same two files, so the three debate figures can be
+    read against each other without adjusting for style. Two things about these particular panels are worth
+    saying. The grain panel here is <em>not</em> the same set of works as figure 5: this panel holds the
+    works the reviews place inside the debate, while figure 5 holds every reviewed work that says anything
+    about a level, which is a larger and older set. And the biology panel splits into three claims that are
+    routinely merged &mdash; metabolism and self-maintenance, bodily self-regulation, and specific neural
+    architecture &mdash; because merging them is the commonest error in citing this literature, and because
+    the third is compatible with a machine qualifying. The near-absence of arrows in the biology panel is
+    itself a finding: the works there lower a prior rather than answering each other, and none of them
+    rejects the thesis outright.</p>
+  </div>
+</figure>
+
+<figure>
+  <img data-fig="fig09_debates_machines" alt="Three stacked panels of debate maps covering the recent debates. Panel one, is what a system says or does evidence about whether it has a mind, has six position rows and fourteen marks from 1988 to 2025. Panel two, are today's language models candidates for minds, has six rows and eleven marks between 2017 and 2025. Panel three, what should be done while the question stays open, has seven rows and eight marks between 2015 and 2025. Most marks in all three panels fall after 2020.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 9 &mdash; The three debates about the machines now in front of us.</b> All three crowd
+    into one decade, and the sharpest live disagreement in the collection is inside the middle panel:
+    where, if anywhere, to look for a machine mind.</span>
+    <span><b>Axes.</b> Horizontal: the year the work first appeared, 1968 to 2034, using the online year
+    where it differs from print. Vertical, within each panel: the positions recorded for that debate, one
+    row each. Marks are works, coloured and shaped by community as in figure 1; vertical offsets inside a
+    row separate works of nearby years. Arrows are documented critiques (solid) and replies (dashed).</span>
+    <span><b>Data.</b> {{DATA:fig09_debates_machines}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/computational_functionalism/page/fig09_debates_machines.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>Same routine and same two files as figures 7 and 8. What a reader should carry into these panels is
+    that adjacency is not independence. Two works whose marks sit in the same row may share authors: the
+    governance report is co-authored by the authors of two of the works it cites as evidence, and the
+    indicator report and that governance report overlap directly in authorship, so any reading of them as
+    two independent assessments is reading one author group twice. The page never uses the word
+    "independent" of them, and the figures cannot show it, which is why it is said here in words. The
+    middle panel also contains the collection's sharpest disagreement between two people who co-authored
+    the same report &mdash; one treating the obstacles to machine consciousness as temporary engineering
+    problems, the other holding that "no one is there" in a chatbot while worrying far more than anyone
+    else about machines nobody is watching, such as connectome-based insect emulations.</p>
+  </div>
+</figure>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">07</span> Who reads whom</h2>
+  <p>Unlike many neighbouring literatures, this field is well connected across its communities:
+  neuroscientists read philosophers and philosophers read neuroscientists, several works are co-authored
+  across communities, and the object of study is shared and concrete. Two debates are nevertheless carried
+  by one community each &mdash; implementation and individuation are almost entirely philosophy of
+  computation, and testability is entirely consciousness science &mdash; and one strand is carried by a
+  single paper from 1988 with nothing after it{{CITE:dennett1988}}.</p>
+  <div class="callout">
+    <p class="eyebrow">The caution that matters most</p>
+    <p>Some of what looks like agreement is <strong>co-authorship</strong>. The governance
+    report{{CITE:long2024welfare}} is not independent of the two works it cites for its central claims: both
+    of their authors contributed to it, and it quotes one of their credences verbatim as evidence. The same
+    two people disagree sharply about language models. Separately, the indicator report{{CITE:butlin2023}}
+    and that governance report share authors in both directions. Any figure showing them as two sources for
+    the same conclusion is showing one author group twice, and this page therefore never calls their
+    convergence independent.</p>
+  </div>
+</section>
+
+<figure>
+  <img data-fig="fig10_community_links" alt="A six by six grid counting documented engagements between communities. Rows are the engaging community, columns the community engaged. The philosophy of mind row and column carry the largest counts, with a heavy diagonal cell. Consciousness science engages philosophy of mind and itself often. Biology and neuroscience sends from a single work. Ethics and policy sends mostly into philosophy of mind and consciousness science, and AI and machine learning into philosophy of mind. Cells with no recorded engagement show a dot rather than a zero.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 10 &mdash; Documented engagements between communities.</b> The heavy cells are inside
+    philosophy of mind and from consciousness science into it: the newer communities read the older one
+    more than the reverse.</span>
+    <span><b>Axes.</b> Horizontal: the community of the work being engaged &mdash; built on, critiqued,
+    replied to, reinterpreted, used as evidence, named as an opponent. Vertical: the community of the
+    engaging work. Each cell is a count of documented engagements; darker means more, on a grey scale with
+    no hue, and a dot means none was recorded.</span>
+    <span><b>Data.</b> {{DATA:fig10_community_links}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/computational_functionalism/page/fig10_community_links.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script joins <code>edges.csv</code> to <code>works.csv</code> and counts engagements by the
+    community at each end. An edge exists only where a reviewer recorded one in the text, with the locus
+    noted, so this is a record of what was read in 36 papers rather than a citation census: a zero means
+    "none recorded here", never "none exists". Cell shading is on a logarithmic scale so that the small
+    counts stay visible next to the largest cell, and the printed number, not the shade, is the value.
+    Named-only works can receive an engagement but never send one, so their community contributes nothing to
+    any row. Two structural facts limit the reading. The biology and neuroscience lane is one work, so its
+    row and column are one paper's habits. And the collection contains no work in these fields that ignores
+    computational functionalism, so every community looks more preoccupied with the thesis than it is.</p>
+  </div>
+</figure>
+
+<figure>
+  <img data-fig="fig11_most_engaged" alt="Horizontal stacked bars for the works receiving at least three documented engagements, longest first. Searle 1980 has fourteen, Tononi and Koch 2015 thirteen of which only four cite the held document and the rest a sibling paper, Block 1978 nine, then Putnam 1967 and Dehaene, Lau and Kouider 2017 with six each, and ten further works with three or four each, among them two named-only works, which can receive an engagement but never send one. Each bar is split into citations of this document, of a sibling paper by the same author or theory group, and of a different document.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 11 &mdash; The works the collection argues with &mdash; and whether the argument cites
+    the document held here.</b> The integrated-information node is the clear case: most of what engages it
+    cites a different paper of that programme, so the node stands for the programme, not for the 2015
+    paper.</span>
+    <span><b>Axes.</b> Horizontal: the number of documented engagements recorded into that work, 0 to about
+    15. Vertical: the works receiving at least three, longest first. Each bar is split by what the engaging
+    work actually cites: this document (black), a sibling paper of the same author or theory group (mid
+    grey), or a different document entirely (light grey).</span>
+    <span><b>Data.</b> {{DATA:fig11_most_engaged}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/computational_functionalism/page/fig11_most_engaged.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script counts rows of <code>edges.csv</code> by their target and splits each count by a column
+    recording which document the engaging work names. That column was added late, during review, precisely
+    so a bar could not be read as a citation count: a reviewer noticed that several arrows into the
+    integrated-information node cite papers from 2004, 2008, 2014, 2016, 2019 or a 2019 book rather than the
+    2015 paper held here, and the generator now refuses a "sibling" value whose evidence cell does not name
+    the document actually cited. Works receiving fewer than three engagements are left out of the figure but
+    counted in the totals under it. Two more limits. A work can only be engaged by works that come after it
+    and are in the collection, so the older works accumulate more by construction. And the most-engaged work
+    here is the one whose published reply literature this collection holds least of, which makes it read as
+    less answered than it was.</p>
+  </div>
+</figure>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">08</span> One verdict, four routes, no shared premise</h2>
+  <p>Four reviewed works conclude that a detailed computer simulation of a brain would not be conscious.
+  It would be easy, and wrong, to draw that as a consensus. The reasons have nothing in common: one says a
+  simulation is virtual while consciousness is real intrinsic cause-effect power{{CITE:tononi2015}};
+  one that intentionality is a biological phenomenon{{CITE:searle1980}}; one that a virtual machine is not
+  a process that actually has an architecture &mdash; reached <em>while defending</em>
+  computationalism{{CITE:klein_maudlin}}; and one that simulating a mechanism is neither implementing nor
+  realising it{{CITE:seth2025}}. The only kinship anyone claims is asserted in an endnote rather than
+  argued.</p>
+</section>
+
+<figure>
+  <img data-fig="fig12_four_routes" alt="A schematic with four cards on the left, each naming a work, its community and the review section, with its reason quoted, and four coloured arrows converging on a single box on the right reading a detailed computer simulation of a brain would not be conscious. A dashed arrow between the first two cards is labelled kinship claimed in an endnote, not argued. A note below reads that the cards are deliberately not joined to one another.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 12 &mdash; Four routes to the same verdict.</b> Two of the four authors are defending
+    computational functionalism while they reach it, which is the clearest sign that a shared conclusion
+    here is not a shared view.</span>
+    <span><b>Axes.</b> None &mdash; this is a schematic, not a plot. Horizontal position separates the four
+    reasons (left) from the verdict they share (right); vertical position only stacks the four cards and
+    carries no value. Card colour is the work's research community, as in figure 1.</span>
+    <span><b>Data.</b> {{DATA:fig12_four_routes}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/computational_functionalism/page/fig12_four_routes.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>Nothing is computed. The four routes and their quotations are taken from the section of the
+    field-history synthesis that records them, each traced to the review of that work and the page or
+    section it is stated on, and the four manifest keys are checked against <code>works.csv</code> when the
+    figure is drawn, so a renamed work breaks the build rather than silently mislabelling a card. The
+    cards are deliberately not joined to one another, and the one asserted kinship &mdash; an endnote in the
+    integrated-information paper naming Searle and Leibniz's mill &mdash; is drawn dashed and labelled as
+    asserted, because no shared premise is identified there. The engagement record does carry that endnote
+    as a link, which is exactly the kind of edge a reader should not convert into agreement. A fifth route
+    exists in the literature at large; this collection holds four, and none of them cites another of them
+    for the conclusion.</p>
+  </div>
+</figure>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">09</span> What these works are said to show, against what they say</h2>
+  <p>Each reviewer was asked, for every work in their batch, to check claims routinely attributed to it
+  against the text. Forty-one such claims were checked, and twenty-five do not hold as stated. The pattern
+  is not sloppiness in the literature so much as compression: a paper that kills one narrow thesis gets
+  cited for a broad one.</p>
+  <p class="cue" hidden>&larr; the table is wider than the screen &mdash; scroll it sideways</p>
+  <div class="scroll"><table class="wide">
+    <thead><tr><th>Work</th><th>Commonly attributed</th><th>What the reviewed text says</th></tr></thead>
+    <tbody>
+      <tr><td>Searle 1980 {{CITE:searle1980}}</td><td>Searle argues machines cannot think</td><td>"Only a machine could think, and indeed only very special kinds of machines" (p. 424). He rejects the sufficiency of running a program, and calls silicon "an empirical question"</td></tr>
+      <tr><td>Maudlin 1989 {{CITE:maudlin1989}}</td><td>Olympia argues against substrate independence</td><td>A silicon or hydraulic brain "may, for all we have said, be conscious" (p. 429); computational structure may even be necessary. Only sufficiency dies</td></tr>
+      <tr><td>Dennett 1988 {{CITE:dennett1988}}</td><td>Dennett denies that conscious experience exists</td><td>"Since I don't deny the reality of conscious experience, I grant that conscious experience has properties." What is denied is that any property is ineffable, intrinsic, private <em>and</em> directly apprehensible</td></tr>
+      <tr><td>Block 1978 {{CITE:block1978}}</td><td>Blockhead refutes computational functionalism</td><td>The list-searcher is aimed at a <em>reply</em> to Block's own argument &mdash; "this is just crude behaviorism" &mdash; and the main argument is offered as burden-of-proof</td></tr>
+      <tr><td>Tononi &amp; Koch 2015 {{CITE:tononi2015}}</td><td>Integrated information theory is carbon chauvinism</td><td>Endnote 15: "there is no reason why hardware-level, neuromorphic models &hellip; could not approximate, one day, our level of consciousness"</td></tr>
+      <tr><td>Graziano 2017 {{CITE:graziano2017}}</td><td>The attention schema explains subjective experience</td><td>"The theory emphatically does not explain how we have a subjective experience. It explains how a machine claims to have a subjective experience" (p. 5)</td></tr>
+      <tr><td>Butlin, Long et al. 2023 {{CITE:butlin2023}}</td><td>The indicators state necessary or sufficient conditions</td><td>"Systems that have more of these features are better candidates &hellip; We do not endorse these stronger claims" (p. 45)</td></tr>
+      <tr><td>Aru et al. 2023 {{CITE:aru2023}}</td><td>They deny that machines could be conscious</td><td>Three explicit disclaimers: not only mammalian brains, not only living systems, not impossible in software. The claim is about present systems and specificity</td></tr>
+      <tr><td>Seth 2025 {{CITE:seth2025}}</td><td>Seth refutes computational functionalism</td><td>"The arguments so far do not disprove computational functionalism. But they do render it less plausible, and less appealing"</td></tr>
+      <tr><td>Klein 2016 {{CITE:klein_maudlin}}</td><td>Klein refutes computationalism about consciousness</td><td>"I do not think Maudlin's argument succeeds"; he defends computationalism while narrowing it to architectures and actual processes</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<figure>
+  <img data-fig="fig13_corrections" alt="Two panels. The left panel counts forty-one checked claims by verdict: does not hold twenty-five, partly holds nine, misattributed five, disputed two. The right panel lists the works carrying two or more corrections, longest first, with Dennett 1988 at the top with five and Searle 1980 with four, then Block 1978 and Maudlin 1989 with three each and Tononi and Koch 2015, Butlin, Long et al. 2023 and Shagrir 2006 with two, every bar split by verdict in the same greys.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 13 &mdash; Claims checked against the works.</b> The works carrying the most corrections
+    are the most cited ones, which is what compression in a citation chain looks like from the other
+    end.</span>
+    <span><b>Axes.</b> Left panel &mdash; horizontal: number of checked claims, 0 to about 29; vertical: the
+    verdict, one bar each. Right panel &mdash; horizontal: number of claims checked against that work, 0 to
+    about 5; vertical: the works carrying two or more, longest first, each bar split by verdict in the same
+    greys. No hue ranks a verdict.</span>
+    <span><b>Data.</b> {{DATA:fig13_corrections}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/computational_functionalism/page/fig13_corrections.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>Each reviewer wrote, for every work in their batch, the claims they had seen attached to it, then the
+    quoted text against each, with a verdict; the synthesis gathered these into
+    <code>corrections.csv</code> and the script counts them. "Does not hold" means the work says something
+    different or the opposite. "Partly" means the gist survives but something is overstated &mdash; a
+    plausibility argument reported as a proof, or a conclusion about natural law reported as one about
+    metaphysical necessity. "Misattributed" means the claim belongs to a different work or a different
+    argument. "Disputed" marks the two cases where reviewed works read the same source incompatibly and the
+    synthesis declines to adjudicate. Read the figure as a map of where compression happens, not as a count
+    of errors in the literature: every row is a claim a reader could plausibly form, and each work's tally
+    grows with how often it is cited. Claims about named-only works could not be checked and are absent,
+    so a work's absence here is not a clean bill of health.</p>
+  </div>
+</figure>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">10</span> What this collection does not contain</h2>
+  <p>A collection assembled around one thesis has holes, and several of them change how a debate reads.
+  Three are worth naming before the table. The standard challenge to <strong>multiple
+  realizability</strong> is not held, which is why that premise looks unanimous above. The developed
+  <strong>replies to the Chinese Room</strong> are held nowhere and the 27 published peer commentaries on
+  it were not reviewed, so the most-engaged work here reads as <em>less answered</em> than it was. And the
+  whole <strong>reply literature on Olympia</strong> is absent, so this page contains one argument and one
+  retrospective on it with 27 years and an entire exchange in between, visible only as a bibliography.</p>
+  <p>None of the works below carries a claim on this page. They are listed so their absence is visible
+  rather than silent.</p>
+  {{NOT_HELD}}
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">11</span> Where things stand in 2026</h2>
+  <ul>
+    <li><strong>Nothing is settled.</strong> Of the {{N_DEBATES}} debates traced here, none is closed. Three
+    lean, and each lean is narrower than it sounds: towards Putnam's mapping construction failing, towards
+    architectural rather than behavioural evidence, and towards no current system being a strong
+    candidate.</li>
+    <li><strong>Two things the collection does agree on.</strong> That any recurrent system's bounded
+    input&ndash;output behaviour can be reproduced by a feedforward system &mdash; stated by both
+    camps{{CITE:tononi2015}}{{CITE:doerig2019}}{{CITE:albantakis2023}}, with the entire disagreement about
+    what follows. And multiple realizability, which is unanimous <em>by absence</em>.</li>
+    <li><strong>The unresolved axis is a dial, and nine of the thirty-one works that address it say the dial
+    is the wrong picture.</strong> Nothing here measures it; one empirical route is proposed and has not been run.</li>
+    <li><strong>A fourth position is easy to miss.</strong> Alongside "the duplicate feels something", "it
+    doesn't" and "we can't tell", one work argues the question has <em>no determinate
+    answer</em>{{CITE:dennett1988}}. Every work from 2015 on presupposes there is a determinate fact about
+    whether a given system is conscious, and none of them engages the denial &mdash; a thirty-seven-year
+    silence in this record, not a settled question.</li>
+    <li><strong>The field is almost entirely argument, not data.</strong> One reviewed work turns on
+    measurements, and it answers a different question{{CITE:piccinini2013}}.</li>
+  </ul>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">12</span> Why it matters for this project</h2>
+  <div class="callout">
+    <p class="eyebrow">Interpretive, not a finding</p>
+    <p>Nothing in these works is about this project's agents, and nothing here shows that an artificial
+    agent has experiences. The project's agents receive an internal damage signal called
+    <strong>nociception</strong>; pain is the thing being explained, never the label for the signal.
+    Turning any point below into an experiment is a question for the project's pain-science reviewer and
+    its research triage, not for this page.</p>
+  </div>
+  <p>The project trains reinforcement-learning agents &mdash; agents that learn by trial and error &mdash;
+  with a nociception channel, and studies how their behaviour changes when that channel is active. That is
+  a behavioural description, and "pain-like" only in that descriptive sense. Three points from this history
+  bear on how such work should be described.</p>
+  <ul>
+    <li><strong>The collection supplies the vocabulary for saying what is <em>not</em> being claimed.</strong>
+    The three-way split between simulating a mechanism, implementing it and realising it{{CITE:seth2025}} is
+    the cleanest way to state that a model of a damage signal is a model, not an instance. "Nothing gets wet
+    in a weather forecasting computer."</li>
+    <li><strong>The behaviour-to-architecture shift is a caution about behavioural evidence
+    generally.</strong> Reviewed works converge on the view that a trained system's behaviour is weak
+    evidence about its internal states. The argument is about consciousness; the structure of the worry
+    transfers to any behavioural signature read off a trained agent.</li>
+    <li><strong>The collection offers no ladder these agents could be climbing.</strong> The grain debate
+    asks how finely a <em>brain</em> must be copied before the copy inherits its mental properties. These
+    agents are not copies of any nervous system, so adding biological detail to a nociception model does not
+    move an agent along any axis this literature recognises &mdash; not because the threshold is far away,
+    but because no threshold here is defined for a system of this kind.</li>
+  </ul>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">13</span> Glossary</h2>
+  <dl>
+    <dt>computational functionalism</dt><dd>The view that what makes a state mental is the computational
+    role it plays, so running the right computation in any material would suffice.</dd>
+    <dt>computational sufficiency</dt><dd>The specific claim that any implementation of a certain class of
+    automata would possess a mind. Distinct from computational explanation, which is the scientific
+    programme of explaining cognition computationally.</dd>
+    <dt>multiple realizability</dt><dd>The same psychological state type can be realised by many different
+    physical state types.</dd>
+    <dt>substrate independence</dt><dd>Mental states can supervene on any of a broad class of physical
+    substrates. Stronger than multiple realizability.</dd>
+    <dt>organizational invariance</dt><dd>A property preserved under every change that preserves causal
+    topology &mdash; the pattern of interaction among a system's parts, abstracted from what the parts are
+    made of. The strongest of the three rungs.</dd>
+    <dt>implementation</dt><dd>The relation connecting an abstract computation to a physical system: on the
+    account used here, the system's causal structure mirrors the computation's formal structure.</dd>
+    <dt>individuation</dt><dd>Which computation a system is running, as opposed to whether it is running one
+    at all.</dd>
+    <dt>triviality / universal realization</dt><dd>The claim that every ordinary open physical system
+    realizes every finite automaton, which would make the thesis empty.</dd>
+    <dt>grain of functional equivalence</dt><dd>How finely a system must be copied before the copy counts as
+    functionally equivalent. The dial of &sect;5.</dd>
+    <dt>liberalism / chauvinism</dt><dd>Falsely attributing mental properties to systems, and falsely
+    denying them.</dd>
+    <dt>absent, inverted, fading and dancing qualia</dt><dd>Functionally identical systems that feel nothing,
+    or feel something systematically different; a subject whose experience dims during neuron-by-neuron
+    replacement while he reports it unchanged; and a switch that changes experience without changing
+    organisation.</dd>
+    <dt>integrated information</dt><dd>A quantity a system specifies above and beyond its parts, on the
+    theory that identifies consciousness with intrinsic cause-effect power rather than with
+    computation.</dd>
+    <dt>unfolding argument</dt><dd>Since a recurrent network's behaviour can be reproduced by a feedforward
+    one, theories that identify consciousness with causal structure are either falsified or untestable.</dd>
+    <dt>indicator properties</dt><dd>Computational conditions extracted from several theories at once and
+    used to score a system as a better or worse candidate &mdash; not as necessary or sufficient
+    conditions.</dd>
+    <dt>sentience candidate</dt><dd>A system whose evidence base implies a realistic possibility of
+    sentience that it would be irresponsible to ignore, and is rich enough to identify welfare risks.</dd>
+    <dt>gaming problem</dt><dd>A system trained on human-generated data is well placed to satisfy any
+    criterion we publish for sentience, which is what makes published criteria fragile.</dd>
+    <dt>nociception</dt><dd>The nervous system's encoding of damage signals, which is not pain. In this
+    project, the agents' injury-reporting channel.</dd>
+    <dt>named only</dt><dd>On this page: a work whose PDF is not held, so it was not reviewed and carries no
+    claim here.</dd>
+  </dl>
+</section>
+
+<section class="col">
+  <h2><span class="num">14</span> References</h2>
+  <p>The list is the whole collection: {{N_REFS}} works, {{N_CITED}} of them cited in the text above and
+  listed first in order of citation, the rest after them by year. {{N_FULL}} were reviewed in full,
+  {{N_SHORT}} as short summaries from the PDF, and {{N_NAMED}} are named only and were not read. Each entry
+  says which, and flags where the file held is a preprint, an author copy or an accepted manuscript rather
+  than the published version &mdash; which matters more here than usual, since one held file adds a
+  footnote absent from the published text, one is a 2026 published version standing behind a 2023 preprint
+  key, and one is a précis rather than the book it summarises.</p>
+  {{REFS}}
+</section>
+
+<hr>
+
+<section class="col">
+  <h4>Provenance</h4>
+  <p class="foot">Built by <code>python docs/project/references/computational_functionalism/page/build_page.py</code>
+  from <code>page_template.html</code>, with the House Style Sheet taken from
+  <code>docs/develop/active/meta/house_style_sheet.template.html</code>. Every figure is drawn by its own
+  script in the same folder from the data files in
+  <code>docs/project/references/computational_functionalism/field_history_data/</code>, which are generated
+  from the per-paper reviews by <code>build_field_history_data.py</code>; no CSV is hand-edited. The prose
+  follows <code>computational_functionalism_field_history_synthesis.md</code>, which was checked by a
+  domain reader and by an evidence reviewer before this page was built, and revised against both. The
+  per-paper reviews are the files named <code>computational_functionalism_lit_review_*.md</code> in the
+  same topic folder, and the PDFs are in <code>sources/</code>. Statuses, counts and "nobody argues"
+  statements describe the {{N_REFS}} works listed above and nothing wider.</p>
+</section>
+
+</div>
+
+{{HOUSE_VIEWER}}

@@ -1,0 +1,114 @@
+{
+ "v1_thermal": {
+  "config": "configs/environment/experiment/thermal/campfire_world.yaml",
+  "seed": 3,
+  "actions": [
+   1,
+   2,
+   1,
+   2,
+   4
+  ],
+  "width": 1400,
+  "height": 1000,
+  "render_seconds": 0.713,
+  "samples": [
+   {
+    "what": "frames rendered",
+    "used": 1,
+    "total": 1,
+    "note": "one state: seed 3 after 5 fixed actions"
+   },
+   {
+    "what": "sensory panels the observation carries",
+    "used": 8,
+    "total": 8,
+    "note": "every entry build_sensory_viz emitted was passed to the renderer; whether the renderer draws each one is what the figure shows"
+   }
+  ]
+ },
+ "v2_thermal": {
+  "config": "configs/environment/experiment/thermal/campfire_world.yaml",
+  "seed": 3,
+  "actions": [
+   1,
+   2,
+   1,
+   2,
+   4
+  ],
+  "width": 1400,
+  "height": 800,
+  "render_seconds": 0.555,
+  "samples": [
+   {
+    "what": "frames rendered",
+    "used": 1,
+    "total": 1,
+    "note": "one state: seed 3 after 5 fixed actions"
+   },
+   {
+    "what": "sensory panels the observation carries",
+    "used": 8,
+    "total": 8,
+    "note": "every entry build_sensory_viz emitted was passed to the renderer; whether the renderer draws each one is what the figure shows"
+   }
+  ]
+ },
+ "v1_default": {
+  "config": "configs/environment/default.yaml",
+  "seed": 3,
+  "actions": [
+   1,
+   2,
+   1,
+   2,
+   4
+  ],
+  "width": 1400,
+  "height": 1000,
+  "render_seconds": 0.272,
+  "samples": [
+   {
+    "what": "frames rendered",
+    "used": 1,
+    "total": 1,
+    "note": "one state: seed 3 after 5 fixed actions"
+   },
+   {
+    "what": "sensory panels the observation carries",
+    "used": 7,
+    "total": 7,
+    "note": "every entry build_sensory_viz emitted was passed to the renderer; whether the renderer draws each one is what the figure shows"
+   }
+  ]
+ },
+ "v2_default": {
+  "config": "configs/environment/default.yaml",
+  "seed": 3,
+  "actions": [
+   1,
+   2,
+   1,
+   2,
+   4
+  ],
+  "width": 1400,
+  "height": 800,
+  "render_seconds": 0.599,
+  "samples": [
+   {
+    "what": "frames rendered",
+    "used": 1,
+    "total": 1,
+    "note": "one state: seed 3 after 5 fixed actions"
+   },
+   {
+    "what": "sensory panels the observation carries",
+    "used": 7,
+    "total": 7,
+    "note": "every entry build_sensory_viz emitted was passed to the renderer; whether the renderer draws each one is what the figure shows"
+   }
+  ]
+ }
+}

@@ -1,0 +1,1550 @@
+<title>Two Currencies, One Sum</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#f4f6f8; --card:#ffffff; --ink:#141d26; --body:#33424f; --muted:#6b7c8a;
+  --rule:#dde3e8; --rule-strong:#c3ced7;
+  --raw:#b4530a; --raw-bg:#fdf1e5; --raw-rule:#eccfae;
+  --norm:#0e6f88; --norm-bg:#e8f4f8; --norm-rule:#b3d8e3;
+  --bad:#a8201a; --bad-bg:#fbeceb; --good:#1f6b3f; --good-bg:#eaf4ee;
+  --accent:#0e6f88;
+  --code-bg:#e7ecf0; --code-rule:#d2dae1;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#101820; --card:#18222c; --ink:#eef3f7; --body:#c2ced8; --muted:#8a9aa8;
+    --rule:#28343f; --rule-strong:#3a4956;
+    --raw:#f0a860; --raw-bg:#2b2015; --raw-rule:#5a4227;
+    --norm:#68c4dd; --norm-bg:#132630; --norm-rule:#2b4d5c;
+    --bad:#ef8078; --bad-bg:#2d1917; --good:#6fc191; --good-bg:#152a1f;
+    --accent:#68c4dd;
+    --code-bg:#212d38; --code-rule:#334150;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#101820; --card:#18222c; --ink:#eef3f7; --body:#c2ced8; --muted:#8a9aa8;
+  --rule:#28343f; --rule-strong:#3a4956;
+  --raw:#f0a860; --raw-bg:#2b2015; --raw-rule:#5a4227;
+  --norm:#68c4dd; --norm-bg:#132630; --norm-rule:#2b4d5c;
+  --bad:#ef8078; --bad-bg:#2d1917; --good:#6fc191; --good-bg:#152a1f;
+  --accent:#68c4dd;
+  --code-bg:#212d38; --code-rule:#334150;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--body);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  font-size:16.5px;line-height:1.65;margin:0;padding:0 20px 96px;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:720px;margin:0 auto}
+.wide{max-width:940px;margin:0 auto}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;color:var(--ink);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(2.1rem,5.5vw,3.1rem);font-weight:600;letter-spacing:-.015em}
+h2{font-size:clamp(1.45rem,3.2vw,1.85rem);font-weight:600;margin:64px 0 6px}
+h3{font-size:1.12rem;font-weight:600;margin:32px 0 4px;font-family:"IBM Plex Sans",sans-serif;letter-spacing:-.005em}
+p{margin:14px 0}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.9em}
+code{background:var(--code-bg);color:var(--ink);padding:1px 5px;border-radius:3px;
+  border:1px solid var(--code-rule);overflow-wrap:anywhere}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+header{padding:76px 0 8px;border-bottom:1px solid var(--rule);margin-bottom:8px}
+.lede{font-size:1.16rem;color:var(--body);margin-top:20px}
+.thesis{font-family:Fraunces,Georgia,serif;font-size:1.35rem;line-height:1.4;color:var(--ink);
+  border-left:3px solid var(--accent);padding:4px 0 4px 20px;margin:30px 0}
+.sub{color:var(--muted);font-size:.94rem}
+
+/* two-currency device */
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:24px 0}
+@media(max-width:640px){.pair{grid-template-columns:1fr}}
+.cur{border-radius:8px;padding:18px 20px;border:1px solid}
+.cur.raw{background:var(--raw-bg);border-color:var(--raw-rule)}
+.cur.norm{background:var(--norm-bg);border-color:var(--norm-rule)}
+.cur h4{margin:0 0 4px;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;
+  font-family:"IBM Plex Mono",monospace}
+.cur.raw h4{color:var(--raw)}
+.cur.norm h4{color:var(--norm)}
+.cur .big{font-family:"IBM Plex Mono",monospace;font-size:1.5rem;font-weight:600;
+  color:var(--ink);display:block;margin:8px 0 2px;font-variant-numeric:tabular-nums}
+.cur p{margin:6px 0 0;font-size:.9rem;color:var(--body)}
+
+.card{background:var(--card);border:1px solid var(--rule);border-radius:8px;
+  padding:22px 24px;margin:24px 0}
+.card>*:first-child{margin-top:0}.card>*:last-child{margin-bottom:0}
+.flag{border-left:3px solid var(--bad);background:var(--bad-bg);border-radius:0 6px 6px 0;
+  padding:16px 20px;margin:24px 0}
+.flag .eyebrow{color:var(--bad)}
+.ok{border-left:3px solid var(--good);background:var(--good-bg);border-radius:0 6px 6px 0;
+  padding:16px 20px;margin:24px 0}
+.ok .eyebrow{color:var(--good)}
+
+.scroll{overflow-x:auto;margin:22px 0;border:1px solid var(--rule);border-radius:8px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+table.tprose{min-width:560px}
+.code .ttl .mono{font-size:inherit;text-transform:none;letter-spacing:0}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:"IBM Plex Mono",monospace;font-size:.7rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);font-weight:500;background:var(--paper)}
+tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right}
+td.num{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{font-family:"IBM Plex Mono",monospace;font-size:.72rem;padding:2px 7px;border-radius:99px;
+  white-space:nowrap;font-weight:500}
+.tag.bad{background:var(--bad-bg);color:var(--bad)}
+.tag.good{background:var(--good-bg);color:var(--good)}
+
+.eq{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:16px 20px;
+  font-family:"IBM Plex Mono",monospace;font-size:.92rem;color:var(--ink);margin:20px 0;
+  overflow-x:auto;line-height:1.9}
+.eq .an{color:var(--muted);font-size:.82em}
+
+/* derivation boxes */
+.deriv{border:1px solid var(--rule-strong);border-radius:8px;margin:26px 0;background:var(--card);
+  overflow:hidden}
+.deriv>.hd{background:var(--paper);border-bottom:1px solid var(--rule);padding:9px 18px;
+  font-family:"IBM Plex Mono",monospace;font-size:.7rem;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--muted)}
+.deriv>.bd{padding:16px 18px}
+.deriv>.bd>*:first-child{margin-top:0}.deriv>.bd>*:last-child{margin-bottom:0}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+.deriv[id]{scroll-margin-top:24px}
+h2[id]{scroll-margin-top:24px}
+.xref{font-family:"IBM Plex Mono",monospace;font-size:.78rem;letter-spacing:.02em;
+  white-space:nowrap}
+/* code comparison blocks */
+.code{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;
+  margin:14px 0;font-family:"IBM Plex Mono",monospace;font-size:.82rem;line-height:1.75;
+  color:var(--ink);overflow-x:auto;white-space:pre}
+.code .cm{color:var(--muted)}
+.code .hi{color:var(--bad);font-weight:600}
+.code .ok2{color:var(--good);font-weight:600}
+.code .ttl{display:block;color:var(--muted);font-size:.7rem;letter-spacing:.11em;
+  text-transform:uppercase;margin-bottom:8px;white-space:normal}
+
+/* episode strip diagram */
+.stripwrap{overflow-x:auto;margin:18px 0 6px;padding-bottom:4px}
+.strip{display:flex;gap:3px;flex-wrap:nowrap;width:max-content}
+.cell{flex:0 0 auto;width:52px;text-align:center;border:1px solid var(--rule);border-radius:5px;
+  padding:7px 2px;background:var(--card);font-family:"IBM Plex Mono",monospace;font-size:.72rem;
+  color:var(--muted);line-height:1.5}
+.cell b{display:block;color:var(--ink);font-size:.82rem;font-weight:600}
+.cell.seen{background:var(--norm-bg);border-color:var(--norm-rule)}
+.cell.seen b{color:var(--norm)}
+.cell.unseen{opacity:.5;border-style:dashed}
+.striplab{display:flex;gap:3px;font-family:"IBM Plex Mono",monospace;font-size:.68rem;
+  color:var(--muted);margin-bottom:16px;letter-spacing:.04em;width:max-content}
+.striplab span{flex:0 0 auto;text-align:center}
+
+/* typeset math — CSS only, no MathML (unreliable) and no external font */
+.eqn{display:block;text-align:center;margin:20px 0;overflow-x:auto;overflow-y:hidden;
+  font-family:Georgia,"Times New Roman",serif;font-size:1.16rem;color:var(--ink);
+  line-height:2;padding:4px 2px;white-space:nowrap}
+.eqn v{font-style:italic}
+.eqn .op{margin:0 .38em}
+.eqn .fn{font-style:normal}
+.eqn sub,.eqn sup{font-size:.66em;font-style:italic}
+.eqn sub.up,.eqn sup.up{font-style:normal}
+.sum{display:inline-block;text-align:center;vertical-align:middle;margin:0 .3em;
+  line-height:1.1}
+.sum>span{display:block}
+.sum .lim{font-size:.54em;font-style:italic;white-space:nowrap}
+.sum .sig{font-size:1.4em;font-style:normal;line-height:1}
+.mnote{color:var(--muted);font-size:.85rem;margin:-10px 0 14px;text-align:center;font-style:italic}
+.deriv p{font-size:.94rem;margin:10px 0}
+
+/* pipeline */
+.pipe{display:flex;align-items:stretch;gap:0;margin:26px 0;flex-wrap:wrap}
+.step{flex:1 1 150px;background:var(--card);border:1px solid var(--rule);padding:13px 15px;
+  position:relative;min-width:0}
+.step:not(:last-child){border-right:none}
+.step:first-child{border-radius:8px 0 0 8px}
+.step:last-child{border-radius:0 8px 8px 0}
+@media(max-width:940px){.step{flex:1 1 100%;border-right:1px solid var(--rule)!important;
+  border-radius:8px!important;margin-bottom:-1px}}
+.step .n{font-family:"IBM Plex Mono",monospace;font-size:.68rem;color:var(--muted);
+  letter-spacing:.1em;display:block;margin-bottom:5px}
+.step .t{font-size:.87rem;color:var(--ink);font-weight:500;line-height:1.4}
+.step .u{font-family:"IBM Plex Mono",monospace;font-size:.72rem;margin-top:8px;display:inline-block;
+  padding:2px 7px;border-radius:99px}
+.step .u.raw{background:var(--raw-bg);color:var(--raw)}
+.step .u.norm{background:var(--norm-bg);color:var(--norm)}
+.step.break{border-color:var(--bad);border-width:2px;z-index:2}
+
+ul,ol{padding-left:22px;margin:14px 0}
+li{margin:7px 0}
+.gloss dt{font-family:"IBM Plex Mono",monospace;font-size:.86rem;color:var(--ink);
+  font-weight:500;margin-top:16px}
+.gloss dd{margin:3px 0 0;color:var(--body);font-size:.94rem}
+hr{border:none;border-top:1px solid var(--rule);margin:52px 0}
+footer{color:var(--muted);font-size:.85rem;margin-top:56px;padding-top:20px;border-top:1px solid var(--rule)}
+strong{color:var(--ink);font-weight:600}
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Recurrent PPO · return computation</p>
+  <h1>Two Currencies, One Sum</h1>
+  <p class="lede">A number measured on one scale is being added to numbers measured on a
+  completely different scale. Everything else in this document follows from that one fact.</p>
+  <p class="sub" style="margin-top:14px">Two things are easy to conflate here, so stated up front:
+  <strong>chopping training into fixed windows is standard practice and is not the problem</strong> —
+  every reinforcement-learning library does it, and the technique for handling the resulting edge is
+  settled (§2). The defect is something this codebase does <em>in addition</em>: it rescales the
+  returns before using them (§3 onward).</p>
+</header>
+
+<div class="flag" style="margin-top:26px">
+<p class="eyebrow">Read this before acting on the recommendation below</p>
+<p><strong>The repair this document argues for was built, run, and lost badly.</strong> Five seeds per
+arm on the 10&times;10 world, one million episodes each: the agent trained the current (allegedly
+broken) way survived <strong>138.2 steps</strong> on average, while the repaired arm managed
+<strong>40.3</strong> and the clean GAE arm <strong>41.9</strong>. The diagnosis in &sect;1&ndash;&sect;7
+is unchanged and still correct as a description of the code &mdash; the units really are mismatched.
+What is wrong is the conclusion that fixing it in isolation would help. <a href="#s10">&sect;10 has the
+result and the reason.</a></p>
+</div>
+
+<p class="sub">Written for someone meeting this for the first time. Every term is defined where it
+first appears, and there is a glossary at the end.</p>
+
+<h2>1. What the trainer is trying to compute</h2>
+
+<p>After the agent acts for a while, the trainer looks back and computes two things for every step:
+a <strong>return</strong> and an <strong>advantage</strong>. Both are worth seeing on a real episode
+before anything goes wrong.</p>
+
+<h3>A real episode, start to finish</h3>
+
+<p>Thirteen steps, recorded from run <code>rppo_restprem_a01</code>, episode seed
+<code>1000016</code>. The agent starts injured, spends nine steps healing, is then attacked twice,
+and dies.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th class="num">Step</th><th class="num">Injury</th><th class="num">Reward</th><th>What happened</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td class="num">67.8</td><td class="num">0.00</td><td>starts hurt</td></tr>
+<tr><td class="num">2</td><td class="num">62.8</td><td class="num">+4.99</td><td rowspan="8" style="vertical-align:middle">healing — injury falls about 5 per step, and healing is what the reward pays for</td></tr>
+<tr><td class="num">3</td><td class="num">57.8</td><td class="num">+4.97</td></tr>
+<tr><td class="num">4</td><td class="num">52.8</td><td class="num">+4.95</td></tr>
+<tr><td class="num">5</td><td class="num">47.8</td><td class="num">+4.92</td></tr>
+<tr><td class="num">6</td><td class="num">42.8</td><td class="num">+4.87</td></tr>
+<tr><td class="num">7</td><td class="num">37.8</td><td class="num">+4.81</td></tr>
+<tr><td class="num">8</td><td class="num">32.8</td><td class="num">+4.73</td></tr>
+<tr><td class="num">9</td><td class="num">27.8</td><td class="num">+4.60</td></tr>
+<tr><td class="num">10</td><td class="num">27.8</td><td class="num">−0.30</td><td>healing stops</td></tr>
+<tr><td class="num">11</td><td class="num">49.5</td><td class="num">−21.29</td><td>attacked — 65 damage</td></tr>
+<tr><td class="num">12</td><td class="num">71.3</td><td class="num">−21.56</td><td>injury still climbing</td></tr>
+<tr><td class="num">13</td><td class="num">100.0</td><td class="num">−128.62</td><td>attacked again — dies</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Computing the return</h3>
+
+<p class="sub"><a href="#a1-return">↓ general form in Appendix A.1</a></p>
+
+<p>The return at a step is everything that followed it, with each later reward counted slightly
+less — 95% per step here. You can only compute it once you know how things ended, so you start at
+the last step and walk backwards:</p>
+
+<div class="eq">
+return(step)&nbsp;=&nbsp;reward(step)&nbsp;+&nbsp;0.95&nbsp;×&nbsp;return(next&nbsp;step)
+</div>
+
+<p>The episode ends at step 13, so nothing follows it and its return is just its own reward:</p>
+
+<div class="eq">
+step&nbsp;13:&nbsp;&nbsp;−128.62&nbsp;&nbsp;<span class="an">// nothing follows — the episode is over</span><br>
+step&nbsp;12:&nbsp;&nbsp;−21.56&nbsp;+&nbsp;0.95&nbsp;×&nbsp;(−128.62)&nbsp;=&nbsp;−143.75<br>
+step&nbsp;11:&nbsp;&nbsp;−21.29&nbsp;+&nbsp;0.95&nbsp;×&nbsp;(−143.75)&nbsp;=&nbsp;−157.85<br>
+step&nbsp;10:&nbsp;&nbsp;&nbsp;−0.30&nbsp;+&nbsp;0.95&nbsp;×&nbsp;(−157.85)&nbsp;=&nbsp;−150.25<br>
+<span class="an">&nbsp;&nbsp;… continuing back …</span><br>
+step&nbsp;&nbsp;1:&nbsp;&nbsp;&nbsp;&nbsp;0.00&nbsp;+&nbsp;0.95&nbsp;×&nbsp;(−66.90)&nbsp;=&nbsp;&nbsp;−63.56
+</div>
+
+<div class="flag">
+<p class="eyebrow">What the return is actually saying</p>
+<p>Step 1's reward was <strong>0.00</strong>, and the next eight steps were all <strong>positive</strong>
+— the agent was healing nicely. Yet step 1's return is <strong>−63.56</strong>.</p>
+<p>Breaking that number apart: the nine healing steps contribute <strong>+31.14</strong>, the two
+attacks contribute <strong>−25.20</strong>, and the single death step contributes
+<strong>−69.50</strong> — because 0.95<sup>12</sup> is still 0.54, so a death twelve steps away
+arrives at over half strength.</p>
+<p>That is the whole point of a return. It is not "how good did that step feel"; it is
+<em>"where did that step lead"</em>. Nine steps of genuine progress are wiped out by one death
+twelve steps later, and the return says so.</p>
+</div>
+
+<h3>Computing the advantage</h3>
+
+<p class="sub"><a href="#a3-advantage">↓ general form, and the TD error, in Appendix A.3</a></p>
+
+<p>The return alone cannot train a policy, because it does not say whether the outcome was
+<em>surprising</em>. A return of −63.56 means one thing if the agent expected disaster and something
+else entirely if it expected to be fine.</p>
+
+<p>That is what the <strong>critic</strong> is for: it predicts the return from each state. The
+advantage is the gap between what happened and what the critic expected:</p>
+
+<div class="eq">
+advantage&nbsp;=&nbsp;return&nbsp;−&nbsp;critic's&nbsp;prediction
+</div>
+
+<p class="sub">The recorded trajectory files do not store the critic's predictions, so the two numbers
+below are illustrative — the returns are real, the predictions are not.</p>
+
+<div class="scroll">
+<table class="tprose">
+<thead><tr><th class="num">Step</th><th class="num">Return (real)</th><th class="num">Critic expected</th><th class="num">Advantage</th><th>What the policy learns</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td class="num">−63.56</td><td class="num">−20.00</td><td class="num">−43.56</td><td>far worse than expected — make these choices less likely</td></tr>
+<tr><td class="num">9</td><td class="num">−138.14</td><td class="num">−140.00</td><td class="num">+1.86</td><td>about as expected — barely change anything</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Sign is what matters. A <strong>positive</strong> advantage pushes the policy to repeat what it
+did; a <strong>negative</strong> one pushes it away. Notice step 9 has a far worse return than step 1
+but a mildly <em>positive</em> advantage — by then disaster was already unavoidable and the critic
+knew it, so there is little to learn. The return says what happened; the advantage says what was
+worth learning from.</p>
+
+<h3>When this happens</h3>
+
+<p>Not during play. The agent acts for a fixed stretch, and only afterwards does the trainer walk
+backwards over what it collected. With this project's live settings, one cycle looks like this:</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Phase</th><th>What happens</th><th class="num">Scale</th></tr></thead>
+<tbody>
+<tr><td><strong>1. Collect</strong></td><td>128 environments run in parallel for 128 steps each. Rewards are recorded. <em>No return exists yet</em> — nothing can be computed until the stretch is over.</td><td class="num">16,384 steps</td></tr>
+<tr><td><strong>2. Compute</strong></td><td>Walk backwards through each environment's own column of 128 steps, building returns, then advantages.</td><td class="num">128 passes</td></tr>
+<tr><td><strong>3. Learn</strong></td><td>Four passes of gradient updates over those 16,384 samples.</td><td class="num">4 epochs</td></tr>
+<tr><td><strong>4. Discard</strong></td><td>The data is thrown away and collection starts again — PPO learns only from experience its current policy just produced.</td><td class="num">—</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Each of those 128 columns has its own stopping point. So <strong>every iteration creates 128
+edges</strong> — one per environment — and each one needs a number standing in for the future beyond it.</p>
+
+<div class="flag">
+<p class="eyebrow">How often does an edge land mid-episode?</p>
+<p>Almost always. Measured over 5,000 real episodes: mean length <strong>195 steps</strong>, median 84,
+and an episode ends <em>exactly</em> on a 128-step boundary <strong>0.18%</strong> of the time.</p>
+<p>So the situation section 4 describes — a window stopping in the middle of an ongoing episode — is
+not an edge case. It is essentially <strong>every edge, every iteration</strong>.</p>
+<p>Over the planned 10M-episode budget that is roughly <strong>1.95 billion</strong> environment steps,
+<strong>119,000</strong> training iterations, and about <strong>15 million</strong> window edges — each
+one seeded with a number in the wrong units.</p>
+</div>
+
+<p>That stretch is the <strong>window</strong>, where it stops is the <strong>edge</strong>, and the
+number standing in for what lies past it is the <strong>starting value</strong>. Those three terms
+carry the rest of the document — so it is worth seeing, in numbers, how much that third one decides.</p>
+
+<h3>Why a starting value is needed at all</h3>
+
+<p>Here is the tension in one sentence. <strong>The return is defined by accumulating backwards from
+the end of the episode — but the trainer only ever holds a 128-step slice, so it has to start
+accumulating from the end of the <em>slice</em> instead.</strong> Something has to stand in for the
+part it cannot see.</p>
+
+<p>A deliberately tiny example makes it exact. Ten steps, reward +1 on each, episode ends at step 10,
+discount 0.9.</p>
+
+<div>
+<div class="stripwrap">
+<div class="strip">
+<div class="cell seen"><b>1</b>+1</div>
+<div class="cell seen"><b>2</b>+1</div>
+<div class="cell seen"><b>3</b>+1</div>
+<div class="cell seen"><b>4</b>+1</div>
+<div class="cell seen"><b>5</b>+1</div>
+<div class="cell unseen"><b>6</b>+1</div>
+<div class="cell unseen"><b>7</b>+1</div>
+<div class="cell unseen"><b>8</b>+1</div>
+<div class="cell unseen"><b>9</b>+1</div>
+<div class="cell unseen"><b>10</b>+1</div>
+</div>
+<div class="striplab">
+<span style="width:275px">← the window: all the trainer holds →</span>
+<span style="width:275px">← happened, not yet collected →</span>
+</div>
+</div>
+</div>
+
+<p>Knowing the whole episode, the returns are straightforward — accumulate backwards from step 10:</p>
+
+<div class="eqn"><v>G</v><sub>10</sub><span class="op">=</span>1.000<span class="op" style="margin:0 1.1em">·</span><v>G</v><sub>9</sub><span class="op">=</span>1.900<span class="op" style="margin:0 1.1em">·</span><v>G</v><sub>8</sub><span class="op">=</span>2.710<span class="op" style="margin:0 1.1em">·</span>…<span class="op" style="margin:0 1.1em">·</span><v>G</v><sub>1</sub><span class="op">=</span>6.513</div>
+
+<p>Now put yourself in the trainer's position. It has steps 1–5 and nothing else. Step 5's return
+should be 4.686 — but computing that requires knowing that the part after step 5 is worth
+<strong>4.095</strong>, and steps 6–10 are not in its hands.</p>
+
+<div class="scroll">
+<table>
+<thead><tr>
+<th class="num">Step</th>
+<th class="num">True return<br><span style="font-weight:400;text-transform:none;letter-spacing:0">(whole episode known)</span></th>
+<th class="num">Window, starting from 4.095<br><span style="font-weight:400;text-transform:none;letter-spacing:0">(the right number)</span></th>
+<th class="num">Window, starting from 0<br><span style="font-weight:400;text-transform:none;letter-spacing:0">(pretend it ends)</span></th>
+<th class="num">Short by</th>
+</tr></thead>
+<tbody>
+<tr><td class="num">1</td><td class="num">6.513</td><td class="num">6.513</td><td class="num">4.095</td><td class="num">2.418</td></tr>
+<tr><td class="num">2</td><td class="num">6.126</td><td class="num">6.126</td><td class="num">3.439</td><td class="num">2.687</td></tr>
+<tr><td class="num">3</td><td class="num">5.695</td><td class="num">5.695</td><td class="num">2.710</td><td class="num">2.985</td></tr>
+<tr><td class="num">4</td><td class="num">5.217</td><td class="num">5.217</td><td class="num">1.900</td><td class="num">3.317</td></tr>
+<tr><td class="num">5</td><td class="num">4.686</td><td class="num">4.686</td><td class="num">1.000</td><td class="num">3.686</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="ok">
+<p class="eyebrow">The exact statement of the problem</p>
+<p>Look at the middle column. <strong>Given the right starting value, the windowed computation
+reproduces the true returns exactly</strong> — 6.513, 6.126, 5.695, all of them. Cutting the episode
+into windows costs nothing at all, <em>provided</em> the right number is inserted at the cut.</p>
+<p>So the entire problem reduces to one question: <strong>what number goes at the edge?</strong>
+Everything else — the recursion, the discounting, the windowing — is exact.</p>
+</div>
+
+<p>And the last column shows what a wrong one costs. The shortfall is
+<span class="mono">0.9<sup>distance</sup> × 4.095</span>: largest at step 5, right against the edge,
+fading as you move back. Which is exactly the pattern seen later on real data, and for exactly this
+reason.</p>
+
+<p class="sub">One thing this toy case makes obvious that the real one hides: the trainer is not being
+careless. Steps 6–10 <em>have not been collected yet</em> when the returns are computed. The number
+at the edge cannot be looked up — only estimated. The only question is whether the estimate is any
+good.</p>
+
+<h3>How much does the starting value actually control?</h3>
+
+<p>Recall the problem at the edge. The backward sum needs a number to begin from — something standing
+in for "everything that happens after this window stops". Where could that number come from?</p>
+
+<div class="card">
+<h3>Candidate 1 &nbsp;·&nbsp; <span style="font-family:'IBM Plex Mono',monospace">0.00</span> — pretend the world ends here</h3>
+<p>The simplest choice: assume nothing follows the edge. It is obviously wrong when the episode is
+still running, but it is easy, and it is <strong>what this codebase actually did until July 2026</strong>.</p>
+
+<h3>Candidate 2 &nbsp;·&nbsp; <span style="font-family:'IBM Plex Mono',monospace">13.18</span> — the truth</h3>
+<p>We are reading a <em>recorded</em> episode, so we can simply look. Take the rewards the agent
+actually went on to receive from step 129 to the end of the episode at step 501, discount them, and
+they sum to <strong>13.18</strong>. That is genuinely what the future past this edge was worth.</p>
+<p class="sub"><strong>The trainer cannot do this.</strong> At the moment it computes returns it holds
+only the 128 steps it just collected — step 129 has not happened yet. That is the entire reason a
+substitute is needed at all. We have the luxury of hindsight here precisely because we are auditing
+after the fact.</p>
+
+<h3>Candidate 3 &nbsp;·&nbsp; <span style="font-family:'IBM Plex Mono',monospace">1.28</span> — what the code actually supplies</h3>
+<p>Unable to look forward, the trainer asks the critic to estimate it. The number the critic hands
+over, on this window, is <strong>1.28</strong>. Why that is roughly a tenth of the truth rather than
+close to it is what section 4 is about — for now it is simply the number the code uses.</p>
+</div>
+
+<p>So: same window, same rewards, same arithmetic. Only the number the backward sum starts from
+changes. Here are the last eight steps under each of the three:</p>
+
+<div class="scroll">
+<table>
+<thead><tr>
+<th class="num">Step</th><th class="num">Its own reward</th>
+<th class="num">if we start from 0.00<br><span style="font-weight:400;text-transform:none;letter-spacing:0">(world ends here)</span></th>
+<th class="num">if we start from 13.18<br><span style="font-weight:400;text-transform:none;letter-spacing:0">(the truth)</span></th>
+<th class="num">if we start from 1.28<br><span style="font-weight:400;text-transform:none;letter-spacing:0">(what the code uses)</span></th>
+</tr></thead>
+<tbody>
+<tr><td class="num">121</td><td class="num">−1.00</td><td class="num">−8.17</td><td class="num">0.57</td><td class="num">−7.32</td></tr>
+<tr><td class="num">122</td><td class="num">−2.46</td><td class="num">−7.55</td><td class="num">1.65</td><td class="num">−6.66</td></tr>
+<tr><td class="num">123</td><td class="num">−3.74</td><td class="num">−5.36</td><td class="num">4.33</td><td class="num">−4.42</td></tr>
+<tr><td class="num">124</td><td class="num">−4.76</td><td class="num">−1.71</td><td class="num">8.49</td><td class="num">−0.72</td></tr>
+<tr><td class="num">125</td><td class="num">+1.53</td><td class="num">3.21</td><td class="num">13.95</td><td class="num">4.26</td></tr>
+<tr><td class="num">126</td><td class="num">+1.08</td><td class="num">1.78</td><td class="num">13.08</td><td class="num">2.87</td></tr>
+<tr><td class="num">127</td><td class="num">+0.61</td><td class="num">0.73</td><td class="num">12.62</td><td class="num">1.88</td></tr>
+<tr><td class="num">128</td><td class="num">+0.12</td><td class="num">0.12</td><td class="num">12.64</td><td class="num">1.34</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Reading step 128 across: its own reward is <strong>+0.12</strong> in all three cases, because the
+rewards are the same recorded rewards. Yet its return reads 0.12, then 12.64, then 1.34.</p>
+
+<div class="flag">
+<p class="eyebrow">What that means</p>
+<p>A hundredfold swing in what the agent is taught about step 128, with the environment, the actions
+and the rewards all held fixed. <strong>Almost the whole of that step's return came from the
+substituted number, not from anything the agent did.</strong></p>
+<p>Steps 121 to 124 make it sharper. Under the truth they are <em>positive</em> — those were good
+moments. Under the other two they are <em>negative</em>. Whether the agent learns "that was worth
+doing" or "avoid that" is decided by which number was put at the edge.</p>
+</div>
+
+<p>The influence fades going backwards, but slowly — each step of distance multiplies it by 0.95:</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Distance back from the edge</th><th class="num">Units of return contributed by a starting value of 13.18</th></tr></thead>
+<tbody>
+<tr><td>1 step</td><td class="num">12.52</td></tr>
+<tr><td>10 steps</td><td class="num">7.89</td></tr>
+<tr><td>30 steps</td><td class="num">2.83</td></tr>
+<tr><td>60 steps</td><td class="num">0.61</td></tr>
+<tr><td>100 steps</td><td class="num">0.08</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Per-step rewards here are typically a few units, so a contribution of 12.5 dominates a step's
+return, 2.8 still shapes it, and by 60 steps back it has faded to nothing. Roughly <strong>the last
+third to half of every window</strong> has its returns substantially decided by that one substituted
+number.</p>
+
+<h3>This is a solved problem — here is the field's answer</h3>
+
+<p>Nothing so far is unusual. Every reinforcement-learning implementation collects in fixed windows and
+faces exactly this edge, and the handling is settled well enough to have a canonical reference:
+Pardo et al. (2018), <em>Time Limits in Reinforcement Learning</em>. The rule is to distinguish two
+different ways a window can end.</p>
+
+<div class="pair">
+  <div class="cur norm">
+    <h4>Termination</h4>
+    <span class="big">start = 0</span>
+    <p>The episode genuinely ended — the agent died, or reached a goal. Nothing follows, so zero is
+    not an approximation, it is correct.</p>
+  </div>
+  <div class="cur raw">
+    <h4>Truncation</h4>
+    <span class="big">start = V(s′)</span>
+    <p>The window merely ran out while the episode continued. The future is real but unobserved, so
+    the critic's estimate stands in for it.</p>
+  </div>
+</div>
+
+<p>Every mainstream library implements precisely this. Stable-Baselines3 passes <code>last_values</code>
+and <code>dones</code> into its return computation; OpenAI's Spinning Up has a
+<code>finish_path(last_val)</code> function that exists for no other purpose; CleanRL threads a
+<code>next_value</code> through its estimator loop.</p>
+
+<div class="ok">
+<p class="eyebrow">And our code does this correctly</p>
+<p>The July change added exactly this: zero on a real death, the critic's estimate on a truncation.
+<strong>The idea was right and the implementation of that idea is right.</strong> Windowing is not the
+defect, and neither is bootstrapping at the edge.</p>
+<p>So why does the same technique misfire here? Because those libraries feed the critic a
+<strong>raw</strong> return, so the estimate it hands back is automatically in the same units as the
+rewards it joins. There is no opportunity for a mismatch. This codebase rescales the returns first —
+and that is the one thing none of them do.</p>
+</div>
+
+<h3>Which part is actually at fault</h3>
+
+<p>Rescaling the returns causes two separate problems. It is worth seeing that only one of them
+involves the window edge at all:</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Problem caused by rescaling the returns</th><th>Needs a window edge?</th></tr></thead>
+<tbody>
+<tr><td>The critic's target shifts every batch, for reasons that have nothing to do with the environment</td><td><span class="tag good">no</span></td></tr>
+<tr><td>The value handed back at the edge is in the wrong units</td><td><span class="tag bad">yes</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<p><strong>One of the two would exist with no windowing whatsoever.</strong> The other needs an edge
+— but only because the edge is where a rescaled number meets raw rewards; the rescaling is still what
+makes it wrong. Remove the windowing and two problems remain; remove the rescaling and all three
+disappear.</p>
+
+<p class="sub">So read everything above as <em>setting</em>: the window, the edge and the starting value
+are the machinery inside which the defect operates, and they are worth understanding on their own
+terms — the last-third-of-every-window arithmetic is real and applies to any implementation. But the
+fault is not there. The rest of this document is about the rescaling: what it is (§3), what it does
+(§4–§5), and why no other implementation does it (§7).</p>
+
+<h2>2. Why anyone normalizes anything</h2>
+
+<p><strong>Normalizing</strong> (or <em>z-scoring</em>) means rescaling a batch of numbers so they
+have an average of 0 and a spread of 1. It is a routine trick: it keeps the numbers a network sees
+in a comfortable range, which makes training more stable.</p>
+
+<p>The question is <em>which</em> numbers you normalize. That single choice is the whole story here.</p>
+
+<div class="pair">
+  <div class="cur raw">
+    <h4>Raw units</h4>
+    <span class="big">−165 … +39</span>
+    <p>Actual reward values from this environment. Returns over a window have a spread of
+    about <strong>24</strong>.</p>
+  </div>
+  <div class="cur norm">
+    <h4>Normalized units</h4>
+    <span class="big">−3 … +3</span>
+    <p>The same information, rescaled to average 0 and spread 1. Convenient, but no longer in
+    the environment's units.</p>
+  </div>
+</div>
+
+<p>Hold on to these two colors. <span style="color:var(--raw);font-weight:600">Amber is raw.</span>
+<span style="color:var(--norm);font-weight:600">Teal is normalized.</span> The bug is what happens
+when they touch.</p>
+
+<h2>3. There are two recipes in the code, and only one is broken</h2>
+
+<p>The trainer has two ways of computing returns. A config setting picks one. They are meant to be
+interchangeable — but they normalize different things.</p>
+
+<p class="sub"><a href="#a4-mc-td">↓ Appendix A.4 shows these two are the endpoints of a single
+family</a>, and <a href="#a5-gae">A.5 derives the estimator that connects them</a> — which makes the
+defect below narrower than it looks.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Recipe</th><th>Critic is trained on</th><th>What gets normalized</th><th>Status</th></tr></thead>
+<tbody>
+<tr>
+  <td><strong>GAE</strong><br><span class="sub">generalized advantage estimation</span></td>
+  <td><span class="tag" style="background:var(--raw-bg);color:var(--raw)">raw returns</span></td>
+  <td>the <strong>advantages</strong></td>
+  <td><span class="tag good">correct</span></td>
+</tr>
+<tr>
+  <td><strong>MC</strong><br><span class="sub">Monte Carlo returns</span></td>
+  <td><span class="tag" style="background:var(--norm-bg);color:var(--norm)">normalized returns</span></td>
+  <td>the <strong>returns</strong></td>
+  <td><span class="tag bad">broken</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>The three branches, side by side</h3>
+
+<p>All three live in the same function, within about twenty lines of each other. Only the last two
+lines of each differ — where the rescaling is applied, and to what.</p>
+
+<div class="code"><span class="ttl">MC — current</span>returns    = compute_mc_returns(...)                 <span class="cm"># raw</span>
+returns    = <span class="hi">(returns - mean) / (std + 1e-7)</span>       <span class="cm"># ← rescaled HERE</span>
+targets    = returns                               <span class="cm"># critic trained on RESCALED returns</span>
+advantages = returns - values                      <span class="cm"># ← never rescaled</span></div>
+
+<div class="code"><span class="ttl">MC_FIXED — new</span>returns    = compute_mc_returns(...)                 <span class="cm"># raw — identical call</span>
+targets    = returns                               <span class="cm"># critic trained on RAW returns</span>
+advantages = returns - values
+advantages = <span class="ok2">(advantages - mean) / (std + 1e-8)</span>    <span class="cm"># ← rescaled HERE instead</span></div>
+
+<div class="code"><span class="ttl">GAE — existing, and already conventional</span>advantages = compute_gae(...)                       <span class="cm"># raw</span>
+targets    = advantages + values                   <span class="cm"># critic trained on RAW returns</span>
+advantages = <span class="ok2">(advantages - mean) / (std + 1e-8)</span>    <span class="cm"># ← rescaled HERE</span></div>
+
+<div class="ok">
+<p class="eyebrow">Read the last two blocks together</p>
+<p><strong>MC_FIXED and GAE have identical bookkeeping.</strong> Raw target, rescaled advantage, same
+epsilon. The only thing left separating them is the estimator itself — Monte-Carlo returns versus
+GAE's smoothed alternative, which Appendix A.5 shows are λ = 1 and λ = 0.95 of one family.</p>
+<p>That is the entire point of the fix: it does not invent a third way of doing things, it makes the
+MC branch agree with the branch sitting thirteen lines below it.</p>
+</div>
+
+<h3>What each produces, on the same numbers</h3>
+
+<p>Four steps, raw returns 10, 20, 30, 40. Note the critic's outputs differ between branches because
+each critic was <em>trained</em> on that branch's targets — MC's critic speaks in rescaled units, the
+other two speak in raw ones.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th></th><th class="num">MC</th><th class="num">MC_FIXED</th></tr></thead>
+<tbody>
+<tr><td>Critic's target</td><td class="num">−1.342 −0.447 0.447 1.342</td><td class="num">10 20 30 40</td></tr>
+<tr><td>What the critic outputs</td><td class="num">−1.20 −0.50 0.60 1.10</td><td class="num">12 18 33 35</td></tr>
+<tr><td>Advantage</td><td class="num">−0.142 0.053 −0.153 0.242</td><td class="num">−0.781 0.469 −1.093 1.406</td></tr>
+<tr><td>Advantage spread</td><td class="num">0.162</td><td class="num">1.000</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="ok">
+<p class="eyebrow">Retracted — this document predicted a decay that never happened</p>
+<p>An earlier version of this page argued from the table above that MC's advantage, being the raw gap
+between target and prediction, must shrink as the critic learns — so the policy's effective step
+size would silently decay while its exploration term stayed fixed. The predicted schedule:</p>
+<div class="scroll">
+<table>
+<thead><tr><th>Critic error</th><th class="num">MC — advantage spread</th><th class="num">MC_FIXED — advantage spread</th></tr></thead>
+<tbody>
+<tr><td>as it is now</td><td class="num">0.162</td><td class="num">1.000</td></tr>
+<tr><td>halved</td><td class="num">0.081</td><td class="num">1.000</td></tr>
+<tr><td>halved again</td><td class="num">0.040</td><td class="num">1.000</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>It was measured across training, and it does not happen.</strong> MC's advantage spread is
+<strong>stable at about 0.69</strong> from early training to the end — not 0.162, and not falling.
+The critic never gets good enough for its residual to collapse, so the mechanism never engages. And the
+size of the surviving difference rules it out as an explanation anyway: 0.69 against exactly 1.000 is a
+1.4× gap, and no 1.4× difference in step size produces the 3.3× difference in
+performance that these two arms actually showed (§10).</p>
+<p class="sub">Adam is also invariant to a <em>steady</em> rescaling of the gradient, which blunts this
+class of argument generally — see the correction in §8.</p>
+</div>
+
+<div class="flag">
+<p class="eyebrow">The part that surprises people</p>
+<p><strong>MC is the broken one. GAE is fine.</strong> And every live config in this project uses
+<strong>MC</strong> — so essentially every run ever trained here carries the bug. The two GAE
+configs are the clean exceptions.</p>
+</div>
+
+<h2>4. Where MC breaks</h2>
+
+<p>Training happens in <strong>windows</strong> of 128 steps. Steps near the <em>end</em> of a window
+have a problem: the window simply stops, so there is no "what happened next" to add up.</p>
+
+<p>A fix was added in July to handle this — ask the critic what it thinks the future is worth, and
+use that as the <strong>starting value</strong> for the backward sum. (Not a random seed. Just the
+number the running total begins at.) The idea is right. The units are not.</p>
+
+</div>
+<div class="wide">
+<div class="pipe">
+  <div class="step"><span class="n">01</span><span class="t">Critic predicts the value of the state past the window edge</span><span class="u norm">normalized</span></div>
+  <div class="step break"><span class="n">02 · break</span><span class="t">That number becomes the starting value of a sum over actual rewards</span><span class="u raw">raw</span></div>
+  <div class="step"><span class="n">03</span><span class="t">Rewards are added backwards through the window</span><span class="u raw">raw</span></div>
+  <div class="step"><span class="n">04</span><span class="t">The result is normalized and becomes the critic's next target</span><span class="u norm">normalized</span></div>
+</div>
+</div>
+<div class="wrap">
+
+<p>Step 4 is what makes the critic speak in normalized units in the first place — and step 1 reads
+its output straight back out. The loop closes, and the mismatch is baked in.</p>
+
+<h3>The same thing with actual numbers</h3>
+
+<div class="eq">
+correct&nbsp;starting&nbsp;value&nbsp;&nbsp;=&nbsp;&nbsp;<span style="color:var(--raw)">13.18</span>&nbsp;&nbsp;&nbsp;<span class="an">// what the future past the edge is really worth</span><br>
+actual&nbsp;&nbsp;starting&nbsp;value&nbsp;&nbsp;=&nbsp;&nbsp;<span style="color:var(--norm)">&nbsp;1.28</span>&nbsp;&nbsp;&nbsp;<span class="an">// the same estimate, on the rescaled 0-to-1 scale</span><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ratio&nbsp;≈&nbsp;<strong>1 / 10</strong>
+</div>
+
+<p>These are real numbers from a real training episode, not an illustration — the sourcing is in the
+next subsection. The starting value arrives roughly <strong>ten times too small</strong> in this
+window: denominated in the wrong currency, like settling a $13 bill with $1.28 because you read the
+price tag in a different unit.</p>
+
+<h3>First: what a "window" is, and what its edge means</h3>
+
+<p>The trainer does not process a whole episode at once. It grabs a fixed <strong>128 steps</strong>
+of experience, learns from those, then grabs the next 128. That chunk is a <strong>window</strong>,
+and its <strong>edge</strong> is simply where the chunk stops.</p>
+
+<p>The edge is an accident of bookkeeping. The agent's episode carries straight on across it — the
+episode used below runs <strong>501 steps</strong>, so the edge at step 128 falls in the middle of an
+ordinary stretch of foraging. Nothing happens there. The agent cannot tell.</p>
+
+<h3>Second: why the sum runs backwards</h3>
+
+<p>A step's return is "everything that followed, discounted"
+<a class="xref" href="#a1-return">[A.1]</a>. You cannot know that until you know
+what followed — so the only way to compute it is to <strong>start at the end and walk back</strong>,
+reusing each answer to get the previous one:</p>
+
+<div class="eq">
+return(step)&nbsp;=&nbsp;reward(step)&nbsp;+&nbsp;0.95&nbsp;×&nbsp;return(next&nbsp;step)
+</div>
+
+<p class="sub"><a href="#a1-return">↓ the same recursion, in general form, in Appendix A.1</a></p>
+
+<p>Each step inherits the one after it, discounted by 5%. That inheritance is what carries the
+starting value backwards through the whole window — and it is why one wrong number at the edge
+contaminates every step behind it.</p>
+
+<p>At the very last step in the window there is no "next step" inside the chunk, so the recursion
+needs a number to begin from. <strong>That is the starting value.</strong> It stands for everything
+after the edge.</p>
+
+<h3>Third: the arithmetic, on real data</h3>
+
+<p>Everything below comes from a real recorded episode — run <code>rppo_restprem_a01</code>,
+episode seed <code>1000000</code>, 501 steps. The true value of the future past step 128, computed
+from the actual rewards the agent went on to receive, is <strong>13.18</strong>. The critic's
+rescaled output for it is <strong>1.28</strong>.</p>
+
+<div class="eq">
+<span class="an">// step 128 — the last one in the window</span><br>
+correct:&nbsp;&nbsp;0.12&nbsp;+&nbsp;0.95&nbsp;×&nbsp;<span style="color:var(--raw)">13.18</span>&nbsp;=&nbsp;<span style="color:var(--raw)">12.65</span><br>
+broken:&nbsp;&nbsp;&nbsp;0.12&nbsp;+&nbsp;0.95&nbsp;×&nbsp;<span style="color:var(--norm)">&nbsp;1.28</span>&nbsp;=&nbsp;<span style="color:var(--norm)">&nbsp;1.34</span><br>
+<br>
+<span class="an">// step 127 — inherits step 128's answer</span><br>
+correct:&nbsp;&nbsp;0.61&nbsp;+&nbsp;0.95&nbsp;×&nbsp;<span style="color:var(--raw)">12.65</span>&nbsp;=&nbsp;<span style="color:var(--raw)">12.62</span><br>
+broken:&nbsp;&nbsp;&nbsp;0.61&nbsp;+&nbsp;0.95&nbsp;×&nbsp;<span style="color:var(--norm)">&nbsp;1.34</span>&nbsp;=&nbsp;<span style="color:var(--norm)">&nbsp;1.88</span>
+</div>
+
+<p>Carry that back through the last eight steps of the window:</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th class="num">Step</th><th class="num">Reward</th><th class="num">Return it should get</th><th class="num">Return it does get</th><th class="num">Missing</th></tr></thead>
+<tbody>
+<tr><td class="num">121</td><td class="num">−1.00</td><td class="num" style="color:var(--raw)">0.58</td><td class="num" style="color:var(--norm)">−7.32</td><td class="num">7.90</td></tr>
+<tr><td class="num">122</td><td class="num">−2.46</td><td class="num" style="color:var(--raw)">1.65</td><td class="num" style="color:var(--norm)">−6.66</td><td class="num">8.31</td></tr>
+<tr><td class="num">123</td><td class="num">−3.74</td><td class="num" style="color:var(--raw)">4.33</td><td class="num" style="color:var(--norm)">−4.42</td><td class="num">8.75</td></tr>
+<tr><td class="num">124</td><td class="num">−4.76</td><td class="num" style="color:var(--raw)">8.49</td><td class="num" style="color:var(--norm)">−0.72</td><td class="num">9.21</td></tr>
+<tr><td class="num">125</td><td class="num">+1.53</td><td class="num" style="color:var(--raw)">13.95</td><td class="num" style="color:var(--norm)">4.25</td><td class="num">9.70</td></tr>
+<tr><td class="num">126</td><td class="num">+1.08</td><td class="num" style="color:var(--raw)">13.08</td><td class="num" style="color:var(--norm)">2.87</td><td class="num">10.21</td></tr>
+<tr><td class="num">127</td><td class="num">+0.61</td><td class="num" style="color:var(--raw)">12.62</td><td class="num" style="color:var(--norm)">1.88</td><td class="num">10.74</td></tr>
+<tr><td class="num">128</td><td class="num">+0.12</td><td class="num" style="color:var(--raw)">12.65</td><td class="num" style="color:var(--norm)">1.34</td><td class="num">11.31</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="flag">
+<p class="eyebrow">Look at steps 121 to 124</p>
+<p>Their true returns are <strong>positive</strong> — 0.58, 1.65, 4.33, 8.49. The agent took some
+damage there (rewards of −1.00 to −4.76) but recovered well afterwards, so those moments genuinely
+led somewhere good.</p>
+<p>What the agent is told is <strong>negative</strong>: −7.32, −6.66, −4.42, −0.72.</p>
+<p><strong>The sign is inverted</strong> — in the raw numbers. Whether that survives into what the
+agent actually learns is a fair objection, and the next section tests it rather than assuming.</p>
+</div>
+
+<h3>But doesn't the rescaling wash all this out?</h3>
+
+<p>It is the right question, and it nearly does. Before these returns reach the critic they are
+z-scored — recentred and rescaled. A <em>constant</em> error would vanish entirely at that step, and
+so would a <em>uniform</em> stretch. So does anything survive?</p>
+
+<p>Running both columns through the same rescaling the trainer applies, on this real window:</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>After rescaling, comparing correct vs broken</th><th class="num">Value</th></tr></thead>
+<tbody>
+<tr><td>Correlation between the two</td><td class="num">0.978</td></tr>
+<tr><td>Average difference</td><td class="num">0.157 σ</td></tr>
+<tr><td>Largest difference</td><td class="num">0.769 σ</td></tr>
+<tr><td>Step pairs whose order flips</td><td class="num">5.5%</td></tr>
+<tr><td>Best step in the window</td><td class="num">same</td></tr>
+<tr><td>Worst step in the window</td><td class="num">same</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="ok">
+<p class="eyebrow">Correction to the framing above</p>
+<p><strong>The rescaling absorbs most of it.</strong> The two columns end up 97.8% correlated, the
+best and worst steps are unchanged, and the dramatic sign flip in the raw numbers largely dissolves
+once the zero point is recentred. The honest size of this defect is an average distortion of about
+<strong>0.16 of a standard deviation</strong> — real, but far from the "opposite lesson" the raw
+table suggests.</p>
+</div>
+
+<h3>What does survive, and why</h3>
+
+<p>Rescaling removes constants and uniform stretches. The error here is neither. It is
+<span class="mono">Δ × 0.95<sup>k</sup></span> — an <strong>exponential ramp</strong> across the
+window:</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th class="num">Step</th><th class="num">Error</th><th>Share of the step-128 error</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td class="num">0.017</td><td class="num">0.15%</td></tr>
+<tr><td class="num">64</td><td class="num">0.424</td><td class="num">3.8%</td></tr>
+<tr><td class="num">112</td><td class="num">4.977</td><td class="num">44%</td></tr>
+<tr><td class="num">128</td><td class="num">11.308</td><td class="num">100%</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Early steps are essentially untouched; late steps carry the whole error. That shape is what no
+amount of recentring or rescaling can remove — and it is why 5.5% of step pairs still swap order
+afterwards.</p>
+
+<div class="flag">
+<p class="eyebrow">The part that actually bites</p>
+<p>The leftover distortion is a function of <strong>where a step sits in the training window</strong>
+— and window position is <em>not in the agent's observation</em>. It sees satiation, pain, smells,
+what it can see, its own last action. Nothing about batching.</p>
+<p>The reviewer strengthened this argument and also trimmed it. <strong>Stronger:</strong> the
+recurrent memory is reset only when an <em>episode</em> ends, never at a window edge, and episode
+phase drifts out of step with window phase — so window position is missing from the agent's whole
+<em>history</em>, not merely from its current observation. <strong>Trimmed:</strong> the average size
+of the artefact across positions <em>is</em> a function of things the critic can see, so part of it
+does get absorbed — as a mild bias toward short-sightedness, on the order of 15%. What is genuinely
+irreducible is the position-dependent <em>residual</em> around that average: noise rather than bias,
+worst near window edges.</p>
+
+<p class="sub">And if the memory <em>could</em> fit the pattern, that would be worse, not better: the
+trunk is shared with the policy, so window-phase features would leak into action selection and into
+the value estimates that seed the next window.</p>
+</div>
+
+<p>Why the raw gap looks so much bigger than 0.16σ: the missing amount is
+<span class="mono">(13.18 − 1.28) × 0.95<sup>k</sup></span>, where k is the number of steps back from
+the edge — about <strong>11.9</strong>, shrinking only 5% per step. Against true returns that sit
+between 0.58 and 13.95, subtracting ~8 to ~11 does not dent them, it <em>overwhelms</em> them.</p>
+
+<p>Look at the two return columns as shapes, not as numbers.</p>
+
+<div class="pair">
+  <div class="cur raw">
+    <h4>What should happen</h4>
+    <span class="big">0.58 → 13.95</span>
+    <p>Returns <strong>rise</strong> as the agent recovers from the damage at steps 121-124, then
+    level off around 12.6-13.9.</p>
+  </div>
+  <div class="cur norm">
+    <h4>What does happen</h4>
+    <span class="big">−7.32 → 4.25</span>
+    <p>The whole curve is <strong>dragged below zero</strong> at the start. The recovery is still
+    visible, but it now reads as "climbing out of a hole" rather than "already fine".</p>
+  </div>
+</div>
+
+<p class="sub"><strong>Correction, from an RL review of this page.</strong> The rescaling is done
+over the <em>whole training batch</em> — about 16,000 samples, spread ≈ 24 — not over this single
+window, whose own spread is 12.50. Dividing by the larger number makes the distortion
+<em>smaller</em>: in the units that actually reach the critic it is about <strong>0.08 σ</strong>,
+half the 0.157 figure above. An earlier version of this note claimed the opposite. Note also this is
+one window: the error scales with how valuable the future past that particular edge is, so eventful
+windows are worse and quiet ones milder. That variation is unmeasured.</p>
+
+<h2>5. How much does it actually matter?</h2>
+
+<p>This was measured, not estimated, across four recorded training runs.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Quantity</th><th class="num">Value</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>Spread of raw returns</td><td class="num">22.8 – 25.1</td><td>Consistent across all four runs</td></tr>
+<tr><td>Spread of per-step reward</td><td class="num">≈ 7.4</td><td>Reward ranges from −165 to +39</td></tr>
+<tr><td>Starting value delivered</td><td class="num">≈ 4%</td><td>Of what it should have been</td></tr>
+<tr><td>Training targets affected</td><td class="num">≈ 35%</td><td>The last ~45 steps of every 128-step window</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="flag">
+<p class="eyebrow">The honest headline</p>
+<p><strong>The July fix never worked.</strong> Before it, the backward sum started from zero; after it,
+the starting value arrives at about 4% strength — which is nearly the same thing. So these runs behave
+close to how they behaved before the fix existed, and the marginal harm attributable to the units
+mismatch, measured against the code that preceded it, is that same ~4%.</p>
+<p>That is a smaller and more precise claim than "35% of targets are corrupted", and it is the one the
+evidence supports. The 35% figure describes how many targets the starting value <em>should</em> have
+reached, not how badly they were damaged relative to what came before.</p>
+</div>
+
+<h3>The larger damage is dynamic, and it took an RL review to spot</h3>
+
+<p>Everything above is a snapshot of one batch. One further problem only shows up over training.</p>
+
+<div class="card">
+<h3>The critic chases a target that moves for no reason</h3>
+<p>Recentring and rescaling per batch means the number the critic is meant to output changes every
+iteration because of <em>what else was in the batch</em>. This is the exact pathology that motivated
+PopArt (van Hasselt et al., 2016) — learning against a target whose scale is itself drifting.</p>
+
+</div>
+
+<div class="ok">
+<p class="eyebrow">A second claim retracted here</p>
+<p>This card used to carry a companion argument — that MC's policy step size quietly decays as the
+critic improves, and that the repair would remove that for free. It was measured and it is false; the
+retraction is at the end of §3.</p>
+</div>
+
+<h2>6. Is it only about scale?</h2>
+
+<p>Almost — and the exception matters. The broken starting value is
+<span class="mono">(future − average) ÷ spread</span> where the correct one is just
+<span class="mono">future</span>. Two things are wrong: a division by the spread, and a subtraction
+of the average.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Term</th><th class="num">Measured here</th><th>Contribution to the error</th></tr></thead>
+<tbody>
+<tr><td>÷ spread (σ)</td><td class="num">≈ 24</td><td><strong>dominant</strong> — shrinks the value ~25-fold</td></tr>
+<tr><td>− average (μ)</td><td class="num">−3 to −4.7</td><td class="num">≈ 0.15 — negligible</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>So yes: <strong>in this environment the damage is essentially all scale.</strong></p>
+
+<h3>Which means: would a small-scale environment be safe?</h3>
+
+<p>Largely, yes. If returns naturally had a spread near 1 and an average near 0, then the normalized
+value and the raw value would be nearly the same number — and this bug would be close to harmless.
+The defect only bites because <em>this</em> environment produces big returns.</p>
+
+<p>But three things stop that from being a fix.</p>
+
+<div class="card">
+<h3>The spread is not one number</h3>
+<p>Measured per window it ranges widely: median 11, but 3.4 at the low end and 29 at the high end.
+So the error is <strong>uneven within a single run</strong> — some windows are barely touched, others
+badly distorted. And the badly distorted ones are the eventful windows, because that is what makes
+returns spread out.</p>
+
+<h3>Below a spread of 1, the error reverses</h3>
+<p>If the spread were less than 1, dividing by it would <em>inflate</em> the starting value instead of
+shrinking it. So the bug is not reliably "under-counting" — its direction depends on the data. It does
+not happen here, but it means the defect cannot be reasoned about as a fixed bias.</p>
+
+<h3>The moving target does not care about scale</h3>
+<p>Even at a spread of exactly 1, the critic would still be chasing a target rescaled by a different
+average and spread <strong>every window</strong>. That second defect is independent of how big the
+numbers are, and it is the condition that let the units mismatch exist in the first place.</p>
+</div>
+
+<div class="flag">
+<p class="eyebrow">And you could not fix it by shrinking the rewards</p>
+<p>Rescaling the environment so returns came out near spread 1 would be tuning the world around a
+code defect — and it would not hold, because <strong>the spread grows as the agent improves.</strong>
+An agent that survives longer accumulates larger returns, so a scale chosen to make the bug
+harmless early would stop working exactly as the agent starts succeeding.</p>
+</div>
+
+<h2>7. Why the repair is "stop normalizing the returns"</h2>
+
+<p>The obvious patch — convert the starting value into raw units before using it — fails for a
+concrete reason. The conversion factor comes from the spread of <em>this window's</em> returns, but
+you need the starting value <em>before</em> you can compute those returns. Circular.</p>
+
+<p>And it would leave the deeper problem untouched:</p>
+
+<div class="flag">
+<p class="eyebrow">The moving target</p>
+<p>Because the rescaling is recomputed <strong>every window</strong>, the "right answer" the critic is
+chasing shifts every iteration — for reasons that have nothing to do with the environment. The agent's
+situation may be identical, but the number it is supposed to output changes because the batch it
+landed in happened to have a different spread.</p>
+</div>
+
+<p>The standard repair is the one GAE already uses: <strong>leave the returns raw, and normalize the
+advantages instead.</strong> You still get well-scaled numbers where the policy needs them, without a
+moving target and without two currencies meeting.</p>
+
+<div class="ok">
+<p class="eyebrow">Worth noticing</p>
+<p>The fix does not invent anything. It makes the MC branch work the way the GAE branch —
+sitting a few lines above it in the same file — already works. <strong>The current MC code is the
+deviation; the fix is the return to standard.</strong></p>
+</div>
+
+<h2>8. The honest cost of fixing it</h2>
+
+<p>Raw returns are big numbers, and that has a downstream consequence worth understanding before
+committing.</p>
+
+<p>The critic learns by being pushed toward its target, and the size of that push is proportional to
+how far off it is — the raw arithmetic difference, not the percentage.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th></th><th class="num">Target spread</th><th class="num">Predicts</th><th class="num">Target</th><th class="num">Error</th><th class="num">Push size</th></tr></thead>
+<tbody>
+<tr><td><span class="tag" style="background:var(--norm-bg);color:var(--norm)">today</span></td>
+    <td class="num">1</td><td class="num">0.5</td><td class="num">1.2</td><td class="num">0.7</td><td class="num">0.7</td></tr>
+<tr><td><span class="tag" style="background:var(--raw-bg);color:var(--raw)">after fix</span></td>
+    <td class="num">24</td><td class="num">12</td><td class="num">29</td><td class="num">17</td><td class="num">17</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Both critics are <em>equally accurate</em> — each is off by about the same fraction. But one produces
+a push of 0.7 and the other 17. Same learning problem, bigger units. Like reporting a 2 °C error as
+2000 millikelvin: identical situation, far bigger number.</p>
+
+<h3>Why that can hurt the policy</h3>
+
+<p><strong>Gradient clipping</strong> is a safety cap: if one training update is too large overall, the
+whole update is scaled down to fit. The critical detail is that the cap is measured across the
+<em>entire network at once</em> — actor and critic share one budget.</p>
+
+<div class="eq">
+<span style="color:var(--muted)">// today</span><br>
+actor push 1 &nbsp;+&nbsp; critic push 1 &nbsp;→&nbsp; total 1.4 &nbsp;→&nbsp; scaled to <strong>36%</strong><br>
+<br>
+<span style="color:var(--muted)">// after the fix</span><br>
+actor push 1 &nbsp;+&nbsp; critic push <span style="color:var(--raw)">24</span> &nbsp;→&nbsp; total 24 &nbsp;→&nbsp; scaled to <strong style="color:var(--bad)">2%</strong>
+</div>
+
+<p>The actor's own push never changed, yet it shares a budget with something whose numbers exploded.</p>
+
+<div class="ok">
+<p class="eyebrow">Correction — this arithmetic overstates the harm</p>
+<p>The optimiser is <strong>Adam</strong>, which divides each update by a running estimate of its own
+recent magnitude. That makes it <em>invariant to a constant rescaling</em> of the gradients: if the
+clip binds by the same factor on every step, Adam largely cancels it after a short warm-up, and the
+policy's effective step size is nearly unchanged. The "2%" above is the raw-gradient story, not the
+applied-update story.</p>
+<p>Two real harms survive that cancellation. <strong>Direction contamination:</strong> the encoder and
+memory are shared, so a value gradient 24× larger dominates the direction the shared trunk moves in,
+whatever the step size. <strong>Intermittent binding:</strong> Adam cancels a <em>steady</em> squeeze,
+not an occasional one — so windows containing a death, where the value error spikes, get a real
+one-off throttle that the surrounding steps do not.</p>
+</div>
+
+<div class="flag">
+<p class="eyebrow">Why this matters here specifically</p>
+<p>The cap bites hardest on the largest updates — which in this environment means <strong>deaths and
+injuries</strong>, the events carrying the biggest rewards. So the plausible failure is that the policy
+gets throttled precisely at the moments that teach injury avoidance.</p>
+<p>The run would end with an agent that never developed injury-dependent behaviour, and
+<em>"modulation didn't help"</em> would be indistinguishable from <em>"the optimizer scaled the lesson
+down every time it appeared."</em> Same numbers, opposite conclusions, no error message.</p>
+</div>
+
+<p>This is why the fix ships with a measurement and a pre-registered stopping rule rather than an
+assurance. We are not accepting the clipping problem — we are checking whether it actually occurs,
+having removed the one we know is real.</p>
+
+<div class="ok">
+<p class="eyebrow">Correction — and the remedy I had wrong</p>
+<p>I previously said that giving the actor and critic separate optimisers, each with its own cap,
+would dissolve this. <strong>That is wrong here.</strong> A single shared cap is the standard for
+PPO implementations with a shared trunk, and separating the optimisers would not help anyway,
+because the encoder and memory are shared — the trunk still receives the enlarged value gradient
+whichever optimiser applies it.</p>
+<p>The standard first remedy is different and simpler: <strong>normalise the rewards upstream</strong>
+by a slowly-updated estimate of return spread, the way most PPO implementations do by default. That
+shrinks the spread from ~24 toward 1 and removes the pressure at source rather than measuring and
+gating it. If the stopping rule ever trips, that is the first thing to reach for — ahead of a
+stationary-scale value loss, or of switching to compressed value targets.</p>
+</div>
+
+<h2>9. What this means for runs that already exist</h2>
+
+<div class="ok">
+<p class="eyebrow">The saving grace</p>
+<p>Every run executed the <strong>same rule</strong>: in effect, no working edge bootstrap at all.
+That is a level playing field, and it is why comparisons between arms hold.</p>
+<p class="sub"><strong>Correction:</strong> an earlier version said the bias was "uniform — same
+magnitude every run". That is not true. The error size depends on the value of the future past each
+edge, on each batch's spread, and on how good that run's critic was — all of which differ by arm. The
+cross-arm verdicts survive because every arm ran the same broken semantics, not because they were
+distorted by the same amount.</p>
+</div>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Claim</th><th>Verdict</th></tr></thead>
+<tbody>
+<tr><td>Arm A beat arm B within a study</td><td><span class="tag good">stands</span></td></tr>
+<tr><td>The 14-arm sensor-ladder verdicts</td><td><span class="tag good">stands</span></td></tr>
+<tr><td>Rest-premium and ambush-risk refutations</td><td><span class="tag good">stands</span></td></tr>
+<tr><td>"The agent plans over horizon X"</td><td><span class="tag bad">not supported</span></td></tr>
+<tr><td>"The critic is accurate to Y"</td><td><span class="tag bad">not supported</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Nothing concluded by <em>comparing</em> runs is invalidated. What is not supported is any absolute
+statement about credit assignment, value quality, or effective planning horizon — those rest on the
+machinery that was broken.</p>
+
+<p>One correction falls out of this: the bug registry warns that runs trained before the July fix are
+not comparable to runs after it. Since the starting value arrives at about 4% strength, targets before
+and after are nearly identical — <strong>that warning is roughly 4% true.</strong></p>
+
+<hr>
+
+<h2 id="s10">10. What happened when the repair was actually run</h2>
+
+<p>Everything above is an argument from the code. This section is what the environment said. Three
+versions of the trainer were run side by side on the 10&times;10 jump-attack world
+(<span class="mono">basic/04</span>), five random seeds each, one million episodes per run, scored the
+only way this project scores anything &mdash; <strong>how many steps the agent stays alive</strong>.</p>
+
+<div class="scroll">
+<table class="tprose">
+<thead><tr><th>Arm</th><th>What it does</th><th class="num">Survival steps (5 seeds)</th></tr></thead>
+<tbody>
+<tr><td><strong>MC</strong> &mdash; the current code</td><td>rescales the returns; the advantage is the left-alone difference</td><td class="num"><strong>138.2 &plusmn; 3.5</strong></td></tr>
+<tr><td><strong>MC_FIXED</strong> &mdash; the repair</td><td>identical returns, raw critic target, separately rescaled advantages</td><td class="num">40.3 &plusmn; 0.8</td></tr>
+<tr><td><strong>GAE</strong> &mdash; the clean branch</td><td>the other estimator, same convention as the repair</td><td class="num">41.9 &plusmn; 0.7</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The gap is not marginal and not noise: the arms do not overlap on a single seed. The repaired agent
+is <strong>3.4&times; worse</strong> than the one this document calls broken.</p>
+
+<h3>The obvious objection, and why it fails</h3>
+
+<p>The budget was counted in <em>episodes</em>, and MC's episodes last longer &mdash; so MC actually
+consumed about <strong>2.3&times; more environment steps</strong>. That is a real confound and it was
+checked: re-scored against steps rather than episodes, MC still leads at every matched budget. At 35
+million steps for all three, MC is at <strong>119.4</strong> against <strong>40.2</strong> and
+<strong>41.7</strong>. The advantage is not bought with extra experience.</p>
+
+<h3>The failure is more specific than "worse"</h3>
+
+<p>The repaired arms do not learn a mediocre foraging policy. <strong>They do not forage at all.</strong>
+In the GAE arm, the share of actions spent eating is <em>exactly zero</em> in 25 of 30 evaluation
+episodes. Measured as food eaten per step, MC eats once every <strong>5.0 steps</strong>; the other two
+manage once every <strong>23.6</strong> and <strong>19.4</strong>.</p>
+
+<p>All three arms fall into the same trap early on &mdash; a local optimum where resting and slowly
+starving beats moving. Only MC climbs out of it: its starvation rate peaks at 58.5% and then falls to
+26.9%, while the other two climb steadily to 54&ndash;55% and stay there.</p>
+
+<h3>Why: the policy never gets a turn</h3>
+
+<p>Three measurements, taken during training, tell one story.</p>
+
+<div class="scroll">
+<table class="tprose">
+<thead><tr><th>Measured during training</th><th class="num">MC</th><th class="num">MC_FIXED</th><th class="num">GAE</th></tr></thead>
+<tbody>
+<tr><td>Gradient size, against a hard ceiling of 0.5</td><td class="num">0.36&ndash;0.48</td><td class="num">125&ndash;154</td><td class="num">77&ndash;86</td></tr>
+<tr><td>How often that ceiling is hit</td><td class="num">never, after 150k</td><td class="num">every step</td><td class="num">every step</td></tr>
+<tr><td>Share of the training signal spent on the policy</td><td class="num">1.94%</td><td class="num">0.0024%</td><td class="num">0.0043%</td></tr>
+<tr><td>How much of the return the critic actually explains</td><td class="num">&asymp;53%</td><td class="num">&asymp;9%</td><td class="num">&asymp;9%</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><strong>Row one is the whole result.</strong> The trainer clips the gradient to a fixed maximum
+length of 0.5 before every update. MC's gradient is naturally below that and is never touched. The
+repaired arms produce gradients <strong>150&ndash;300&times; too large</strong>, so every single update
+is squeezed back down to length 0.5 &mdash; and what survives that squeeze is whatever direction
+dominated, which is the critic's.</p>
+
+<p>The reason it is the critic's is <strong>a shared trunk</strong>. In this architecture the actor and
+the critic are not separate networks: they read the same encoder and the same recurrent memory, and
+only split at the last layer. The two losses are added together, so one summed gradient shapes that
+shared trunk. When the critic is regressing on raw returns spanning roughly &plusmn;24 while the policy
+is working with advantages of spread 1, the critic's contribution is hundreds of times larger. The
+trunk is then trained almost entirely by value regression, and the actor is left reading out features
+that were never shaped to encode <em>where the food is</em>.</p>
+
+<p>And the critic does not even succeed at that. Its target is a moving average over raw returns it
+never fits &mdash; explaining about 9% of the variance, with the value loss <em>rising</em> mid-training.
+The repair spends the entire budget on a regression that fails, and starves the policy to do it.</p>
+
+<h3>What was actually missing</h3>
+
+<p>Nine mainstream PPO implementations were surveyed for this project, and all nine use the raw critic
+target and rescaled advantages that <span class="mono">MC_FIXED</span> adopts. But all nine also carry
+something this codebase does not: <strong>a reward normaliser upstream of the return computation</strong>
+&mdash; running-statistics rescaling of the rewards themselves (VecNormalize), or a critic that learns
+its own output scale (PopArt). That component is what keeps their returns near spread 1 so the textbook
+convention is safe.</p>
+
+<p>This project has no such component. <strong>MC's return-rescaling has been doing that job by
+accident</strong> &mdash; badly, with the units bug described in &sect;4 as the price, but doing it.
+Removing it without putting a real normaliser in its place did not restore the convention; it removed
+the only thing holding the scales together.</p>
+
+<div class="ok">
+<p class="eyebrow">The cleanest way to state the finding</p>
+<p><span class="mono">MC</span> and <span class="mono">MC_FIXED</span> consume
+<strong>byte-identical returns from identical code</strong> and differ by 98 survival steps.
+<span class="mono">MC_FIXED</span> and <span class="mono">GAE</span> use <strong>different
+estimators</strong> under the same rescaling convention and differ by 1.7.
+<strong>Scale predicts the outcome. The estimator does not.</strong></p>
+</div>
+
+<h3>Two things this section should not be read as claiming</h3>
+
+<p><strong>MC is not a better policy across the board.</strong> Its <em>typical</em> episode is no
+better than the others' &mdash; median 40 steps against 38. The entire advantage lives in the upper
+tail: among episodes that survive at least 30 steps, MC averages 290.5 against 73.1 and 68.6. MC is
+not more reliable; it is the only arm that ever produces a long life at all.</p>
+
+<p><strong>And it is not an exploration story.</strong> The natural guess &mdash; that rescaling changes
+how much the agent explores &mdash; was tested and refuted, with the direction reversed: all three arms
+converge to a similar exploration level and MC ends up the <em>least</em> exploratory of the three.</p>
+
+<h3>Where this stands now</h3>
+
+<p>Longer 10-million-episode runs of all three arms are in flight. So far they argue against the
+gentlest reading &mdash; that the repaired arms are merely slower. Both are now well past five times the
+point where MC has clearly taken off (about 280k episodes) and neither has moved: 43.8 and 44.5 survival
+steps. That is early evidence for a <strong>stall, not a delay</strong>.</p>
+
+<p>A fourth arm is running to settle the remaining ambiguity. Call it
+<span class="mono">GAE_NORM</span>: the GAE estimator, with MC's matched-scale rescaling. It fills the
+empty cell of a 2&times;2 &mdash; two estimators crossed with two scaling conventions &mdash; which is
+the only way to separate "matched scale is what helps" from "the Monte-Carlo estimator is what helps".
+Its predictions were written down before it was launched: <strong>near 139 means scale is the
+mechanism; near 42 means the estimator is.</strong></p>
+
+<hr>
+
+<h2 id="s11">11. What the missing piece actually is, and how it would be built</h2>
+
+<p>&sect;10 ended on a claim that deserves to be concrete rather than gestured at: the nine mainstream
+implementations that use the raw-target convention safely all carry a component this codebase does not
+have &mdash; a <strong>reward normaliser upstream of everything else</strong>. This section says exactly
+what that component does and what adding it here would involve.</p>
+
+<h3>The idea in one line</h3>
+
+<p>Instead of rescaling the returns <em>after</em> computing them (what MC does) or rescaling the
+advantages after computing them (what the textbook convention does), you rescale <strong>the rewards
+themselves, as they come out of the environment</strong>, using a statistic that accumulates slowly over
+the whole run. Everything downstream &mdash; returns, critic targets, advantages &mdash; is then already
+on a sane scale, and no branch has to fix it up afterwards.</p>
+
+<div class="code"><span class="ttl">the canonical version (OpenAI Baselines <span class="mono">VecNormalize</span>)</span>ret_acc = ret_acc * gamma + reward         <span class="cm"># a running DISCOUNTED return, per env</span>
+ret_acc = ret_acc * (1 - done)             <span class="cm"># reset at an episode boundary</span>
+update(ret_rms, ret_acc)                   <span class="cm"># slow running mean/var over ALL steps seen</span>
+reward  = <span class="ok2">clip(reward / sqrt(ret_rms.var + 1e-8), -10, 10)</span></div>
+
+<p>Three details in that snippet do the real work, and each is easy to get wrong.</p>
+
+<div class="card">
+<h3>It divides. It never subtracts the mean.</h3>
+<p>Note there is no <code>- mean</code> anywhere. That is deliberate in every
+implementation that does this, and Tianshou's source comments on it directly: subtracting the mean
+"will harm performances".</p>
+<p><strong>In this project the reason is much sharper than a general performance note.</strong> Our
+episodes have <em>variable length</em> &mdash; staying alive longer is the entire objective. Subtracting
+a constant <em>c</em> from every step's reward therefore adds a per-step bonus of &minus;<em>c</em> for
+merely existing. In a fixed-horizon task that is a harmless baseline shift that cancels out. In a
+survival task it is <strong>a different objective</strong>: make <em>c</em> negative and the agent is
+paid to survive without foraging; make it positive and it is paid to die early. Scale the rewards freely;
+never shift them.</p>
+
+<h3>The statistic is over the discounted RETURN, not over the reward</h3>
+<p><span class="mono">ret_acc</span> accumulates <span class="mono">gamma</span>-discounted rewards
+before the variance is taken. This matters because what needs to land near spread 1 is the quantity the
+critic predicts &mdash; the return &mdash; not the individual reward. Dividing by the standard deviation
+of single-step rewards would leave the returns off by roughly a factor of
+1&nbsp;/&nbsp;(1&nbsp;&minus;&nbsp;&gamma;).</p>
+
+<h3>It is slow, and that is the whole point</h3>
+<p>The statistic is a running estimate over every step the run has ever seen, so it moves by a hair per
+iteration. Contrast MC's divisor, which is recomputed <em>from scratch every batch</em> &mdash; that is
+precisely the moving-target pathology in &sect;7. A slow statistic gives the same scale benefit without
+it.</p>
+</div>
+
+<h3>What it would take here</h3>
+
+<p>The obstacle is not the arithmetic, it is that this trainer is compiled. A running statistic is
+<em>mutable state</em>, and it cannot live in a Python object that a jitted function reads &mdash; it has
+to be carried explicitly, the same way the environment state and the recurrent hidden state already are.
+The current signature is:</p>
+
+<div class="code">train_iteration(model, optimizer, env_params, <span class="hi">env_state, h_state</span>, key, config)</div>
+
+<p>and the change is to thread one more small piece of state alongside those two: four numbers per
+run &mdash; a per-environment return accumulator plus a running mean, variance and count.</p>
+
+<div class="scroll">
+<table class="tprose">
+<thead><tr><th>Piece</th><th>What it is</th><th>Where it lives</th></tr></thead>
+<tbody>
+<tr><td>Return accumulator</td><td>one discounted-return running total per parallel environment, reset on episode end</td><td>carried state, shape (num_envs,)</td></tr>
+<tr><td>Running mean / variance / count</td><td>the slow statistic, merged one batch at a time with a numerically stable parallel update</td><td>carried state, three scalars</td></tr>
+<tr><td>The division itself</td><td>applied to rewards immediately after collection, before returns or GAE are computed</td><td>one line in the advantage step</td></tr>
+<tr><td>Checkpoint entry</td><td>the statistic must be saved and restored, or a resumed run silently re-learns the scale from nothing</td><td>checkpoint payload</td></tr>
+<tr><td>Evaluation</td><td>evaluation must reuse the frozen training statistic, or the agent is scored in different units than it learned in</td><td>eval path</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The last two rows are where implementations of this usually go wrong, and neither produces an error
+message &mdash; a resumed run just quietly gets worse for a while, and a mis-scaled evaluation just
+reports the wrong number.</p>
+
+<div class="ok">
+<p class="eyebrow">Why this is worth doing rather than picking a winner from &sect;10</p>
+<p>On this environment the returns have a measured spread of about 24, so the divisor would settle near
+24 and the returns would arrive at roughly spread 1 <strong>on their own</strong> &mdash; the same place
+MC's rescaling puts them, but reached with a slow statistic instead of a per-batch one, and with no mean
+subtraction.</p>
+<p>That combination is the one configuration this project has <strong>never run</strong>. It is also the
+only one that separates the two things &sect;10 could not: whether matched scale is what helps, or whether
+MC's particular way of getting there carries a cost that only shows up late. If the reward normaliser
+lets the textbook convention match MC's early speed <em>and</em> keep the climb the raw-target arms are
+still showing at five million episodes, then neither existing branch was the right answer and this is.</p>
+</div>
+
+<p class="sub">A stronger variant exists: <strong>PopArt</strong> (van Hasselt et al., 2016) normalises
+the critic's target with a running statistic and then rescales the value head's output weights and bias
+so the un-normalised prediction is <em>unchanged</em> by the update &mdash; the drift is cancelled exactly
+rather than merely kept slow. It is the principled version; the reward normaliser above is the cheap one
+that nine libraries actually ship. Start with the cheap one.</p>
+
+<h2 id="appendix-a">Appendix A — the equations, and where they come from</h2>
+
+<p>Everything above was deliberately arithmetic rather than algebra — the worked episode in
+section 1 and the broken window in section 4 are the same objects in numbers. This appendix gives the
+general forms, shows how each follows from the one before, and then asks a question worth asking: how much of
+this is actually reinforcement learning's own invention?</p>
+
+<div class="deriv" id="a1-return">
+<div class="hd">A.1 — the return</div>
+<div class="bd">
+<p>The discounted sum of everything that follows, with the discount factor setting how much the future
+counts:</p>
+<div class="eqn"><v>G</v><sub>t</sub><span class="op">=</span><span class="sum"><span class="lim">&#8734;</span><span class="sig">&#8721;</span><span class="lim">k = 0</span></span><v>&#947;</v><sup>k</sup>&#8202;<v>R</v><sub>t+k+1</sub></div>
+<p class="mnote">&#947; = 0.95 here, so a reward 14 steps away still counts for about half</p>
+<p>Peel off the first term and what remains is the same quantity one step later. That gives the
+recursive form — the one the code actually computes, walking backwards:</p>
+<div class="eqn"><v>G</v><sub>t</sub><span class="op">=</span><v>R</v><sub>t+1</sub><span class="op">+</span><v>&#947;</v>&#8202;<v>G</v><sub>t+1</sub></div>
+<p>This is the line from section 1. Nothing else in the document depends on the infinite sum; the
+recursion is the whole computational content.</p>
+</div>
+</div>
+
+<div class="deriv" id="a2-value">
+<div class="hd">A.2 — value, and the Bellman equation</div>
+<div class="bd">
+<p>The <strong>value</strong> of a state is the return expected from it under the current policy:</p>
+<div class="eqn"><v>V</v><sup>&#960;</sup>(<v>s</v>)<span class="op">=</span><span class="fn">&#120124;</span><sub>&#960;</sub>[&#8202;<v>G</v><sub>t</sub><span class="op">|</span><v>S</v><sub>t</sub><span class="op">=</span><v>s</v>&#8202;]</div>
+<p>Take the expectation of the recursion in A.1 and the same self-reference survives:</p>
+<div class="eqn"><v>V</v><sup>&#960;</sup>(<v>s</v>)<span class="op">=</span><span class="fn">&#120124;</span><sub>&#960;</sub>[&#8202;<v>R</v><sub>t+1</sub><span class="op">+</span><v>&#947;</v>&#8202;<v>V</v><sup>&#960;</sup>(<v>S</v><sub>t+1</sub>)<span class="op">|</span><v>S</v><sub>t</sub><span class="op">=</span><v>s</v>&#8202;]</div>
+<p>That is the Bellman equation, and it is why a value estimate may legitimately stand in for
+"everything after the window edge" — the substitution section 4 is about.</p>
+</div>
+</div>
+
+<div class="deriv" id="a3-advantage">
+<div class="hd">A.3 — the advantage, and the TD error</div>
+<div class="bd">
+<p>Q is the value of committing to one action first; the <strong>advantage</strong> is how much better
+that action is than the state's average:</p>
+<div class="eqn"><v>A</v><sup>&#960;</sup>(<v>s</v>,&#8202;<v>a</v>)<span class="op">=</span><v>Q</v><sup>&#960;</sup>(<v>s</v>,&#8202;<v>a</v>)<span class="op">&#8722;</span><v>V</v><sup>&#960;</sup>(<v>s</v>)</div>
+<p>Neither is known, so both must be estimated. The cheapest estimator is the
+<strong>temporal-difference error</strong> — what one step of real experience says the value should
+have been, minus what the critic said:</p>
+<div class="eqn"><v>&#948;</v><sub>t</sub><span class="op">=</span><v>R</v><sub>t+1</sub><span class="op">+</span><v>&#947;</v>&#8202;<v>V</v>(<v>S</v><sub>t+1</sub>)<span class="op">&#8722;</span><v>V</v>(<v>S</v><sub>t</sub>)</div>
+<p>The fact everything rests on: <strong>if V is correct, &#948; is an unbiased estimate of the
+advantage.</strong> Every estimator below is assembled from it.</p>
+</div>
+</div>
+
+<div class="deriv" id="a4-mc-td">
+<div class="hd">A.4 — MC and TD are two ends of one family</div>
+<div class="bd">
+<p>Look further than one step and the &#948; terms telescope. The n-step advantage estimator is:</p>
+<div class="eqn"><v>&#194;</v><sub>t</sub><sup class="up">(n)</sup><span class="op">=</span><span class="sum"><span class="lim">n &#8722; 1</span><span class="sig">&#8721;</span><span class="lim">l = 0</span></span><v>&#947;</v><sup>l</sup>&#8202;<v>&#948;</v><sub>t+l</sub></div>
+<p>Check the two ends. At <v style="font-family:Georgia,serif;font-style:italic">n</v> = 1 it is simply
+&#948;<sub>t</sub> — one step of real reward, all the rest trusted to the critic. Let it run to the end
+of the episode and the intermediate value terms cancel, leaving:</p>
+<div class="eqn"><v>&#194;</v><sub>t</sub><sup class="up">(&#8734;)</sup><span class="op">=</span><v>G</v><sub>t</sub><span class="op">&#8722;</span><v>V</v>(<v>S</v><sub>t</sub>)</div>
+<p class="mnote">the Monte-Carlo advantage</p>
+<p><strong>So MC is not a different method from TD — it is the same estimator with n taken to the
+limit.</strong> The trade-off is the classical one: short n leans on the critic and is biased but
+steady; long n uses real rewards and is unbiased but noisy.</p>
+</div>
+</div>
+
+<div class="deriv" id="a5-gae">
+<div class="hd">A.5 — GAE, derived</div>
+<div class="bd">
+<p>Rather than committing to one n, average over all of them with exponentially decaying weights:</p>
+<div class="eqn"><v>&#194;</v><sub>t</sub><sup class="up">GAE</sup><span class="op">=</span>(1<span class="op">&#8722;</span><v>&#955;</v>)&#8202;<span class="sum"><span class="lim">&#8734;</span><span class="sig">&#8721;</span><span class="lim">n = 1</span></span><v>&#955;</v><sup>n&#8722;1</sup>&#8202;<v>&#194;</v><sub>t</sub><sup class="up">(n)</sup></div>
+<p>Substitute A.4, exchange the order of summation, and the geometric series collapses into something
+far simpler than it began:</p>
+<div class="eqn"><v>&#194;</v><sub>t</sub><sup class="up">GAE</sup><span class="op">=</span><span class="sum"><span class="lim">&#8734;</span><span class="sig">&#8721;</span><span class="lim">l = 0</span></span>(<v>&#947;&#955;</v>)<sup>l</sup>&#8202;<v>&#948;</v><sub>t+l</sub></div>
+<p>One discounted sum of TD errors, decaying at &#947;&#955;. And its endpoints are exactly the two
+methods above:</p>
+<div class="eqn"><v>&#955;</v><span class="op">=</span>0<span class="op">&#10233;</span><v>&#194;</v><sub>t</sub><span class="op">=</span><v>&#948;</v><sub>t</sub><span class="op" style="margin:0 1.4em">&#183;</span><v>&#955;</v><span class="op">=</span>1<span class="op">&#10233;</span><v>&#194;</v><sub>t</sub><span class="op">=</span><v>G</v><sub>t</sub><span class="op">&#8722;</span><v>V</v>(<v>S</v><sub>t</sub>)</div>
+<p class="mnote">one-step TD on the left, Monte Carlo on the right</p>
+</div>
+</div>
+
+<div class="ok">
+<p class="eyebrow">Which reframes this project's two branches</p>
+<p>The trainer's "MC" and "GAE" settings are not rival algorithms. They are <strong>&#955; = 1 and
+&#955; = 0.95 of the same estimator</strong> — and the config's own <code>gae_lambda: 0.95</code> says
+so. Read that way the defect in section 4 is narrower than it first appears: a bug in how the
+&#955; = 1 branch handles a truncated window, in a family whose &#955; &lt; 1 branch handles it
+correctly a few lines away.</p>
+</div>
+
+<h2 id="appendix-b">Appendix B — is any of this reinforcement learning's own idea?</h2>
+
+<p>Mostly no, and the exceptions are informative.</p>
+
+<div class="scroll">
+<table class="tprose">
+<thead><tr><th>Idea</th><th>Older name, older field</th><th>Origin</th></tr></thead>
+<tbody>
+<tr><td><strong>Discounting the future</strong></td><td>present value — economics and finance</td><td>Interest arithmetic is ancient; formalised as discounted utility by Samuelson (1937). RL's γ is the economist's discount factor, γ = 1/(1+r) for interest rate r.</td></tr>
+<tr><td><strong>The return</strong></td><td><em>cost-to-go</em> — dynamic programming and optimal control</td><td>Bellman (1957). Control minimises accumulated cost where RL maximises accumulated reward; the sign flips and nothing else does.</td></tr>
+<tr><td><strong>The value function and its recursion</strong></td><td>Bellman equation; the Hamilton–Jacobi–Bellman equation in continuous time</td><td>Bellman (1957). In linear-quadratic control the value function is exactly x<sup>T</sup>Px, with P from the Riccati equation — the same object, solved in closed form.</td></tr>
+<tr><td><strong>Policy iteration over an MDP</strong></td><td>operations research</td><td>Howard (1960), a decade before RL existed as a field.</td></tr>
+<tr><td><strong>Monte Carlo estimation</strong></td><td>Monte Carlo method — statistical physics</td><td>Metropolis &amp; Ulam (1949). "MC return" is ordinary Monte-Carlo integration: estimate an expectation by averaging sampled trajectories.</td></tr>
+<tr><td><strong>Subtracting a baseline</strong></td><td>control variates — Monte-Carlo statistics</td><td>A standard variance-reduction device. V(s) is a control variate for G<sub>t</sub>: it correlates with the estimate and has known mean, so subtracting it lowers variance without adding bias.</td></tr>
+<tr><td><strong>Exponential λ-weighting</strong></td><td>exponential smoothing — time-series forecasting</td><td>Holt and Winters, 1950s–60s. GAE's λ is the same geometric weighting of horizons.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>What RL did contribute</h3>
+
+<div class="card">
+<h3>Temporal-difference learning</h3>
+<p>Sutton (1988), with roots in Samuel's checkers player (1959) and in animal-learning theory. Dynamic
+programming needed a model of the world and swept all states; TD learns the same value function from
+sampled experience, bootstrapping from its own current estimate. That is genuinely new, and it is the
+step that made the Bellman machinery usable without a model.</p>
+
+<h3>The advantage function as an object</h3>
+<p>Baird (1993), "advantage updating". The idea of subtracting a baseline is older, but treating
+Q − V as the thing to estimate — and building algorithms around it — is RL's.</p>
+
+<h3>GAE itself</h3>
+<p>Schulman et al. (2016). Even here the ancestry is visible: it is TD(λ) — Sutton, 1988 — applied to
+advantage estimation rather than value estimation. The novelty is the application and the
+bias-variance analysis, not the geometric weighting.</p>
+</div>
+
+<p>So the honest summary: <strong>the return, the value function, discounting and Monte-Carlo
+estimation are all borrowed</strong> — from Bellman's dynamic programming, from economics, from
+statistical physics. What reinforcement learning added is <strong>learning these quantities from
+sampled experience without a model of the world</strong>: temporal-difference bootstrapping, the
+advantage as an estimation target, and the λ-family that interpolates between trusting your own
+estimate and trusting what actually happened.</p>
+
+<p class="sub">Which is worth holding onto while reading section 4. The bug there is not in any deep
+idea. It is in the bookkeeping of one truncated sum — the most mechanical part of the whole stack.</p>
+
+<hr>
+
+<h2>Glossary</h2>
+<dl class="gloss">
+<dt>return</dt><dd>Total reward that followed from a moment, with later rewards discounted.</dd>
+<dt>critic</dt><dd>The part of the network that predicts returns.</dd>
+<dt>actor / policy</dt><dd>The part that chooses actions.</dd>
+<dt>advantage</dt><dd>Return minus the critic's prediction — how much better than expected.</dd>
+<dt>normalize / z-score</dt><dd>Rescale a batch to average 0, spread 1.</dd>
+<dt>spread (σ)</dt><dd>Standard deviation — the typical distance from the average.</dd>
+<dt>window</dt><dd>A 128-step chunk of experience the trainer processes at once.</dd>
+<dt>starting value</dt><dd>The number a backward running total begins at. <em>Not</em> a random seed.</dd>
+<dt>MC</dt><dd>Monte Carlo returns — add up what actually happened. Carries the bug.</dd>
+<dt>GAE</dt><dd>Generalized advantage estimation — a smoothed alternative. Unaffected.</dd>
+<dt>gradient</dt><dd>The direction and size of a proposed change to the network.</dd>
+<dt>gradient clipping</dt><dd>A cap on total update size, shared across the whole network.</dd>
+</dl>
+
+<footer>
+Spread measurements from four recorded rollouts (<code>rppo_restprem_a07</code>–<code>a10</code>).
+The worked window in section 4 is real recorded data: run <code>rppo_restprem_a01</code>, episode
+seed <code>1000000</code>, 501 steps, read from the trajectory store.
+Environment for the coming work: <code>basic/04</code>, single seed.
+Fix plan: <code>FIX_MC_RETURN_UNITS_AND_LEARNING_RATES.md</code>.
+</footer>
+</div>

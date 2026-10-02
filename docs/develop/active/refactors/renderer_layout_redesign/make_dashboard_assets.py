@@ -1,0 +1,148 @@
+"""Build the assets the episode-dashboard design spec needs (docs/reviews/design_episode_dashboard.md).
+
+WHAT IT WRITES (new files only; no existing file under assets/ is touched, and the script checks that)
+    assets/fonts/dashboard_sans_tab/DashboardSansTab-{Regular,Medium,SemiBold}.otf
+        Pretendard with its tabular figures ('tnum') frozen into the character map, so digits have one
+        fixed width and values do not jitter between video frames (Matplotlib cannot switch OpenType
+        features on). Renamed: the SIL OFL reserves the name "Pretendard" for unmodified copies.
+    assets/fonts/dashboard_sans_tab/OFL.txt, README.md
+    assets/dashboard_icons/<name>.png      1000 x 1000 transparent PNG per flat glyph (dashboard_style.GLYPHS)
+    assets/campfire.png                    the campfire glyph, same master (plan Q12)
+
+Run (from the repo root)
+    /home/vncuser/miniconda3/envs/grid_world_pain/bin/python \
+        docs/develop/active/refactors/renderer_layout_redesign/make_dashboard_assets.py
+"""
+import hashlib
+import os
+import shutil
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+
+import matplotlib  # noqa: E402
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+from fontTools.ttLib import TTFont  # noqa: E402
+
+import dashboard_style as ds  # noqa: E402
+
+ROOT = ds.ROOT
+ASSETS = os.path.join(ROOT, "assets")
+SRC_FONTS = os.path.join(ASSETS, "fonts", "pretendard")
+OUT_FONTS = ds.FONT_DIR
+OUT_ICONS = os.path.join(ASSETS, "dashboard_icons")
+CAMPFIRE = os.path.join(ASSETS, "campfire.png")
+WEIGHTS = ("Regular", "Medium", "SemiBold")
+FAMILY = "Dashboard Sans Tab"
+
+
+def snapshot(exclude):
+    out = {}
+    for d, _, files in os.walk(ASSETS):
+        for f in files:
+            p = os.path.join(d, f)
+            if any(p == e or p.startswith(e + os.sep) for e in exclude):
+                continue
+            with open(p, "rb") as fh:
+                out[p] = (os.path.getmtime(p), hashlib.sha256(fh.read()).hexdigest())
+    return out
+
+
+def build_fonts():
+    os.makedirs(OUT_FONTS, exist_ok=True)
+    for w in WEIGHTS:
+        src = os.path.join(SRC_FONTS, f"Pretendard-{w}.otf")
+        f = TTFont(src)
+        gsub = f["GSUB"].table
+        recs = [fr for fr in gsub.FeatureList.FeatureRecord if fr.FeatureTag == "tnum"]
+        if not recs:
+            raise ValueError(f"{src}: no 'tnum' feature")
+        sub = {}
+        for i in recs[0].Feature.LookupListIndex:
+            for st in gsub.LookupList.Lookup[i].SubTable:
+                sub.update(getattr(st, "mapping", {}))
+        n = 0
+        for t in f["cmap"].tables:
+            for cp, gl in list(t.cmap.items()):
+                if gl in sub:
+                    t.cmap[cp] = sub[gl]
+                    n += 1
+        ps = f"DashboardSansTab-{w}"
+        new = {1: FAMILY, 3: f"{ps};derived-from-Pretendard", 4: f"{FAMILY} {w}", 6: ps, 16: FAMILY}
+        for rec in f["name"].names:
+            if rec.nameID in new:
+                rec.string = new[rec.nameID]
+        cff = f["CFF "].cff
+        top = cff.topDictIndex[0]
+        cff.fontNames[0] = ps
+        top.FullName, top.FamilyName = f"{FAMILY} {w}", FAMILY
+        out = os.path.join(OUT_FONTS, f"{ps}.otf")
+        f.save(out)
+        # verify from the written file, not from the in-memory object
+        g = TTFont(out)
+        cm, hm = g.getBestCmap(), g["hmtx"]
+        widths = {hm[cm[ord(c)]][0] for c in "0123456789"}
+        if len(widths) != 1:
+            raise ValueError(f"{out}: digits still have {len(widths)} widths {widths}")
+        names = [str(r.toUnicode()) for r in g["name"].names if r.nameID in new]
+        if any("Pretendard" in s.split(";")[0] for s in names):
+            raise ValueError(f"{out}: a renamed name record still carries the reserved name: {names}")
+        print(f"  {os.path.relpath(out, ROOT)}: {n} cmap entries remapped, digit advance {widths.pop()} units")
+    shutil.copyfile(os.path.join(SRC_FONTS, "OFL.txt"), os.path.join(OUT_FONTS, "OFL.txt"))
+    with open(os.path.join(OUT_FONTS, "README.md"), "w") as fh:
+        fh.write(f"""# Dashboard Sans Tab
+
+Derived from **Pretendard** (Kil Hyung-jin, SIL Open Font License 1.1 — see `OFL.txt`, copied unchanged
+from `assets/fonts/pretendard/`).
+
+- **Source files:** `assets/fonts/pretendard/Pretendard-{{Regular,Medium,SemiBold}}.otf`.
+- **Modification:** the glyphs named by Pretendard's own `tnum` (tabular figures) substitution are written
+  into the character map, so every digit has one fixed advance width. No outline is changed.
+- **Why:** Matplotlib cannot switch OpenType features on, and proportional digits make values jitter
+  sideways between video frames.
+- **Name:** the OFL reserves the font name "Pretendard" for unmodified copies, so the family is renamed
+  "{FAMILY}" (name records 1, 3, 4, 6, 16 and the CFF names). Copyright and licence records are kept.
+- **Generated by:** `docs/develop/active/refactors/renderer_layout_redesign/make_dashboard_assets.py`.
+  Do not edit these files by hand; rerun the script.
+- **Used by:** the episode-dashboard sketch figures in the same folder (design spec
+  `docs/reviews/design_episode_dashboard.md`).
+""")
+
+
+def export_glyph(fn, path, size=1000):
+    fig = plt.figure(figsize=(size / 100, size / 100), dpi=100)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(0, size)
+    ax.set_ylim(size, 0)
+    ax.axis("off")
+    fn(ax, size / 2, size / 2, size)
+    fig.savefig(path, dpi=100, transparent=True)
+    plt.close(fig)
+
+
+def main():
+    os.chdir(ROOT)
+    new_paths = [OUT_FONTS, OUT_ICONS, CAMPFIRE]
+    before = snapshot(new_paths)
+    print("fonts")
+    build_fonts()
+    print("icons")
+    os.makedirs(OUT_ICONS, exist_ok=True)
+    for name, fn in ds.GLYPHS.items():
+        p = os.path.join(OUT_ICONS, f"{name}.png")
+        export_glyph(fn, p)
+        print(f"  {os.path.relpath(p, ROOT)}")
+    export_glyph(ds.g_campfire, CAMPFIRE)
+    print(f"  {os.path.relpath(CAMPFIRE, ROOT)}")
+    after = snapshot(new_paths)
+    changed = sorted(p for p in before if after.get(p) != before[p])
+    added = sorted(set(after) - set(before))
+    if changed or added:
+        raise SystemExit(f"pre-existing assets changed: {changed}; unexpected new files: {added}")
+    print(f"pre-existing assets unchanged: {len(before)} files, same mtime and sha256")
+
+
+if __name__ == "__main__":
+    main()

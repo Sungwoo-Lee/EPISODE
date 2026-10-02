@@ -1,0 +1,37 @@
+# Continual schedule -- continual-worlds sequence P1: pre-trained Home -> Forage -> DANGER -> FAMINE -> DANGER -> FAMINE
+# Design doc: docs/experiments/active/continual_worlds/CONTINUAL_WORLDS.md (section 3.3).
+#
+# *** PROVISIONAL (Revision 1, 2026-09-28) -- DO NOT LAUNCH FROM THESE BOUNDARIES. ***
+# (1) Stage lengths are set AFTER Pilot 1 by the pre-registered rule in design doc 3.3:
+#     length of concept X = min(3,000,000, 1.5 x the larger of the two agents' time-to-plateau in X,
+#     rounded up to 100,000). This file is regenerated from those numbers; the 2 M values below are
+#     placeholders only.
+# (2) BRANCHING: Forage is trained ONCE per agent (it is Pilot 1's Forage run) and each sequence
+#     starts from that run's checkpoint at the Forage boundary (first value below) via
+#     --load-checkpoint. The restored counter is >= that boundary, so the run starts in stage 02; the
+#     Forage stage 01 stays in the schedule on purpose -- train.py sizes the per-animal distance
+#     accumulators from stage 0 BEFORE the restore, and Forage (no hunting predator, 5 rabbit
+#     slots) is what keeps the later roster changes clear of Known Bug A2 (design doc 6.2, B1).
+#
+# Stages (alphabetical in configs/continual/continual_worlds/p1_danger_famine_stages/):
+#   01 forage_20x20   Forage, once
+#   02 danger_15x15   A (first visit)      03 famine_15x15   B (first visit)
+#   04 danger_15x15   A (return)           05 famine_15x15   B (return)
+#
+# EPISODE COUNTER OFFSET -- READ BEFORE EDITING. Every run of this schedule starts from a pre-trained
+# checkpoint loaded with --load-checkpoint, which restores the episode counter (10,000,046 for the
+# ordinary agent, 10,000,021 for the modulated agent of the level-05 factorial). Boundaries are
+# CUMULATIVE episode counts on that restored counter (train.py ContinualSchedule.stage_for_episode),
+# so they start above 10,000,000. A schedule whose first boundary were 2,000,000 would put the
+# restored run past its final boundary and it would exit at once. Stage 01 is therefore 46 / 21
+# episodes shorter than 2 M for the two agents (0.002 %); stage switches happen at iteration
+# granularity anyway (tens of episodes of drift per switch, train.py stage-transition block).
+# The fresh-seed pre-training legs end at >= 10,000,000 episodes too, so this file serves them unchanged.
+#
+# 2,000,000 episodes per stage (5 stages, 10 M episodes per run; design doc section 3.3 justifies it).
+# Checkpoint every 100,000 episodes -> 20 per stage. The first checkpoint at or after each boundary
+# is saved at the end of the iteration that crossed it, BEFORE the next iteration switches the world,
+# so it is the exact stage-end model used by the forgetting matrix (section 5.3).
+continual:
+  episode_boundaries: [12000000, 14000000, 16000000, 18000000, 20000000]
+  checkpoint_frequencies: [100000, 100000, 100000, 100000, 100000]

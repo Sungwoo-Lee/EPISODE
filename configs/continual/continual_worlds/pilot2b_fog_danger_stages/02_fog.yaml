@@ -1,0 +1,7 @@
+# Continual-worlds Pilot 2b (FOG <-> DANGER, 1 M per stage, pipeline shakedown), stage 2 of 5 -- A, first visit.
+# Design: docs/experiments/active/continual_worlds/CONTINUAL_WORLDS.md. Schedule: configs/continual/continual_worlds/pilot2b_fog_danger.yaml.
+# The whole world is the concept file named below; this stage file adds nothing, so every
+# visit to a concept is the SAME world (one stage file per stage because train.py reads one
+# YAML per stage in alphabetical order; `extends:` is resolved per stage, train.py
+# _build_continual_schedule -> load_env_config).
+extends: environment/experiment/continual_worlds/fog_15x15

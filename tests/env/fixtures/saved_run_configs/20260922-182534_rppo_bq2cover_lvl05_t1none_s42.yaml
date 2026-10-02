@@ -1,0 +1,485 @@
+environment:
+  height: 10
+  width: 10
+  start_pos: [5, 5]
+  max_steps: 500
+  rest_action_enabled: true
+  eat_action_enabled: true
+  random_start_pos: true
+  placement:
+    mode: per_entity
+  resources:
+  - name: food
+    type: food
+    count_low: 1
+    count_high: 4
+    spawn_area:
+    - [1, 1]
+    - [10, 10]
+    properties: [1.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    max_consumption: 12
+    regeneration_delay: 0
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.0
+  - name: hiding_predator
+    type: hiding_predator
+    count_low: 2
+    count_high: 12
+    spawn_area:
+    - [1, 1]
+    - [10, 10]
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    max_consumption: -1
+    regeneration_delay: 20
+    damage: [15.0, 45.0]
+    nociception_intensity: 0.9
+  entities:
+  - class: predator
+    behaviour: hunt
+    tag: pred
+    count_low: 0
+    count_high: 2
+    properties: [0.0, 0.7, 0.5, 0.0, 0.0]
+    properties_std: [0.0, 0.3, 0.3, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    move_interval: [1, 1]
+    damage: [15.0, 120.0]
+    attack_delay: [1, 3]
+    nociception_intensity: 0.9
+    spawn_area:
+    - [1, 1]
+    - [10, 10]
+    patrol_area:
+    - [1, 1]
+    - [10, 10]
+    detection_range: [1, 7]
+    max_stamina: [30, 150]
+    stamina_recovery_rate: [1, 1]
+    hunt_stamina_threshold: [0.7, 0.7]
+    lose_interest_multiplier: [1.5, 1.5]
+    attack_range: [2, 3]
+    attack_success_rate: 0.5
+  - class: neutral
+    behaviour: wander
+    tag: rabbit
+    count_low: 0
+    count_high: 2
+    properties: [0.0, 0.5, 0.7, 0.0, 0.0]
+    properties_std: [0.0, 0.3, 0.3, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    move_interval: [1, 1]
+    damage: [0.0, 0.0]
+    attack_delay: [0, 0]
+    nociception_intensity: 0.1
+    spawn_area:
+    - [1, 1]
+    - [10, 10]
+    patrol_area:
+    - [1, 1]
+    - [10, 10]
+  location_areas:
+  - type: grass
+    area:
+    - [1, 1]
+    - [10, 10]
+  - type: sand
+    area:
+    - [0, 0]
+    - [0, 0]
+  obstacles:
+  - name: campfire
+    count_low: 1
+    count_high: 3
+    area:
+    - [1, 1]
+    - [10, 10]
+    edge_margin: 2
+    temperature_ratio: [11, 11]
+    blocking: false
+    blocks_sight: false
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.0
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: rock
+    count_low: 6
+    count_high: 12
+    area:
+    - [1, 1]
+    - [10, 10]
+    blocking: false
+    damage: [1, 5]
+    nociception_intensity: 0.9
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: tree
+    count: 0
+    area:
+    - [5, 15]
+    - [5, 15]
+    blocking: true
+    damage: [0.1, 0.5]
+    nociception_intensity: 0.1
+    properties: [0.0, 0.0, 0.0, 0.0, 1.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: bush
+    count_low: 4
+    count_high: 10
+    area:
+    - [1, 1]
+    - [10, 10]
+    blocking: false
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.0
+    hides_agent: true
+    blocks_animals: true
+    properties: [0.0, 0.0, 0.0, 1.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+body:
+  with_satiation: true
+  with_nutrition: true
+  with_injury: true
+  random_start_satiation: false
+  random_start_nutrition: true
+  random_start_injury: true
+  start_nutrition_low: 0
+  start_nutrition_high: 200
+  start_injury_low: 0
+  start_injury_high: 100
+  max_satiation: 200
+  max_nutrition: 200
+  max_injury: 100
+  metabolic_cost: 1.0
+  food_nutrition_gain: 6
+  eating_nutrition_cost: 1.0
+  eating_reward_penalty: 0.0
+  nutrition_to_satiation_scaling_factor: 1.0
+  satiation_setpoint: 100
+  start_satiation: 100
+  start_nutrition: 100
+  recovery_base_rate: 0.2
+  recovery_accel_rate: 0.0
+  recovery_in_bush_multiplier: 25.0
+  injury_smoothing_duration: 3
+  use_homeostatic_reward: true
+  death_penalty: 100
+  overeating_death: true
+sensory:
+  using_sensory: true
+  olfactory_enabled: true
+  sensor_radius: 20
+  vector_size: 5
+  olfactory_channel_names:
+  - name: Food
+    qualifier: ''
+  - name: Odour A
+    qualifier: predator-leaning
+  - name: Odour B
+    qualifier: neutral-leaning
+  - name: Bush
+    qualifier: ''
+  - name: Tree
+    qualifier: ''
+  olfactory_channel_groups: []
+  decay_power: 1.0
+  olfactory_grid_range: 1
+  collision_sensor_range: 1
+  location_sensor: false
+  nociception_enabled: true
+  nociception_size: 1
+  visual_sensor_enabled: true
+  visual_sensor_range: 2
+  visual_vector_size: 1
+  visual_channel_names:
+  - name: Visible
+    qualifier: ''
+  visual_channel_groups: []
+  visual_blur_enabled: true
+  visual_blur_radial_scale: 0.5
+  visual_blur_anisotropy: 3.0
+  visual_blur_sigma_floor: 0.5
+  visual_value_mode: clamp
+  visual_occlusion_enabled: false
+  visual_background_properties:
+  - [0.0]
+  - [0.0]
+  - [0.0]
+  proprioception_enabled: true
+  injury_observable: false
+  nutrition_observable: false
+  interoceptive_nociception_enabled: true
+  interoceptive_convolution_enabled: true
+  interoceptive_kernel_tau: 3.0
+  interoceptive_kernel_length: 12
+thermal:
+  enabled: true
+  sigma: 0.7
+  default_temp: [-31, -29]
+  use_random_spots: false
+  use_object_sources: true
+  random_spots:
+    count: 4
+    size: 2
+    temp: 40.0
+  min_fire_separation: 4
+  food_min_fire_distance: 0
+  temperature_setpoint: 0.0
+  min_temperature: -15.0
+  max_temperature: 15.0
+  k_exchange: 0.04
+  k_loss: 0.02
+  k_metabolic: 0.0
+  warming_rate_scale: 2.0
+  cooling_rate_scale: 0.25
+  metabolic_coupling: false
+  metabolic_coupling_rate: 1.0
+  grid_range: 1
+  relative: true
+  body_temp_observable: true
+visualization:
+  local_view_size: 5
+  enabled: true
+  font_family: sans-serif
+  fps: 5
+  video_dpi: 300
+  icon_scale: 1.0
+  icons:
+    agent: agent
+    food: food
+    hiding_predator: danger
+    predator: predator
+    agent_food: agent_food
+    agent_hiding_predator: agent_danger
+    agent_predator: agent_predator
+    rock: rock
+    tree: tree
+    bush: bush
+    agent_bush: bush_agent
+    neutral: neutral
+  activations:
+    enabled: false
+    with_lrp: false
+    dpi: 100
+    row_height: 0.8
+    header_height: 0.6
+    bg_color: '#1A1A1A'
+    text_color: '#E0E0E0'
+    label_color: '#B0B0B0'
+    activation_cmap: magma
+    activation_range: [0.0, 4.0]
+    attribution_cmap: seismic
+    attribution_range: [-1.0, 1.0]
+    save_h5: true
+  q_table:
+    dpi: 150
+    bg_color: '#F8F9FA'
+    title_color: '#343A40'
+    label_color: '#495057'
+    cmap: viridis
+    food_color: '#51CF66'
+    arrow_color_threshold: 0.7
+  learning_curves:
+    dpi: 150
+    figsize: [12, 12]
+    bg_color: '#F8F9FA'
+    window_divisor: 100
+    colors:
+      reward_main: '#4C6EF5'
+      reward_raw: '#A5D8FF'
+      steps_main: '#20C997'
+      steps_raw: '#C3FAE8'
+      milestone: '#FA5252'
+      epsilon: '#FCC419'
+behavior_measures:
+  enabled: false
+  cue_radius: 3.0
+  obs_window: 5
+  eval_n_episodes: 200
+  eval_seeds:
+    rng: 42
+    sort: true
+  eval_policy_mode: deterministic
+  eval_max_steps: 500
+  eval_obs_noise: training
+  motif_window_K: 7
+  motif_features: [net_displacement, path_length, threat_distance_change_rate, min_threat_distance,
+    bush_occupancy_fraction, eat_events_per_window, action_entropy, mode_action_fraction,
+    stay_in_place_fraction, drive_injury_change]
+  motif_kmeans_k: 6
+  motif_kmeans_seed: 42
+  motif_standardise: zscore_pooled
+  eval_output_root: results/eval
+perceptual_noise:
+  enabled: false
+  modalities:
+    injury:
+      mode: state_dependent
+      sigma: 0.0
+      injury_noise_scale: 1.5
+      clip_min: 0.0
+      clip_max: 1.0
+    nutrition:
+      mode: state_dependent
+      sigma: 0.0
+      injury_noise_scale: 1.5
+      clip_min: 0.0
+      clip_max: 1.0
+    satiation:
+      mode: state_dependent
+      sigma: 0.1
+      injury_noise_scale: 1.5
+      clip_min: 0.0
+      clip_max: 1.0
+    body_temperature:
+      mode: state_dependent
+      sigma: 0.0
+      injury_noise_scale: 1.5
+      clip_min: -100.0
+      clip_max: 100.0
+    interoceptive_nociception:
+      mode: state_dependent
+      sigma: 0.1
+      injury_noise_scale: 1.5
+      clip_min: 0.0
+      clip_max: 1.0
+    extero_nociception:
+      mode: state_dependent
+      sigma: 0.1
+      injury_noise_scale: 1.5
+      clip_min: 0.0
+      clip_max: 100.0
+    thermoception:
+      mode: state_dependent
+      sigma: 0.0
+      injury_noise_scale: 1.5
+      clip_min: -100.0
+      clip_max: 400.0
+    olfaction:
+      mode: state_dependent
+      sigma: 0.2
+      injury_noise_scale: 1.5
+      clip_min: 0.0
+      clip_max: 100.0
+    collision:
+      mode: constant
+      sigma: 0.01
+      injury_noise_scale: 0.0
+      clip_min: 0.0
+      clip_max: 1.0
+    proprioception:
+      mode: constant
+      sigma: 0.05
+      injury_noise_scale: 0.0
+      clip_min: 0.0
+      clip_max: 1.0
+    visual:
+      mode: state_dependent
+      sigma: 0.2
+      injury_noise_scale: 1.5
+      clip_min: 0.0
+      clip_max: 100.0
+    location:
+      mode: constant
+      sigma: 0.01
+      injury_noise_scale: 0.0
+      clip_min: -1.0
+      clip_max: 1.0
+training:
+  episodes: 100
+  num_envs: 128
+  checkpoint_frequency: 200000
+  max_checkpoints_to_keep: null
+  video_during_training: true
+  stats_during_training: false
+  auto_analysis: false
+  async_video_render: true
+  render_every_n_checkpoints: 1
+  render_workers: 8
+  eval_video_episodes: 3
+  eval_stats_episodes: 100
+  eval_stats_num_envs: 10
+  seed: 42
+  device: auto
+  log_interval: 10
+  log_accumulate: true
+episodes: 10000000
+seed: 42
+tag: rppo_bq2cover_lvl05_t1none_s42
+logging:
+  episode:
+    smoothing_episodes: 5000
+    interval_episodes: 4000
+  step:
+    smoothing_iters: 100
+    interval_iters: 50
+testing:
+  seed: 8217
+  evaluation_episodes: 1
+  num_envs: 1
+  render_video: true
+  record_stats: true
+  record_true_observations: true
+  auto_render_after_eval: true
+experiment:
+  conditions: all
+  episodes: 30
+  log_measures: [bush_hiding, survival_steps]
+  log_conditions: all
+  during_training:
+    enabled: false
+    every_n_checkpoints: 1
+    on_node: self
+wandb:
+  disabled: false
+  entity: sungwoolee
+  project: grid_world_pain
+  group: basic_levels_q2_cover
+  job_type: pilot
+  name: rppo_bq2cover_lvl05_t1none_s42
+  mode: online
+agent:
+  algorithm: RecurrentPPO
+  lr_actor: 0.0005
+  lr_critic: 0.0005
+  gamma: 0.95
+  K_epochs: 4
+  eps_clip: 0.1
+  sequence_length: 128
+  frame_stack: 1
+  fc_layers: [128, 128]
+  actor_fc_layers: [128, 128]
+  critic_fc_layers: [128, 128]
+  hidden_size: 128
+  entropy_coef: 0.01
+  gae_lambda: 0.95
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  use_layer_norm: true
+  rnn_type: GRU
+  activation: relu
+  return_mode: GAE_NORM
+  encoding_mode: hierarchical
+  hierarchical_params:
+    default_mlp: [128, 128]
+    unimodal_overrides:
+      visual: [128, 128]
+      olfaction: [128, 128]
+    multimodal_hub: [128, 128]
+  modulation:
+    type: null

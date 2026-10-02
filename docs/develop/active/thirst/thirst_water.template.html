@@ -1,0 +1,599 @@
+<title>Water at Level 06</title>
+__HOUSE_STYLE__
+<style>
+  /* Departure from the House Style Sheet (stated at the foot of the page): figures spend blue, orange and
+     green on water, fire and food; chrome moves its accent off them. */
+  :root { --accent: #3f5b7a; --accent-text: #35506e; --warn: #7a5340; }
+  :root { --f-head: 'Pretendard', system-ui, -apple-system, "Segoe UI", sans-serif;
+          --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  figure, figcaption { min-width: 0; }
+  table.datatable td:last-child, table.datatable th:last-child { min-width: 220px; }
+  table.datatable td:first-child, table.datatable th:first-child { min-width: 160px; }
+  table.wide { min-width: 585px; }
+  table.datatable.wide td:last-child, table.datatable.wide th:last-child { min-width: 0; }
+  p.kind { display: inline-block; align-self: flex-start; margin: 0 0 6px; padding: 2px 9px; border-radius: 3px;
+           font-size: 12.5px; letter-spacing: .02em; border: 1px solid var(--rule); color: var(--ink-2); }
+  p.kind-calculation { border-color: var(--accent); color: var(--accent-text); }
+  p.kind-simulation { border-color: var(--rule); color: var(--ink-2); }
+  p.kind-recording { border-color: var(--warn); color: var(--warn); }
+  .figscroll img { min-width: 685px; }
+  /* F25/F65: the dashboard frames are 1440 px with ~11 px fine print; 1440 x 9 / 11 = 1180 keeps it >= 9 px */
+  figure img[data-fig^="render_"] { min-width: 1180px; }
+  /* F69: table code chips wrap only at the <wbr> the builder puts after . _ /, never mid-identifier */
+  td code { overflow-wrap: break-word; word-break: normal; }
+    td.plan { white-space: nowrap; }
+  table.settings td:nth-child(3), table.settings th:nth-child(3) { min-width: 230px; }
+  table.margin td:first-child, table.margin th:first-child { min-width: 0; white-space: nowrap; }
+  table.margin td:nth-child(2) { white-space: nowrap; }
+  code { padding: 1px 3px; }
+  ol, ul { margin: 0; padding-left: 1.4em; } li + li { margin-top: 6px; }
+  h3.group { margin-top: 2.2em; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+</style>
+
+<div class="wrap">
+
+<section class="col">
+  <h1>Water at Level 06</h1>
+  <p class="lede">A design page for the next body system. Before any code is written, it works out how the
+  planned water settings — how fast thirst drains, how much one step in the pond gives back, how big the grid
+  is and where the pond may sit — change how hard the world is, and shows how the episode dashboard will draw
+  the pond and the new hydration level.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">01</span> What this page is for</h2>
+
+<p>The agent will get a new internal state, <strong>hydration</strong>, and a new resource, a
+<strong>pond</strong>. Unlike food, the pond never runs out and stays put for the whole episode, so the
+agent can always drink there — as in EVAAA, the reference 3-D environment this follows. That turns drinking
+into a navigation task: remember where the water is and go back.</p>
+
+<p>One difference from EVAAA matters. EVAAA's agent sees and smells from its own point of view in 3-D, so its
+senses never say which way is north. In our grid they do: the vision and smell grids are laid out
+north-up. A pond that sat in the same place every episode could be found by a fixed route, with no memory at
+all. So the pond's place changes between episodes, drawn from a list of candidate spots in the config (or
+anywhere, or always the centre).</p>
+
+<p>The plan for all of this (<code>docs/<wbr>develop/<wbr>active/<wbr>thirst/<wbr>THIRST_WATER_PLAN.md</code>)
+was approved on 30 September and is now implemented on the <code>v5.0</code> branch, where it is being reviewed
+and is not yet merged. The calculations and the simulation on this page were made <em>before</em> the code
+existed, to choose the settings; the dashboard frames in section 13 come from the implemented environment.</p>
+
+<div class="callout">
+  <p class="eyebrow">The answer, in one paragraph</p>
+  <p>At the planned settings — thirst kills 160 steps after the comfortable middle, a step in the pond gives
+  back a net 5, a 10×10 grid with the pond at one of four corner spots — the rules themselves are
+  <strong>gentle</strong>. A scripted agent that knows where the pond is lasts the full 500 steps in 95 % of
+  episodes, against 98 % with water switched off; one that must first find the pond lasts in 93 %. The price
+  of water at 10×10 is not in the clock but in <strong>time spent exposed</strong>: about 1.7 drinking visits
+  per episode of about 28 steps each, all outside cover. At the hit rate real level-05 agents took on open
+  ground, those steps would carry about 44 points of injury per episode (Figure 9) — how much of that is
+  <em>extra</em> depends on whether the agent would otherwise sit in a bush or on the open fire ring. Of the
+  dials swept here, grid size moves difficulty most: at 20×20 an agent that must find the pond lasts in
+  44–77 % of episodes, depending on how early it starts looking (Table 1), against 72–86 % when it knows
+  where the pond is. A larger gain per step shortens each exposed stay (28 steps at the planned 5.625, 13 at
+  12.6) but makes over-drinking easier. Centre placement is the easiest and should not be a training world:
+  the pond is always in the same place, so there is nothing episode-specific to remember.</p>
+</div>
+
+<div class="callout warn">
+  <p class="eyebrow">One correction to the plan</p>
+  <p>The plan (Revision 1) says that with starting hydration drawn from the full 0–200 range, about 5 % of
+  episodes die of thirst by step 16 "whatever the agent does". That counts every episode whose water would
+  run out if it never reached the pond. The pond is a median 6 steps away at 10×10, so most of those
+  episodes can be saved: the simulated agent that knows where the pond is loses 1.8 % of episodes to thirst,
+  nearly all in the first 10 steps (Figure 8); one that must first find it loses 2.4 % by step 16 and 3.9 %
+  over the whole episode. Both are below the plan's 5 %, which is an upper bound, not a floor.</p>
+</div>
+</section>
+
+<section class="col">
+<h2><span class="num">02</span> The world being planned</h2>
+
+<p>Level 06 is level 05 — the campfire world — plus the pond and hydration. Everything else is inherited.</p>
+<p class="cue" hidden>Wider than the screen — scroll sideways.</p>
+<div class="scroll"><table class="datatable wide settings"><thead><tr><th>setting</th><th>value</th><th>config key</th></tr></thead><tbody>
+<tr><td>grid</td><td>10 × 10 cells; the agent can start anywhere except on the pond</td><td><code>environment.height/width</code>, <code>random_start_pos</code></td></tr>
+<tr><td>actions</td><td>four compass moves, rest, eat</td><td>—</td></tr>
+<tr><td>episode cap</td><td>500 steps</td><td><code>environment.max_steps</code></td></tr>
+<tr><td>the pond</td><td>one 2×2 block per episode, never used up; drinking is automatic on any pond cell; predators may walk in</td><td><code>water.size</code></td></tr>
+<tr><td>where the pond sits</td><td>one of four candidate blocks just inside a 1-cell border, drawn each episode</td><td><code>water.placement: list</code>, <code>water.candidates</code>, <code>water.edge_margin</code></td></tr>
+<tr><td>hydration</td><td>0–200, comfortable middle 100; death at 0 (thirst) and at 200 (over-drinking)</td><td><code>water.max_hydration</code>, <code>water.hydration_setpoint</code></td></tr>
+<tr><td>drain per step</td><td>0.625</td><td><code>water.drain_per_step</code></td></tr>
+<tr><td>gain per step on the pond</td><td>5.625 (net +5 after the drain)</td><td><code>water.drink_gain_per_step</code></td></tr>
+<tr><td>starting hydration</td><td>drawn uniformly from 0–200 each episode (user decision, 29 September)</td><td><code>water.random_start_hydration</code>, <code>water.start_hydration_low/high</code></td></tr>
+<tr><td>what the agent senses</td><td>its own hydration, as one number next to body temperature; the pond smells half like food and half on the channel trees used (no maintained level has trees), each pond cell at a quarter strength</td><td><code>water.properties</code></td></tr>
+<tr><td>food, fires, predators</td><td>as level 05: 1–4 food items of 12 bites, 1–3 campfires at least 4 cells apart, predators and hiding predators</td><td>inherited</td></tr>
+</tbody></table></div>
+</section>
+
+<h3 class="group col">Exact calculation from the planned rules</h3>
+
+<section class="col">
+<h2><span class="num">03</span> How long each need lets the agent go</h2>
+<p><b>Why this first.</b> The user set a target before any number was solved: thirst should be the slowest
+clock, 150–200 steps from comfort to death, so water is a background need rather than a third race against
+hunger and cold. This checks the planned rates hit it, next to the clocks the agent already lives with.</p>
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="w1_clocks" alt="Left: hydration falls in a straight line from 100 to 0 over 160 steps away from water, and rises from 100 to 200 in 20 steps standing on the pond. Right: horizontal bars of steps from the comfortable middle to death — hunger 100, cold 86 to 99, thirst 160 — against a dashed episode cap at 500."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:w1_clocks__
+  <figcaption>
+    <span><b>Figure 1 — thirst is the slowest clock, as intended; over-drinking is fast.</b> Away from water
+    the agent dies of thirst 160 steps after leaving the comfortable middle; hunger takes 100 and cold
+    86–99. Standing on the pond it over-drinks in 20. So at least one pond visit is needed in every full
+    episode, and a stay longer than about 20 steps from comfort is itself lethal.</span>
+    <span><b>Axes.</b> Left: horizontal, steps since the agent left hydration 100; vertical, hydration on its
+    0–200 scale. Right: horizontal, steps from the comfortable middle to death; one bar per need; the hatched
+    end of the cold bar spans the measured range.</span>
+    __DATA:w1_clocks__
+    <span><b>How it is computed.</b> The planned rule is one line: each step, hydration goes down by the drain
+    (0.625), goes up by the gain (5.625) if the agent ends the step on a pond cell, and is then clipped to
+    0–200; reaching 0 is death by thirst and reaching 200 is death by over-drinking. The left panel applies
+    that rule step by step from 100, once with the agent never on the pond and once with it always on the
+    pond. The numbers are exact — 0.625 and 5.625 are eighths — so the death steps are exactly 160 and 20, which a
+    test can pin with no tolerance.
+    Hunger's 100 is the same arithmetic for nutrition (−1 per step from 100). Cold is not recomputed here: 86–99
+    is the time a body leaving the fire ring survives on cold ground, measured on 600 real level-05 resets at
+    the shipped temperature settings and recorded in the critical-settings change log (19 September). <b>What
+    this figure does not show:</b> anything about how often the agent can reach the pond, how far it is, or
+    what the trip costs — only how long each need allows.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">04</span> The two water dials</h2>
+<p><b>Why.</b> Two numbers set everything the body does with water: the drain, which sets how long the
+agent can stay away, and the gain, which sets how long it must stand in the pond to refill and how quickly
+standing there turns lethal. Each was placed against a stated target.</p>
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="w2_rate_dials" alt="Left: a falling curve of steps to thirst death against drain per step, crossing the shaded 150 to 200 target band between drains 0.5 and 0.67, with the planned drain 0.625 at 160; dashed hunger line at 100 and a cold band at 86 to 99. Right: three falling curves of steps on the pond against gain per step — refill from 25, refill from 50, and over-drink from 100 — with the planned gain 5.625 marked at 15, 10 and 20 steps."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:w2_rate_dials__
+  <figcaption>
+    <span><b>Figure 2 — the planned drain and gain land inside their targets.</b> Drain 0.625 gives 160
+    steps, inside the 150–200 target; any drain from 0.5 to 0.67 would. Gain 5.625 refills from 50 in 10 steps
+    and from 25 in 15, and over-drinks from comfort in 20 — each inside the plan's target band.</span>
+    <span><b>Axes.</b> Left: horizontal, hydration lost per step away from water; vertical, steps from 100 to
+    thirst death; blue band the target, green line hunger, lilac band cold. Right: horizontal, hydration
+    gained per step standing on the pond; vertical, steps standing on the pond; light blue band the refill target (10–20 steps), light orange band the over-drinking target (15–25),
+    each tinted like the curves it constrains.</span>
+    __DATA:w2_rate_dials__
+    <span><b>How it is computed.</b> Both panels are the planned rule solved in closed form. Away from water,
+    hydration falls by the drain each step, so from 100 it lasts 100 ÷ drain steps. On the pond the drain
+    still applies, so the net rise is gain − drain per step; refilling from 25 to 100 takes 75 ÷ (gain −
+    drain), from 50 takes 50 ÷ (gain − drain), and over-drinking from 100 takes 100 ÷ (gain − drain). The
+    right panel holds the drain at the planned 0.625. The target bands are the plan's, set before the numbers
+    were solved: 150–200 steps for the thirst clock is the user's decision; 10–20 steps for a refill and 15–25
+    for over-drinking are the planner's proposal — long enough that the pond is an exposed place to wait, short
+    enough that a visit is a trip rather than a camp, and reachable so that over-drinking is a real brake. They
+    are recorded in the plan as open to change. <b>What this figure does not show:</b> how the agent actually
+    behaves at these settings — how full it fills, how often it goes — which is what the simulation below is
+    for.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">05</span> Where the pond can be, and how far it is</h2>
+<p><b>Why.</b> The placement mode decides two things at once: how far the agent walks to water, and how much it
+must work out each episode to know where the water is. The second is the point of moving the pond.</p>
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="w3_trip_geometry" alt="Left: median walk to the pond rising with grid size for three modes, list highest (6 steps at grid 10, 15.5 at 20), random in between, centre lowest (4 at grid 10, 9 at 20), with shaded 10 to 90 percent ranges. Right, log scale: places the pond can be — centre 1 at every size, list 4 at every size, random rising from 25 to 289."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:w3_trip_geometry__
+  <figcaption>
+    <span><b>Figure 3 — list placement means longer walks but a small, learnable set of places; centre never
+    moves.</b> At 10×10 the median walk to the pond is 6 steps under the list (4 corner spots), 5 under random
+    (49 possible spots) and 4 at the centre (1 spot). Walks roughly double or more from 10×10 to 20×20.</span>
+    <span><b>Axes.</b> Both panels: horizontal, grid size in cells per side (grey band the planned 10). Left:
+    vertical, steps from a start cell to the nearest pond cell; lines the median; the shading is the 10–90 % range for the list mode only.
+    Right: vertical, number of places the pond can be in an episode, on a log scale.</span>
+    __DATA:w3_trip_geometry__
+    <span><b>How it is computed.</b> For each grid size and placement mode, every pond position the mode
+    allows is listed: the list mode's four 2×2 blocks just inside a 1-cell border (the plan's defaults,
+    scaled to each grid), every 2×2 block inside that border for random, and the single middle block for
+    centre. Each position is taken as equally likely and, for each, every cell of the grid not on the pond is
+    taken as a start. The walk is the Manhattan distance — rows apart plus columns apart — to the nearest
+    pond cell, which equals the number of steps because the agent moves in compass steps and nothing on the
+    level-05 map blocks it. The median and the 10th and 90th percentiles (the values below which 10 % and
+    90 % of walks fall) are then read off all start-and-position pairs together. <b>What this figure does not
+    show:</b> the agent's real starting positions (it starts wherever the reset puts it, and near fires far
+    more often after the first steps), or the cost of not knowing which of the places the pond is in this
+    episode — that search cost is in the simulation.</span>
+  </figcaption>
+</figure>
+<p>Centre placement defeats the reason the pond moves: a pond that is always in the middle leaves nothing
+episode-specific to remember, and north-up senses make "the middle" easy to head for. This is a design
+argument, not a simulation result. It stays in the plan as a mode, but it should not be a training world.</p>
+</section>
+
+<h3 class="group col">Simulation: the planned rules with a scripted agent</h3>
+
+<section class="col">
+<h2><span class="num">06</span> What the simulation is, and is not</h2>
+<p>These runs were made before water existed in the environment, so difficulty is measured on a reduced copy of level 06 run
+by a <strong>scripted agent</strong> — a fixed rule, not a trained policy. It is the same approach as the
+internal-state study, and reuses its pieces.</p>
+<ul>
+  <li><b>Food and temperature</b> use that study's copy of the environment's body update, checked against the
+  real environment over 4,000 steps (largest difference 0.00002). <b>Water</b> uses the plan's rule, since
+  there is no code to check it against.</li>
+  <li><b>The map</b> has 1–3 fires, 1–4 food items (12 bites each, then the item moves), one 2×2 pond, and
+  cell temperatures set by distance to the nearest fire as measured on 300 real level-05 resets.</li>
+  <li><b>The agent</b> camps on the fire ring, because cold is the fastest clock. When a need's spare time
+  — steps until it kills, minus the walk to its nearest source — falls below 25 steps, it goes and refills
+  that need (water to 160, food to 160, body temperature to +4.5°).</li>
+  <li><b>Two versions:</b> one that knows where the pond is from step 1, and one that must find it. The second
+  knows the placement mode but not the spot drawn, and discovers the pond when a pond cell comes within 2
+  cells (the vision range). Under the list mode it checks the nearest unchecked candidate; under random it
+  walks to the nearest cell it has not yet seen.</li>
+  <li><b>Not modelled:</b> predators, injury and smell. For the agent that knows the pond, survival here is
+  an <strong>upper bound</strong>: a trained agent will do worse. The agent that must find the pond is
+  <em>not</em> an upper bound — it cannot smell, sees a 13-cell diamond rather than the real 5 × 5 view, and
+  starts looking late — so a trained agent could beat it. Section 12 puts back the cost the missing predators
+  would add.</li>
+  <li><b>The agent's own timing matters.</b> Waiting until only 25 steps of spare time remain means it
+  arrives at the pond nearly empty (about 12 of 200). Table 1 below shows which numbers move when it starts
+  earlier: at 10×10 almost nothing; at 20×20, a lot.</li>
+</ul>
+<p>Each setting is 2,000 episodes. The reference for every figure is the same world with water switched off,
+where the agent lasts 500 steps in 97.9 % of episodes at 10×10 (the rest starve, mostly from a near-empty start).</p>
+<p><b>Table 1 — share of episodes lasting 500 steps when the agent starts on a need earlier</b> (the margin
+is the spare time, in steps, at which it sets off; the figures use 25).</p>
+__TABLE:t1_margin__
+</section>
+
+<section class="col">
+<h2><span class="num">07</span> The drain rate</h2>
+<p><b>Why.</b> Figure 2 fixed the drain by arithmetic. This asks what it costs an agent that must also eat and
+stay warm.</p>
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="w4_drain_sweep" alt="Left: share of episodes lasting 500 steps falls slowly with drain, from 96 to 91 percent for an agent that knows the pond and 95 to 88 percent for one that must find it, below a dotted no-water reference near 98. Middle: stacked bars of how episodes die, rising from 4 to 9 percent, thirst growing from 1 to 5 percent while starvation stays near 3. Right: drinking visits per episode rising from 0.8 to 4.2 and steps per drinking visit, divided by 5, from 5.5 to about 6."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:w4_drain_sweep__
+  <figcaption>
+    <span><b>Figure 4 — at 10×10 the drain barely matters to survival; it changes how often the agent
+    visits.</b> At the planned 0.625, 95.1 % of episodes last 500 steps if the agent knows the pond and
+    93.5 % if it must find it, against 97.9 % with no water. Even a drain 2.5 times faster (1.6) keeps about 91 %.
+    What rises is traffic: 1.7 drinking visits of 28 steps each at 0.625, 4.2 visits of 30 steps at 1.6.</span>
+    <span><b>Axes.</b> All panels: horizontal, hydration lost per step away from water (grey band the planned
+    0.625). Left: vertical, share of episodes that last the full 500 steps, percent (not starting at zero);
+    dotted blue line the no-water reference. Middle: vertical, share of episodes that die, percent, split by
+    cause. Right: vertical, a count — drinking visits per episode, and steps per drinking visit divided by 5 so
+    both fit one scale.</span>
+    __DATA:w4_drain_sweep__
+    <span><b>How it is computed.</b> For each drain value, 2,000 episodes of the reduced level-06 world are run
+    for up to 500 steps with the scripted agent (section 06), at grid 10, list placement and the planned gain.
+    Each episode draws its own map, start cell, starting nutrition (0–200), body temperature (−10° to +5°)
+    and hydration (0–200), and the same random seed is used for every drain value so the maps match across
+    the sweep. An episode "lasts" if it reaches step 500; otherwise its cause of death is the first body limit
+    crossed, with thirst and over-drinking listed ahead of cold when two happen on the same step, as the plan
+    specifies. A "drinking visit" starts on the step the agent enters a pond cell while heading for water;
+    walking across the pond on the way elsewhere (about 0.7 times an episode) is not counted, and steps per
+    visit are the steps spent on the pond while heading for water divided by those visits. The search version differs only in not knowing
+    where the pond is. <b>What this figure does not show:</b> predators or injury — every death here is a
+    body clock — or a trained agent's behaviour; the scripted agent never forgets where the pond is once seen
+    and never wastes a step.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">08</span> Grid size and placement mode</h2>
+<p><b>Why.</b> Figure 3 showed walks double with grid size, and that the modes differ in how much there is to
+search. This asks what that does to survival once food and fire must be served too.</p>
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="w5_grid_modes" alt="Left: share of episodes lasting 500 steps against grid size for three placement modes, solid when the agent knows the pond and dashed when it must find it. All sit near 95 percent at grid 8 to 10. Known-pond lines fall to 73 (list), 81 (random) and 87 percent (centre) at grid 20; must-find lines for list and random fall to about 41 percent; centre's two lines coincide. A dotted no-water line stays near 95 to 98. Right: share of steps walking to water rising with grid size, highest for the must-find versions (about 17 percent at grid 20)."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:w5_grid_modes__
+  <figcaption>
+    <span><b>Figure 5 — of the dials swept here, grid size moves difficulty most.</b> At 10×10 every mode
+    keeps 91–96 % of episodes. At 20×20, knowing the pond keeps 73–87 %, and having to find it drops list and
+    random placement to 41–42 % for this agent — which starts looking late; one that starts earlier keeps up to
+    77 % (Table 1). Centre placement never needs finding, so its two lines are one.</span>
+    <span><b>Axes.</b> Both panels: horizontal, grid size in cells per side (grey band the planned 10);
+    shade and marker the placement mode (dark circles list, grey squares random, light triangles centre);
+    solid knows the pond, dashed must find it. Left: vertical, share of episodes
+    lasting 500 steps, percent (starting at 40); dotted blue the no-water reference. Right: vertical, share of
+    the agent's steps spent walking toward water, percent.</span>
+    __DATA:w5_grid_modes__
+    <span><b>How it is computed.</b> The simulation of section 06 is run at every grid size from 8 to 20 in
+    steps of 2, with each placement mode, 2,000 episodes per setting and the planned drain and gain. The list
+    mode's four candidates are the corner blocks just inside a 1-cell border at every size; random allows any
+    2×2 block inside that border; centre uses the middle block. The counts of food items (1–4) and fires
+    (1–3) are held at level 05's, so a larger grid is also a sparser one — food and fires get farther away, not
+    only the pond — which is why the no-water reference also falls slightly (97.9 % to 95.1 %). The walking
+    share counts steps where the agent's current goal is water and it is not yet on the pond, over all its
+    steps alive. <b>What this figure does not show:</b> smell, which a trained agent can follow to the pond
+    (and which, by design, is mixed with food's); predators, which would make a longer exposed walk costlier
+    still; or learning across episodes, which is what would let a trained agent exploit the fixed centre.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">09</span> The difficulty map</h2>
+<p><b>Why.</b> Drain and grid size were varied one at a time above. Together they show where the planned
+world sits and how far it is from a hard one.</p>
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="w6_difficulty_map" alt="Two heat maps of the share of episodes lasting 500 steps, drain per step on the vertical axis from 0.3125 to 1.6 and grid size on the horizontal from 8 to 20. Left, agent knows the pond: 95 to 97 percent across small grids, falling to 17 percent at drain 1.6 and grid 20. Right, agent must find it: similar on small grids, falling to 10 percent at the same corner. The planned cell, drain 0.625 and grid 10, is outlined in orange at 95 and 93 percent."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:w6_difficulty_map__
+  <figcaption>
+    <span><b>Figure 6 — the planned world sits in the easy corner.</b> At drain 0.625 and grid 10 (outlined)
+    95 % and 93 % of episodes last. Difficulty rises mostly to the right: at grid 16, 87 % and 70 %; at grid 20,
+    72 % and 44 %. A faster drain only bites on large grids. The right panel's large-grid numbers depend on
+    the agent's late start (Table 1).</span>
+    <span><b>Axes.</b> Both panels: horizontal, grid size in cells per side; vertical, hydration lost per step
+    away from water; each cell's number and shade the share of episodes lasting 500 steps, percent. Left:
+    the agent knows where the pond is. Right: it must find it.</span>
+    __DATA:w6_difficulty_map__
+    <span><b>How it is computed.</b> Every combination of eight drain values (0.3125 to 1.6) and seven grid
+    sizes (8 to 20) is run with the scripted agent of section 06: 2,000 episodes each, list placement, the
+    planned gain of 5.625, and the same seed per grid size so maps match across drains. Each cell reports the
+    share of those episodes that reach step 500 alive. The two panels use the same seeds; the only difference
+    is whether the agent knows the pond's position from the first step. The numbers are percentages of
+    episodes, not percentage points of change. The orange outline marks the planned setting. Starting
+    hydration is drawn from 0–200 throughout, so about 2 % of episodes are lost to thirst in their first
+    steps in every cell regardless of settings (section 11). <b>What this figure does not show:</b> any cell
+    with predators — every number here is an upper bound on what a trained agent reaches — or the gain,
+    held at 5.625 (section 10 varies it).</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">10</span> The water consumption value</h2>
+<p><b>Why.</b> The gain per step decides how long each visit lasts — and the pond is the one place the agent
+must return to, in the open, where predators can come. That makes the gain the dial for how much a drink
+risks.</p>
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="w7_gain_exposure" alt="Left: steps on the pond per drinking visit fall steeply with gain, from about 67 at gain 1.6 to 28 at the planned 5.6 and 8 at gain 20.6, nearly the same at drain 0.625 and 1.6 to 22 at the planned 5.6 and 6 at gain 20.6, nearly the same at drain 0.625 and 1. Right: share of episodes lasting 500 steps, near 95 percent between gains 2.6 and 12.6, lower at both ends: 90 percent at gain 1.6 and drain 0.625, 42 percent at gain 1.6 and drain 1, and 86 percent at gain 20.6 and drain 0.625."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:w7_gain_exposure__
+  <figcaption>
+    <span><b>Figure 7 — a larger gain means shorter, safer-looking stays, but over-drinking gets easier.</b>
+    At the planned 5.625 a drinking visit lasts 28 steps; at 12.6, 13 steps. At 20.6, 10.8 % of episodes die
+    of over-drinking for this agent, which drinks until 160: with 20 points a step, one or two pond steps more
+    than intended cross the ceiling (an agent that stops at 120 loses 3.1 %). Below about 2.6 refilling is too
+    slow and the agent cannot keep up with a fast drain.</span>
+    <span><b>Axes.</b> Both panels: horizontal, hydration gained per step standing on the pond (grey band the
+    planned 5.625); solid line drain 0.625, dashed drain 1. Left: vertical, steps on the pond per drinking visit.
+    Right: vertical, share of episodes lasting 500 steps, percent (starting at 30).</span>
+    __DATA:w7_gain_exposure__
+    <span><b>How it is computed.</b> Seven gain values from 1.625 to 20.625 are run at two drains, with the
+    scripted agent that knows where the pond is, at grid 10 and list placement, 2,000 episodes each. The agent
+    stays on the pond until hydration reaches 160, so a visit's length is roughly (160 − hydration on arrival)
+    ÷ (gain − drain): with the planned numbers it arrives at about 12, which gives 28 steps. Drinking is automatic on
+    any pond cell, whether or not the agent means to drink, so a path that crosses the pond on the way to food
+    or fire adds water; at large gains two or three such steps are enough to cross 200. Over-drinking is
+    counted as its own cause of death. Survival is reported as a percentage of episodes. <b>What this figure
+    does not show:</b> the predators that make a long stay dangerous — the left panel is the exposure they
+    would act on, priced in section 12 — or a smarter agent that routes around the pond when full, which would
+    remove most accidental over-drinking.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">11</span> What the full starting range costs</h2>
+<p><b>Why.</b> The user chose to draw starting hydration from the whole 0–200 range, so that training covers
+every internal state the experiment environment will later set by hand. Some episodes will then start close
+to death. This measures how many are lost.</p>
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="w8_start_hydration" alt="Left: bars of mean survival steps by starting hydration in bins of 10, about 310 steps for a start below 10 and 470 to 490 steps for every other bin. Right: share of episodes dead of thirst by step k, levelling at about 1.8 percent by step 10, far below a dashed straight line rising to 37.5 percent at step 120 that shows what would die if the agent never drank."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:w8_start_hydration__
+  <figcaption>
+    <span><b>Figure 8 — the full range costs about 2 % of episodes, all in the first steps.</b> Only a start
+    below 10 shortens survival on average (310 steps); every other starting value survives 470–490. Deaths
+    by thirst level off at 1.8 % of episodes by step 10: the agents that start too dry to reach the pond.</span>
+    <span><b>Axes.</b> Left: horizontal, hydration at the start of the episode on its 0–200 scale, in bins of
+    10; vertical, mean steps survived (cap 500). Right: horizontal, step number; vertical, share of all
+    episodes that have died of thirst by that step, percent; dashed line the share whose water would have run
+    out by then had they never reached the pond.</span>
+    __DATA:w8_start_hydration__
+    <span><b>How it is computed.</b> 20,000 episodes of the planned level-06 world are run with the scripted
+    agent that knows where the pond is (grid 10, list placement, drain 0.625, gain 5.625), each drawing its
+    starting hydration uniformly from 0 to 200 as decided. The left panel groups episodes by that starting value
+    and averages how long they last. The right panel counts, for each step k, the share of all episodes that
+    have died of thirst by step k. The dashed line is 0.625 × k ÷ 200: the share of starts below 0.625 × k, whose
+    water runs out by step k with no drinking — the figure the plan quoted as deaths "whatever the agent
+    does". The gap between the two lines is the episodes a quick walk to the pond saves. <b>What this figure
+    does not show:</b> a trained agent, which must also notice it is thirsty and know where to go — so its
+    early losses will sit between the two lines, likely nearer the solid one once it has learned — and the
+    matching cost of the nutrition draw, which level 03 already has.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">12</span> The cost the simulation leaves out</h2>
+<p><b>Why.</b> The simulation has no predators, and on real level-05 runs injury, not hunger or cold, is what
+kills. The pond is not cover, so every water step is exposed. This puts a price on those steps.</p>
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="w9_exposure" alt="Left: expected injury per episode from water steps rising in a straight line with drain, from about 21 points at drain 0.3 to 44 at the planned 0.625 and 110 at 1.6, crossing a dotted lethal-injury line at 100. Right: the same against grid size at drain 0.625, from 40 points at grid 8 to about 58 at grid 20 for an agent that knows the pond, and about 50 for one that must find it."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:w9_exposure__
+  <figcaption>
+    <span><b>Figure 9 — at the planned settings, water steps would carry about 44 points of injury per
+    episode.</b> That is close to half the injury scale, spread over an episode in which injury also heals. The
+    drain is the lever: it sets how many visits the agent makes, each about 28 exposed steps. At drain 1.6 the
+    water steps alone would carry more than the 100-point scale over the episode.</span>
+    <span><b>Axes.</b> Both panels: vertical, expected injury points per episode from steps spent walking to
+    water or standing in it; dotted line 100, the lethal injury. Left: horizontal, hydration lost per step (grey
+    band the planned 0.625), grid 10. Right: horizontal, grid size in cells per side (grey band the planned
+    10), drain 0.625. Solid knows the pond, dashed must find it.</span>
+    __DATA:w9_exposure__
+    <span><b>How it is computed.</b> The average number of steps per episode spent walking to water or standing on the pond, from the
+    runs above, is multiplied by the injury per step real level-05 agents took outside cover while not
+    resting — 0.715 points, from the ordinary agent's final-checkpoint recordings. The product is the injury
+    those steps would carry if predators behaved as at level 05. It is an
+    expected value, not a death count: hits arrive as single large events (15 to 120 points) and injury heals.
+    How much is <em>extra</em> depends on what the agent would otherwise do: nothing if it would sit on the
+    open fire ring, all of it if it would rest in a bush (41 % of level-05 episodes have one next to a fire).
+    The rate is cautious: most water steps are standing still, and resting in the open was hit at 0.118 per
+    step — though agents choose where they rest, so that rate is partly selection. The walk back is counted as
+    fire-ring time, undercounting water's open steps by about a tenth. <b>What this figure does not show:</b> predators learning to wait at the pond, or a trained agent drinking
+    in fewer, longer visits.</span>
+  </figcaption>
+</figure>
+</section>
+
+<h3 class="group col">The episode dashboard</h3>
+
+<section class="col">
+<h2><span class="num">13</span> How the pond and hydration are drawn</h2>
+<p>The rendering session added the pond and a hydration row to the episode dashboard, and the environment
+now produces both. The three frames below are <strong>real level-06 episodes</strong>: the pond's position,
+hydration, the smell maps (including the pond's own odour on "Odour C"), vision, temperature and the cause of
+death all come from the environment. What is not real is the agent: no level-06 agent has been trained yet,
+so the episodes are driven by a <strong>seeded random policy</strong>, and the frame titles say so.</p>
+
+<div class="callout warn">
+  <p class="eyebrow">What is settled, and what these frames do not show</p>
+  <p><b>The pond's look is final</b> (user decision, 29 September): an inset with two wave lines, keeping the
+  square's temperature colour as a rim, drawn under every occupant. The dashboard's pixel audit treats that
+  drawing as ground cover and fails if it is ever painted over an occupant. <b>The agent's movements are
+  random</b>: where it goes, and whether it drinks, says nothing about how a trained agent will behave.</p>
+</div>
+
+<figure>
+  <p class="cue" hidden>Wider than the column — scroll sideways to see the right-hand panels, or click to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="render_a_far_from_pond_low_hydration" alt="Episode dashboard titled Level 06, random policy, at step 74 of 102. The interoception panel shows satiation 0.59, injury 0.30 not observed, body temperature minus 12.2 degrees, and the Hydration row reading 0.15 observed and 0.15 true, well left of the tick at the middle. The 5 by 5 grid view shows the agent with no pond in view; the 10 by 10 world map below shows the pond as a 2 by 2 block of water squares in the upper right, outside the agent's view window. All five smell maps, including Odour C, water-leaning, carry readings."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:render_a_far_from_pond_low_hydration__
+  <figcaption>
+    <span><b>Figure 10 — thirsty, and the pond out of sight.</b> Hydration reads 0.15 (30 of 200), well below
+    the tick that marks the comfortable middle. The pond is not in the agent's 5 × 5 view but shows on the world
+    map, four or more squares away; only its smell reaches the agent here.</span>
+    <span><b>Axes.</b> Not a chart: a dashboard frame. Left column, the body readings, observed (what the agent
+    receives) beside true; Hydration is the bottom row, drawn from 0 to 1 of its 0–200 range with a tick at
+    0.5. Centre, the agent's 5 × 5 view and the whole 10 × 10 world; right and bottom, the other senses.</span>
+    __DATA:render_a_far_from_pond_low_hydration__
+    <span><b>How it is computed.</b> The rendering session recorded 400 level-06 episodes with the project's
+    fixture recorder (the level-06 test world, recorded as shipped), in two batches seeded 11 and 23 (the seed in each frame's title is that episode's own reset seed, drawn
+    from its batch), with a random policy choosing each action. Its frame script then searched those episodes for three kinds of moment
+    and drew each through the new dashboard. This frame is step 74 of episode 260, chosen as a moment with the
+    agent at least four squares from the pond and hydration low while the episode continues. Every number and
+    map in it is the environment's own output: hydration is the true body value, and because level 06 delivers
+    hydration to the agent without noise, the observed value is the same. The five smell maps include the pond's
+    contribution — half on the food channel and half on the channel trees used — which is why "Odour C" now
+    carries readings. <b>What this frame does not show:</b> a decision — a random agent does not go to water
+    when thirsty — or anything about how often a trained agent will let its hydration fall this low.</span>
+  </figcaption>
+</figure>
+
+<figure>
+  <p class="cue" hidden>Wider than the column — scroll sideways to see the right-hand panels, or click to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="render_b_drinking_predator_in_pond" alt="Episode dashboard titled Level 06, random policy, at step 9 of 48. The grid view shows the 2 by 2 pond: two water squares with wave lines on the left, a predator on the upper right pond square and the agent on the lower right pond square, both drawn on top of the water. Hydration reads 0.50, on the setpoint tick; injury 0.06."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:render_b_drinking_predator_in_pond__
+  <figcaption>
+    <span><b>Figure 11 — drinking, with a predator in the pond.</b> The agent stands on one pond square and a
+    predator on the square next to it; both are drawn over the water, so neither is hidden by it. Hydration
+    reads 0.50 (101 of 200), right on the middle tick.</span>
+    <span><b>Axes.</b> Not a chart: a dashboard frame, laid out as Figure 10. The four blue squares with wave
+    lines or animals on them are the 2 × 2 pond.</span>
+    __DATA:render_b_drinking_predator_in_pond__
+    <span><b>How it is computed.</b> From the same 400 recorded episodes, this is step 9 of episode 258, the
+    moment found by searching for the agent on a pond cell with a predator on an adjacent pond cell. A random
+    walker rarely stands in the pond with a predator beside it, which is why the second, larger batch was
+    recorded. Because the environment places the pond before everything else and predators may walk into it
+    (decision 9), nothing in the scene was arranged: the predator walked there under its own rules. The pond is
+    drawn as ground cover, so the tokens for the agent and the predator are painted on top, and the dashboard's
+    tests fail if the water is ever drawn over an occupant. Hydration here is the true value, delivered to the
+    agent unchanged. The smell labels come from the level-06 config: channel 0 is "Food (shared with water)" and
+    channel 4 is "Odour C (water-leaning)". <b>What this frame does not show:</b> whether predators will learn
+    to wait at water, or whether a trained agent will drink with one beside it — the agent's step into the pond
+    was random.</span>
+  </figcaption>
+</figure>
+
+<figure>
+  <p class="cue" hidden>Wider than the column — scroll sideways to see the right-hand panels, or click to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="render_c_hydration_zero_terminal" alt="Episode dashboard titled Level 06, random policy, at step 53 of 53, the last frame. Hydration reads 0.00 observed and true, with empty bars. Injury and extero-nociception read zero; satiation 0.52. The agent is at the top of its view beside a bush, with food and a rabbit nearby; the pond is outside the view, shown on the world map in the upper left."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:render_c_hydration_zero_terminal__
+  <figcaption>
+    <span><b>Figure 12 — the last frame of a real thirst death.</b> Hydration is 0 and the step counter (top
+    right of the frame — scroll the frame or open it full size) reads 53 of 53. Injury is 0, so thirst is the
+    only cause. The episode started at hydration 33 of 200.</span>
+    <span><b>Axes.</b> Not a chart: a dashboard frame, laid out as Figure 10; the step counter at the top right of
+    the frame — off the visible part of the column, so scroll the frame or open it full size — reads the frame
+    number over the episode's length.</span>
+    __DATA:render_c_hydration_zero_terminal__
+    <span><b>How it is computed.</b> From the same 400 recorded episodes, this is the final step of episode 97,
+    found by searching for an episode that the environment ended with the dehydration cause (code 6) and no
+    injury. Its starting hydration of 33 lasts 33 ÷ 0.625 = 52.8 steps with no drinking, so the random walker,
+    which never reached the pond, died on step 53 — exactly as the planned rule predicts. Nothing in the frame was
+    set by hand: the episode really ended here, for this reason. The environment records the cause of death with
+    its own code, which training logs and evaluation summaries carry; the dashboard itself prints no cause of
+    death today, so apart from the empty hydration bars the frame looks like any other final step. <b>What this
+    frame does not show:</b> a trained agent's thirst death — a random walker does not head for water — or any
+    on-screen death label, which is a possible later addition.</span>
+  </figcaption>
+</figure>
+</section>
+
+<h3 class="group col">What to take from this</h3>
+
+<section class="col">
+<h2><span class="num">14</span> The settings, as options</h2>
+<p>The planned settings make a world where water is a real but gentle need. If the goal is a world where the
+agent's best move depends on thirst <em>together with</em> hunger, cold and danger — the state-dependence the
+modulator is meant to exploit — the page suggests these levers, strongest first.</p>
+<p class="cue" hidden>Wider than the screen — scroll sideways.</p>
+<div class="scroll"><table class="datatable wide"><thead><tr><th>lever</th><th>planned</th><th>what moving it does (from the figures)</th></tr></thead><tbody>
+<tr><td>grid size</td><td class="plan">10 × 10</td><td>strongest of the dials swept. Walks and search both grow; at 14×14 an agent that must find the pond lasts in 82–90 % of episodes (by how early it starts looking) against 92–94 % when it knows where it is (Table 1). Changes food and fire distances too — a whole-ladder decision, not a water one.</td></tr>
+<tr><td>placement mode</td><td class="plan">list, 4 spots</td><td>list keeps what must be learned small (4 places) and the walk longest; random makes search harder but walks shorter; centre removes the reason for moving the pond (Figures 3, 5).</td></tr>
+<tr><td>drain per step</td><td class="plan">0.625 (160 steps)</td><td>little effect on survival at 10×10 (Figure 4) but sets the number of exposed visits (Figure 9); faster drain is the simplest way to raise predator pressure at water.</td></tr>
+<tr><td>gain per step</td><td class="plan">5.625 (28 steps a visit)</td><td>sets how long each exposed stay is (Figure 7); above about 12, over-drinking starts to appear.</td></tr>
+<tr><td>starting hydration</td><td class="plan">0–200</td><td>costs about 2 % of episodes (Figure 8); kept for coverage of every state.</td></tr>
+</tbody></table></div>
+</section>
+
+<section class="col">
+<h2><span class="num">15</span> Settled and open</h2>
+<p class="cue" hidden>Wider than the screen — scroll sideways.</p>
+<div class="scroll"><table class="datatable wide"><thead><tr><th>settled (user, 29 September)</th><th>open</th></tr></thead><tbody>
+<tr><td>one 2×2 pond per episode, never used up; walk in and drink each step</td><td>whether the grid should grow for level 06 (whole-ladder decision)</td></tr>
+<tr><td>placement modes list / random / centre; list is the default</td><td>the four candidate spots: corners just inside a 1-cell border are the planner's default</td></tr>
+<tr><td>hydration mirrors nutrition: 0–200, middle 100, death at both ends</td><td>refill and over-drinking targets (10–20 and 15–25 steps) are the planner's, not yet the user's</td></tr>
+<tr><td>thirst slower than hunger: 150–200 steps (planned 160)</td><td>whether hydration should couple to body temperature, as in EVAAA (off in the plan)</td></tr>
+<tr><td>smell stays 5 channels; the pond smells half food, half the old tree channel</td><td>the effect of that shared smell on finding the pond — needs training, not this simulation</td></tr>
+<tr><td>predators walk into the pond</td><td>whether a setpoint mark should also be added to the nutrition row of the dashboard</td></tr>
+<tr><td>new level 06 after the campfire world; sensory noise moves to 07</td><td>merging v5.0 back: after the reviews, and only with the user's OK</td></tr>
+<tr><td>starting hydration drawn from the full 0–200</td><td></td></tr>
+<tr><td>implementation approved (30 September), built on the v5.0 branch</td><td></td></tr>
+</tbody></table></div>
+</section>
+
+<section class="col">
+<h2><span class="num">16</span> How to reproduce this</h2>
+<ul>
+  <li>The plan, with its reviews and decisions: <code>docs/<wbr>develop/<wbr>active/<wbr>thirst/<wbr>THIRST_WATER_PLAN.md</code></li>
+  <li>Simulator, sweep and one script per figure: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>thirst_water/</code>. Run <code>python sweep.py</code> (about 15 minutes), then each <code>w*.py</code>, then <code>python build_page.py</code>.</li>
+  <li>Sweep output: <code>results/<wbr>analysis/<wbr>thirst_water/<wbr>sweep.json</code></li>
+  <li>Food and temperature rules, their validation and the measured map: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>internal_state_interactions/</code> (<code>bodysim.py</code>, <code>validate.py</code>, <code>measure_world.py</code>) and <code>results/<wbr>analysis/<wbr>internal_state_interactions/</code></li>
+  <li>Dashboard frames: <code>docs/<wbr>develop/<wbr>active/<wbr>thirst/<wbr>figures/<wbr>make_render_frames.py</code> (rendering session), from level-06 recordings it regenerates with <code>scripts/<wbr>eval/<wbr>make_render_fixture_recordings.py</code>; commands in its docstring.</li>
+</ul>
+<p>Departures from the House Style Sheet, as on the project's other analysis pages: the chrome accent and
+warning hues are moved off the figure palette; headings use Pretendard and code the reader's system
+monospace; a small evidence-kind badge sits above each caption; wide tables sit in scroll boxes with an
+overflow cue.</p>
+</section>
+
+</div>
+__HOUSE_SCRIPT__

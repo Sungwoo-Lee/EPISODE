@@ -1,0 +1,251 @@
+#!/usr/bin/env python3
+"""collect_arm_data.py - the sensor-ladder arm sweep, ported onto core/scan.
+
+A faithful port of `scripts/analysis/ladder/build_arm_data.py`. It must reproduce that script's
+output exactly - the gate is `scripts/analysis/core/golden.py` against
+`results/_golden_prerefactor_20260904/`, and anything it does not reproduce bit-for-bit (integer
+fields) or inside rtol=1e-12 (floats) is a defect in this file, not a licence to adjust the gate.
+
+What changed: the shard loop, the episode-boundary bookkeeping, the seed-contiguity and
+shard-alignment asserts, and the step-count cross-check all moved into `core`. What did NOT change:
+every accumulation below, which is the study's own arithmetic and is deliberately still ordinary
+NumPy in the study's own folder.
+
+Two conventions are preserved exactly rather than tidied, because tidying them would move published
+numbers:
+  * `bush_steps` excludes the reset row; `dmg` and `n_ate` include it. Both forms are asked for
+    explicitly.
+  * the odour quartile edges are computed from the FIRST shard only, then reused for every later
+    shard. That is what the original does, so that is what this does.
+"""
+from __future__ import annotations
+import argparse
+import json
+import os
+import sys
+
+import numpy as np
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
+sys.path.insert(0, os.path.join(ROOT, "scripts", "analysis", "core"))
+sys.path.insert(0, os.path.join(ROOT, "scripts", "analysis", "ladder"))
+os.chdir(ROOT)
+
+import env as ENV                    # noqa: E402
+import scan as SCAN                  # noqa: E402
+import store as STORE                # noqa: E402
+import _ladder as L                  # noqa: E402  - study facts: arm order, bin edges, run paths
+
+EARLY = 25
+EP_COLS = ["episode_seed", "length", "termination_reason", "animal_active",
+           "animal_property_sampled"]
+STEP_COLS = ["episode_seed", "t", "agent_in_bush", "injury_level", "nutrition", "damage",
+             "ate_food", "agent_row", "agent_col", "animal_row", "animal_col"]
+
+
+def new_sensitivity() -> dict:
+    z2 = lambda a, b: np.zeros((a, b))
+    return {"rd_no0_bush": z2(L.DIST_MAX, 4), "rd_no0_tot": z2(L.DIST_MAX, 4),
+            "rab_on_cell": np.zeros(4), "rab_steps": np.zeros(4),
+            "rdpf_bush": z2(L.DIST_MAX, 4), "rdpf_tot": z2(L.DIST_MAX, 4),
+            "rdcpf_bush": z2(L.DIST_MAX, 4), "rdcpf_tot": z2(L.DIST_MAX, 4)}
+
+
+def accumulate_sensitivity(S, y, drab_prev, dpred_prev, ib, cb, hr):
+    """Study S6 (plan-review M3). Rows are chosen steps of episodes with >=1 rabbit (mask hr).
+
+    (a) a rabbit ON the agent's square (drab_prev == 0): counted per start-injury quarter, and the
+        rd grid rebuilt WITHOUT those rows (the main grid clips them into the 1-2 bin);
+    (b) predator-free rows (dpred_prev > 2; inf = no live predator counts as free): rd and rdc grids.
+    Uses np.bincount on flattened (dist_bin * 4 + inj_bin) indices, not np.add.at, to keep the
+    sweep fast. Distance binning is the main grids' own `clip(d, 1, DIST_MAX) - 1`.
+    """
+    n = L.DIST_MAX * 4
+    y, drab_prev, dpred_prev = y[hr], drab_prev[hr], dpred_prev[hr]
+    ib, cb = ib[hr], cb[hr]
+    drb = np.clip(drab_prev, 1, L.DIST_MAX).astype(int) - 1
+    on = drab_prev == 0
+    S["rab_on_cell"] += np.bincount(ib[on], minlength=4)
+    S["rab_steps"] += np.bincount(ib, minlength=4)
+    k = drb * 4 + ib
+    kc = drb * 4 + cb
+    no0, pf = ~on, dpred_prev > 2
+    S["rd_no0_bush"] += np.bincount(k[no0], weights=y[no0], minlength=n).reshape(L.DIST_MAX, 4)
+    S["rd_no0_tot"] += np.bincount(k[no0], minlength=n).reshape(L.DIST_MAX, 4)
+    S["rdpf_bush"] += np.bincount(k[pf], weights=y[pf], minlength=n).reshape(L.DIST_MAX, 4)
+    S["rdpf_tot"] += np.bincount(k[pf], minlength=n).reshape(L.DIST_MAX, 4)
+    S["rdcpf_bush"] += np.bincount(kc[pf], weights=y[pf], minlength=n).reshape(L.DIST_MAX, 4)
+    S["rdcpf_tot"] += np.bincount(kc[pf], minlength=n).reshape(L.DIST_MAX, 4)
+
+
+def build(arm: str, run: str, verbose: bool = True, stores: list[str] | None = None) -> dict:
+    """Scan one run and write its aggregate.
+
+    `stores` exists so the SAME sweep can be pointed at a population outside the sensor ladder -
+    the neuromodulator site grid reuses it unchanged, which is the only way its figures are
+    honestly "the same analysis" rather than a re-implementation that happens to agree. Nothing
+    below is conditional on which study is calling: the ladder passes None and gets
+    `L.arm_stores(arm)`, exactly as before, so the golden gate still covers this file.
+    The output directory follows `$LADDER_OUT_ROOT`, which `_ladder` already honours.
+    """
+    cfg = L.arm_config(run)
+    lay = ENV.slot_layout(cfg)
+    P, R = lay["pred"], lay["neutral"]
+    na = lay["n_animal"]
+    spec = ENV.scent_spec(cfg)
+
+    stores = L.arm_stores(arm) if stores is None else list(stores)
+    st = STORE.open_run(stores, EP_COLS)
+    nep, seed0 = st.n_episodes, st.seed0
+
+    length = st.episode("length", np.float64)
+    term = st.episode("termination_reason").astype(int)
+    act = st.episode_list("animal_active", na)
+    prop = st.episode_property("animal_property_sampled", na)
+
+    pa, rb = act[:, P], act[:, R]
+    mean_over = lambda X, M: np.where(M.sum(1) > 0, (X * M).sum(1) / np.maximum(M.sum(1), 1), np.nan)
+    pred_olf = mean_over(spec.intensity(prop[:, P]), pa)
+    rab_olf = mean_over(spec.intensity(prop[:, R]), rb)
+    # A THIRD of episodes contain no predator and a third no rabbit. They have no "distance to the
+    # nearest predator" and no "how strongly it smelled", so they must be dropped from any grid
+    # conditioned on those. Left in, np.digitize files every NaN into the TOP bin and np.clip files
+    # every inf into the FARTHEST distance bin, and the no-predator episodes - which hide far less,
+    # nothing hunting them - silently become the reference group everything is compared against.
+    has_p, has_r = pa.sum(1) > 0, rb.sum(1) > 0
+    n_pred, n_rab = pa.sum(1).astype(np.int32), rb.sum(1).astype(np.int32)
+
+    z1, z2 = lambda n: np.zeros(n), lambda a, b: np.zeros((a, b))
+    E = {k: np.zeros(nep) for k in ["n_steps", "bush_steps", "inj0", "nut0", "dmg", "n_ate",
+                                    "bush_early", "steps_early"]}
+    G = {
+        "pd_bush": z2(L.DIST_MAX, 4), "pd_tot": z2(L.DIST_MAX, 4),
+        "rd_bush": z2(L.DIST_MAX, 4), "rd_tot": z2(L.DIST_MAX, 4),
+        "pdc_bush": z2(L.DIST_MAX, 4), "pdc_tot": z2(L.DIST_MAX, 4),
+        "rdc_bush": z2(L.DIST_MAX, 4), "rdc_tot": z2(L.DIST_MAX, 4),
+        "dw_inj": z1(4), "dwt_inj": z1(4),
+        "dw_early": z1(4), "dwt_early": z1(4),
+        "dw_nut": z1(4), "dwt_nut": z1(4),
+        "dw_carried": z1(4), "dwt_carried": z1(4),
+        "dmg_inj": z1(4),
+    }
+    OLF = {"rab_bush": z2(4, 4), "rab_tot": z2(4, 4),
+           "pred_bush": z2(4, 4), "pred_tot": z2(4, 4)}
+    edges = {}
+    S = new_sensitivity()
+
+    def collect(fr, acc, fi):
+        gi, gidx = fr.episode_id, fr.episodes
+        bu = fr.raw("agent_in_bush"); inj = fr.raw("injury_level"); nut = fr.raw("nutrition")
+        ar, ac = fr.raw("agent_row"), fr.raw("agent_col")
+        anr = fr.list_raw("animal_row", na).astype(np.float64)
+        anc = fr.list_raw("animal_col", na).astype(np.float64)
+
+        E["inj0"][gidx] = fr.at_initial(inj); E["nut0"][gidx] = fr.at_initial(nut)
+        E["n_steps"][gidx] += fr.steps_per_episode
+        E["bush_steps"][gidx] += fr.per_episode_sum(bu)
+        E["dmg"][gidx] += fr.per_episode_sum_with_initial(fr.raw("damage"))
+        E["n_ate"][gidx] += fr.per_episode_sum_with_initial(fr.raw("ate_food"))
+
+        d = np.maximum(np.abs(anr - ar[:, None]), np.abs(anc - ac[:, None]))
+        live = act[gi]
+        dm = np.where(live, d, np.inf)
+        dpred = dm[:, P].min(1); drab = dm[:, R].min(1)
+
+        prev = fr.prev                       # the row the action was chosen on
+        y = bu[fr.is_step]
+        g = fr.episode_of_step
+        dpb = np.clip(dpred[prev], 1, L.DIST_MAX).astype(int) - 1
+        drb = np.clip(drab[prev], 1, L.DIST_MAX).astype(int) - 1
+        ib = np.digitize(E["inj0"][g], L.INJ_EDGES)
+        cb = np.digitize(inj[prev], L.INJ_EDGES)
+        nb = np.digitize(E["nut0"][g], L.INJ_EDGES)
+
+        hp, hr = has_p[g], has_r[g]
+        np.add.at(G["pd_bush"], (dpb[hp], ib[hp]), y[hp])
+        np.add.at(G["pd_tot"],  (dpb[hp], ib[hp]), 1.0)
+        np.add.at(G["rd_bush"], (drb[hr], ib[hr]), y[hr])
+        np.add.at(G["rd_tot"],  (drb[hr], ib[hr]), 1.0)
+        np.add.at(G["pdc_bush"], (dpb[hp], cb[hp]), y[hp])
+        np.add.at(G["pdc_tot"],  (dpb[hp], cb[hp]), 1.0)
+        np.add.at(G["rdc_bush"], (drb[hr], cb[hr]), y[hr])
+        np.add.at(G["rdc_tot"],  (drb[hr], cb[hr]), 1.0)
+        accumulate_sensitivity(S, y, drab[prev], dpred[prev], ib, cb, hr)
+        np.add.at(G["dw_inj"], ib, y);   np.add.at(G["dwt_inj"], ib, 1.0)
+        np.add.at(G["dw_nut"], nb, y);   np.add.at(G["dwt_nut"], nb, 1.0)
+        np.add.at(G["dw_carried"], cb, y); np.add.at(G["dwt_carried"], cb, 1.0)
+        np.add.at(G["dmg_inj"], ib, fr.raw("damage")[fr.is_step])
+
+        early = fr.is_step & (np.arange(fr.n) <= fr.estart + EARLY)
+        ye, ge = bu[early], gi[early]
+        ibe = np.digitize(E["inj0"][ge], L.INJ_EDGES)
+        np.add.at(G["dw_early"], ibe, ye); np.add.at(G["dwt_early"], ibe, 1.0)
+        np.add.at(E["bush_early"], ge, ye); np.add.at(E["steps_early"], ge, 1.0)
+
+        if fi == 0:
+            edges["r"] = np.nanquantile(rab_olf, [.25, .5, .75])
+            edges["p"] = np.nanquantile(pred_olf, [.25, .5, .75])
+        mr, mp = has_r[ge], has_p[ge]
+        rq = np.digitize(rab_olf[ge][mr], edges["r"])
+        pq_ = np.digitize(pred_olf[ge][mp], edges["p"])
+        np.add.at(OLF["rab_bush"], (rq, ibe[mr]), ye[mr])
+        np.add.at(OLF["rab_tot"],  (rq, ibe[mr]), 1.0)
+        np.add.at(OLF["pred_bush"], (pq_, ibe[mp]), ye[mp])
+        np.add.at(OLF["pred_tot"],  (pq_, ibe[mp]), 1.0)
+
+    SCAN.sweep(st, STEP_COLS, collect, verbose=verbose, label=arm)
+
+    seed = st.seeds
+    os.makedirs(L.OUT_ROOT, exist_ok=True)
+    np.savez_compressed(f"{L.OUT_ROOT}/{arm}_episodes.npz",
+                        seed=seed, length=length, term=term,
+                        bush_steps=E["bush_steps"], n_steps=E["n_steps"],
+                        inj0=E["inj0"], nut0=E["nut0"], dmg=E["dmg"], n_ate=E["n_ate"],
+                        bush_early=E["bush_early"], steps_early=E["steps_early"],
+                        n_pred=n_pred, n_rab=n_rab,
+                        pred_olf=pred_olf, rab_olf=rab_olf)
+
+    out = {"arm": arm, "run": run, "stores": stores, "n_episodes": int(nep),
+           "seed_range": [int(seed.min()), int(seed.max())],
+           "sensory": L.sensory_summary(cfg),
+           "mean_survival": float(length.mean()),
+           "bush_dwell_pct": float(100 * E["bush_steps"].sum() / E["n_steps"].sum()),
+           "term_pct": {L.TERM_NAMES.get(k, str(k)): float(100 * np.mean(term == k))
+                        for k in sorted(set(term.tolist()))},
+           "odour_edges": {"rabbit": edges["r"].tolist(), "predator": edges["p"].tolist()},
+           "episodes_with_a_predator": float(has_p.mean()),
+           "episodes_with_a_rabbit": float(has_r.mean()),
+           "grids": {k: v.tolist() for k, v in G.items()},
+           "odour": {k: v.tolist() for k, v in OLF.items()}}
+    L.save_json(arm, out)
+    # Study S6 lands in a SEPARATE file so `<arm>.json` / `<arm>_episodes.npz` keep their exact key
+    # sets (golden products).
+    L.save_json(f"{arm}_sensitivity", {
+        "arm": arm, "run": run, "stores": stores, "n_episodes": int(nep),
+        "seed_range": [int(seed.min()), int(seed.max())], "scent": spec.as_dict(),
+        "near_pred_free": "dpred > 2 on the deciding row (inf = no live predator counts as free)",
+        "grids": {k: v.tolist() for k, v in S.items()}})
+    return out
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--arms", nargs="*", default=None,
+                    help="which arms to scan. Default: the whole sensor ladder, or every key of "
+                         "--manifest when one is given.")
+    ap.add_argument("--manifest", default=None,
+                    help='JSON mapping name -> {"run": <run dir>, "stores": [<store dir>, ...]}. '
+                         "Use this to run the ladder sweep over a population that is not the "
+                         "ladder; pair it with $LADDER_OUT_ROOT so the aggregates land elsewhere.")
+    a = ap.parse_args()
+    if a.manifest:
+        man = json.load(open(a.manifest))
+        for arm in (a.arms or list(man)):
+            build(arm, man[arm]["run"], stores=man[arm]["stores"])
+            print(f"{arm}: scanned")
+    else:
+        runs = L.arm_runs()
+        for arm in (a.arms or L.ARM_ORDER):
+            build(arm, runs[arm])
+            print(f"{arm}: scanned")

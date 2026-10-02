@@ -1,0 +1,1 @@
+120 run-and-site measurements, all 120 of 120 drawn (100%): the 15 modulated cells of each of 4 grids, each contributing one value per FiLM site it switches on. Each value is computed from a 128-episode greedy replay of that agent, not from the 1,000,000-episode behaviour store — the modulator's own output is not recorded in that store.

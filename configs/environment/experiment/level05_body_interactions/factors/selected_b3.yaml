@@ -1,0 +1,10 @@
+# EXPERIMENTAL, NOT MAINTAINED (CLAUDE.md "Config maintenance scope"): part of the level-05
+# body-interactions study, docs/experiments/active/level05_body_interactions/LEVEL05_BODY_INTERACTIONS.md.
+#
+# SELECTED STRENGTH for factor B3 "healing costs food" — the single place the 16 factorial worlds read it from.
+# Every worlds/ file that switches this factor on extends THIS file, never a strength file
+# directly, so the pilot pick is changed in one line here and nowhere else.
+#
+# STATUS: PICKED (2026-09-27) by the stage-1 pilot pick rule (design doc section 2.3); pick record
+# and pilot numbers in design doc section 6.1. Pick: cost 0.5 (weakest rung); the fragment keeps healing_nutrition_shortfall: partial explicit.
+extends: environment/experiment/level05_body_interactions/factors/b3_healing_costs_food__cost0p5

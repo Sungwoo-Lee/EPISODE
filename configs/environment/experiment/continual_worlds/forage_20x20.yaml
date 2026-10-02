@@ -1,0 +1,152 @@
+# EXPERIMENTAL, NOT MAINTAINED (CLAUDE.md "Config maintenance scope"): a concept world of the
+# continual-worlds study, docs/experiments/active/continual_worlds/CONTINUAL_WORLDS.md.
+#
+# FORAGE (20 x 20): a big, safe world where the job is finding food
+#
+# Grid 20 x 20, smell range 5, 4-8 food items (12 bites), NO hunting predator, 0-2 ambushers.
+# Fires, rocks and bushes at level-05 density (x4 area). Rabbits 0-5 (density would be 0-8:
+# pinned to the sequence-wide slot count, see Known Bug A2 in the design doc).
+#
+# STATIONARY BY CONSTRUCTION: this file changes only the EXTERNAL world. Every body rule, the
+# interoceptive channels, the reward, max_steps and the observation layout (58 numbers) are
+# inherited unchanged from level 05 through `extends:`. Food energy per bite (6) and the bush
+# healing multiplier (25) are body-side keys and are not touched.
+# Lists (resources / entities / obstacles / location_areas) are restated in full because
+# Config.merge replaces lists wholesale (CONFIG_GUIDE.md section 1); every entry not named
+# above is level 05's entry verbatim with its placement box widened to the grid, the approach
+# validated for 15 x 15 / 20 x 20 by scripts/analysis/studies/context_exploration/make_worlds.py.
+# Generated once from level 05's resolved lists; values are pinned in the design doc (section 3.2).
+extends: environment/experiment/basic/05-campfire_thermal_10x10
+environment:
+  height: 20
+  width: 20
+  location_areas:
+  - type: grass
+    area:
+    - [1, 1]
+    - [20, 20]
+  - type: sand
+    area:
+    - [0, 0]
+    - [0, 0]
+  resources:
+  - name: food
+    type: food
+    count_low: 4
+    count_high: 8
+    spawn_area:
+    - [1, 1]
+    - [20, 20]
+    properties: [1.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    max_consumption: 12
+    regeneration_delay: 0
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.0
+  - name: hiding_predator
+    type: hiding_predator
+    count_low: 0
+    count_high: 2
+    spawn_area:
+    - [1, 1]
+    - [20, 20]
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    max_consumption: -1
+    regeneration_delay: 20
+    damage: [15.0, 45.0]
+    nociception_intensity: 0.9
+  entities:
+  - class: neutral
+    behaviour: wander
+    tag: rabbit
+    count_low: 0
+    count_high: 5
+    properties: [0.0, 0.5, 0.7, 0.0, 0.0]
+    properties_std: [0.0, 0.3, 0.3, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    move_interval: [1, 1]
+    damage: [0.0, 0.0]
+    attack_delay: [0, 0]
+    nociception_intensity: 0.1
+    spawn_area:
+    - [1, 1]
+    - [20, 20]
+    patrol_area:
+    - [1, 1]
+    - [20, 20]
+  obstacles:
+  - name: campfire
+    count_low: 4
+    count_high: 12
+    area:
+    - [1, 1]
+    - [20, 20]
+    edge_margin: 2
+    temperature_ratio: [11, 11]
+    blocking: false
+    blocks_sight: false
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.0
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: rock
+    count_low: 24
+    count_high: 48
+    area:
+    - [1, 1]
+    - [20, 20]
+    blocking: false
+    damage: [1, 5]
+    nociception_intensity: 0.9
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: tree
+    count: 0
+    area:
+    - [5, 15]
+    - [5, 15]
+    blocking: true
+    damage: [0.1, 0.5]
+    nociception_intensity: 0.1
+    properties: [0.0, 0.0, 0.0, 0.0, 1.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: tree
+    count: 0
+    area:
+    - [5, 15]
+    - [5, 15]
+    blocking: true
+    damage: [0.1, 0.5]
+    nociception_intensity: 0.1
+    properties: [0.0, 0.0, 0.0, 0.0, 1.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: bush
+    count_low: 16
+    count_high: 40
+    area:
+    - [1, 1]
+    - [20, 20]
+    blocking: false
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.0
+    hides_agent: true
+    blocks_animals: true
+    properties: [0.0, 0.0, 0.0, 1.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+sensory: {sensor_radius: 5}

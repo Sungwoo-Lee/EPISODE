@@ -1,0 +1,10 @@
+{
+ "graft_tool_calls": 0,
+ "graft_cli_calls": 0,
+ "graft_dir_reads": 0,
+ "graphify_cli_calls": 0,
+ "graph_report_reads": 1,
+ "bash_grep_calls": 6,
+ "graft_session_context_bytes": 0,
+ "graft_mcp_connected": false
+}

@@ -1,0 +1,58 @@
+# Python 관련
+**/__pycache__/
+*.pyc
+
+# ML-Agents & 결과물
+*.mp4
+*.egg-info/
+*.npy
+*.csv
+*.pth
+*.log
+results/
+dist/
+build/
+/sheeprl/
+!vendor/sheeprl/
+evaaa/
+temp_configs/
+/wandb/
+logs/
+.wandb_api_key
+legacy/
+*legacy*
+tmp/
+train_command.sh
+train_command-new.sh
+
+# Antigravity
+antigravity_data/
+
+#Claude
+claude_data/
+
+# Skills
+# Ignore local data but track the skill scripts
+skills/notebooklm/data/
+skills/notebooklm/.venv/
+!skills/
+
+# LLM Wiki soft-delete bin (track placeholder, ignore the rest)
+docs/llm_wiki/.trash/*
+!docs/llm_wiki/.trash/.gitkeep
+
+# (deprecated) LLM Wiki raw archives — superseded by claude_data/
+# (raw conversations are now read directly from the synced JSONL under
+#  claude_data/.claude/projects/<proj>/<UUID>.jsonl; the local _archive/
+#  directory was removed when /wiki-write Step 7 changed to point at the JSONL)
+
+# Skill eval workspaces — iteration outputs are transient
+.claude/skills/*-workspace/
+.claude/worktrees/
+
+# Code-side wiki (graphify artefacts — large, per-machine, regenerated on demand)
+# graphify writes to <scanned_path>/graphify-out/, so the pattern must match
+# at any depth (e.g. src/graphify-out/, not just repo-root graphify-out/).
+**/graphify-out/
+
+docs/.obsidian/
