@@ -75,3 +75,51 @@ nothing. The worse case is a loop that improvises the 10 M checkpoint as "final"
 of local sweeps) whose numbers contradict the study's pre-registered stop rule and must be redone.
 Separately, d9's hypervigilance page would fail to rebuild until about 1.5 h of re-sweeping.
 There is no data-loss hazard.
+
+## Re-check of Revision 1 (2026-10-03, commit `66310839`)
+
+**Verdict:** the main analysis (checkpoints C0–C6) is **cleared, SOUND WITH CONCERNS**. The
+experiment-test part (C7–C8, Figure 7) is **NOT READY**. The original Critical is closed, and so is
+finding 2. Revision 1's answer to finding 4 creates a new Critical.
+
+**Closed.**
+- **Finding 1.** Final-checkpoint endpoint with a plain statement on the page; C0 gates all store
+  reads. The stores (`configs/trajectory_collection/thirst_task.yaml`, 1 M episodes) match the
+  hvsmell size, where a cell swept in 897 s. The layout `<root>/<tag>/<ckpt>/<hash>/` is what
+  `make_population` globs.
+- **Finding 2.** Named code change. Order dependency: THIRST_TASK §9 must say `completed`
+  first, or the stale-status guard (`make_population.py:179`) refuses.
+- **Findings 5/6.** Separate `_water_pass.json` and an external reference. Verified: on
+  `readout/t16quad_s42_2000001.json`, `bouts_per_episode × n_episodes × steps_per_bout_mean` =
+  187622.0 exactly, and the shares are counts / 10 000, so exact comparison is possible.
+- **Findings 3, 7, 8, 10, 11, 12** are answered adequately. Finding 7 adds a 3 h hvsmell
+  byte-identity rebuild; output paths are CLI arguments, so it can go to a scratch root.
+- **Finding 9** is closed by the user's explicit request.
+
+**New 🔴 (from finding 4's fix): the pond drop rule empties or biases Figure 7.** Measured on the
+pilot stores (`results/analysis/thirst_pilot/<run>/<ckpt>/`, ordinary and modulated, 10 000
+episodes each). The share of episodes with any pond step within 100 steps, by start hydration:
+
+| Start hydration | 90–110 | 130–150 | 150–170 | 160–190 |
+|---|---|---|---|---|
+| modulated (2 000 001) | 0.59 (0.47 within 60 steps) | 0.38 | 0.15 | 0.09 |
+| ordinary (2 000 008) | 0.62 (0.50 within 60 steps) | 0.38 | 0.15 | 0.12 |
+
+In training the pond is at a random corner. In the scenes it is fixed 3 squares from the start, so
+visits are likely at least as frequent. At start 100 the "> 3 of 30 episodes" rule drops almost every
+trained-checkpoint cell. What survives is selected on the outcome: scenes where a threat keeps the
+agent hidden, and early checkpoints that never learned to drink. Fix before C7, without dropping
+cells:
+1. Bush dwell is measured per episode up to the first pond step, with the visit share reported beside it.
+2. The start hydration is chosen by a cheap local test (one world, final checkpoint, 2–3 values, 30
+   episodes per scene) before the full sweep. The pilot suggests about 150–175. Over-drinking (code 7)
+   then needs only 5–10 consecutive pond steps, so report it.
+
+Caveat: these are 2 M-episode pilot agents on the older pond smell, so the figures are indicative.
+
+**Also.** THIRST_TASK does not yet record that its pre-registered stop rule was cancelled. That is a
+deviation the study doc should state (owner: thirst session). Some stale text remains: "stop early"
+in §Analysis and W-g, and "scenes stay about animals and cover" in D12 (iii).
+
+**Cost of being wrong:** a night of node time on the probe sweep that yields an empty or
+outcome-selected Figure 7. Nothing is lost, and C0–C6 are unaffected.

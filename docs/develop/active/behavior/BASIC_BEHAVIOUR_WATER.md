@@ -401,3 +401,25 @@ saved configs; no `src/environment/` change since the frozen run commit `583b022
 
 **Flips to SOUND WITH CONCERNS when** findings 1 and 2 are resolved (C0 + ≤ b\* restriction; the
 population-builder change named and owned).
+
+### Re-check of Revision 1 (plan-reviewer, 2026-10-03, commit `66310839`)
+
+*Reviewed by: plan-reviewer. Details and evidence: [[plan_basic_behaviour_water]] §Re-check.*
+
+**Verdict: the main analysis (C0–C6) is cleared, SOUND WITH CONCERNS. The experiment-test
+part (C7–C8) is NOT READY.** The original Critical and finding 2 are closed. A new Critical
+comes from the pond rule that Revision 1 added.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+| Finding | Status |
+|---|---|
+| 1 🔴 stop point / stores | **Closed.** The endpoint is the final checkpoint because early stopping was not applied, and the page says so. C0 gates every store read. The stores are 1 M episodes, the same as hvsmell (an hvsmell cell swept in 897 s), and they sit in the layout the builder globs. 🟢 THIRST_TASK itself does not yet record that the stop rule was cancelled. It should: it is a deviation from that study's pre-registration (owner: thirst session). |
+| 2 make_population | **Closed.** Named code change. The §9 doc edit is needed first, because the builder's stale-status guard refuses `running` rows that have a store. |
+| 3, 5, 6, 7, 8, 10, 11, 12 | **Closed.** The water gate's external reference reproduces exactly: on the pilot readout, `bouts_per_episode × n_episodes × steps_per_bout_mean` = 187622.0, and the shares are counts over 10 000. |
+| 9 | **Closed** by the user's request: live picks, pre-flight, diary claims, CPU only. Nodes 106–114 are busy with collection, so only 101–105 are likely free. |
+| **4 → new 🔴** | **The pre-registered pond rule would empty or bias Figure 7.** I measured the pilot's own stored episodes (10×10, 2 M-episode checkpoints, both agents). Of episodes starting at hydration 90–110, **59–62 % stood on the pond within 100 steps** (47–50 % within 60 steps). The figure is 38 % at start 130–150, 15 % at 150–170 and 9–12 % at 160–190. At start 100, a pond 3 squares away and a "drop the cell if > 3 of 30 episodes visit the pond" rule, almost every trained-checkpoint cell would be dropped. The survivors would be the scenes that keep the agent hidden (predator scenes) and the early checkpoints that have not learned to drink. That is a selection on the outcome. **Fix before C7:** (a) do not drop cells. Measure bush dwell per episode only up to the first pond step, and report the pond-visit share beside it. (b) Choose start hydration from a cheap local test: one world, final checkpoint, 2–3 start values, 30 episodes per scene. The pilot suggests about 150–175. Over-drinking then needs only 5–10 consecutive pond steps, so report code-7 deaths. The start value is the user's to revisit. Caveat: the pilot is a 2 M checkpoint on the older pond smell, so this is indicative. |
+| 🟢 stale text | §Analysis "Thirst runs stop early" and W-g "early-stopped thirst runs", and D12 (iii) "scenes stay about animals and cover", contradict Revision 1 and the data above. |
+
+**Flips to SOUND WITH CONCERNS** when D12 (iii) replaces the drop rule with first-pond-visit
+truncation and adds the start-hydration test before the full probe sweep.
