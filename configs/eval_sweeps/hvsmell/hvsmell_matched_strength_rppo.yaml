@@ -35,7 +35,7 @@ output_dir: results/eval/avoidance/metrics_history_rppo_hvsmell/matched_strength
 probe: configs/environment/experiment/behavior_probes/hvsmell/matched_strength
 conditions: all
 episodes: 30
-nodes: []
+nodes: [108]
 x_axis: steps
 plot_measures: [bush_hiding, spatial_spread, survival_steps]
 runs:
