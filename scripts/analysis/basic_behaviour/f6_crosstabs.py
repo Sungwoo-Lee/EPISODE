@@ -64,7 +64,8 @@ def main(argv=None):
         ladder[c["label"]] = ([float(llr[b == k].mean()) for k in range(6)],
                               [100 * float(y[b == k].sum() / max(L[b == k].sum(), 1)) for k in range(6)])
         rows.append({"what": f"episodes in the smell sextiles, {FG.run_label(c)}", "used": int(keep.sum()),
-                     "total": int(keep.size), "note": "episodes with exactly one rabbit and no predator, so only the smell can signal danger"})
+                     "total": int(keep.size), "note": ("episodes with exactly one rabbit and no predator, so only the smell can signal danger"
+                              + ("; not drawn: the behaviour cannot occur without a predator" if a.target == "near_predator" else ""))})
     ng = len(groups)
     nrow_h = int(np.ceil(ng / 3))
     worlds = D["worlds"]
@@ -103,7 +104,16 @@ def main(argv=None):
     # one smell panel per world, the runs of both agents in it, shape = agent
     ys = [y for xs, yv in ladder.values() for y in yv]
     pad = 0.08 * (max(ys) - min(ys) + 1e-9)
-    for k, w in enumerate(worlds[:3]):
+    # a behaviour that cannot occur on this subset (near a predator, in predator-free episodes) gives
+    # all-zero lines; say so instead of drawing them on a meaningless 1e-11 scale
+    undefined = max(abs(y) for y in ys) < 1e-9
+    if undefined:
+        ax = fig.add_subplot(gs[nrow_h, 0:3])
+        ax.axis("off")
+        ax.text(0.5, 0.5, "By the rabbit's smell: not defined for this behaviour. These episodes contain "
+                "no predator,\nso the share of steps near a predator is zero by construction.",
+                ha="center", va="center", transform=ax.transAxes, fontsize=H.FS_BODY, color=H.INK_2)
+    for k, w in enumerate([] if undefined else worlds[:3]):
         ax = fig.add_subplot(gs[nrow_h, k])
         for c in [c for c in cells if c["world"] == w]:
             xs, yv = ladder[c["label"]]
@@ -123,6 +133,7 @@ def main(argv=None):
                     color=D["colour"][c["world"]], alpha=0.9)
     ax.set_xticks(range(4)); ax.set_xticklabels(NEAR, fontsize=H.FS_LABEL)
     ax.set_xlim(-0.6, 3.6)
+    ax.set_ylim(bottom=0)
     ax.set_ylabel("share of chosen steps (%)")
     ax.set_title("By nearby animals (within 2 squares, one step earlier); one marker per run", fontsize=H.FS_BODY)
     fig.legend(handles=FG.legend_handles(D), loc="lower center", ncol=len(D["worlds"]) + len(D["agents"]),
