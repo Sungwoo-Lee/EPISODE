@@ -119,7 +119,7 @@ def test_edit_warning_only_for_other_sessions(board, capsys, monkeypatch):
     hook("PostToolUse", {"session_id": "A", **edit}, a.pid, capsys, monkeypatch)
     assert hook("PreToolUse", {"session_id": "A", **edit}, a.pid, capsys, monkeypatch) == ""   # own file
     out = hook("PreToolUse", {"session_id": "B", **edit}, b.pid, capsys, monkeypatch)
-    assert '⚠ "Sess A" edited tmp/x.py' in out
+    assert '⚠ "Sess A"' in out and "edited tmp/x.py" in out   # a branch tag may sit between them
     other = {**edit, "tool_input": {"file_path": os.path.join(sb.REPO, "tmp/y.py")}}
     assert hook("PreToolUse", {"session_id": "B", **other}, b.pid, capsys, monkeypatch) == ""
 
