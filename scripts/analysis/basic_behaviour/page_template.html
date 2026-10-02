@@ -325,8 +325,262 @@ details.bb-data[open] > summary { margin-bottom:8px; }
   that injure them are also the ones full of predators. The tables describe; Figures 3 to 5 adjust.</p></div></div>
 <!-- /BLOCK F6 -->
 
+<!-- BLOCK F7 -->
 <section class="col">
-  <h2><span class="num">07</span> Provenance</h2>
+  <h2><span class="num">07</span> Probe scenes: the same agents in small fixed test scenes</h2>
+  <div class="callout warn"><p class="eyebrow">Exploratory &middot; added 2026-10-02</p>
+  <p>This section is not part of the smell study's pre-registered test and cannot change its verdict.
+  Its reading rules were written down before any probe result existed, in the study document's section
+  &ldquo;Probe-scene sweep (exploratory)&rdquo;.</p></div>
+  <p>Figures 1 to 6 watch each agent in the world it trained in, where many things happen at once.
+  Here the same 18 agents are put into twelve small, fixed test scenes instead: a 10&times;10 arena
+  with one hiding bush, a campfire beside it, and at most one animal. Six animal setups &mdash;
+  <strong>no animal</strong>, a <strong>hunting predator</strong>, a harmless <strong>chasing
+  rabbit</strong>, the chasing rabbit with its predator-like smell channel removed, a harmless
+  <strong>wandering rabbit</strong>, and a wandering rabbit that <strong>smells like a
+  predator</strong> &mdash; each run once with the agent unhurt (injury 0) and once badly injured
+  (injury 70 of 100). Every one of the 50 checkpoints saved during training is replayed, 30 episodes
+  per scene, and the measure is <strong>bush dwell</strong>: the share of the scene's steps the agent
+  spends on the bush.</p>
+  <p>The last setup asks this study's question directly: does a harmless animal that merely smells
+  like a predator make the agent dwell in the bush more (the <strong>confusion contrast</strong>), and
+  does injury make that larger? Two things to keep in mind. The campfire next to the bush makes the
+  bush the warm place in a cold arena, which lifts bush dwell even when nothing threatens; compare
+  scenes with each other, not with the training world. And in the single-channel world the
+  &ldquo;smell removed&rdquo; chasing rabbit has no smell at all, because its one smell channel is the
+  one removed, so that scene is not compared across worlds.</p>
+</section>
+<figure>
+  <h3 class="bb-fh" id="f7a"><span class="bb-n">Figure 7a</span>Bush dwell over training, per world</h3>
+  <img data-fig="f7_probe_traces__hv2ch" alt="Two-channel (control) world: a grid of small line charts, one row per probe scene and one column per agent type and injury level, each with one line per training seed showing bush dwell at every saved checkpoint.">
+  <img data-fig="f7_probe_traces__hv1ch" alt="Single-channel world: the same grid of line charts.">
+  <img data-fig="f7_probe_traces__hv1chm" alt="Matched-strength world: the same grid of line charts.">
+  <p class="zoomhint">Click a figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
+  <figcaption>
+    <span><b>Figure 7a &mdash; bush dwell in each probe scene across training, one chart per world
+    (two-channel control, then single-channel, then matched-strength).</b> <b>Axes.</b> Every small panel:
+    horizontal, training progress in millions of environment steps, from 0 to 10; vertical, bush dwell,
+    the percentage of the scene's steps the agent spent on the bush, from 0 to 100. Rows are the six
+    animal setups; columns are the agent type (ordinary, modulated) and the injury at the start of the
+    scene (0, 70). One line per training seed; the shaded band marks the newest 20 checkpoints, the only
+    ones summarised in Figures 7b to 7g.</span>
+    <span>{{DATA:f7_probe_traces__hv2ch}}</span>
+    <span>{{DATA:f7_probe_traces__hv1ch}}</span>
+    <span>{{DATA:f7_probe_traces__hv1chm}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>{{CMD:f7_probe_traces__hv2ch}}</code> (and <code>--world hv1ch</code>, <code>--world hv1chm</code>)</p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>Each probe scene is a short episode of 100 steps. A scene file takes everything the run's own
+    training world defines &mdash; the body, the temperature system, the senses &mdash; and replaces only
+    the arena: the bush, the campfire beside it, the animal and the agent's starting square and injury.
+    The animals smell the way that world's animals smell, at the class average with no random spread.
+    For every one of the 50 checkpoints saved while a run trained, the agent is replayed for 30 episodes
+    of each of the 12 scenes, with the same episode seeds every time, and bush dwell is averaged over
+    those 30 episodes. That average is one point on a line here. The reason for drawing every checkpoint
+    rather than the last one: earlier probe studies found that a single checkpoint can sit far from its
+    neighbours, because the policy keeps moving after training has levelled off, while thirty episodes
+    already pin down what one checkpoint does. Reading the final checkpoint alone once produced a
+    sixty-point difference between agents that shrank to under one point when ten checkpoints were
+    averaged. So every later figure averages the newest 20 checkpoints, shaded here, and treats their
+    spread as part of the uncertainty.</p>
+  </div>
+</figure>
+<figure>
+  <h3 class="bb-fh" id="f7b"><span class="bb-n">Figure 7b</span>Bush dwell per scene, late in training</h3>
+  <img data-fig="f7_probe_levels" alt="Twelve dot-plot panels, one per scene and injury level, each showing every run's late-training bush dwell with a 95 percent interval, grouped by world.">
+  <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
+  <figcaption>
+    <span><b>Figure 7b &mdash; late-training bush dwell in each scene.</b> <b>Axes.</b> Every panel:
+    horizontal, the smell world (control, single-channel, matched-strength), with the ordinary agent
+    (circles) left and the modulated agent (triangles) right inside each world, one marker per training
+    seed; vertical, bush dwell as a percentage of the scene's steps, from 0 to 100, averaged over the
+    newest 20 checkpoints. The vertical line through a marker is that run's 95% interval; the black dash
+    is the mean of the three seeds.</span>
+    <span>{{DATA:f7_probe_levels}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>{{CMD:f7_probe_levels}}</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>Each marker summarises one run in one scene by the mean of its newest 20 checkpoints. The interval
+    around it is a 95% interval for that mean, built from how much those 20 checkpoint values differ from
+    one another. Neighbouring checkpoints can resemble each other, which would make 20 of them worth fewer
+    than 20 independent readings; so the interval measures the lag-one autocorrelation &mdash; how
+    strongly each checkpoint's value predicts the next one &mdash; and, when it is positive, shrinks the
+    count to an effective number of checkpoints, 20 &times; (1 &minus; r) / (1 + r), before computing the
+    usual t-interval. This interval describes how much a single run wobbles late in training. It says
+    nothing about how a different training seed would behave: that is what the three seeds side by side
+    show, and Figure 7e compares the two scales. A hollow marker is a value reported but not
+    interpreted, under two rules fixed in advance: the run's average survival in a scene it uses fell
+    below 95 steps, so it often did not live through the scene; or its bush dwell with no animal was
+    above 90%, so nothing could raise it further.</p>
+  </div>
+</figure>
+<figure>
+  <h3 class="bb-fh" id="f7c"><span class="bb-n">Figure 7c</span>Does a predator's smell on a harmless rabbit raise bush dwell?</h3>
+  <img data-fig="f7_probe_confusion" alt="Five dot-plot panels: the confusion contrast at injury 0 and 70, its injury shift, and the wandering rabbit response at injury 0 and 70, one marker per run with intervals, grouped by world.">
+  <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
+  <figcaption>
+    <span><b>Figure 7c &mdash; the confusion contrast, its change with injury, and the plain rabbit
+    response.</b> <b>Axes.</b> Every panel: horizontal, the smell world, ordinary agent (circles) left
+    and modulated agent (triangles) right, one marker per seed; vertical, a difference in bush dwell
+    between two scenes, in percentage points, averaged over the newest 20 checkpoints, zero marked by a
+    rule. Top row: predator-smelling wandering rabbit minus ordinary wandering rabbit, at injury 0 and
+    70, then injury 70 minus injury 0 of that difference. Bottom row: ordinary wandering rabbit minus no
+    animal, at injury 0 and 70.</span>
+    <span>{{DATA:f7_probe_confusion}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>{{CMD:f7_probe_confusion}}</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>The <strong>confusion contrast</strong> is bush dwell with a wandering rabbit that smells like the
+    world's predator, minus bush dwell with an ordinary wandering rabbit. The two rabbits move the same
+    way; only the smell differs, so the contrast is how much the predator smell alone, on a harmless
+    animal, adds to bush dwell. It is formed checkpoint by checkpoint &mdash; the two scenes' values at
+    the same checkpoint are subtracted &mdash; and the resulting series is summarised like Figure 7b: the
+    mean of the newest 20 checkpoints with a 95% interval corrected for neighbouring checkpoints being
+    alike. The <strong>injury shift</strong> is the contrast at injury 70 minus the contrast at injury 0,
+    also formed per checkpoint: does injury make the predator smell on a harmless animal matter more?
+    The bottom row is needed to read the top row. The <strong>wandering rabbit response</strong> is bush
+    dwell with an ordinary wandering rabbit minus bush dwell with no animal. A small confusion contrast
+    next to a large rabbit response means the agent already treats any rabbit as a threat, so the smell
+    has little left to add. A small confusion contrast next to a small rabbit response means the smell is
+    simply ignored.</p>
+  </div>
+</figure>
+<figure>
+  <h3 class="bb-fh" id="f7d"><span class="bb-n">Figure 7d</span>Threat discrimination</h3>
+  <img data-fig="f7_probe_threat" alt="Four dot-plot panels: hunting predator minus no animal and chasing rabbit minus no animal, at injury 0 and 70, one marker per run with intervals, grouped by world.">
+  <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
+  <figcaption>
+    <span><b>Figure 7d &mdash; how much more bush dwell a hunting predator, or a chasing rabbit, causes
+    than an empty arena.</b> <b>Axes.</b> Every panel: horizontal, the smell world, ordinary agent
+    (circles) left and modulated agent (triangles) right, one marker per seed; vertical, a difference in
+    bush dwell, in percentage points, averaged over the newest 20 checkpoints, zero marked by a rule. Top
+    row: hunting predator minus no animal, at injury 0 and 70. Bottom row: chasing rabbit minus no
+    animal, at injury 0 and 70.</span>
+    <span>{{DATA:f7_probe_threat}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>{{CMD:f7_probe_threat}}</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p><strong>Threat discrimination</strong> is bush dwell with a hunting predator in the arena minus
+    bush dwell with no animal: how much an agent's hiding depends on there being a real threat. A value
+    near zero means the agent dwells in the bush about as much whether or not anything hunts it. The
+    reading rules name injury 0 as the main value and report injury 70 beside it. The chasing-rabbit
+    panels use a harmless rabbit that runs toward the agent instead of the predator; they are described
+    only, because rabbits never chase in the training worlds. Each difference is formed checkpoint by
+    checkpoint and summarised by the mean of the newest 20 checkpoints, with a 95% interval widened when
+    neighbouring checkpoints resemble each other, exactly as in Figures 7b and 7c. The probe predator
+    does not pounce and does less damage than the training predators, and the
+    warm bush lifts bush dwell even in the empty arena. Both shrink this contrast, by the same amount in
+    every world, since the scenes differ between worlds only in how the animals smell. Compare worlds
+    and agents with each other here, not with the size of the threat response in the training world.</p>
+  </div>
+</figure>
+<figure>
+  <h3 class="bb-fh" id="f7e"><span class="bb-n">Figure 7e</span>World differences against seed-to-seed and checkpoint-to-checkpoint variation</h3>
+  <img data-fig="f7_probe_budget" alt="Horizontal bar charts, one per quantity and agent type, comparing the three differences between worlds with the seed-to-seed and checkpoint-to-checkpoint standard deviations.">
+  <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
+  <figcaption>
+    <span><b>Figure 7e &mdash; are the world differences larger than the noise?</b> <b>Axes.</b> Every
+    panel: horizontal, a size in percentage points of bush dwell, starting at zero, on one scale per row
+    (the two agents of a quantity share it; rows differ, so compare bar lengths within a row); vertical, five bars
+    &mdash; the three differences between worlds (each world's mean of three seeds), drawn as absolute
+    values with the signed value printed, then the seed-to-seed standard deviation and the
+    checkpoint-to-checkpoint standard deviation (hatched). One row of panels per quantity from Figures
+    7c and 7d, one column per agent type; the panel title gives the share of the nine runs' variance
+    that lies between worlds.</span>
+    <span>{{DATA:f7_probe_budget}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>{{CMD:f7_probe_budget}}</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>For each quantity and agent type there are nine run-level values: three worlds times three
+    training seeds, each the newest-20-checkpoint mean shown in Figures 7c and 7d. Three scales are set
+    side by side. The <strong>differences between worlds</strong> subtract one world's mean of three
+    seeds from another's: matched-strength minus control (how much harder it is to tell the animals
+    apart by smell), single-channel minus control, and single-channel minus matched-strength. The
+    <strong>seed-to-seed standard deviation</strong> is the spread among the three seeds of one world,
+    pooled over the three worlds: how much training alone varies. The <strong>checkpoint-to-checkpoint
+    standard deviation</strong> is the spread among a run's newest 20 checkpoints, pooled over the nine
+    runs: how much one run wobbles late in training. The share in each title is the part of the nine
+    values' total variance that lies between the world means. A bar is drawn black only when all three
+    seeds of one world lie beyond all three of the other, the most extreme result three against three
+    can give; even that has a two-sided p-value of 0.10, so nothing here is called established. With
+    three seeds per world this figure is a screen for where a larger study would look.</p>
+  </div>
+</figure>
+<figure>
+  <h3 class="bb-fh" id="f7f"><span class="bb-n">Figure 7f</span>Probe scenes against the training world</h3>
+  <img data-fig="f7_probe_training" alt="Three scatter plots of probe bush dwell against training-world bush dwell, one marker per run, for the no-animal, hunting-predator and predator-smelling-rabbit scenes.">
+  <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
+  <figcaption>
+    <span><b>Figure 7f &mdash; does an agent that dwells in bushes more in its training world also do
+    so in the probe scenes?</b> <b>Axes.</b> Every panel: horizontal, the run's bush dwell in its training
+    world, as a percentage of chosen steps at the final checkpoint (the Figure 1 value), on a range that
+    does not start at zero; vertical, the same run's probe bush dwell at injury 0, as a percentage of the
+    scene's steps averaged over the newest 20 checkpoints, starting at zero. One marker per run; the
+    panel title gives the rank correlation across the runs.</span>
+    <span>{{DATA:f7_probe_training}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>{{CMD:f7_probe_training}}</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>The horizontal value is computed exactly as in Figure 1: each run's final checkpoint was replayed
+    for a million episodes in its own training world, and bush dwell is the number of steps the agent
+    chose that ended on a bush, divided by all steps it chose. The vertical value is the probe bush dwell
+    of Figure 7b, for three scenes at injury 0: no animal, a hunting predator, and a wandering rabbit that
+    smells like a predator. The two numbers come from different checkpoints by design &mdash; the
+    training-world store holds only the final checkpoint, while a probe value averages the newest 20 &mdash;
+    and from very different situations: the training world has several bushes, fires, food and animals
+    over 500 steps, the probe one bush beside one fire for 100 steps. The rank correlation in each title is
+    Spearman's: it orders the runs by each measure and asks how well the two orders agree, from &minus;1
+    (reversed) through 0 (unrelated) to +1 (identical). With 18 runs, a value between about &minus;0.47
+    and +0.47 is within what chance alone produces at the 5% level. The figure says whether the probe
+    scenes rank agents the way their training world does, not whether either ranking is right.</p>
+  </div>
+</figure>
+<figure>
+  <h3 class="bb-fh" id="f7g"><span class="bb-n">Figure 7g</span>Survival, closest distance and spatial spread</h3>
+  <img data-fig="f7_probe_other" alt="Three dot-plot panels across the twelve scenes: survival in steps, closest distance to the animal in squares, and spatial spread in squares, one marker per world and agent with the range of its seeds.">
+  <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
+  <figcaption>
+    <span><b>Figure 7g &mdash; other measures from the same scenes.</b> <b>Axes.</b> All three panels:
+    horizontal, the twelve scenes (six animal setups, each at injury 0 and 70); inside each scene, the
+    six world and agent combinations side by side. Top: survival, the number of recorded steps, where
+    101 means the agent lived through the whole scene, with the 95-step validity floor as a grey
+    dash-dot line. Middle: the closest the animal came to the agent, in grid squares counted along rows
+    plus columns, starting at zero. Bottom: spatial spread, in squares. Each marker is the mean of the
+    three seeds' newest-20-checkpoint values; the vertical line spans the lowest to the highest seed.</span>
+    <span>{{DATA:f7_probe_other}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>{{CMD:f7_probe_other}}</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>All three measures come from the same recorded episodes as bush dwell and are summarised the same
+    way: averaged over the 30 episodes of a checkpoint, then over the newest 20 checkpoints of a run, then
+    shown as the mean of the three training seeds with their range. <strong>Survival</strong> counts the
+    recorded steps of an episode, including the starting position, so an agent that lives through the
+    whole 100-step scene scores 101. It is the project's measure of performance and here also a validity
+    check: under a rule fixed in advance, a run whose average survival in a scene is below 95 steps has
+    that scene's bush dwell reported but not interpreted, because an agent killed early spends fewer
+    steps anywhere. <strong>Closest distance</strong> is the smallest number of squares, counted along
+    rows plus columns, between the agent and the animal over the episode; zero means the animal reached
+    the agent's square. It is undefined with no animal. <strong>Spatial spread</strong> is how far the
+    agent ranges from its own average position over the episode, the square root of the variance of its
+    row plus the variance of its column, in squares. A low spread means the agent stays put, often on
+    the bush.</p>
+  </div>
+</figure>
+<div class="col"><div class="callout bb-cannot"><p class="eyebrow">What these figures cannot tell you</p>
+  <p>Whether a difference between worlds would survive more training seeds: three per world is a
+  screen. Nor whether the probe readings agree with the study's pre-registered reading of the training
+  world; if the two disagree in sign, the pre-registered one stands.</p></div></div>
+<!-- /BLOCK F7 -->
+
+<section class="col">
+  <h2><span class="num">08</span> Provenance</h2>
   <p>Built by <code>scripts/analysis/basic_behaviour/build_page.py</code> from the population manifest
   <code>{{MANIFEST}}</code> and the outputs under <code>{{OUT_ROOT}}</code>. Plan:
   <code>docs/develop/active/behavior/BASIC_BEHAVIOUR_ANALYSIS_PIPELINE.md</code>. Reproduction check: {{GOLDEN}} (see the implementation report in the plan).</p>

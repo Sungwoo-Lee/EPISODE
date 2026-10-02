@@ -314,7 +314,7 @@ def test_build_partial_and_broken(tmp_path):
     (figs / "f1_behaviours_survival.samples.json").write_text(json.dumps(
         [{"what": "episodes", "used": 5, "total": 10, "pct": 50.0, "note": "test"}]))
     present, pending = BP.build(str(pop), str(out_root), str(page))
-    assert present == ["f1_behaviours_survival"] and pending == ["F2", "F3", "F4", "F5", "F6"]
+    assert present == ["f1_behaviours_survival"] and pending == ["F2", "F3", "F4", "F5", "F6", "F7"]
     html_text = (page / "basic_behaviour.html").read_text()
     assert "not yet produced" in html_text and "{{" not in html_text
     assert "**Axes.**" in (page / "basic_behaviour.md").read_text()
@@ -322,7 +322,7 @@ def test_build_partial_and_broken(tmp_path):
     with pytest.raises(SystemExit, match="f1_behaviours_survival"):
         BP.build(str(pop), str(out_root), str(page))
     (figs / "stray.png").write_text("x")
-    with pytest.raises(SystemExit, match="not part of the F1-F6 sequence"):
+    with pytest.raises(SystemExit, match="not part of the F1-F7 sequence"):
         BP.build(str(pop), str(out_root), str(page))
 
 

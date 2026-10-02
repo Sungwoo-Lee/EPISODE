@@ -16,7 +16,7 @@ then prints `partial: present [...], pending [...]` and exits 0.
 
 FAILS (non-zero, no page written) on: a present figure missing any of PNG / SVG / PDF / samples or its
 generating script; a <figure> holding <svg> or <canvas>; a file in the figure folder that is not part
-of the F1-F6 sequence; a caption without <b>Axes.</b>; a block without "How it is computed" or with
+of the F1-F7 sequence; a caption without <b>Axes.</b>; a block without "How it is computed" or with
 one outside 150-250 words; a data row whose used count exceeds its available count; any unsubstituted
 token. Writes <page-dir>/basic_behaviour.html and the generated mirror <page-dir>/basic_behaviour.md
 (each figure's Axes sentence + data table, from the same source, so the two cannot drift).
@@ -42,7 +42,18 @@ FONTS = os.path.join(ROOT, "assets/fonts/pretendard/subset")
 TEMPLATE = os.path.join(HERE, "page_template.html")
 BLOCKS = {"F1": ("f1_behaviours_survival", False), "F2": ("f2_factor_inventory", True),
           "F3": ("f3_univariate", True), "F4": ("f4_multivariate", True),
-          "F5": ("f5_settings", True), "F6": ("f6_crosstabs", True)}
+          "F5": ("f5_settings", True), "F6": ("f6_crosstabs", True),
+          "F7": ("f7_probes", None)}
+# Figure 7 (probe scenes): fixed stems, all drawn by f7_probes.py from probes.py's outputs. A None
+# in BLOCKS marks this "explicit" kind: the template names every stem with data-fig.
+F7_STEMS = ["f7_probe_traces__hv2ch", "f7_probe_traces__hv1ch", "f7_probe_traces__hv1chm",
+            "f7_probe_levels", "f7_probe_confusion", "f7_probe_threat", "f7_probe_budget",
+            "f7_probe_training", "f7_probe_other"]
+F7_ARGS = {"f7_probe_traces__hv2ch": "--figure traces --world hv2ch",
+           "f7_probe_traces__hv1ch": "--figure traces --world hv1ch",
+           "f7_probe_traces__hv1chm": "--figure traces --world hv1chm",
+           **{f"f7_probe_{k}": f"--figure {k}" for k in ("levels", "confusion", "threat", "budget",
+                                                          "training", "other")}}
 HOWTO = "How it is computed"
 EXTS = ("png", "svg", "pdf", "samples.json")
 UNBREAKABLE_MAX = 40
@@ -159,7 +170,8 @@ def data_table(stem, rows):
 TOC_TITLE = {"F1": "Behaviours and survival, per run", "F2": "Which features each run's analysis uses",
              "F3": "Each feature on its own, per run", "F4": "The features fitted together, per run",
              "F5": "Which settings move each behaviour (screening)",
-             "F6": "By state, rabbit smell and nearby animals"}
+             "F6": "By state, rabbit smell and nearby animals",
+             "F7": "Probe scenes (exploratory)"}
 LABEL_PX = FG.H.FS_LABEL * 220 / 72          # smallest label on every figure canvas (house.apply: 220 dpi)
 
 
@@ -170,10 +182,18 @@ def width_floor(png_path):
     return math.ceil(Image.open(png_path).width * 9 / LABEL_PX)
 
 
+F7_TOC = [("f7a", "over training"), ("f7b", "per scene"), ("f7c", "confusion contrast"),
+          ("f7d", "threat discrimination"), ("f7e", "worlds vs noise"), ("f7f", "vs training world"),
+          ("f7g", "other measures")]
+
+
 def toc_html(toc):
     items = []
     for bid, figs in toc:
-        if len(figs) == 1 and figs[0][0] is None:
+        if bid == "F7":
+            subs = " &middot; ".join(f'<a href="#{fid}">{fid[1:]} {lab}</a>' for fid, lab in F7_TOC)
+            items.append(f'<li>Figure 7 &middot; {TOC_TITLE[bid]}<br><span class="bb-sub">{subs}</span></li>')
+        elif len(figs) == 1 and figs[0][0] is None:
             items.append(f'<li><a href="#{figs[0][1]}">Figure {bid[1]}</a> &middot; {TOC_TITLE[bid]}</li>')
         else:
             subs = " &middot; ".join(f'<a href="#{fid}">{bid[1]}{"abcdefgh"[k]} {html.escape(FG.TARGET_NOUN[t])}</a>'
@@ -272,14 +292,18 @@ def build(population, out_root, page_dir):
     sc = re.search(r"(function updateCues\(\).*?)</script>", house, re.S)
     if not (m and vm and vs and sc):
         fail(f"could not find the style block, viewer or cue script in {HOUSE}")
-    # every file in the figure folder must belong to the F1-F6 sequence
+    # every file in the figure folder must belong to the F1-F7 sequence
     on_disk = sorted(os.listdir(fig_dir)) if os.path.isdir(fig_dir) else []
     stems = {}
     for f in on_disk:
+        m7 = re.fullmatch(r"(f7_probe_[a-z_]+?(?:__hv[0-9a-z]+)?)\.(png|svg|pdf|samples\.json)", f)
+        if m7 and m7.group(1) in F7_STEMS:
+            stems.setdefault(("f7_probes", m7.group(1)), set()).add(m7.group(2))
+            continue
         mm = re.fullmatch(r"(f\d_[a-z_]+?)(?:__([a-z_]+))?\.(png|svg|pdf|samples\.json)", f)
         if not mm or mm.group(1) not in {v[0] for v in BLOCKS.values()} or \
                 (mm.group(2) and mm.group(2) not in REG.TARGETS):
-            fail(f"{fig_dir}/{f} is not part of the F1-F6 sequence")
+            fail(f"{fig_dir}/{f} is not part of the F1-F7 sequence")
         stems.setdefault((mm.group(1), mm.group(2)), set()).add(mm.group(3))
     blocks = blocks_of(page)
     if sorted(blocks) != sorted(BLOCKS):
@@ -287,6 +311,10 @@ def build(population, out_root, page_dir):
     present, pending, mirror, toc = [], [], [], []
     for bid, (base, per_target) in BLOCKS.items():
         block = blocks[bid]
+        if per_target is None:
+            page, ok = build_f7(page, block, stems, fig_dir, out_root, mirror, toc)
+            (present if ok else pending).append(bid)
+            continue
         targets = [t for t in REG.TARGETS if (base, t) in stems] if per_target else \
             ([None] if (base, None) in stems else [])
         if not targets:
@@ -347,7 +375,7 @@ def build(population, out_root, page_dir):
            "{{RUN_TABLE}}": run_table(D), "{{MANIFEST}}": html.escape(os.path.relpath(population, ROOT)),
            "{{OUT_ROOT}}": html.escape(os.path.relpath(out_root, ROOT)), "{{GOLDEN}}": html.escape(gtxt),
            "{{TOC}}": toc_html(toc),
-           "{{STATUS_LINE}}": ("All six figures are present." if not pending else
+           "{{STATUS_LINE}}": ("All seven figures are present." if not pending else
                                f"Figures not yet produced: {', '.join(pending)}.")}
     for k, v in tok.items():
         page = page.replace(k, v)
@@ -380,6 +408,56 @@ def build(population, out_root, page_dir):
     print(f"{'partial' if pending else 'complete'}: present {present}, pending {pending}; "
           f"page {len(page.encode()):,} bytes")
     return present, pending
+
+
+def build_f7(page, block, stems, fig_dir, out_root, mirror, toc):
+    """Figure 7: every stem in F7_STEMS must be complete, or the block becomes a pending box."""
+    have = [st for st in F7_STEMS if ("f7_probes", st) in stems]
+    if not have:
+        title = re.search(r"<h2>(.*?)</h2>", block, re.S).group(1)
+        return page.replace(block, f'<section class="col"><h2>{title}</h2><div class="bb-pending">'
+                            '<b>Figure 7 &mdash; not yet produced.</b> Run <code>scripts/analysis/basic_behaviour/'
+                            'probes.py</code> then <code>f7_probes.py</code>, then rebuild.</div></section>'), False
+    for st in F7_STEMS:
+        missing = [e for e in EXTS if e not in stems.get(("f7_probes", st), set())]
+        if missing:
+            fail(f"{st}: missing {missing} in {fig_dir} (Figure 7 is built whole or not at all)")
+    if not os.path.exists(os.path.join(HERE, "f7_probes.py")):
+        fail("Figure 7: no generating script f7_probes.py")
+    prov = os.path.join(out_root, "probes", "provenance.json")
+    if not os.path.exists(prov):
+        fail(f"Figure 7: no {prov} (written by probes.py)")
+    P = json.load(open(prov))
+    if P.get("partial") or P.get("csv_root_override"):
+        print("build_page: WARNING - Figure 7 is built from a PARTIAL / development probe summary")
+    check_block("F7", block)
+    b = block
+    for st in F7_STEMS:
+        rows = json.load(open(os.path.join(fig_dir, f"{st}.samples.json")))
+        tbl = data_table(st, rows)
+        if "__" in st:                       # three trace charts share one caption: name the world
+            w = {"hv2ch": "two-channel (control)", "hv1ch": "single-channel",
+                 "hv1chm": "matched-strength"}[st.split("__")[1]]
+            tbl = tbl.replace("<b>Data.</b>", f"<b>Data, {w} chart.</b>", 1)
+        b = b.replace(f"{{{{DATA:{st}}}}}", tbl)
+        cmd = (P["command"] + " && python scripts/analysis/basic_behaviour/f7_probes.py --out-root "
+               f"{os.path.relpath(out_root, ROOT)} --fig-dir {os.path.relpath(fig_dir, ROOT)} {F7_ARGS[st]}")
+        b = b.replace(f"{{{{CMD:{st}}}}}", html.escape(cmd))
+        png = os.path.join(fig_dir, f"{st}.png")
+        im_tag = re.search(rf'<img data-fig="{st}"[^>]*>', b)
+        if not im_tag:
+            fail(f"Figure 7: the template has no <img data-fig=\"{st}\">")
+        im_tag = im_tag.group(0)
+        new_tag = im_tag.replace(f'<img data-fig="{st}"', f'<img data-fig="{st}" style="min-width:{width_floor(png)}px" '
+                                 f'src="data:image/png;base64,{embed_png(png)}"', 1)
+        b = b.replace(im_tag, '<p class="cue" hidden>&larr; the figure is wider than the screen &mdash; '
+                      'scroll it sideways, or tap it to open it full size</p><div class="scroll">'
+                      + new_tag + "</div>", 1)
+        figs = re.findall(r"<figure\b.*?</figure>", b, re.S)
+        fig_html = next(f for f in figs if f'data-fig="{st}"' in f)
+        mirror.append((st, axes_sentence(fig_html), rows))
+    toc.append(("F7", [(None, "f7a")]))
+    return page.replace(block, b), True
 
 
 def main(argv=None):
