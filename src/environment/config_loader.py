@@ -3055,20 +3055,28 @@ def _load_water(config, *, height, width, start_pos, random_start_pos, vector_si
 
     # ── capacity check (KNOWN_BUGS ~#117; plan §D1) ──
     # resolve_overlaps_global visits slots in the fixed scan order, and every earlier
-    # slot holds at most one cell. So slot i at scan position k finds a free, in-area,
-    # non-pond cell iff |A_i| - max_t |pond(t) ∩ A_i| >= k + 1. When this holds the
-    # scan's (0, 0) fallback cannot be reached because of the pond.
+    # slot holds at most one cell, inside its OWN area (by induction: this check passed
+    # for it, so it did not fall back to (0, 0)). An earlier slot can therefore block a
+    # cell of A_k only when its area intersects A_k. So slot k finds a free, in-area,
+    # non-pond cell iff |A_k| - max_t |pond(t) ∩ A_k| >= #{j < k : A_j ∩ A_k ≠ ∅} + 1.
+    # When this holds the scan's (0, 0) fallback cannot be reached because of the pond.
+    # (2026-10-03, BASIC_BEHAVIOUR_WATER: the earlier bound k + 1 counted every earlier
+    # slot, which refused fixed layouts of single-cell, disjoint areas -- validation only,
+    # no placement behaviour changes.)
     ponds = [_water_block_cells(r, c, h, w) for r, c in table]
-    for k, area in enumerate(spawn_areas_scan_order):
-        r0, c0, r1, c1 = (int(v) for v in area)
+    boxes = [tuple(int(v) for v in a) for a in spawn_areas_scan_order]
+    for k, (r0, c0, r1, c1) in enumerate(boxes):
         cells = {(r, c) for r in range(r0, r1) for c in range(c0, c1)}
         worst = max(len(p & cells) for p in ponds)
-        if len(cells) - worst < k + 1:
+        need = 1 + sum(1 for (a0, b0, a1, b1) in boxes[:k]
+                       if max(a0, r0) < min(a1, r1) and max(b0, c0) < min(b1, c1))
+        if len(cells) - worst < need:
             raise ValueError(
                 f"water: capacity check failed for the entity slot at placement scan "
                 f"position {k} (spawn area rows {r0}..{r1 - 1}, cols {c0}..{c1 - 1}, "
                 f"{len(cells)} cells): with the pond covering up to {worst} of them, "
-                f"{len(cells) - worst} cells remain for {k + 1} slots. Enlarge the area, "
+                f"{len(cells) - worst} cells remain for {need} slots (this one and the "
+                f"{need - 1} earlier slots whose areas overlap it). Enlarge the area, "
                 "move water.candidates, or shrink water.size.")
 
     # ── hydration axis ──
