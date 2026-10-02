@@ -2410,3 +2410,18 @@ produces, not the one the figure was first drawn for.
 - **The interaction checker's Tab walk covers only about 4 of 26 figures** on a page this long. A
   clean Tab-walk result therefore says nothing about the other 22 viewers. Check the viewer names
   directly instead: every `figure figcaption b:first-child` must be unique (26 of 26 here).
+
+### F72 — a generated data-table label states the complement of the count it shows
+
+**Saw (2026-10-02, Basic Behaviour page, Figure 7, format gate).** The emitted data statement had rows
+labelled "values shown hollow" whose `used` column held the number of **filled** markers (70 of 72),
+and the same in the variance figure ("runs shown hollow … 6/9"). A reader takes "used" as the count the
+label names, so the table claimed 70 hollow markers where the panel shows two. The same table also
+listed hollow-marker rows under a figure (seed means) that draws no hollow markers at all.
+
+**Rule.** The label of an emitted row names exactly the quantity in its `used` column; never pair a
+label with its complement. A row about an encoding (hollow, flagged, excluded) appears only on figures
+that draw that encoding. **Check:** count the markers of that kind in one panel of the PNG and compare
+with the row (here 1 hollow marker per predator panel × 2 panels = 2 for the control world, matching
+the row "2 of 24").
+
