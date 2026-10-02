@@ -26,6 +26,8 @@ def board(tmp_path, monkeypatch):
     monkeypatch.setattr(sb, "SEEN", tmp_path / "board" / "seen")
     monkeypatch.setattr(sb, "REGISTRY", tmp_path / "registry")
     monkeypatch.setattr(sb, "OFF", tmp_path / "board" / "OFF")
+    monkeypatch.setattr(sb, "TARGET", tmp_path / "board" / "TARGET_BRANCH")
+    monkeypatch.setattr(sb, "DIVERGENCE", tmp_path / "board" / "divergence.json")
     (tmp_path / "registry").mkdir()
     procs = []
 
@@ -353,3 +355,149 @@ def test_main_repo_resolves_worktree_to_main_checkout(tmp_path):
     odd = tmp_path / "sub"; odd.mkdir(); (odd / ".git").write_text("gitdir: /somewhere/else/modules/x\n")
     assert sb.main_repo(odd) == odd                        # submodule-style pointer: left alone
     assert sb.main_repo(tmp_path / "nope") == tmp_path / "nope"
+
+
+# ------------------------------------------------------------------ branch awareness (2026-10-02)
+def fake_checkout(root, branch=None, sha=None):
+    (root / ".git").mkdir(parents=True)
+    (root / ".git" / "HEAD").write_text(f"ref: refs/heads/{branch}\n" if branch else f"{sha}\n")
+    return root
+
+
+def fake_worktree(main, name, branch):
+    gd = main / ".git" / "worktrees" / name
+    gd.mkdir(parents=True)
+    (gd / "HEAD").write_text(f"ref: refs/heads/{branch}\n")
+    wt = main / ".claude" / "worktrees" / name
+    wt.mkdir(parents=True)
+    (wt / ".git").write_text(f"gitdir: {gd}\n")
+    return wt
+
+
+def set_target(name):
+    sb.TARGET.parent.mkdir(parents=True, exist_ok=True)
+    sb.TARGET.write_text(name + "\n")
+
+
+def test_git_head_shared_worktree_and_detached(tmp_path, monkeypatch):
+    main = fake_checkout(tmp_path / "repo", branch="v4.0")
+    monkeypatch.setattr(sb, "REPO", main)
+    (main / "src" / "x").mkdir(parents=True)
+    assert sb.git_head(main / "src" / "x") == ("v4.0", "shared")
+    wt = fake_worktree(main, "thirst", "v5.0")
+    assert sb.git_head(wt) == ("v5.0", "worktree thirst")
+    det = fake_checkout(tmp_path / "det", sha="583b022f941647d362c5795012ad607ea422e3ab")
+    assert sb.git_head(det)[0] == "detached@583b022f"
+    assert sb.git_head(tmp_path / "nowhere") == (None, None)
+
+
+def test_off_target_rules(board):
+    assert not sb.off_target("v4.0")                     # no working branch set: never flagged
+    set_target("v5.0")
+    assert sb.off_target("v4.0") and not sb.off_target("v5.0")
+    assert not sb.off_target("detached@583b022f") and not sb.off_target("worktree-agent-ab12")
+    assert not sb.off_target(None)
+
+
+def test_card_shows_branch_and_prompt_warns_off_target(board, capsys, monkeypatch, tmp_path):
+    main = fake_checkout(tmp_path / "repo", branch="v4.0")
+    monkeypatch.setattr(sb, "REPO", main)
+    set_target("v5.0")
+    monkeypatch.setattr(sb, "divergence", lambda force=False: [])
+    a, b = board("A", "Sess A"), board("B", "Sess B")
+    hook("SessionStart", {"session_id": "A", "source": "startup", "cwd": str(main)}, a.pid, capsys, monkeypatch)
+    out = hook("SessionStart", {"session_id": "B", "source": "startup", "cwd": str(main)}, b.pid, capsys, monkeypatch)
+    assert '"Sess A" [on v4.0] ⚠ not the working branch' in out
+    assert "Working branch for this project: v5.0." in out and "You are on branch v4.0" in out
+    for _ in range(2):                                    # every prompt, not just once
+        assert "You are on branch v4.0" in hook("UserPromptSubmit", {"session_id": "B", "cwd": str(main)},
+                                                 b.pid, capsys, monkeypatch)
+    sb.TARGET.write_text("v4.0\n")                        # now on the working branch: silent
+    assert "You are on branch" not in hook("UserPromptSubmit", {"session_id": "B", "cwd": str(main)},
+                                           b.pid, capsys, monkeypatch)
+
+
+def test_branch_change_is_reported(board, capsys, monkeypatch, tmp_path):
+    main = fake_checkout(tmp_path / "repo", branch="v4.0")
+    monkeypatch.setattr(sb, "REPO", main)
+    wt = fake_worktree(main, "thirst", "v5.0")
+    a, b = board("A", "Sess A"), board("B", "Sess B")
+    hook("SessionStart", {"session_id": "A", "source": "startup", "cwd": str(main)}, a.pid, capsys, monkeypatch)
+    hook("SessionStart", {"session_id": "B", "source": "startup", "cwd": str(main)}, b.pid, capsys, monkeypatch)
+    hook("UserPromptSubmit", {"session_id": "A", "cwd": str(wt)}, a.pid, capsys, monkeypatch)   # A moves to the worktree
+    out = hook("UserPromptSubmit", {"session_id": "B", "cwd": str(main)}, b.pid, capsys, monkeypatch)
+    assert "now on branch v5.0" in out and "worktree thirst" in out
+
+
+@pytest.mark.parametrize("command,warn", [
+    ("git commit -m x", True),
+    ("timeout 60 git commit -q -F msg -- a b", True),
+    ("git add a && git commit -m x", True),
+    ("git status", False),
+    ("echo commit", False),
+])
+def test_commit_warning_on_wrong_branch(board, capsys, monkeypatch, tmp_path, command, warn):
+    main = fake_checkout(tmp_path / "repo", branch="v4.0")
+    monkeypatch.setattr(sb, "REPO", main)
+    set_target("v5.0")
+    a = board("A", "Sess A")
+    out = hook("PreToolUse", {"session_id": "A", "tool_name": "Bash", "tool_input": {"command": command},
+                              "cwd": str(main)}, a.pid, capsys, monkeypatch)
+    assert ("would land on branch v4.0" in out) == warn
+
+
+def test_commit_warning_follows_git_C_and_cd(board, capsys, monkeypatch, tmp_path):
+    main = fake_checkout(tmp_path / "repo", branch="v5.0")
+    monkeypatch.setattr(sb, "REPO", main)
+    old = fake_worktree(main, "old", "v4.0")
+    set_target("v5.0")
+    a = board("A", "Sess A")
+    ev = lambda cmd: hook("PreToolUse", {"session_id": "A", "tool_name": "Bash", "tool_input": {"command": cmd},
+                                         "cwd": str(main)}, a.pid, capsys, monkeypatch)
+    assert ev("git commit -m x") == ""                               # cwd is on the working branch
+    assert "would land on branch v4.0" in ev(f'git -C "{old}" commit -m x')
+    assert "would land on branch v4.0" in ev(f"cd {old} && git commit -m x")
+
+
+def make_git_repo(path):
+    import subprocess
+    run = lambda *a: subprocess.run(["git", "-C", str(path), *a], check=True, capture_output=True)
+    path.mkdir()
+    run("init", "-q", "-b", "v4.0")
+    run("-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "base")
+    run("branch", "v5.0")
+    run("-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "late v4.0 work")
+    return path
+
+
+def test_divergence_counts_commits_missing_from_working_branch(board, monkeypatch, tmp_path):
+    repo = make_git_repo(tmp_path / "gitrepo")
+    monkeypatch.setattr(sb, "REPO", repo)
+    set_target("v5.0")
+    assert sb.divergence(force=True) == [("v4.0", 1)]
+    assert "v4.0 has 1" in "\n".join(sb.branch_lines())
+    cached = sb.read_json(sb.DIVERGENCE)
+    assert cached["target"] == "v5.0" and cached["gaps"] == [["v4.0", 1]]
+    set_target("v4.0")                                    # v5.0 has nothing v4.0 lacks
+    assert sb.divergence(force=True) == []
+
+
+def test_divergence_is_cached_and_survives_git_failure(board, monkeypatch, tmp_path):
+    repo = make_git_repo(tmp_path / "gitrepo")
+    monkeypatch.setattr(sb, "REPO", repo)
+    set_target("v5.0")
+    assert sb.divergence(force=True) == [("v4.0", 1)]
+    import subprocess
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: (_ for _ in ()).throw(subprocess.TimeoutExpired("git", 1)))
+    assert sb.divergence() == [("v4.0", 1)]               # fresh cache: no git call at all
+    assert sb.divergence(force=True) == [("v4.0", 1)]     # git fails: last known value, no crash
+
+
+def test_target_command(board, capsys, monkeypatch, tmp_path):
+    repo = make_git_repo(tmp_path / "gitrepo")
+    monkeypatch.setattr(sb, "REPO", repo)
+    sb.BOARD.mkdir(parents=True, exist_ok=True)
+    sb.main(["target", "v5.0"])
+    assert sb.target_branch() == "v5.0" and "v4.0 has 1" in capsys.readouterr().out
+    sb.main(["target", "--clear"])
+    assert sb.target_branch() is None

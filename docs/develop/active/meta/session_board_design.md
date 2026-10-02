@@ -316,3 +316,19 @@ After rollout, one board hook in a live session went past its 5 s limit, so its 
 | PreToolUse on an edit | ~1.9 s | ~0.6 s |
 
 The hook commands now run `python -S`. SessionStart and UserPromptSubmit get a 10 s timeout, so their board text isn't dropped on a slow NAS moment; the per-tool hooks keep 5 s. Reading the 7 cards took 0.9 s under that load against a few ms when idle. The remaining latency is the NAS, and it varies with cluster load.
+
+### Branch awareness (2026-10-02): why the board missed the v4.0 / v5.0 split, and the fix
+
+**Incident.** `v5.0` was cut on 09-30 inside the `thirst` worktree. The shared folder stayed on `v4.0`, which was intended, to isolate running jobs. Every other session kept committing there: by 10-02, `v4.0` held 69 commits that `v5.0` lacked, and `develop`/`main` had been advanced only locally, never pushed. The board could not see this. It tracked task, note, edited files and liveness, **nothing about branches**. The two lines of work touched different files, so no collision warning fired. The plan's "merge back later" had no owner, trigger or check. Fixed by hand on 10-02: `develop`/`main`/`v4.0` → `00769e28`, merged into `v5.0` (`db5ffb33`, `a7420940`), shared folder switched to `v5.0`.
+
+**Fix (all tested; 61 tests):**
+
+| Piece | Behaviour |
+|---|---|
+| Branch on each card | `git_head(cwd)` reads `.git/HEAD`, or the worktree's `gitdir/HEAD`, from files only, with no git process. Cards show `[on v5.0]` or `[on v5.0, worktree thirst]`; a branch change is reported in deltas. |
+| Working branch | `claude_data/board/TARGET_BRANCH`, set with `BOARD target <branch>`. A session on another *named* branch is warned **at every prompt**, and its card is marked "⚠ not the working branch". Detached HEADs and Claude's own `worktree-*` isolation branches are not flagged. |
+| Before `git commit` | A `PreToolUse` hook with `matcher: Bash` and `if: "Bash(*git*commit*)"` fires only for commit commands. A live test confirmed it catches plain `git commit`, `timeout 60 git commit`, `git -C <dir> commit` and `cd <dir> && git commit`, and stays silent for `git status`/`echo`. The narrower `Bash(git commit*)` missed the `timeout` and `-C` forms. The handler resolves the target directory from `git -C`/`cd` and warns if that checkout is off the working branch. |
+| Gap counter | `divergence()` runs `git rev-list --count <target>..<b>` for `v*`, `develop` and `main`, with a 4 s budget. It is cached in `claude_data/board/divergence.json` for an hour and shared by all sessions. The full board, and an hourly prompt line, say "⚠ Commits not yet in v5.0: v4.0 has N". If git fails, the last known value is kept. |
+| Procedure | `CLAUDE.md` "Version branches": finish a cut the same day (push `develop`/`main`, set the working branch, move the shared folder), and merge forward any commit that still lands on the old branch. |
+
+Working branch set to `v5.0` on 2026-10-02.
