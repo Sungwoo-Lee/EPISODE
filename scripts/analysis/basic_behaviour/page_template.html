@@ -6,8 +6,20 @@
 <title>Basic Behaviour Analysis &mdash; {{POPULATION}}</title>
 {{HOUSE_STYLE}}
 <style>
+/* hue is spent on data here (blue = control world, orange = single-channel): chrome goes to ink,
+   as the house sheet prescribes (register F11 amendment) */
+:root { --accent:var(--ink); --accent-text:var(--ink); --warn:var(--ink-2); }
+/* one right edge for text blocks and figures */
+.wrap > .col { max-width:880px; }
 .bb-pending { border:1px dashed var(--rule); padding:14px 18px; color:var(--ink-2); }
 .bb-cannot { font-size:14.5px; color:var(--ink-2); }
+/* a figure's own heading: close to its figure, far from the block above (wrap gap) */
+.bb-fh { margin:0 0 2px; }
+.bb-fh .bb-n { font-family:var(--f-head); font-weight:600; color:var(--ink-3); margin-right:8px; }
+.bb-toc ol { margin:0; padding-left:22px; display:flex; flex-direction:column; gap:6px; }
+.bb-toc .bb-sub { color:var(--ink-3); }
+details.bb-data > summary { cursor:pointer; color:var(--ink-2); font-size:14.5px; }
+details.bb-data[open] > summary { margin-bottom:8px; }
 </style>
 </head>
 <body>
@@ -26,7 +38,7 @@
   <p>After training, every agent in a study is replayed for about a million evaluation episodes and
   every step is recorded. This page summarises those recordings the same way for every population, so
   that two studies can be read side by side. It measures five behaviours, each as a share of the
-  steps the agent chose in an episode: <strong>hiding in a bush</strong>, <strong>eating</strong>,
+  steps the agent chose in an episode: <strong>bush dwell</strong> (time spent in a bush), <strong>eating</strong>,
   being <strong>within two squares of a rabbit</strong>, being <strong>within two squares of a
   predator</strong>, and, in worlds with temperature, standing <strong>on a warm square</strong>.
   It also reports survival, measured in steps, which is how this project judges performance.</p>
@@ -40,6 +52,8 @@
   {{N_PENDING}} runs of the manifest are not yet available.</p>
 </section>
 
+{{TOC}}
+
 <section class="col">
   <h2><span class="num">00</span> The runs on this page</h2>
   {{RUN_TABLE}}
@@ -52,7 +66,7 @@
   of the same world and agent sit side by side, one per training seed. The same encoding is used on
   every figure of this page.</p>
 </section>
-<figure>
+<figure id="f1">
   <img data-fig="f1_behaviours_survival" alt="Dot plots, one panel per behaviour, of each run's share of chosen steps, then each run's mean survival in steps and the share of episodes ending in each way.">
   <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
   <figcaption>
@@ -70,7 +84,7 @@
     <p>Each episode of a run is a sequence of rows: row zero is the random starting position, and
     every later row is the result of a step the agent chose. A behaviour's share is the number of
     chosen steps on which the behaviour holds, divided by the number of chosen steps, added up over
-    all of the run's episodes, so long episodes count for more than short ones. Hiding means the agent
+    all of the run's episodes, so long episodes count for more than short ones. Bush dwell means the agent
     stands in a bush. Eating means the agent ate on that step. Near a rabbit, or near a predator, means
     at least one such animal is within two squares in any direction, diagonals included. On a warm
     square means a body resting on the agent's square would settle at or above the comfortable body
@@ -84,23 +98,25 @@
   </div>
 </figure>
 <div class="col"><div class="callout bb-cannot"><p class="eyebrow">What this figure cannot tell you</p>
-  <p>Why a run behaves as it does. A higher share of hiding can come from more danger in the
+  <p>Why a run behaves as it does. A higher bush dwell can come from more danger in the
   episodes it happened to meet, or from a different strategy; the next figures separate those.
   Differences between seeds of the same setting show how much training alone varies.</p></div></div>
 <!-- /BLOCK F1 -->
 
 <!-- BLOCK F2 -->
 <section class="col">
-  <h2><span class="num">02</span> Which world features each run's analysis uses &mdash; {{TARGET_LABEL}}</h2>
+  <h2><span class="num">02</span> Which world features each run's analysis uses</h2>
   <p>The features below are read from each run's own saved settings, not typed per world. A feature
   that is randomised in the settings but has no measurement here is listed as unhandled rather than
   silently dropped.</p>
 </section>
+<!-- PER -->
 <figure>
+  <h3 class="bb-fh" id="{{FIGID}}"><span class="bb-n">Figure 2{{L}}</span>{{TARGET_TITLE}}</h3>
   <img data-fig="f2_factor_inventory__{{T}}" alt="A grid of factors by runs, each cell marking whether the factor is used, excluded with a reason, not present in that world, or unhandled.">
   <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
   <figcaption>
-    <span><b>Figure 2 &mdash; factor inventory for {{TARGET_LABEL}}.</b> <b>Axes.</b> Horizontal: the
+    <span><b>Figure 2{{L}} &mdash; factor inventory: {{TARGET_TITLE}}.</b> <b>Axes.</b> Horizontal: the
     run (world, agent type and training seed), one column each. Vertical: the factor, in the fixed
     order the analysis uses, followed by any randomised setting it cannot handle. Each cell is a status,
     not a number: used (dark, blank), or a short code explained in the legend &mdash; uni (used in
@@ -128,6 +144,7 @@
   </div>
 </figure>
 <div class="col">{{REASONS:{{T}}}}</div>
+<!-- /PER -->
 <div class="col"><div class="callout bb-cannot"><p class="eyebrow">What this figure cannot tell you</p>
   <p>Whether a used factor matters. It only says what the later figures are allowed to look at, and
   why anything is missing from them.</p></div></div>
@@ -135,15 +152,18 @@
 
 <!-- BLOCK F3 -->
 <section class="col">
-  <h2><span class="num">03</span> Each factor on its own, per run &mdash; {{TARGET_LABEL}}</h2>
+  <h2><span class="num">03</span> Each factor on its own, per run</h2>
 </section>
+<!-- PER -->
 <figure>
+  <h3 class="bb-fh" id="{{FIGID}}"><span class="bb-n">Figure 3{{L}}</span>{{TARGET_TITLE}}</h3>
   <img data-fig="f3_univariate__{{T}}" alt="For each factor, one marker per run showing the change in the behaviour's share per one standard deviation of the factor.">
   <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
   <figcaption>
-    <span><b>Figure 3 &mdash; single-factor effects on {{TARGET_LABEL}}.</b> <b>Axes.</b> Both panels:
-    horizontal, the change in the run's share of chosen steps spent {{TARGET_LABEL}}, in percentage
-    points, for a one-standard-deviation increase in the factor (zero marked by a vertical rule);
+    <span><b>Figure 3{{L}} &mdash; single-factor effects: {{TARGET_TITLE}}.</b> <b>Axes.</b> Both panels:
+    horizontal, the change in the run's share of chosen steps showing the behaviour ({{TARGET_NOUN}}), in
+    percentage points, for a one-standard-deviation increase in the factor (zero marked by a vertical
+    rule); the two panels have different horizontal scales, so compare positions within a panel only;
     vertical, the factor, ranked by its median absolute effect across runs, largest at the top. Left
     panel: factors drawn before the agent acts. Right panel: consequences produced during the
     episode.</span>
@@ -166,6 +186,7 @@
     behaviour for reasons that run in both directions and are shown separately.</p>
   </div>
 </figure>
+<!-- /PER -->
 <div class="col"><div class="callout bb-cannot"><p class="eyebrow">What this figure cannot tell you</p>
   <p>Whether a factor matters once the others are taken into account (Figure 4), or whether the
   difference between runs is larger than seed-to-seed noise (Figure 5).</p></div></div>
@@ -173,17 +194,20 @@
 
 <!-- BLOCK F4 -->
 <section class="col">
-  <h2><span class="num">04</span> The factors fitted together, per run &mdash; {{TARGET_LABEL}}</h2>
+  <h2><span class="num">04</span> The factors fitted together, per run</h2>
 </section>
+<!-- PER -->
 <figure>
+  <h3 class="bb-fh" id="{{FIGID}}"><span class="bb-n">Figure 4{{L}}</span>{{TARGET_TITLE}}</h3>
   <img data-fig="f4_multivariate__{{T}}" alt="One panel per model, each showing every term's effect per standard deviation with one marker per run.">
   <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
   <figcaption>
-    <span><b>Figure 4 &mdash; multi-factor models of {{TARGET_LABEL}}.</b> <b>Axes.</b> Every panel:
-    horizontal, the change in the run's share of chosen steps spent {{TARGET_LABEL}}, in percentage
-    points, for a one-standard-deviation increase in the term with the model's other terms held fixed
-    (zero marked by a vertical rule); vertical, the model's terms. One panel per model; panels use
-    different episode subsets, so compare within a panel, not heights across panels.</span>
+    <span><b>Figure 4{{L}} &mdash; multi-factor models: {{TARGET_TITLE}}.</b> <b>Axes.</b> Every panel:
+    horizontal, the change in the run's share of chosen steps showing the behaviour
+    ({{TARGET_NOUN}}), in percentage points, for a one-standard-deviation increase in the term with
+    the model's other terms held fixed (zero marked by a vertical rule); vertical, the model's terms.
+    One panel per model, M1 to M5. Each panel has its own horizontal scale and its own episodes, so
+    compare positions within a panel, not across panels.</span>
     <span>{{DATA:f4_multivariate__{{T}}}}</span>
   </figcaption>
   <p class="prov">Reproduce: <code>{{CMD:f4_multivariate__{{T}}}}</code></p>
@@ -192,18 +216,19 @@
     <p>The same quasi-binomial regression as Figure 3 &mdash; a logistic regression for each episode's
     share of chosen steps, with standard errors widened for episodes that vary more than independent
     steps would &mdash; but with several factors at once, so each effect is the change with the others
-    held fixed. Five models are fitted, taken unchanged from the hiding analysis this page generalises.
+    held fixed. Five models are fitted, taken unchanged from the bush-dwell analysis this page generalises.
     M1 uses every factor drawn before the agent acts, on all episodes. M2 swaps the predator count for
     the predator's own traits, on episodes with exactly one predator. M3 adds the rabbit's smell, on
-    episodes with exactly one predator and one rabbit. M5 looks at episodes with two predators and
-    compares the keenest-sighted with the least keen one; because the spread between the two is their
-    difference, those three terms are not separately determined and are reported as the
-    minimum-length solution, as in the original analysis. M4 adds the consequences produced during the
-    episode, which carry association only. Inside each model a term is dropped, with the reason in the
+    episodes with exactly one predator and one rabbit. M4 adds what happened during the episode, which
+    can only be read as association. M5 looks at episodes with two predators and compares the
+    keener-sighted one with the less keen one; the difference between their sight ranges is exactly
+    the one minus the other, so those three effects cannot be told apart and are shown as the
+    original analysis fitted them. Inside each model a term is dropped, with the reason in the
     data statement, if it is constant on that model's episodes, duplicates another term, or is almost
     perfectly correlated with one.</p>
   </div>
 </figure>
+<!-- /PER -->
 <div class="col"><div class="callout bb-cannot"><p class="eyebrow">What this figure cannot tell you</p>
   <p>Whether an effect is a property of an agent type or of one trained run: every marker is one run,
   and the spread between seeds of one setting is the only guide to that. Figure 5 measures it.</p></div></div>
@@ -211,22 +236,25 @@
 
 <!-- BLOCK F5 -->
 <section class="col">
-  <h2><span class="num">05</span> Which settings move each behaviour &mdash; {{TARGET_LABEL}}</h2>
+  <h2><span class="num">05</span> Which settings move each behaviour</h2>
   <div class="callout warn"><p class="eyebrow">Exploratory screening</p>
   <p>This figure ranks settings to help choose a training direction. It is not the smell study's
   pre-registered verdict, which lives in that study; its smell panels carry no test and no interval.</p></div>
 </section>
+<!-- PER -->
 <figure>
+  <h3 class="bb-fh" id="{{FIGID}}"><span class="bb-n">Figure 5{{L}}</span>{{TARGET_TITLE}}</h3>
   <img data-fig="f5_settings__{{T}}" alt="Ranked standardised contrasts between settings with intervals, variance components with reference marks, and per-cell run values for the behaviour level and slopes.">
   <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
   <figcaption>
-    <span><b>Figure 5 &mdash; settings that move {{TARGET_LABEL}}.</b> <b>Axes.</b> Panel (a):
+    <span><b>Figure 5{{L}} &mdash; settings compared: {{TARGET_TITLE}}.</b> <b>Axes.</b> Panel (a):
     horizontal, a difference between two settings divided by the seed-to-seed standard deviation (no
     unit), with its 95% interval; vertical, the contrast and quantity, sorted by size. Panel (b):
     horizontal, the share of run-to-run variation attributed to each source, from 0 to 1; vertical, the
     quantity and source. Panels (c): horizontal, the world and agent type; vertical, the quantity on the
     logit scale (the behaviour level, or a slope per 10 points of start injury or nutrition, or per nat
-    of smell).</span>
+    of smell). A vertical bar marks each standardised difference in (a); a horizontal dash with an
+    error bar marks a setting's mean &plusmn; seed-to-seed standard deviation in (c).</span>
     <span>{{DATA:f5_settings__{{T}}}}</span>
   </figcaption>
   <p class="prov">Reproduce: <code>{{CMD:f5_settings__{{T}}}}</code></p>
@@ -243,10 +271,11 @@
     uncertainty. Panel (a) divides each difference between settings by that spread and ranks them; this
     is the main ranking. Panel (b) splits run-to-run variation into parts due to world, agent, their
     combination, shared starting weights and the remainder, estimated so that a source with no effect
-    comes out near zero; the orange tick shows the share a source would take by chance. Exact
+    comes out near zero; the grey dash-dot mark shows the share a source would take by chance. Exact
     permutation tests, which reshuffle world labels among runs, are in the output tables.</p>
   </div>
 </figure>
+<!-- /PER -->
 <div class="col"><div class="callout bb-cannot"><p class="eyebrow">What this figure cannot tell you</p>
   <p>Whether a setting truly matters: with three seeds per setting, intervals are wide and the ranking
   is a screen, not a result. Nor does it answer the smell study's question about rabbit smell and
@@ -255,17 +284,21 @@
 
 <!-- BLOCK F6 -->
 <section class="col">
-  <h2><span class="num">06</span> The behaviour by the agent's state, the rabbit's smell and nearby animals &mdash; {{TARGET_LABEL}}</h2>
+  <h2><span class="num">06</span> The behaviour by the agent's state, the rabbit's smell and nearby animals</h2>
 </section>
+<!-- PER -->
 <figure>
+  <h3 class="bb-fh" id="{{FIGID}}"><span class="bb-n">Figure 6{{L}}</span>{{TARGET_TITLE}}</h3>
   <img data-fig="f6_crosstabs__{{T}}" alt="Heat maps of the behaviour's share by injury and nutrition band per setting, a line chart of the share by rabbit smell per run, and a dot plot by which animals are near.">
   <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
   <figcaption>
-    <span><b>Figure 6 &mdash; {{TARGET_LABEL}} by state, smell and company.</b> <b>Axes.</b> Heat
+    <span><b>Figure 6{{L}} &mdash; by state, smell and nearby animals: {{TARGET_TITLE}}.</b> <b>Axes.</b> Heat
     maps: horizontal, the agent's nutrition one step earlier (four bands); vertical, its injury one
-    step earlier (four bands); colour and number, the share of chosen steps in percent, on one scale
-    shared by all heat maps. Line chart: horizontal, the rabbit's smell as evidence that it is a
-    predator, in nats (sextile means); vertical, the share of chosen steps in percent. Dot plot:
+    step earlier (four bands); shade and number, the share of chosen steps in percent, on one grey
+    scale shared by all heat maps that runs from the lowest to the highest cell, not from zero. Line
+    charts, one per smell world: horizontal, the rabbit's smell as evidence that it is a predator, in
+    nats (sextile means); vertical, the share of chosen steps in percent; one line per run, marker shape
+    for the agent type. Dot plot:
     horizontal, which animals were within two squares one step earlier; vertical, the share of chosen
     steps in percent.</span>
     <span>{{DATA:f6_crosstabs__{{T}}}}</span>
@@ -279,15 +312,16 @@
     from an attack, explain the choice that led to it. In the heat maps, every chosen step of every
     seed of a setting is put in one of sixteen cells by the injury band and nutrition band of the
     previous row, and each cell shows the share of those steps with the behaviour; the seeds are pooled
-    by adding their steps. The line chart uses only episodes with exactly one rabbit and no predator, so
+    by adding their steps. The line charts, one per smell world, use only episodes with exactly one rabbit and no predator, so
     nothing but the rabbit's smell can signal danger; each run's episodes are cut into six equal groups
     by the rabbit's smell, expressed in nats, units of evidence that the smell belongs to a predator,
-    so the three smell worlds share one horizontal axis. The dot plot pairs each chosen step with
+    so all three panels share one horizontal axis. The dot plot pairs each chosen step with
     whether a rabbit, a predator, both or neither were within two squares on the previous row.</p>
   </div>
 </figure>
+<!-- /PER -->
 <div class="col"><div class="callout bb-cannot"><p class="eyebrow">What this figure cannot tell you</p>
-  <p>Cause. Injured agents may hide more because injury changes what they do, or because the episodes
+  <p>Cause. Injured agents may dwell in bushes more because injury changes what they do, or because the episodes
   that injure them are also the ones full of predators. The tables describe; Figures 3 to 5 adjust.</p></div></div>
 <!-- /BLOCK F6 -->
 
@@ -295,8 +329,7 @@
   <h2><span class="num">07</span> Provenance</h2>
   <p>Built by <code>scripts/analysis/basic_behaviour/build_page.py</code> from the population manifest
   <code>{{MANIFEST}}</code> and the outputs under <code>{{OUT_ROOT}}</code>. Plan:
-  <code>docs/develop/active/behavior/BASIC_BEHAVIOUR_ANALYSIS_PIPELINE.md</code>. Golden gate:
-  {{GOLDEN}}.</p>
+  <code>docs/develop/active/behavior/BASIC_BEHAVIOUR_ANALYSIS_PIPELINE.md</code>. Reproduction check: {{GOLDEN}} (see the implementation report in the plan).</p>
 </section>
 
 </div>

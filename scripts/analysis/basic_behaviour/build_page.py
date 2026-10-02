@@ -106,19 +106,80 @@ def wrap_cell(text):
     return esc
 
 
-def data_table(stem, rows):
+RUN_RE = re.compile(r"^(?P<what>.*), (?P<run>[^,]+ smell[^,]*, [^,]+ agent, seed \d+)$")
+
+
+def merge_rows(rows):
+    """Rows that differ only in the run they describe become one row naming how many runs share it
+    (register F71). Order of first appearance is kept."""
+    groups, order = {}, []
+    for r in rows:
+        m = RUN_RE.match(r["what"])
+        key = (m.group("what") if m else r["what"], r["used"], r["total"], r["note"])
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(m.group("run") if m else None)
     out = []
+    for key in order:
+        runs = [x for x in groups[key] if x]
+        what = key[0] if not runs else (f"{key[0]}, {runs[0]}" if len(runs) == 1 else f"{key[0]}, {len(runs)} runs")
+        tot = key[2]
+        out.append({"what": what, "used": key[1], "total": tot,
+                    "pct": (100.0 * key[1] / tot) if tot else 0.0, "note": key[3]})
+    return out
+
+
+def data_table(stem, rows):
     for r in rows:
         if r["used"] > r["total"]:
             fail(f"{stem}: row '{r['what']}' uses {r['used']} of {r['total']}")
+        if r["total"] and r["used"] < r["total"] and not str(r.get("note", "")).strip():
+            fail(f"{stem}: row '{r['what']}' uses {r['pct']:.1f}% of what is available but gives no "
+                 f"reason (guide 11b: every subset says why)")
+    merged = merge_rows(rows)
+    out = []
+    for r in merged:
         out.append(f'<tr><td>{wrap_cell(r["what"])}</td><td class="n">{r["used"]:,}</td>'
                    f'<td class="n">{r["total"]:,}</td><td class="n">{r["pct"]:.1f}%</td>'
                    f'<td>{wrap_cell(r["note"])}</td></tr>')
-    return ('<b>Data.</b> Counts emitted by the figure script.'
+    pcts = [r["pct"] for r in merged if r["total"]]
+    span = (f"{min(pcts):.0f}%" if min(pcts) == max(pcts) else f"{min(pcts):.0f}&ndash;{max(pcts):.0f}%") if pcts else "n/a"
+    summary = (f"<b>Data.</b> {len(merged)} subset{'s' if len(merged) != 1 else ''} "
+               f"({len(rows)} rows before merging identical ones), using {span} of what was available "
+               f"&mdash; open for the counts, emitted by the figure script")
+    return (f'<details class="bb-data"><summary>{summary}</summary>'
             '<p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>'
-            '<div class="scroll"><table class="wide"><thead><tr><th>subset</th><th class="n">used</th>'
+            '<div class="scroll"><table class="wide" style="min-width:720px"><thead><tr><th>subset</th><th class="n">used</th>'
             '<th class="n">available</th><th class="n">share</th><th>why</th></tr></thead><tbody>'
-            + "".join(out) + "</tbody></table></div>")
+            + "".join(out) + "</tbody></table></div></details>")
+
+
+TOC_TITLE = {"F1": "Behaviours and survival, per run", "F2": "Which features each run's analysis uses",
+             "F3": "Each feature on its own, per run", "F4": "The features fitted together, per run",
+             "F5": "Which settings move each behaviour (screening)",
+             "F6": "By state, rabbit smell and nearby animals"}
+LABEL_PX = FG.H.FS_LABEL * 220 / 72          # smallest label on every figure canvas (house.apply: 220 dpi)
+
+
+def width_floor(png_path):
+    """Display width at which the smallest label is 9 px (register F65)."""
+    from PIL import Image
+    import math
+    return math.ceil(Image.open(png_path).width * 9 / LABEL_PX)
+
+
+def toc_html(toc):
+    items = []
+    for bid, figs in toc:
+        if len(figs) == 1 and figs[0][0] is None:
+            items.append(f'<li><a href="#{figs[0][1]}">Figure {bid[1]}</a> &middot; {TOC_TITLE[bid]}</li>')
+        else:
+            subs = " &middot; ".join(f'<a href="#{fid}">{bid[1]}{"abcdefgh"[k]} {html.escape(FG.TARGET_NOUN[t])}</a>'
+                                     for k, (t, fid) in enumerate(figs))
+            items.append(f'<li>Figure {bid[1]} &middot; {TOC_TITLE[bid]}<br><span class="bb-sub">{subs}</span></li>')
+    return ('<nav class="col bb-toc" aria-label="Figures on this page"><h2><span class="num">CONTENTS</span></h2>'
+            '<ol>' + "".join(items) + '</ol></nav>')
 
 
 def blocks_of(page):
@@ -151,25 +212,36 @@ def axes_sentence(fig_html):
     return " ".join(t.split())
 
 
+def plain_reason(text: str) -> str:
+    """Pre-fit reasons name factors by code; show them by their display names."""
+    for code in sorted(FG.FACTOR_LABEL, key=len, reverse=True):
+        text = re.sub(rf"\b{code}\b", FG.FACTOR_LABEL[code], text)
+    return text
+
+
 def reasons_table(D, target):
-    rows = []
+    """Every exclusion with its reason; identical (feature, reason) pairs across runs merged."""
+    groups = {}
     for c in D["cells"]:
         pj = os.path.join(c["dir"], target, "prefit.json")
         if not os.path.exists(pj):
             continue
         pf = json.load(open(pj))
         for e in pf["excluded"] + pf["demoted"]:
-            rows.append((e["name"], FG.run_label(c), e["reason"]))
+            groups.setdefault((FG.flabel(e["name"]), plain_reason(e["reason"])), []).append(c)
         for u in c["inv"]["unhandled"]:
-            rows.append((u["path"], FG.run_label(c), f"unhandled: {u['why_no_handler']}"))
-    if not rows:
-        return "<p>No factor was excluded and no setting was unhandled in any run.</p>"
-    body = "".join(f"<tr><td>{wrap_cell(a)}</td><td>{wrap_cell(b)}</td><td>{wrap_cell(c)}</td></tr>"
-                   for a, b, c in sorted(rows))
-    return ('<h4>Every exclusion, with its reason</h4><p class="cue" hidden>&larr; scroll sideways</p>'
-            '<div class="scroll"><table class="wide"><thead><tr><th>factor or setting</th><th>run</th>'
-            f'<th>reason</th></tr></thead><tbody>{body}</tbody></table></div>')
-
+            groups.setdefault((f"randomised setting {u['path']}", f"no measurement: {u['why_no_handler']}"),
+                              []).append(c)
+    if not groups:
+        return "<p>No feature was excluded and no randomised setting went unmeasured in any run.</p>"
+    worlds = lambda cs: ", ".join(sorted({FG.WORLD_SHORT.get(c["world"], c["world"]) for c in cs}))
+    body = "".join(f"<tr><td>{wrap_cell(a)}</td><td>{wrap_cell(b)}</td><td>{len(cs)} runs "
+                   f"({html.escape(worlds(cs))})</td></tr>" for (a, b), cs in groups.items())
+    return ('<details class="bb-data"><summary><b>Exclusions.</b> every feature left out of this '
+            'behaviour\'s fits, with the reason and the runs it applies to</summary>'
+            '<p class="cue" hidden>&larr; scroll sideways</p>'
+            '<div class="scroll"><table class="wide" style="min-width:640px"><thead><tr><th>feature</th><th>reason</th>'
+            f'<th>runs</th></tr></thead><tbody>{body}</tbody></table></div></details>')
 
 def run_table(D):
     rows = []
@@ -181,7 +253,8 @@ def run_table(D):
         rows.append(f"<tr><td>{html.escape(FG.wlabel(c['world']))}</td><td>{html.escape(FG.alabel(c['agent']))}"
                     f"</td><td class=\"n\">{c['seed']}</td><td class=\"n\">&mdash;</td>"
                     f"<td>not yet available ({html.escape(c['status'] if c in D['not_completed'] else 'not swept')})</td></tr>")
-    return ('<p class="cue" hidden>&larr; scroll sideways</p><div class="scroll"><table class="wide">'
+    return ('<p class="cue" hidden>&larr; the table is wider than the screen &mdash; scroll it sideways</p>'
+            '<div class="scroll"><table class="wide" style="min-width:760px">'
             '<thead><tr><th>world</th><th>agent</th><th class="n">training seed</th>'
             '<th class="n">evaluation episodes</th><th>run</th></tr></thead><tbody>'
             + "".join(rows) + "</tbody></table></div>")
@@ -210,7 +283,7 @@ def build(population, out_root, page_dir):
     blocks = blocks_of(page)
     if sorted(blocks) != sorted(BLOCKS):
         fail(f"template blocks {sorted(blocks)} != {sorted(BLOCKS)}")
-    present, pending, mirror = [], [], []
+    present, pending, mirror, toc = [], [], [], []
     for bid, (base, per_target) in BLOCKS.items():
         block = blocks[bid]
         targets = [t for t in REG.TARGETS if (base, t) in stems] if per_target else \
@@ -226,14 +299,22 @@ def build(population, out_root, page_dir):
             continue
         parts = []
         check_block(bid, block)
-        for t in targets:
+        pm = re.search(r"<!-- PER -->(.*?)<!-- /PER -->", block, re.S)
+        if per_target and not pm:
+            fail(f"{bid}: a per-behaviour block needs <!-- PER --> ... <!-- /PER -->")
+        unit = pm.group(1) if pm else block
+        toc.append((bid, [(t, f"f{bid[1]}-{t}" if t else f"f{bid[1]}") for t in targets]))
+        for li, t in enumerate(targets):
             stem = f"{base}__{t}" if t else base
             missing = [e for e in EXTS if e not in stems[(base, t)]]
             if missing:
                 fail(f"{stem}: missing {missing} in {fig_dir}")
             if not os.path.exists(os.path.join(HERE, f"{base}.py")):
                 fail(f"{stem}: no generating script {base}.py")
-            b = block.replace("{{T}}", t or "").replace("{{TARGET_LABEL}}", REG.TARGETS[t] if t else "")
+            b = (unit.replace("{{T}}", t or "").replace("{{L}}", "abcdefgh"[li] if t else "")
+                 .replace("{{FIGID}}", f"f{bid[1]}-{t}" if t else f"f{bid[1]}")
+                 .replace("{{TARGET_TITLE}}", FG.TARGET_TITLE[t] if t else "")
+                 .replace("{{TARGET_NOUN}}", FG.TARGET_NOUN[t] if t else ""))
             rows = json.load(open(os.path.join(fig_dir, f"{stem}.samples.json")))
             b = b.replace(f"{{{{DATA:{stem}}}}}", data_table(stem, rows))
             cmd = (f"python scripts/analysis/basic_behaviour/{base}.py --population "
@@ -243,20 +324,28 @@ def build(population, out_root, page_dir):
             if t is not None and f"{{{{REASONS:{t}}}}}" in b:
                 b = b.replace(f"{{{{REASONS:{t}}}}}", reasons_table(D, t))
             png = embed_png(os.path.join(fig_dir, f"{stem}.png"))
-            b = b.replace(f'<img data-fig="{stem}"', f'<img data-fig="{stem}" src="data:image/png;base64,{png}"', 1)
+            floor = width_floor(os.path.join(fig_dir, f"{stem}.png"))
+            im_tag = re.search(rf'<img data-fig="{stem}"[^>]*>', b).group(0)
+            new_tag = im_tag.replace(f'<img data-fig="{stem}"', f'<img data-fig="{stem}" style="min-width:{floor}px" '
+                                     f'src="data:image/png;base64,{png}"', 1)
+            # register F65: a width floor so labels stay >= 9 px on a phone, inside a scroll box whose
+            # cue is shown only while it really overflows (the house cue script)
+            b = b.replace(im_tag, '<p class="cue" hidden>&larr; the figure is wider than the screen &mdash; '
+                          'scroll it sideways, or tap it to open it full size</p><div class="scroll">'
+                          + new_tag + "</div>", 1)
             fig_html = re.search(r"<figure\b.*?</figure>", b, re.S).group(0)
             mirror.append((stem, axes_sentence(fig_html), rows))
             parts.append(b)
             present.append(stem)
-        page = page.replace(block, "\n".join(parts))
+        page = page.replace(block, block.replace(pm.group(0), "\n".join(parts)) if pm else "\n".join(parts))
     n_ep = sum(c["inv"]["n_episodes"] for c in D["cells"])
     golden = os.path.join(FG.ROOT, "results/analysis/basic_behaviour/_golden_pass.json")
-    gtxt = (f"passed {json.load(open(golden))['date']}, sources {json.load(open(golden))['combined']}"
-            if os.path.exists(golden) else "not passed")
+    gtxt = (f"passed on {json.load(open(golden))['date'][:10]}" if os.path.exists(golden) else "not passed")
     tok = {"{{POPULATION}}": html.escape(D["population"]), "{{N_RUNS}}": str(len(D["cells"])),
            "{{N_EPISODES}}": f"{n_ep:,}", "{{N_PENDING}}": str(len(D["unswept"]) + len(D["not_completed"])),
            "{{RUN_TABLE}}": run_table(D), "{{MANIFEST}}": html.escape(os.path.relpath(population, ROOT)),
            "{{OUT_ROOT}}": html.escape(os.path.relpath(out_root, ROOT)), "{{GOLDEN}}": html.escape(gtxt),
+           "{{TOC}}": toc_html(toc),
            "{{STATUS_LINE}}": ("All six figures are present." if not pending else
                                f"Figures not yet produced: {', '.join(pending)}.")}
     for k, v in tok.items():

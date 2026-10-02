@@ -20,12 +20,15 @@ import _fig as FG                                                       # noqa: 
 import registry as REG                                                  # noqa: E402
 
 STEM = "f4_multivariate"
-MODELS = ["M1", "M2", "M3", "M5", "M4"]
-SHORT = {"M1": "M1 drawn-before-acting factors, all episodes",
-         "M2": "M2 + predator traits, one-predator episodes",
-         "M3": "M3 + rabbit smell, one predator and one rabbit",
-         "M5": "M5 two-predator episodes, keenest vs least keen",
-         "M4": "M4 + consequences, all episodes"}
+MODELS = ["M1", "M2", "M3", "M4", "M5"]          # numeric order on the page (the CSVs keep the legacy order)
+SHORT = {"M1": "M1  features drawn before the agent acts, all episodes",
+         "M2": "M2  + predator traits, episodes with one predator",
+         "M3": "M3  + rabbit smell, episodes with one predator and one rabbit",
+         "M4": "M4  + what happened during the episode, all episodes",
+         "M5": "M5  episodes with two predators: keener vs less keen"}
+WHY = {"M1": "all episodes", "M2": "episodes with exactly one predator",
+       "M3": "episodes with exactly one predator and exactly one rabbit", "M4": "all episodes",
+       "M5": "episodes with exactly two predators"}
 
 
 def main(argv=None):
@@ -56,10 +59,9 @@ def main(argv=None):
                 rows.append({"what": f"{mid}, {FG.run_label(c)}", "used": 0, "total": n,
                              "note": f"skipped: {r['skipped']}"})
             else:
-                ex = "; ".join(f"{e['name']} ({e['reason']})" for e in r.get("excluded", []))
+                ex = "; ".join(f"{FG.flabel(e['name'])} ({e['reason']})" for e in r.get("excluded", []))
                 rows.append({"what": f"{mid}, {FG.run_label(c)}", "used": r["n"], "total": n,
-                             "note": (f"dropped inside the model: {ex}" if ex else "")
-                             + (" " + " ".join(r.get("notes", [])) if r.get("notes") else "")})
+                             "note": WHY[mid] + (f"; dropped inside the model: {ex}" if ex else "")})
     M = pd.concat(frames)
     M = M[M.term != "const"]
     present = [m for m in MODELS if (M.mid == m).any()]
@@ -80,12 +82,12 @@ def main(argv=None):
                         color=D["colour"][c["world"]], alpha=0.9)
         ax.axvline(0, color=H.RULE, lw=1)
         ax.set_yticks(range(len(terms)))
-        ax.set_yticklabels(terms, fontsize=H.FS_LABEL)
+        ax.set_yticklabels([FG.flabel(t) for t in terms], fontsize=H.FS_LABEL)
         ax.set_ylim(len(terms) - 0.3, -0.7)
         ax.grid(axis="x", color=H.TICK_LINE)
         ax.grid(axis="y", visible=False)
-        ax.set_title(SHORT[mid], fontsize=H.FS_BODY)
-        ax.set_xlabel("change in share (percentage points per +1 SD, other terms held fixed)")
+        ax.set_title(SHORT[mid] + "  (own horizontal scale)", fontsize=H.FS_BODY)
+        ax.set_xlabel("change in share of steps (percentage points per +1 standard deviation, other terms held fixed)")
     fig.legend(handles=FG.legend_handles(D), loc="lower center", ncol=len(D["worlds"]) + len(D["agents"]),
                frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.005))
     fig.tight_layout(rect=(0, 0.025, 1, 1), h_pad=1.6)

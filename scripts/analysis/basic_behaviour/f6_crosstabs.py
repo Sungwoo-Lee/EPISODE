@@ -50,7 +50,7 @@ def main(argv=None):
         near[c["label"]] = 100 * x[f"near__{a.target}"] / np.maximum(x["near_trials"], 1)
         rows.append({"what": f"chosen steps, {FG.run_label(c)}", "used": int(tr.sum()),
                      "total": int(e["n_rows"].sum()),
-                     "note": "every step t >= 1, binned by the row before it; the reset row is not a step"})
+                     "note": "every chosen step, binned by the state one step earlier; the starting row is not a chosen step"})
         rab = next(t["tag"] for t in c["inv"]["slots"]["entities"] if t["cls"] != "predator")
         prd = [t["tag"] for t in c["inv"]["slots"]["entities"] if t["cls"] == "predator"]
         keep = (e[f"cnt__{rab}"] == 1)
@@ -64,17 +64,25 @@ def main(argv=None):
         ladder[c["label"]] = ([float(llr[b == k].mean()) for k in range(6)],
                               [100 * float(y[b == k].sum() / max(L[b == k].sum(), 1)) for k in range(6)])
         rows.append({"what": f"episodes in the smell sextiles, {FG.run_label(c)}", "used": int(keep.sum()),
-                     "total": int(keep.size), "note": "exactly one rabbit and no predator"})
+                     "total": int(keep.size), "note": "episodes with exactly one rabbit and no predator, so only the smell can signal danger"})
     ng = len(groups)
-    fig = plt.figure(figsize=(12.0, 3.3 * int(np.ceil(ng / 3)) + 4.4))
-    gs = fig.add_gridspec(int(np.ceil(ng / 3)) + 1, 3, height_ratios=[1] * int(np.ceil(ng / 3)) + [1.25])
+    nrow_h = int(np.ceil(ng / 3))
+    worlds = D["worlds"]
+    fig = plt.figure(figsize=(12.0, 3.6 * nrow_h + 7.6))
+    # heat maps in columns 0-2, a dedicated narrow column for the colour bar (it must not sit over a
+    # panel title: register F18 amendment); then one smell panel per world; then the nearby-animals panel
+    gs = fig.add_gridspec(nrow_h + 2, 4, width_ratios=[1, 1, 1, 0.06],
+                          height_ratios=[1] * nrow_h + [1.15, 1.15], hspace=0.95, wspace=0.42)
     vals = {g: 100 * h[0] / np.maximum(h[1], 1) for g, h in heat.items()}
-    vmax = max(v.max() for v in vals.values())
-    cm = H.sequential()
+    lo = min(v[heat[g][1] > 0].min() for g, v in vals.items())
+    hi = max(v[heat[g][1] > 0].max() for g, v in vals.items())
+    # neutral ramp: colour means smell world elsewhere on the page, so the heat maps carry no hue;
+    # anchored at the data's own range (shared by every map) so differences are visible
+    cm = H.sequential(stops=[H.PAPER, "#dfe1e3", "#a9aeb5", "#6e747e", H.INK])
     for k, g in enumerate(groups):
         ax = fig.add_subplot(gs[k // 3, k % 3])
         V = vals[g].reshape(4, 4)
-        im = ax.imshow(V, cmap=cm, vmin=0, vmax=vmax, origin="upper", aspect="auto")
+        im = ax.imshow(V, cmap=cm, vmin=lo, vmax=hi, origin="upper", aspect="auto")
         for i in range(4):
             for j in range(4):
                 n = heat[g][1].reshape(4, 4)[i, j]
@@ -84,36 +92,42 @@ def main(argv=None):
         ax.set_yticks(range(4)); ax.set_yticklabels(INJ, fontsize=H.FS_LABEL)
         ax.grid(False)
         seeds = sorted(heat[g][2])
-        ax.set_title(f"{FG.wlabel(g[0])}, {FG.alabel(g[1])}\nseeds {', '.join(map(str, seeds))}",
-                     fontsize=H.FS_LABEL)
-        ax.set_xlabel("nutrition at t-1")
-        ax.set_ylabel("injury at t-1")
-    cax = fig.add_axes([0.92, 0.55, 0.012, 0.3])
+        ax.set_title(f"{FG.WORLD_SHORT.get(g[0], g[0])}, {FG.AGENT_SHORT.get(g[1], g[1])}\n"
+                     f"seeds {', '.join(map(str, seeds))}", fontsize=H.FS_LABEL)
+        ax.set_xlabel("nutrition one step earlier")
+        ax.set_ylabel("injury one step earlier")
+    cax = fig.add_subplot(gs[0:nrow_h, 3])
     cb = fig.colorbar(im, cax=cax)
     cb.set_label("share of chosen steps (%)", fontsize=H.FS_LABEL)
     cb.outline.set_visible(False)
-    r0 = int(np.ceil(ng / 3))
-    ax = fig.add_subplot(gs[r0, 0:2])
-    for c in cells:
-        xs, ys = ladder[c["label"]]
-        ax.plot(xs, ys, color=D["colour"][c["world"]], marker=D["marker"][c["agent"]], ms=5, lw=1.4,
-                alpha=0.85)
-    ax.set_xlabel("rabbit smell, log-likelihood ratio predator vs rabbit (nats; sextile means)")
-    ax.set_ylabel("share of chosen steps (%)")
-    ax.set_title("By the rabbit's smell (one rabbit, no predator)", fontsize=H.FS_BODY)
-    ax.axvline(0, color=H.RULE, lw=1)
-    ax = fig.add_subplot(gs[r0, 2])
+    # one smell panel per world, the runs of both agents in it, shape = agent
+    ys = [y for xs, yv in ladder.values() for y in yv]
+    pad = 0.08 * (max(ys) - min(ys) + 1e-9)
+    for k, w in enumerate(worlds[:3]):
+        ax = fig.add_subplot(gs[nrow_h, k])
+        for c in [c for c in cells if c["world"] == w]:
+            xs, yv = ladder[c["label"]]
+            ax.plot(xs, yv, color=D["colour"][w], marker=D["marker"][c["agent"]], ms=5.5, lw=1.3, alpha=0.9)
+        ax.set_ylim(min(ys) - pad, max(ys) + pad)
+        ax.set_xlim(min(min(v[0]) for v in ladder.values()) - 0.25, max(max(v[0]) for v in ladder.values()) + 0.25)
+        ax.axvline(0, color=H.RULE, lw=1)
+        ax.set_title(f"{FG.WORLD_SHORT.get(w, w)}: by the rabbit's smell", fontsize=H.FS_LABEL)
+        ax.set_xlabel("rabbit smell (nats, sextile means)")
+        if k == 0:
+            ax.set_ylabel("share of chosen steps (%)")
+    ax = fig.add_subplot(gs[nrow_h + 1, 0:3])
     for j, c in enumerate(cells):
         off = (j - (len(cells) - 1) / 2) * (0.7 / max(len(cells), 1))
         for k in range(4):
-            ax.plot(k + off, near[c["label"]][k], ls="", marker=D["marker"][c["agent"]], ms=5,
+            ax.plot(k + off, near[c["label"]][k], ls="", marker=D["marker"][c["agent"]], ms=6,
                     color=D["colour"][c["world"]], alpha=0.9)
-    ax.set_xticks(range(4)); ax.set_xticklabels([n.replace(" ", "\n") for n in NEAR], fontsize=H.FS_LABEL)
+    ax.set_xticks(range(4)); ax.set_xticklabels(NEAR, fontsize=H.FS_LABEL)
+    ax.set_xlim(-0.6, 3.6)
     ax.set_ylabel("share of chosen steps (%)")
-    ax.set_title("By animals within 2 squares at t-1", fontsize=H.FS_BODY)
+    ax.set_title("By nearby animals (within 2 squares, one step earlier); one marker per run", fontsize=H.FS_BODY)
     fig.legend(handles=FG.legend_handles(D), loc="lower center", ncol=len(D["worlds"]) + len(D["agents"]),
-               frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.01))
-    fig.subplots_adjust(left=0.07, right=0.9, top=0.94, bottom=0.12, hspace=0.75, wspace=0.35)
+               frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.005))
+    fig.subplots_adjust(left=0.08, right=0.94, top=0.95, bottom=0.08)
     stem = f"{STEM}__{a.target}"
     FG.record_samples(a.fig_dir, stem, rows)
     FG.save(fig, a.fig_dir, stem)

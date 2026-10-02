@@ -36,9 +36,56 @@ WORLD_LABEL = {"hv1ch": "single-channel smell", "hv1chm": "matched-strength smel
 WORLD_ORDER = ["hv2ch", "hv1ch", "hv1chm"]
 AGENT_LABEL = {"t1none": "ordinary agent", "t16quad": "modulated agent", "unmodulated": "ordinary agent"}
 AGENT_ORDER = ["t1none", "unmodulated", "t16quad"]
-WORLD_SHORT = {"hv1ch": "single-ch.", "hv1chm": "matched", "hv2ch": "two-ch. (control)"}
+WORLD_SHORT = {"hv1ch": "single-channel", "hv1chm": "matched-strength", "hv2ch": "two-channel (control)"}
 AGENT_SHORT = {"t1none": "ordinary", "t16quad": "modulated", "unmodulated": "ordinary"}
 MARKERS = ["o", "^", "s", "D", "v", "P"]
+# Markers reserved for non-run glyphs, so no shape means two things on the page (register F11, third
+# amendment): agents use MARKERS; a setting's mean +/- seed-to-seed SD is "_" with an error bar; a
+# standardised contrast is a vertical bar "|".
+MEAN_MARKER, CONTRAST_MARKER = "_", "|"
+
+# Display names for behaviours: noun phrases, so they fit every sentence frame (register F59 amendment).
+# "Bush dwell" is the project's term for time spent in a bush.
+TARGET_NOUN = {"bush_dwell": "bush dwell", "eating": "eating", "near_rabbit": "time near a rabbit",
+               "near_predator": "time near a predator", "warm_cell": "time on a warm square"}
+TARGET_TITLE = {"bush_dwell": "Bush dwell (time in a bush)", "eating": "Eating",
+                "near_rabbit": "Time near a rabbit (within 2 squares)",
+                "near_predator": "Time near a predator (within 2 squares)",
+                "warm_cell": "Time on a warm square"}
+TARGET_ORDER = ["bush_dwell", "eating", "near_rabbit", "near_predator", "warm_cell"]
+
+# Every factor shown on a figure goes through this table: no code names on the page.
+FACTOR_LABEL = {
+    "start_injury": "injury at start", "start_nutrition": "nutrition at start",
+    "start_satiation": "satiation at start", "n_predators": "number of predators",
+    "n_rabbits": "number of rabbits", "n_campfire": "number of campfires", "n_rocks": "number of rocks",
+    "n_bushes": "number of bushes", "n_food": "number of food items",
+    "n_ambush_predators": "number of hidden ambush predators", "spawn_dist_to_bush": "start distance to nearest bush",
+    "start_body_temp": "body temperature at start", "ambient_temp": "world baseline temperature",
+    "pred_detection_range": "predator sight range", "pred_attack_delay": "predator attack delay",
+    "pred_attack_range": "predator attack range", "pred_max_stamina": "predator stamina",
+    "pred_smell_predatorness": "predator's smell (how predator-like)",
+    "spawn_dist_to_predator": "start distance to the predator", "pred_olf_intensity": "predator's odour strength",
+    "rab_smell_predatorness": "rabbit's smell (how predator-like)", "rab_olf_intensity": "rabbit's odour strength",
+    "frac_time_injured": "share of time injured", "frac_time_inj_severe": "share of time badly injured (50+)",
+    "mean_injury": "average injury", "peak_injury": "highest injury", "frac_time_low_nutrition":
+    "share of time with nutrition under 50", "mean_nutrition": "average nutrition",
+    "total_damage_taken": "total damage taken", "eat_rate": "share of steps eating",
+    "rest_rate": "share of steps resting", "episode_length": "episode length",
+    "frac_time_predator_near": "share of time a predator is near",
+    "frac_time_rabbit_near": "share of time only a rabbit is near",
+    "mean_body_temp": "average body temperature", "frac_time_warm_cell": "share of time on a warm square",
+    "detect_keenest": "sight range of the keener predator", "detect_least_keen": "sight range of the less keen predator",
+    "detect_spread": "difference between the two sight ranges"}
+QUANTITY_LABEL = {"level": "behaviour level", "start_injury": "injury-at-start slope",
+                  "start_nutrition": "nutrition-at-start slope", "smell": "rabbit-smell slope",
+                  "smell_x_injury": "rabbit smell × injury at start"}
+
+
+def flabel(name: str) -> str:
+    if name not in FACTOR_LABEL:
+        raise SystemExit(f"no display name for factor {name!r}: add it to _fig.FACTOR_LABEL")
+    return FACTOR_LABEL[name]
 TERM_NAMES = {1: "reached the step limit", 2: "starved", 3: "over-ate",
               4: "injury reached maximum", 5: "body temperature out of range"}
 
@@ -123,6 +170,10 @@ def run_label(c) -> str:
     return f"{wlabel(c['world'])}, {alabel(c['agent'])}, seed {c['seed']}"
 
 
+def run_short(c) -> str:
+    return f"{WORLD_SHORT.get(c['world'], c['world'])} · {AGENT_SHORT.get(c['agent'], c['agent'])} · seed {c['seed']}"
+
+
 def group_positions(D: dict, gap: float = 0.6, width: float = 0.5):
     """x position of each run: one group per world x agent cell, seeds jittered inside the group."""
     pos, ticks, labels, x = {}, [], [], 0.0
@@ -140,12 +191,14 @@ def group_positions(D: dict, gap: float = 0.6, width: float = 0.5):
     return pos, ticks, labels
 
 
-def legend_handles(D: dict):
+def legend_handles(D: dict, extra=()):
     from matplotlib.lines import Line2D
     hs = [Line2D([], [], ls="", marker="o", ms=8, color=D["colour"][w], label=wlabel(w))
           for w in D["worlds"]]
     hs += [Line2D([], [], ls="", marker=D["marker"][a], ms=8, color=H.INK_2, label=alabel(a))
            for a in D["agents"]]
+    for marker, label in extra:
+        hs.append(Line2D([], [], ls="", marker=marker, ms=11, mew=2.2, color=H.INK, label=label))
     return hs
 
 

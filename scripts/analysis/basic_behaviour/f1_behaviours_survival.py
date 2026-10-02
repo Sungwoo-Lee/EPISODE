@@ -61,7 +61,7 @@ def main(argv=None):
                      "note": "every evaluation episode in the store"})
         for t in REG.TARGETS:
             if not c["inv"]["targets"][t]["available"]:
-                rows.append({"what": f"{REG.TARGETS[t]}, {FG.run_label(c)}", "used": 0, "total": s["n"],
+                rows.append({"what": f"{FG.TARGET_NOUN[t]}, {FG.run_label(c)}", "used": 0, "total": s["n"],
                              "note": f"not available: {c['inv']['targets'][t]['reason']}"})
     rows.append({"what": "chosen steps (t >= 1), all runs", "used": int(sum(s["steps"] for s in stats.values())),
                  "total": int(sum(s["rows"] for s in stats.values())),
@@ -101,7 +101,7 @@ def main(argv=None):
     for i, t in enumerate(targets):
         ax = axs[i]
         dots(ax, t)
-        ax.set_title(REG.TARGETS[t].capitalize(), fontsize=H.FS_BODY)
+        ax.set_title(FG.TARGET_TITLE[t], fontsize=H.FS_BODY)
         ax.set_ylabel("share of chosen steps (%)")
         top(ax, max(stats[c["label"]].get(t, 0) for c in cells))
     ax = axs[len(targets)]

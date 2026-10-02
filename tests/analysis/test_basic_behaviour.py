@@ -324,3 +324,17 @@ def test_build_partial_and_broken(tmp_path):
     (figs / "stray.png").write_text("x")
     with pytest.raises(SystemExit, match="not part of the F1-F6 sequence"):
         BP.build(str(pop), str(out_root), str(page))
+
+
+def test_data_table_requires_reason_and_merges_identical_rows():
+    """Register F71 / format-gate finding 1: a row using under 100% must say why; rows that differ
+    only in the run collapse into one."""
+    import build_page as BP
+    run = lambda s: f"two-channel smell (control), ordinary agent, seed {s}"
+    rows = [{"what": f"M2, {run(s)}", "used": 333, "total": 1000, "pct": 33.3,
+             "note": "episodes with exactly one predator"} for s in (42, 43, 44)]
+    out = BP.data_table("x", rows)
+    assert "<details" in out and out.count("<tr><td>") == 1 and "3 runs" in out
+    rows[0]["note"] = ""
+    with pytest.raises(SystemExit, match="gives no reason"):
+        BP.data_table("x", rows)

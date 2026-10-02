@@ -40,9 +40,7 @@ def code_of(reason: str) -> str:
 
 
 def short_run(c):
-    w = {"hv1ch": "1ch", "hv1chm": "1chm", "hv2ch": "2ch"}.get(c["world"], c["world"])
-    ag = {"t1none": "ord", "t16quad": "mod"}.get(c["agent"], c["agent"])
-    return f"{w} {ag} s{c['seed']}"
+    return FG.run_short(c)
 
 
 def main(argv=None):
@@ -87,15 +85,17 @@ def main(argv=None):
                 M[len(names) + k, j] = CODES.index("unhandled")
         rows.append({"what": f"factors used, {FG.run_label(c)}", "used": len(mine) - len(exc),
                      "total": len(mine), "note": (f"{len(exc)} excluded before fitting" if exc else
-                                                  "none excluded") + f"; target {REG.TARGETS[a.target]}"})
+                                                  "none excluded")})
     for c in D["cells"]:
         if c not in cells:
             rows.append({"what": f"{FG.run_label(c)}", "used": 0, "total": 0,
-                         "note": f"{REG.TARGETS[a.target]} not available in this run"})
-    shades = [H.INK_2, "#8fa3bd", "#c8cccf", "#dcdedb", "#e6e1d6", "#e9d6cc", H.PAPER, "#e8b7b7"]
+                         "note": f"{FG.TARGET_NOUN[a.target]} not available in this run"})
+    # used / uni / dup / con / few / out / n-a / unh: distinct neutral steps plus one warm tint for
+    # "unhandled"; no series hue, since colour means smell world elsewhere on the page
+    shades = [H.INK_2, "#9aa0a8", "#c3c7cc", "#dfe1e3", "#e9e3d3", "#d8cfe0", H.PAPER, "#efc9b8"]
     cmap = ListedColormap(shades)
-    h = 0.27 * len(rowsn) + 2.6
-    fig, ax = plt.subplots(figsize=(min(12.0, 3.2 + 0.62 * len(cells)), h))
+    h = 0.3 * len(rowsn) + 5.6
+    fig, ax = plt.subplots(figsize=(12.0, h))
     ax.imshow(M, cmap=cmap, vmin=-0.5, vmax=len(CODES) - 0.5, aspect="auto", interpolation="nearest")
     for i in range(M.shape[0]):
         for j in range(M.shape[1]):
@@ -105,27 +105,26 @@ def main(argv=None):
             ax.text(j, i, SHORT.get(code, code), ha="center", va="center", fontsize=H.FS_LABEL,
                     color=H.PAPER if code == "univariate only" else H.INK)
     ax.set_yticks(range(len(rowsn)))
-    ax.set_yticklabels([n + ("  (consequence)" if kinds.get(n) == "consequence" else "") for n in rowsn],
-                       fontsize=H.FS_LABEL)
+    ylab = [(FG.flabel(n) + ("  (during episode)" if kinds.get(n) == "consequence" else ""))
+            if not n.startswith("unhandled: ") else "randomised, unmeasured: " + n[11:] for n in rowsn]
+    ax.set_yticklabels(ylab, fontsize=H.FS_LABEL)
     ax.set_xticks(range(len(cells)))
     ax.set_xticklabels([short_run(c) for c in cells], rotation=90, fontsize=H.FS_LABEL)
     ax.xaxis.tick_top()
     ax.grid(False)
-    ax.set_xlabel("run (world, agent, training seed)")
+    ax.set_xlabel("run: smell world · agent type · training seed")
     ax.xaxis.set_label_position("top")
-    ax.set_ylabel("factor (registry order) or unhandled config marker")
+    ax.set_ylabel("feature of the episode")
     from matplotlib.patches import Patch
     full = {"used": "used", "univariate only": "uni = single-factor fits only",
             "dup": "dup = identical to an earlier factor", "constant": "con = constant in this run",
             "few": "few = under 1,000 episodes", "outcome": "out = part of the outcome",
             "n/a": "not in this world", "unhandled": "unh = randomised, no measurement"}
-    hs = [Patch(facecolor=shades[CODES.index(k)], edgecolor=H.RULE, label=full[k]) for k in full]
+    hs = [Patch(facecolor=shades[CODES.index(k)], edgecolor=H.INK_2, linewidth=0.8, label=full[k]) for k in full]
     fig.legend(handles=hs, loc="lower center", ncol=2, frameon=False, fontsize=H.FS_LABEL,
                bbox_to_anchor=(0.5, -0.01))
     fig.tight_layout(rect=(0, 0.09, 1, 1))
     FG.record_samples(a.fig_dir, f"{STEM}__{a.target}", rows)
-    json.dump({"target": a.target, "reasons": table, "unhandled": unh},
-              open(os.path.join(a.out_root, f"f2_reasons__{a.target}.json"), "w"), indent=1)
     FG.save(fig, a.fig_dir, f"{STEM}__{a.target}")
 
 

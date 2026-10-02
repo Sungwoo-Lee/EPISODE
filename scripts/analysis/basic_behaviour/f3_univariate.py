@@ -43,16 +43,21 @@ def main(argv=None):
         u["label"] = c["label"]
         frames.append(u)
         n = c["inv"]["n_episodes"]
-        for sub, test in (("all episodes", lambda t: t == "start_injury"),
-                          ("exactly one predator", lambda t: t.startswith("pred_")),
-                          ("exactly one rabbit", lambda t: t.startswith("rab_"))):
+        for sub, test, why in (
+                ("factors defined on every episode", lambda t: t == "start_injury",
+                 "all episodes"),
+                ("predator traits and smell", lambda t: t.startswith("pred_"),
+                 "episodes with exactly one predator: a single predator's traits are defined only there"),
+                ("rabbit smell", lambda t: t.startswith("rab_"),
+                 "episodes with exactly one rabbit: a single rabbit's smell is defined only there")):
             hit = u[u.term.map(test)]
             if len(hit):
                 rows.append({"what": f"{sub}, {FG.run_label(c)}", "used": int(hit.n.max()), "total": n,
-                             "note": "the episodes on which those factors are defined"})
+                             "note": why})
     U = pd.concat(frames)
     cmap = {c["label"]: c for c in D["cells"]}
-    blocks = [("exogenous", "Drawn before the agent acts"), ("consequence", "Produced during the episode")]
+    blocks = [("exogenous", "Drawn before the agent acts\n(own horizontal scale)"),
+              ("consequence", "Produced during the episode\n(own horizontal scale)")]
     order = {}
     for b, _ in blocks:
         s = U[U.block == b].groupby("term").dpp_per_sd.apply(lambda x: np.median(np.abs(x)))
@@ -71,12 +76,12 @@ def main(argv=None):
                         color=D["colour"][c["world"]], alpha=0.9)
         ax.axvline(0, color=H.RULE, lw=1)
         ax.set_yticks(range(len(terms)))
-        ax.set_yticklabels(terms, fontsize=H.FS_LABEL)
+        ax.set_yticklabels([FG.flabel(t) for t in terms], fontsize=H.FS_LABEL)
         ax.set_ylim(-0.7, len(terms) - 0.3)
         ax.grid(axis="x", color=H.TICK_LINE)
         ax.grid(axis="y", visible=False)
         ax.set_title(title, fontsize=H.FS_BODY)
-        ax.set_xlabel("change in share (percentage points per +1 SD)")
+        ax.set_xlabel("change in share of steps (percentage\npoints per +1 standard deviation)")
     fig.legend(handles=FG.legend_handles(D), loc="lower center", ncol=len(D["worlds"]) + len(D["agents"]),
                frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.01))
     fig.tight_layout(rect=(0, 0.05, 1, 1), w_pad=2.0)
