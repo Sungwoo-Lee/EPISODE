@@ -295,3 +295,35 @@ version number anywhere.
 ## Verification Report
 
 *(senior-developer fills)*
+
+## Feedback from plan-reviewer
+
+*Reviewed by: plan-reviewer, 2026-10-02, on commit `92cd1be8`. Full report with evidence:
+[[plan_basic_behaviour_water]] (`docs/reviews/plan_basic_behaviour_water.md`).*
+
+**Verdict: NOT READY.** The design is mostly sound. The pond rebuild is checked against
+independently recorded data, and the old-world reference checks really are untouched. But the
+plan assumes data and a stop-point decision that do not exist yet, and its probe step would use
+checkpoints the thirst study says to ignore.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+| # | Sev | Where | Issue → fix |
+|---|---|---|---|
+| 1 | 🔴 | Gate 3, D11, D12, C3–C8 | All 18 runs ran to 10 M with no b\* recorded (THIRST_TASK §9 still `running`, §10 empty), and no §5.5 store exists. Add **C0** (b\* per world recorded and stores collected); the loop halts after C2 otherwise. D12 / probes use only checkpoints ≤ b\* (THIRST_TASK §4: "anything after b\* is ignored"). |
+| 2 | 🟡 | D11 | The parser needs a **code** change: `make_population.py` knows only hv world names (`:42`) and splits Cell on `·` (`:166`). b\* differs per world, so one `--checkpoint-nearest` cannot serve all 18. Name the change and its owner (d9 reviews). |
+| 3 | 🟡 | D8 | Hydration at t−1 is raised by the drinking bout itself (+5/step), so pond × hydration mostly shows bout continuation. Bin the pond target by hydration at bout onset (off-pond at t−1). Same family as Known Bugs row 502. |
+| 4 | 🟡 | D12 (ii)–(iii) | The pond is ~3 squares away on 10×10 vs ~8–12 on 15/20, and hydration drains 100 → 37.5 in-scene. Map-size bush-dwell differences would partly measure pond distance × thirst. Code 7 is possible in-scene. Use the same pond distance at every size, and pre-state a pond-visit rule. Start-hydration choice goes to the user. |
+| 5 | 🟡 | Gate 3(c) | Redundant with D3 (it equals D3 by construction once the sweep passes). Instead, compare with the pilot readout JSONs on a pilot store: an external reference that can run tonight. |
+| 6 | 🟡 | Gate 3 → `_golden_pass.json` | Couples the shared stamp to thirst data and would block hvsmell fits. Use a separate water stamp. |
+| 7 | 🟡 | `_fig`/`f1`/template | Old hvsmell inventories lack `pond`, so F1 `KeyError`s (`f1:42,62`). Codes 6/7 add empty columns to a waterless page. Shared template text changes. Make these population-conditional. Work in a worktree. Warn d9 before the merge. |
+| 8 | 🟡 | "No critical-settings change" | Scene files override `water.placement` / `candidates` locally. By the 2026-09-23 and 2026-10-01 precedent, add a change-log entry. |
+| 9 | 🟡 | C8 | Lab-node launch while the user sleeps. Exclude C8 from the loop. The node list is stale (training is done). |
+| 10 | 🟡 | Page text | F3/F4/F7 intervals are within-run (episodes / checkpoints), not seed noise. Caption them so, quote THIRST_TASK §5.4, and include no modulated-minus-ordinary reading. |
+| 11–12 | 🟢 | File Changes; D12 checks | List `FACTOR_LABEL`, `TERM_SHORT`, `f1.TARGET_KEY`. Keep the hvsmell generator's thermal-contract check. |
+
+Verified here: Hydration index 2 (alphabetical 7) at 10×10 and 20×20; noise off in all nine
+saved configs; no `src/environment/` change since the frozen run commit `583b022f`.
+
+**Flips to SOUND WITH CONCERNS when** findings 1 and 2 are resolved (C0 + ≤ b\* restriction; the
+population-builder change named and owned).
