@@ -3,7 +3,7 @@ title: Artifact format bugs — the register, and why reading the CSS never find
 topic: meta
 status: active
 created: 2026-08-31
-last_updated: 2026-09-16
+last_updated: 2026-10-02
 ---
 
 # Artifact format bugs
@@ -2341,3 +2341,72 @@ caption for style words ("dashed", "filled", "circle") and check each against th
 Found on *Continual Worlds: Results*, 2026-09-30 (gate findings 2–3); fixed there by making circles
 mean sampled actions and squares most-likely actions in every panel, and moving every reference line
 to grey dash-dot.
+
+### F71 — data-accounting tables that grow with runs × models bury the figures they describe
+
+**What a reader saw** (2026-10-02, *Basic Behaviour Analysis — hvsmell*, first format gate). Every
+figure carried its data-use table inline, one row per run per model per subset. With 18 runs, five
+models and five behaviours, the Figure 4 block alone ran to about 13,500 px at 1440 px. Most of that
+height was rows that differed only in the run label: the 18 runs share evaluation seeds, so they used
+identical episode counts. The figures sat between screens of near-duplicate table rows, and 72 of
+the 90 Figure 4 rows had an empty "why" cell.
+
+**Why it was missed.** Guide §11b asks every figure to state its denominators, and the builder
+enforced that a table *exists*. Nothing measured how tall it was, merged rows that say the same thing,
+or required a reason on a row using less than 100 %. The page was correct at 10 runs and became
+unreadable at 18 without any single change being wrong.
+
+**Rule.** Put each data-accounting table in a `<details>` element whose `<summary>` is a one-line
+statement: how many subsets, and what share of the data they use. Merge rows that differ only in the
+run they describe into one row naming how many runs share it. The build fails on a row that uses
+under 100 % of what is available and gives no reason. Pages with several behaviours or targets get a
+table of contents that links every figure.
+
+**How to verify.** At 1440 px with the details closed, no figure block is more than about one figure
+height plus one screen. Open every `<details>` (`check_artifact_layout.py --open-details`): the merged
+row count is at most runs × subsets ÷ (runs sharing counts), and every below-100 % row has a non-empty
+why cell. Fixed on that page in `scripts/analysis/basic_behaviour/build_page.py` (`merge_rows`,
+`data_table`).
+
+### F59 amendment — a sentence-frame title filled with a noun-phrase insert
+
+**Saw (2026-10-02, same page and gate).** Per-behaviour figure titles were built as
+`single-factor effects on {behaviour}` and `settings that move {behaviour}`, with each behaviour's
+label as the insert. The labels were written to read inside an axis caption ("share of chosen steps
+spent *within two squares of a predator*"). In the title frames they produced "effects on on a warm
+square", "factor inventory for within two squares of a rabbit" and "settings that move within two
+squares of a predator".
+
+**Rule.** A template that inserts one value into several sentence frames needs that value to have
+one grammatical shape. Keep a **noun-phrase display name** for each insert ("time near a predator",
+"bush dwell"), and write every frame to take a noun phrase. A typical frame is `Figure 3b —
+single-factor effects: Bush dwell (time in a bush)` or `… showing the behaviour (time near a
+rabbit)`. Never write `spent {x}` or `on {x}`. Check by building the page with every insert and
+reading each title aloud; a doubled or dangling preposition is this defect.
+
+### F18 amendment — a figure-level colour bar placed by hand clips a panel title
+
+**Saw (2026-10-02, same page and gate).** A heat-map figure placed its colour bar with
+`fig.add_axes([0.92, …])` at fixed figure coordinates. When the grid grew from four panels to six, the
+right-most panel's title ran under the bar and was cut. Separately, the line chart's first x tick
+("−2.0") collided with the lowest y tick ("22.00") at the bottom-left corner. Neither label-fit guard
+fires: the colour bar is its own axes, and the tick labels sit outside every hand-placed text check.
+
+**Rule.** Give a colour bar its own grid column (`width_ratios=[…, 0.06]`), never fixed figure
+coordinates over the data panels. Set axis limits with explicit padding so the first tick on each
+axis cannot meet at the origin corner. Check the PNG at the panel count the largest population
+produces, not the one the figure was first drawn for.
+
+**Tool notes from the same gate.**
+
+- **The layout checker crashes on very tall captures.** A full-page capture above about 100,000 px
+  fails in Chrome. Capture with a `--shot-height` that keeps the clip under that limit, plus targeted
+  clipped screenshots of the regions under review. A shot that the tool reports as truncated has not
+  been reviewed.
+- **Default and `--open-details` disagree at the 500 px floor when there are no `<details>`
+  elements.** Reported by the gate on the pre-fix page: the two modes reported different findings and page
+  heights at 500 px, although the page had no `<details>` for the flag to open. Run both modes and
+  treat any difference as something to explain, not as noise.
+- **The interaction checker's Tab walk covers only about 4 of 26 figures** on a page this long. A
+  clean Tab-walk result therefore says nothing about the other 22 viewers. Check the viewer names
+  directly instead: every `figure figcaption b:first-child` must be unique (26 of 26 here).
