@@ -413,18 +413,18 @@ def fig_training(D):
                      fontsize=H.FS_LABEL + 1, loc="left")
         ax.set_xlim(xlo - xpad, xhi + xpad)
         ax.set_ylim(0, ymax)
-        ax.set_xlabel("training-world bush dwell\n(% of chosen steps, final checkpoint;\naxis not from zero)")
+        ax.set_xlabel("training-environment bush dwell\n(% of chosen steps, final checkpoint;\naxis not from zero)")
         ax.grid(axis="x", color=H.TICK_LINE)
-    axs[0].set_ylabel("probe bush dwell (%, newest 20 checkpoints)")
+    axs[0].set_ylabel("experiment-test bush dwell\n(%, newest 20 checkpoints)")
     legend(fig, extra=[hollow_handle()], y=-0.02, ncol=3)
     fig.tight_layout(rect=(0, 0.13, 1, 1), w_pad=1.4)
     rows = []
     for lab, r in TW.iterrows():
-        rows.append({"what": f"training-world episodes, run {lab}", "used": int(r.n_episodes), "total": int(r.n_episodes),
+        rows.append({"what": f"training-environment episodes, run {lab}", "used": int(r.n_episodes), "total": int(r.n_episodes),
                      "note": f"every evaluation episode of the run's trajectory store at checkpoint {int(r.checkpoint):,} "
                              "(the same numbers as Figure 1)"})
-    rows.append({"what": "runs with both a training-world and a probe value", "used": nused, "total": 18,
-                 "note": "every run" if nused == 18 else "a run without 20 probe checkpoints is not drawn"})
+    rows.append({"what": "runs with both a training-environment and an experiment-test value", "used": nused, "total": 18,
+                 "note": "every run" if nused == 18 else "a run without 20 experiment-test checkpoints is not drawn"})
     return fig, rows
 
 

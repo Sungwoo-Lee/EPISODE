@@ -1295,7 +1295,7 @@ Figure 6e — by state, smell and nearby animals: Time on a warm square. **Axes.
 
 ## f7_probe_traces__hv2ch
 
-Figure 7a — bush dwell in each probe scene across training, one chart per world (two-channel control, then single-channel, then matched-strength). **Axes.** Every small panel: horizontal, training progress in millions of environment steps, from 0 to 10; vertical, bush dwell, the percentage of the scene's steps the agent spent on the bush, from 0 to 100. Rows are the six animal setups; columns are the agent type (ordinary, modulated) and the injury at the start of the scene (0, 70). One line per training seed; the shaded band marks the newest 20 checkpoints, the only ones summarised in Figures 7b to 7g.
+Figure 7a — bush dwell in each experiment test scene across training, one chart per world (two-channel control, then single-channel, then matched-strength). **Axes.** Every small panel: horizontal, training progress in millions of environment steps, from 0 to 10; vertical, bush dwell, the percentage of the scene's steps the agent spent on the bush, from 0 to 100. Rows are the six animal setups; columns are the agent type (ordinary, modulated) and the injury at the start of the scene (0, 70). One line per training seed; the shaded band marks the newest 20 checkpoints, the only ones summarised in Figures 7b to 7g.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
@@ -1306,7 +1306,7 @@ Figure 7a — bush dwell in each probe scene across training, one chart per worl
 
 ## f7_probe_traces__hv1ch
 
-Figure 7a — bush dwell in each probe scene across training, one chart per world (two-channel control, then single-channel, then matched-strength). **Axes.** Every small panel: horizontal, training progress in millions of environment steps, from 0 to 10; vertical, bush dwell, the percentage of the scene's steps the agent spent on the bush, from 0 to 100. Rows are the six animal setups; columns are the agent type (ordinary, modulated) and the injury at the start of the scene (0, 70). One line per training seed; the shaded band marks the newest 20 checkpoints, the only ones summarised in Figures 7b to 7g.
+Figure 7a — bush dwell in each experiment test scene across training, one chart per world (two-channel control, then single-channel, then matched-strength). **Axes.** Every small panel: horizontal, training progress in millions of environment steps, from 0 to 10; vertical, bush dwell, the percentage of the scene's steps the agent spent on the bush, from 0 to 100. Rows are the six animal setups; columns are the agent type (ordinary, modulated) and the injury at the start of the scene (0, 70). One line per training seed; the shaded band marks the newest 20 checkpoints, the only ones summarised in Figures 7b to 7g.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
@@ -1317,7 +1317,7 @@ Figure 7a — bush dwell in each probe scene across training, one chart per worl
 
 ## f7_probe_traces__hv1chm
 
-Figure 7a — bush dwell in each probe scene across training, one chart per world (two-channel control, then single-channel, then matched-strength). **Axes.** Every small panel: horizontal, training progress in millions of environment steps, from 0 to 10; vertical, bush dwell, the percentage of the scene's steps the agent spent on the bush, from 0 to 100. Rows are the six animal setups; columns are the agent type (ordinary, modulated) and the injury at the start of the scene (0, 70). One line per training seed; the shaded band marks the newest 20 checkpoints, the only ones summarised in Figures 7b to 7g.
+Figure 7a — bush dwell in each experiment test scene across training, one chart per world (two-channel control, then single-channel, then matched-strength). **Axes.** Every small panel: horizontal, training progress in millions of environment steps, from 0 to 10; vertical, bush dwell, the percentage of the scene's steps the agent spent on the bush, from 0 to 100. Rows are the six animal setups; columns are the agent type (ordinary, modulated) and the injury at the start of the scene (0, 70). One line per training seed; the shaded band marks the newest 20 checkpoints, the only ones summarised in Figures 7b to 7g.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
@@ -1395,29 +1395,29 @@ Figure 7e — are the world differences larger than the noise? **Axes.** Every p
 
 ## f7_probe_training
 
-Figure 7f — does an agent that dwells in bushes more in its training world also do so in the probe scenes? **Axes.** Every panel: horizontal, the run's bush dwell in its training world, as a percentage of chosen steps at the final checkpoint (the Figure 1 value), on a range that does not start at zero; vertical, the same run's probe bush dwell at injury 0, as a percentage of the scene's steps averaged over the newest 20 checkpoints, starting at zero. One marker per run; the panel title gives the rank correlation across the runs.
+Figure 7f — does an agent that dwells in bushes more in its training environment also do so in the experiment tests? **Axes.** Every panel: horizontal, the run's bush dwell in its training environment, as a percentage of chosen steps at the final checkpoint (the Figure 1 value), on a range that does not start at zero; vertical, the same run's experiment-test bush dwell at injury 0, as a percentage of the scene's steps averaged over the newest 20 checkpoints, starting at zero. One marker per run; the panel title gives the rank correlation across the runs.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| training-world episodes, run hv2ch_t1none_s42 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,046 (the same numbers as Figure 1) |
-| training-world episodes, run hv2ch_t16quad_s42 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,021 (the same numbers as Figure 1) |
-| training-world episodes, run hv2ch_t1none_s43 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,000 (the same numbers as Figure 1) |
-| training-world episodes, run hv2ch_t16quad_s43 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,018 (the same numbers as Figure 1) |
-| training-world episodes, run hv2ch_t1none_s44 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,014 (the same numbers as Figure 1) |
-| training-world episodes, run hv2ch_t16quad_s44 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,059 (the same numbers as Figure 1) |
-| training-world episodes, run hv1ch_t1none_s42 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,038 (the same numbers as Figure 1) |
-| training-world episodes, run hv1ch_t16quad_s42 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,016 (the same numbers as Figure 1) |
-| training-world episodes, run hv1ch_t1none_s43 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,008 (the same numbers as Figure 1) |
-| training-world episodes, run hv1ch_t16quad_s43 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,048 (the same numbers as Figure 1) |
-| training-world episodes, run hv1ch_t1none_s44 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,035 (the same numbers as Figure 1) |
-| training-world episodes, run hv1ch_t16quad_s44 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,016 (the same numbers as Figure 1) |
-| training-world episodes, run hv1chm_t1none_s42 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,058 (the same numbers as Figure 1) |
-| training-world episodes, run hv1chm_t16quad_s42 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,015 (the same numbers as Figure 1) |
-| training-world episodes, run hv1chm_t1none_s43 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,016 (the same numbers as Figure 1) |
-| training-world episodes, run hv1chm_t16quad_s43 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,063 (the same numbers as Figure 1) |
-| training-world episodes, run hv1chm_t1none_s44 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,030 (the same numbers as Figure 1) |
-| training-world episodes, run hv1chm_t16quad_s44 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,058 (the same numbers as Figure 1) |
-| runs with both a training-world and a probe value | 18 | 18 | 100.0% | every run |
+| training-environment episodes, run hv2ch_t1none_s42 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,046 (the same numbers as Figure 1) |
+| training-environment episodes, run hv2ch_t16quad_s42 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,021 (the same numbers as Figure 1) |
+| training-environment episodes, run hv2ch_t1none_s43 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,000 (the same numbers as Figure 1) |
+| training-environment episodes, run hv2ch_t16quad_s43 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,018 (the same numbers as Figure 1) |
+| training-environment episodes, run hv2ch_t1none_s44 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,014 (the same numbers as Figure 1) |
+| training-environment episodes, run hv2ch_t16quad_s44 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,059 (the same numbers as Figure 1) |
+| training-environment episodes, run hv1ch_t1none_s42 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,038 (the same numbers as Figure 1) |
+| training-environment episodes, run hv1ch_t16quad_s42 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,016 (the same numbers as Figure 1) |
+| training-environment episodes, run hv1ch_t1none_s43 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,008 (the same numbers as Figure 1) |
+| training-environment episodes, run hv1ch_t16quad_s43 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,048 (the same numbers as Figure 1) |
+| training-environment episodes, run hv1ch_t1none_s44 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,035 (the same numbers as Figure 1) |
+| training-environment episodes, run hv1ch_t16quad_s44 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,016 (the same numbers as Figure 1) |
+| training-environment episodes, run hv1chm_t1none_s42 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,058 (the same numbers as Figure 1) |
+| training-environment episodes, run hv1chm_t16quad_s42 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,015 (the same numbers as Figure 1) |
+| training-environment episodes, run hv1chm_t1none_s43 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,016 (the same numbers as Figure 1) |
+| training-environment episodes, run hv1chm_t16quad_s43 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,063 (the same numbers as Figure 1) |
+| training-environment episodes, run hv1chm_t1none_s44 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,030 (the same numbers as Figure 1) |
+| training-environment episodes, run hv1chm_t16quad_s44 | 1,000,000 | 1,000,000 | 100.0% | every evaluation episode of the run's trajectory store at checkpoint 10,000,058 (the same numbers as Figure 1) |
+| runs with both a training-environment and an experiment-test value | 18 | 18 | 100.0% | every run |
 
 ## f7_probe_other
 

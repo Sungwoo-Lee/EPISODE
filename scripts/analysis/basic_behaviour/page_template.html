@@ -327,13 +327,13 @@ details.bb-data[open] > summary { margin-bottom:8px; }
 
 <!-- BLOCK F7 -->
 <section class="col">
-  <h2><span class="num">07</span> Probe scenes: the same agents in small fixed test scenes</h2>
+  <h2><span class="num">07</span> Experiment tests: bush dwell in controlled scenes</h2>
   <div class="callout warn"><p class="eyebrow">Exploratory &middot; added 2026-10-02</p>
   <p>This section is not part of the smell study's pre-registered test and cannot change its verdict.
-  Its reading rules were written down before any probe result existed, in the study document's section
-  &ldquo;Probe-scene sweep (exploratory)&rdquo;.</p></div>
+  Its reading rules were written down before any experiment-test result existed, in the study document's section
+  &ldquo;Probe-scene sweep (exploratory)&rdquo; (the document heading uses the earlier name for these experiment tests).</p></div>
   <p>Figures 1 to 6 watch each agent in the world it trained in, where many things happen at once.
-  Here the same 18 agents are put into twelve small, fixed test scenes instead: a 10&times;10 arena
+  Here the same 18 agents are put into twelve small, fixed experiment test scenes instead: a 10&times;10 arena
   with one hiding bush, a campfire beside it, and at most one animal. Six animal setups &mdash;
   <strong>no animal</strong>, a <strong>hunting predator</strong>, a harmless <strong>chasing
   rabbit</strong>, the chasing rabbit with its predator-like smell channel removed, a harmless
@@ -346,7 +346,7 @@ details.bb-data[open] > summary { margin-bottom:8px; }
   like a predator make the agent dwell in the bush more (the <strong>confusion contrast</strong>), and
   does injury make that larger? Two things to keep in mind. The campfire next to the bush makes the
   bush the warm place in a cold arena, which lifts bush dwell even when nothing threatens; compare
-  scenes with each other, not with the training world. And in the single-channel world the
+  scenes with each other, not with the training environment. And in the single-channel world the
   &ldquo;smell removed&rdquo; chasing rabbit has no smell at all, because its one smell channel is the
   one removed, so that scene is not compared across worlds.</p>
 </section>
@@ -357,7 +357,7 @@ details.bb-data[open] > summary { margin-bottom:8px; }
   <img data-fig="f7_probe_traces__hv1chm" alt="Matched-strength world: the same grid of line charts.">
   <p class="zoomhint">Click a figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
   <figcaption>
-    <span><b>Figure 7a &mdash; bush dwell in each probe scene across training, one chart per world
+    <span><b>Figure 7a &mdash; bush dwell in each experiment test scene across training, one chart per world
     (two-channel control, then single-channel, then matched-strength).</b> <b>Axes.</b> Every small panel:
     horizontal, training progress in millions of environment steps, from 0 to 10; vertical, bush dwell,
     the percentage of the scene's steps the agent spent on the bush, from 0 to 100. Rows are the six
@@ -371,14 +371,14 @@ details.bb-data[open] > summary { margin-bottom:8px; }
   <p class="prov">Reproduce: <code>{{CMD:f7_probe_traces__hv2ch}}</code> (and <code>--world hv1ch</code>, <code>--world hv1chm</code>)</p>
   <div class="howto">
     <p class="eyebrow">How it is computed</p>
-    <p>Each probe scene is a short episode of 100 steps. A scene file takes everything the run's own
-    training world defines &mdash; the body, the temperature system, the senses &mdash; and replaces only
+    <p>Each experiment test scene is a short episode of 100 steps. A scene file takes everything the run's own
+    training environment defines &mdash; the body, the temperature system, the senses &mdash; and replaces only
     the arena: the bush, the campfire beside it, the animal and the agent's starting square and injury.
     The animals smell the way that world's animals smell, at the class average with no random spread.
     For every one of the 50 checkpoints saved while a run trained, the agent is replayed for 30 episodes
     of each of the 12 scenes, with the same episode seeds every time, and bush dwell is averaged over
     those 30 episodes. That average is one point on a line here. The reason for drawing every checkpoint
-    rather than the last one: earlier probe studies found that a single checkpoint can sit far from its
+    rather than the last one: earlier experiment-test studies found that a single checkpoint can sit far from its
     neighbours, because the policy keeps moving after training has levelled off, while thirty episodes
     already pin down what one checkpoint does. Reading the final checkpoint alone once produced a
     sixty-point difference between agents that shrank to under one point when ten checkpoints were
@@ -469,13 +469,13 @@ details.bb-data[open] > summary { margin-bottom:8px; }
     near zero means the agent dwells in the bush about as much whether or not anything hunts it. The
     reading rules name injury 0 as the main value and report injury 70 beside it. The chasing-rabbit
     panels use a harmless rabbit that runs toward the agent instead of the predator; they are described
-    only, because rabbits never chase in the training worlds. Each difference is formed checkpoint by
+    only, because rabbits never chase in the training environments. Each difference is formed checkpoint by
     checkpoint and summarised by the mean of the newest 20 checkpoints, with a 95% interval widened when
-    neighbouring checkpoints resemble each other, exactly as in Figures 7b and 7c. The probe predator
+    neighbouring checkpoints resemble each other, exactly as in Figures 7b and 7c. The experiment-test predator
     does not pounce and does less damage than the training predators, and the
     warm bush lifts bush dwell even in the empty arena. Both shrink this contrast, by the same amount in
     every world, since the scenes differ between worlds only in how the animals smell. Compare worlds
-    and agents with each other here, not with the size of the threat response in the training world.</p>
+    and agents with each other here, not with the size of the threat response in the training environment.</p>
   </div>
 </figure>
 <figure>
@@ -512,14 +512,14 @@ details.bb-data[open] > summary { margin-bottom:8px; }
   </div>
 </figure>
 <figure>
-  <h3 class="bb-fh" id="f7f"><span class="bb-n">Figure 7f</span>Probe scenes against the training world</h3>
+  <h3 class="bb-fh" id="f7f"><span class="bb-n">Figure 7f</span>Experiment tests vs training environment</h3>
   <img data-fig="f7_probe_training" alt="Three scatter plots of probe bush dwell against training-world bush dwell, one marker per run, for the no-animal, hunting-predator and predator-smelling-rabbit scenes.">
   <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
   <figcaption>
-    <span><b>Figure 7f &mdash; does an agent that dwells in bushes more in its training world also do
-    so in the probe scenes?</b> <b>Axes.</b> Every panel: horizontal, the run's bush dwell in its training
-    world, as a percentage of chosen steps at the final checkpoint (the Figure 1 value), on a range that
-    does not start at zero; vertical, the same run's probe bush dwell at injury 0, as a percentage of the
+    <span><b>Figure 7f &mdash; does an agent that dwells in bushes more in its training environment also do
+    so in the experiment tests?</b> <b>Axes.</b> Every panel: horizontal, the run's bush dwell in its training
+    environment, as a percentage of chosen steps at the final checkpoint (the Figure 1 value), on a range that
+    does not start at zero; vertical, the same run's experiment-test bush dwell at injury 0, as a percentage of the
     scene's steps averaged over the newest 20 checkpoints, starting at zero. One marker per run; the
     panel title gives the rank correlation across the runs.</span>
     <span>{{DATA:f7_probe_training}}</span>
@@ -528,17 +528,17 @@ details.bb-data[open] > summary { margin-bottom:8px; }
   <div class="howto">
     <p class="eyebrow">How it is computed</p>
     <p>The horizontal value is computed exactly as in Figure 1: each run's final checkpoint was replayed
-    for a million episodes in its own training world, and bush dwell is the number of steps the agent
-    chose that ended on a bush, divided by all steps it chose. The vertical value is the probe bush dwell
+    for a million episodes in its own training environment, and bush dwell is the number of steps the agent
+    chose that ended on a bush, divided by all steps it chose. The vertical value is the experiment-test bush dwell
     of Figure 7b, for three scenes at injury 0: no animal, a hunting predator, and a wandering rabbit that
     smells like a predator. The two numbers come from different checkpoints by design &mdash; the
-    training-world store holds only the final checkpoint, while a probe value averages the newest 20 &mdash;
-    and from very different situations: the training world has several bushes, fires, food and animals
-    over 500 steps, the probe one bush beside one fire for 100 steps. The rank correlation in each title is
+    training-environment store holds only the final checkpoint, while an experiment-test value averages the newest 20 &mdash;
+    and from very different situations: the training environment has several bushes, fires, food and animals
+    over 500 steps, the experiment test one bush beside one fire for 100 steps. The rank correlation in each title is
     Spearman's: it orders the runs by each measure and asks how well the two orders agree, from &minus;1
     (reversed) through 0 (unrelated) to +1 (identical). With 18 runs, a value between about &minus;0.47
-    and +0.47 is within what chance alone produces at the 5% level. The figure says whether the probe
-    scenes rank agents the way their training world does, not whether either ranking is right.</p>
+    and +0.47 is within what chance alone produces at the 5% level. The figure says whether the experiment
+    tests rank agents the way their training environment does, not whether either ranking is right.</p>
   </div>
 </figure>
 <figure>
@@ -575,8 +575,8 @@ details.bb-data[open] > summary { margin-bottom:8px; }
 </figure>
 <div class="col"><div class="callout bb-cannot"><p class="eyebrow">What these figures cannot tell you</p>
   <p>Whether a difference between worlds would survive more training seeds: three per world is a
-  screen. Nor whether the probe readings agree with the study's pre-registered reading of the training
-  world; if the two disagree in sign, the pre-registered one stands.</p></div></div>
+  screen. Nor whether the experiment-test readings agree with the study's pre-registered reading of the training
+  environment; if the two disagree in sign, the pre-registered one stands.</p></div></div>
 <!-- /BLOCK F7 -->
 
 <section class="col">

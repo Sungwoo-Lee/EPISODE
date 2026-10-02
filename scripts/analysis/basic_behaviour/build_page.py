@@ -171,7 +171,7 @@ TOC_TITLE = {"F1": "Behaviours and survival, per run", "F2": "Which factors each
              "F3": "Each factor on its own, per run", "F4": "The factors fitted together, per run",
              "F5": "Which settings move each behaviour (screening)",
              "F6": "By state, rabbit smell and nearby animals",
-             "F7": "Probe scenes (exploratory)"}
+             "F7": "Experiment tests (exploratory)"}
 LABEL_PX = FG.H.FS_LABEL * 220 / 72          # smallest label on every figure canvas (house.apply: 220 dpi)
 
 
@@ -183,7 +183,7 @@ def width_floor(png_path):
 
 
 F7_TOC = [("f7a", "over training"), ("f7b", "per scene"), ("f7c", "confusion contrast"),
-          ("f7d", "threat discrimination"), ("f7e", "worlds vs noise"), ("f7f", "vs training world"),
+          ("f7d", "threat discrimination"), ("f7e", "worlds vs noise"), ("f7f", "vs training environment"),
           ("f7g", "other measures")]
 
 
