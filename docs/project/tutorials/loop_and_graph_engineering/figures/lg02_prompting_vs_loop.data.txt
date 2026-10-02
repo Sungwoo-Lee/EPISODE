@@ -1,1 +1,0 @@
-Conceptual diagram, not a measurement: 2 of 2 working styles drawn (100%) - 2 nodes on the left, 6 on the right, and all 5 of the 5 loop-spec parts named by Macedo (2026). No run, episode or seed is summarised.

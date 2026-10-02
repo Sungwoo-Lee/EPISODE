@@ -1,3 +1,0 @@
-evaluation episodes (32 runs x 1,000,000)|32,000,000|32,000,000|100.0|final checkpoint, greedy policy, one recording per run
-decision steps used, all runs|7,210,004,367|7,210,004,367|100.0|0 steps in body-variable bins under 200 steps were dropped; decision steps are the states the policy acted from
-worlds where the modulator's gain is higher|10|16|62.5|gap -0.53 to +1.07 points

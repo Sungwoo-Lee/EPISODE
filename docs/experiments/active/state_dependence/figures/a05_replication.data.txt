@@ -1,3 +1,0 @@
-world × level comparisons|9|9|100.0|every pairing where both agents have a populated causal panel; two curriculum levels never randomise starting injury and so cannot contribute
-training runs behind them|18|18|100.0|one ordinary and one neuromodulated run per comparison, one seed each
-seeds behind each band|5|5|100.0|five seeds of one unmodulated agent; the two bands are the two return estimators, which disagree about the noise floor by a factor of five

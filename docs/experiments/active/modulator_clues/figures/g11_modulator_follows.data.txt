@@ -1,6 +1,0 @@
-level 02|20|20|100.0|checkpoint step-recordings (30 episodes x 10 values each)
-level 03|20|20|100.0|checkpoint step-recordings (30 episodes x 10 values each)
-level 04|20|20|100.0|checkpoint step-recordings (30 episodes x 10 values each)
-level 05|80|80|100.0|checkpoint step-recordings (30 episodes x 10 values each)
-level 06 no fire|80|80|100.0|checkpoint step-recordings (30 episodes x 10 values each)
-level 06 with fire|80|80|100.0|checkpoint step-recordings (30 episodes x 10 values each)

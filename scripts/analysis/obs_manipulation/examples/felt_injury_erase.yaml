@@ -1,9 +1,0 @@
-# Felt injury removed (x0) or halved (x0.5) -- does an injured agent still act injured once it
-# stops feeling it? The world, including the true injury and its healing, is untouched.
-manipulations:
-  - name: felt_injury
-    sensor: Interoceptive Nociception
-    element: 0
-    op: scale
-    values: [0.0, 0.5]
-    steps: [0, null]

@@ -1,2 +1,0 @@
-worlds: food energy per bite x predator hit odds|18|18|100.0|6 food values x 3 hazard levels; today's is food 6 at measured odds (grey band)
-rollout starts per world|2,000|2,000|100.0|map without a warm bush

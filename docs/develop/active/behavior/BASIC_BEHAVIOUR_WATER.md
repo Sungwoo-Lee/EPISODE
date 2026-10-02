@@ -3,12 +3,13 @@ title: "Basic Behaviour Analysis: water (pond time, hydration, pond features, th
 topic: behavior
 status: active
 created: 2026-10-02
-last_updated: 2026-10-02
+last_updated: 2026-10-03
 ---
 
 # Basic Behaviour Analysis — adding water
 
-> **Status**: DRAFT plan, awaiting plan review. Nothing implemented.
+> **Status**: **Revision 1** (2026-10-03) — answers the plan review ([[plan_basic_behaviour_water]],
+> verdict NOT READY on commit `92cd1be8`); see §R1. Awaiting the reviewer's re-check. Nothing implemented.
 > **Owner of the pipeline**: the hypervigilance session (grid-world-pain-d9). This plan's water
 > parts are written by the thirst session in its own commits, with that session reviewing the diff.
 > **Parent plan**: [[BASIC_BEHAVIOUR_ANALYSIS_PIPELINE]] · **Runs**: [[THIRST_TASK]] ·
@@ -38,6 +39,28 @@ each episode's random seed — a method the thirst pilot validated over 25 milli
 exceptions. Because each world × agent has only **one** run, the cross-run comparison step refuses
 by design and the page says so. The existing reference checks stay byte-identical, and a new
 check proves the pond numbers against an independent count.
+
+## R1. Revision 1 — response to review (2026-10-03)
+
+The review ([[plan_basic_behaviour_water]], and the signed block at the end of this doc, kept as
+written) found one Critical and nine Moderate problems. The parent session decided each one in the
+user's absence, following the user's earlier choices. The table says what changed and where.
+Anything marked **default, user may revisit** is open for the user to reverse.
+
+| Finding | Decision and change | Where |
+|---|---|---|
+| 1 🔴 no stop point (b\*), no stores | **Early stopping was not applied: the user cancelled the hourly stop-checker loop, so every run trained the full 10 M episodes.** The endpoint for every world is the **final checkpoint (≥ 10 M episodes)**. The page says so in plain words: "early stopping not applied; user cancelled the checker". Stores: 1 M episodes per run at the final checkpoint, spec `configs/trajectory_collection/thirst_task.yaml`, out-root `results/trajectories_thirst_task/`, collection started 23:49 (2026-10-02) on nodes 106–114. New **C0 "stores collected and validated"**; the loop waits at C0 and runs nothing that reads a thirst store before it. The probe step replays all 50 checkpoints, as hvsmell does, and its summary window is the newest 20, ending at 10 M | Status, D11, D12, Gates, C0 |
+| 2 🟡 population builder needs code | A named code change to `make_population.py` (the developer writes it; d9 reviews; listed in SCRIPTS_DEPENDENCY_MAP): (a) the nine thirst cell names in `CELL_WORLD`, mapping to themselves (`g10sW` … `g20s3`); (b) `Cell` split on `·` **or** whitespace (§9 reads `g10sW ordinary`); (c) no `--checkpoint-nearest`: each run has one store, `final`. §9 rows still need `completed` and a `run dir` entry in the Log-path cell; the thirst session makes that doc edit | D11 |
+| 3 🟡 bouts contaminate hydration at t−1 | For the **pond** target, the hydration panel bins by hydration **at the start of a bout**: the denominator is the steps where the agent was off the pond at t−1, the numerator is arrivals. So the panel shows the arrival rate by thirst, not bout continuation. The page says which binning it uses. The other five targets keep the row-t−1 binning. Known Bugs note filed later through `bug-curator`; not blocking | D8 |
+| 4 🟡 probe pond confounded with map size | The pond sits at the **same distance from the scene at every map size**: its top-left at the start cell + (3, 3), which is the 10×10 geometry (level-06 candidate [8,8] with start [5,5]). Each world keeps its own pond size (2×2 / 3×3 / 4×4), so the pond's total smell stays what that world trained with. The generator asserts the replayed offset (nearest pond cell − agent start) is identical in all nine worlds. Start hydration stays **100** (the user's earlier default, **default, user may revisit**). Pre-registered rule: the pond-visit share (episodes in which the agent stands on the pond at least once) is reported for every scene × checkpoint. A scene × checkpoint cell with **more than 3 of its 30 episodes (> 10 %)** on the pond is **dropped** from every F7 summary, and the drop count is shown. Over-drinking (code 7) needs at least **20 consecutive pond steps** from 100 (net +5 per step to reach 200), so it can only occur in pond-visiting episodes, which the rule already covers | D12 (iii) |
+| 5 🟡 Gate 3(c) redundant | Replaced. The water gate runs the pipeline on a **thirst-pilot store** and must equal the pilot readout files written earlier by other code (`results/analysis/thirst_pilot/readout/<agent>_<seed>_<ckpt>.json`): chosen steps = `check2_steps_checked`; drinking steps = `bouts_per_episode × n_episodes × steps_per_bout_mean` (an integer to 1e-6, else the gate fails); share of episodes that drank = `share_episodes_drank`; death shares = `term_share`. It runs before any thirst store exists | Gates |
+| 6 🟡 shared stamp coupled | The water gate writes its **own stamp**, `results/analysis/basic_behaviour/_water_pass.json`. Only populations with water require it. Gates 1/2 keep writing `_golden_pass.json` unchanged | Gates |
+| 7 🟡 hvsmell page would break | Every water part depends on **whether the population has water** (any cell's saved config has `water.enabled: true`). Termination columns 6/7, the pond target, template wording and F6 hydration rows exist only then. F1 iterates the targets present in the inventory, so old inventories without `pond` still work. Development happens in an **isolated git worktree branch**, merged into `v5.0` only after the hvsmell page rebuilds **byte-identical (figures)** and d9 has reviewed. d9 is warned **before** the merge that the source-hash change makes hvsmell caches refuse `--reuse-cache` | D13, Gates, C2b |
+| 8 🟡 change-log entry missing | Same-commit CONFIG_CRITICAL_SETTINGS change-log entry for the 108 probe scenes' local `water.placement` / `water.candidates` / `random_start_hydration` / `start_hydration` overrides ("NO CANONICAL VALUE CHANGED", as on 2026-09-23 and 2026-10-01) | File Changes |
+| 9 🟡 node launch while the user sleeps | The user explicitly asked for the probe sweeps to run overnight, so C8 stays. The launcher picks nodes from **live `gpu_status`**, runs the pre-flight checks (NAS mount, `pgrep` for CPU-phase claimants, today's diary) and **claims the nodes in the diary at launch**. CPU only. The stale node-avoid list is removed | D12 Nodes, C8 |
+| 10 🟡 n = 1 honesty | Every F3, F4 and F7 error bar is captioned **within-run (one trained policy)**: episode-to-episode or checkpoint-to-checkpoint spread, not seed-to-seed. A page-level box quotes [[THIRST_TASK]] §5.4, that one seed "cannot support any modulator claim" nor any "no difference" claim. No modulated-minus-ordinary panel or sentence. Greedy-store numbers are never pooled with training-log numbers (§5.5) | D10 |
+| 11 🟢 labels unlisted | `_fig.FACTOR_LABEL` (new factor names), `f1.TERM_SHORT` (codes 6/7) and `f1.TARGET_KEY` (`pond`) added to File Changes | File Changes |
+| 12 🟢 thermal contract | The hvsmell generator's thermal-contract check (bush warm and survivable, start cell not) is kept per world in the thirst generator's `--check-only` | D12 env-config check |
 
 ## Analysis
 
@@ -145,6 +168,10 @@ spawn_dist_to_pond)"; `placement: random` → claimed by W2 as well (the replay 
 **row t−1** — the state the agent was in when it chose the step (plan A6). Hydration is digitised
 after `np.round(h, 3)` so float32 round-trip (e.g. 99.99998) cannot flip a band at an edge. F6 gains
 one heat-map row per world × agent for water worlds; absent otherwise.
+**Revision 1 (finding 3):** for the **pond** target only, hydration is binned at the **start of a
+bout**. Trials are the chosen steps where the agent was off the pond at t−1, successes are arrivals
+on the pond at t, and the bands are read from hydration at t−1. Cross-table `hyd_nut_onset__pond`.
+The page states this binning under the panel.
 
 **D9. Termination codes.** `_fig.TERM_NAMES` gains `6: "died of thirst"`, `7: "over-drank"`. F1's
 "other" bucket must be 0 % on every thirst cell (asserted).
@@ -152,17 +179,22 @@ one heat-map row per world × agent for water worlds; absent otherwise.
 **D10. One run per cell.** `screen.py` already refuses and writes `screen/<target>/prefit.json
 {"refused": …}`. `build_page.py` renders that reason in the F5 block instead of "not yet produced".
 F1–F4 and F6 are built per run as usual. F7 part 7e gets the same treatment (D12).
+**Revision 1 (finding 10):** every F3, F4 and F7 interval is captioned "within-run (one trained
+policy)". A page-level box quotes [[THIRST_TASK]] §5.4, and the page carries no
+modulated-minus-ordinary reading. The endpoint note reads "early stopping not applied; user
+cancelled the checker".
 
-**D11. Population.** `scripts/analysis/studies/hypervigilance/make_population.py --from-study-doc
-docs/experiments/active/thirst_task/THIRST_TASK.md --population thirst --checkpoint-nearest <b*
-store> --out results/analysis/basic_behaviour/thirst/` (stores from the collection in
-[[THIRST_TASK]] §5.5, root `results/analysis/thirst_task/`). Required: 18 cells, `world` ∈ the nine
-cell names, `agent` ∈ {t1none, t16quad}, seed 42, all `completed`. If the parser cannot read §9
-(it looks for `run dir \`…\`` in the Log-path cell, which §9 does not yet carry), the fix is a
-§9 Status/Log-path edit by the session that keeps that table, not a code change here.
+**D11. Population (Revision 1).** `scripts/analysis/studies/hypervigilance/make_population.py
+--from-study-doc docs/experiments/active/thirst_task/THIRST_TASK.md --population thirst --store-root
+results/trajectories_thirst_task --out results/analysis/basic_behaviour/thirst/`. Stores: one per
+run, the **final checkpoint (≥ 10 M episodes)**, 1 M episodes, from `configs/trajectory_collection/thirst_task.yaml`.
+**Code change** (developer writes, d9 reviews): thirst cell names in `CELL_WORLD`; `Cell` split on
+`·` or whitespace; no `--checkpoint-nearest` (one store per run). **Doc edit** (thirst session):
+§9 rows set to `completed` with a `run dir \`…\`` entry in the Log-path cell. Required: 18 cells,
+`world` ∈ the nine cell names, `agent` ∈ {t1none, t16quad}, seed 42, all `completed`.
 
-**D12. Probe scenes (Figure 7) for the thirst population.** Every saved checkpoint of each run is
-replayed in the 12 fixed scenes (no animal; hunting predator; chasing rabbit; chasing rabbit with
+**D12. Probe scenes (Figure 7) for the thirst population.** Every saved checkpoint (all 50,
+ending at the final ≥ 10 M checkpoint; early stopping was not applied) of each run is replayed in the 12 fixed scenes (no animal; hunting predator; chasing rabbit; chasing rabbit with
 its predator-like odour zeroed; wandering rabbit; wandering rabbit with the world's predator
 smell; each at start injury 0 and 70), 30 episodes each, 100-step episodes. Defaults set in the
 user's absence — **each is "default, user may revisit"**:
@@ -180,13 +212,15 @@ user's absence — **each is "default, user may revisit"**:
   impossible and the scenes stay about animals and cover. **The pond cannot be removed**: with
   `water.enabled: true` the reset always places one (`core.py:1884`), and `water.enabled: false`
   drops the Hydration number from the observation (59 → 58), which the trained agents cannot take.
-  Default: `placement: list` with **one** candidate at the corner farthest from the scene's cells
-  (on 10×10 that is still only ~3 squares from the start — stated on the page); pond smell and sight
-  left as trained. The sweep records per scene the share of episodes in which the agent ever stood
-  on the pond. Alternatives: a small environment change adding `water.placement: none` (its own
+  **Revision 1 (finding 4):** `placement: list` with **one** candidate whose top-left is the start
+  cell + (3, 3), the 10×10 geometry, at **every** map size. Each world keeps its own pond size, and
+  pond smell and sight stay as trained. The pre-registered pond rule (report the visit share; drop
+  any scene × checkpoint cell with > 3 of 30 episodes on the pond) is in §R1. Over-drinking needs
+  ≥ 20 consecutive pond steps from 100, so it is covered by that rule. Alternatives: a small environment change adding `water.placement: none` (its own
   plan, `src/` change), or a deliberate pond scene as a follow-up.
 - (iv) `probes.py` and `f7_probes.py` refuse 7e (seed-to-seed budget) when any world has < 2 runs,
   as F5 does, and the page shows the reason. World-difference panels are descriptive at one seed.
+  The summary window is the newest 20 checkpoints, ending at the final (10 M) checkpoint.
 - `probes.py` is generalised minimally: worlds come from the sweep specs + population (no
   hv-specific `SPEC_WORLD` / `WORLD_CONTRASTS` for this population; thirst declares no contrasts),
   and the 20-checkpoint floor is reported per run, never silently dropped.
@@ -198,10 +232,15 @@ user's absence — **each is "default, user may revisit"**:
   = the world's; observation breakdown (names, order, widths, D = 59) equals the run's saved config;
   water: fixed start 100, one candidate, pond cells disjoint from start / bush / fire / spawn / patrol
   cells; animal smell vectors equal the world's, spread 0; and 30 seeded resets show the fixed
-  start, bush, fire and pond where intended.
-- **Nodes** (the parent picks them at launch, from live `gpu-status` + the diary): CPU-only work;
-  avoid nodes running the thirst training (currently 106, 107, 109–114 per [[THIRST_TASK]] §9) since
-  the eval would starve their data pipeline; confirm the NAS mount on each (`df | grep nas01`).
+  start, bush, fire and pond where intended, with the nearest-pond-cell offset from the start
+  identical in all nine worlds. The hvsmell thermal-contract check (bush warm and survivable, start
+  cell not) is kept per world. The generator, scenes and sweep specs are configs, so
+  `experiment-designer` produces them, with the CONFIG_CRITICAL_SETTINGS entry in the same commit.
+- **Nodes (Revision 1, finding 9):** the user asked for the probe sweeps to run overnight. The
+  launcher picks nodes from **live `gpu_status`** at launch and avoids any node with live training or
+  trajectory collection (the collection started 23:49 on 106–114). It runs the pre-flight checks:
+  NAS mount (`df | grep nas01`), `pgrep` for CPU-phase claimants that `nvidia-smi` cannot see, and
+  today's diary. It **claims the nodes in the diary at launch**. CPU only.
   Node time per world is measured on the first world before the rest (hvsmell: 9–15 min with 6
   runs per world; thirst has 2 runs per world but larger maps). Collation, 60–90 min on the
   launching container, must not be restarted mid-way.
@@ -210,18 +249,27 @@ user's absence — **each is "default, user may revisit"**:
 
 - **Gate 1 (a01 byte-identity) and Gate 2 (single-channel hv1ch store) stay byte-identical**, plus
   the thermal replay. Every water path is gated on `water.enabled`, false in both reference worlds.
+- **hvsmell unchanged (Revision 1, finding 7):** before the merge, the hvsmell page is rebuilt twice
+  from the same hvsmell stores into a scratch root: once with `v5.0` code and once with the branch.
+  Every PNG must be byte-identical between the two (SVG/PDF compared after stripping their date
+  metadata). Plus d9's review.
 - **Source-hash consequence (state it to d9 before merging):** `registry.py` and `sweep.py` are in
   `SWEEP_SOURCES`, so editing them changes the golden stamp's hash and makes existing hvsmell
   caches refuse `--reuse-cache`. The gate is re-run once on the final diff; hvsmell re-sweeps are
   scheduled with d9, not forced by surprise.
-- **Gate 3 (new, water)** in `golden_gate.py`, on one thirst store (g10sW ordinary, final store):
-  (a) the Hydration index found by name is not its alphabetical position and equals the pilot's
-  layout position; (b) 20 episodes replayed with `jax_reset`: replayed `state.hydration` at t = 0
-  equals `max × obs_true[Hydration]` within 1e-4; (c) **pond time, two independent ways**:
-  pipeline `y__pond.sum() / n_steps.sum()` versus a count of hydration rises read directly from the
-  parquet with the pilot's reader logic (fixed index, `np.diff(h) > 0`, no replay, no registry) —
-  equal integer counts, so the shares agree to the last printed digit; (d) the D3 checks report
-  zero exceptions; (e) the audit has no unhandled row. Pass is added to `_golden_pass.json`.
+- **Water gate (Revision 1, findings 5 and 6)**, a separate mode of `golden_gate.py`, on a
+  **thirst-pilot store** (`results/analysis/thirst_pilot/<run>/<ckpt>/<hash>/`, the one behind
+  `readout/t16quad_s42_2000001.json`): (a) the Hydration index found by name is not its
+  alphabetical position (index 2 vs 7, verified by the reviewer); (b) 20 episodes replayed with
+  `jax_reset`: replayed `state.hydration` at t = 0 equals `max × obs_true[Hydration]` within 1e-4;
+  (c) **external reference**: the pipeline's numbers equal the pilot readout JSON, written earlier
+  by other code. Chosen steps `n_steps.sum()` = `check2_steps_checked`; pond steps `y__pond.sum()`
+  = `bouts_per_episode × n_episodes × steps_per_bout_mean` (integer to 1e-6, else fail); share of
+  episodes with any pond step = `share_episodes_drank`; termination shares = `term_share`; (d) the
+  D3 checks report zero exceptions; (e) the audit has no unhandled row. Pass writes **its own
+  stamp** `results/analysis/basic_behaviour/_water_pass.json`, required only by populations with
+  water. `_golden_pass.json` is untouched by it. On the thirst stores (after C0) the D3 checks run
+  on every store during the sweep.
 
 ### Speed
 
@@ -229,7 +277,22 @@ The sweep already reads `obs_true` on thermal worlds (~14 min per run locally). 
 vmapped reset per store (seconds) and a vectorised pond-mask lookup per shard. Expected ≤ 5 %;
 measured on the gate store before/after and recorded. All sweeps and fits run **in the local
 container** at `nice -n 19` — lab nodes lack `statsmodels` (Known Bugs, "node env drift"). 18 runs
-at `--workers 3`: about 1.5 h wall. Only the F7 probe sweep uses nodes.
+at `--workers 3`: about 1.5 h wall. Only the F7 probe sweep uses nodes. The hvsmell
+byte-identity rebuild (two re-sweeps of 18 hv cells) adds about 3 h locally.
+
+### D13. Isolation (Revision 1, finding 7)
+
+Development happens on a branch in its own worktree (`git worktree add -b bb-water
+.claude/worktrees/bb-water v5.0`), merged into `v5.0` only after Gates 1/2, the hvsmell
+byte-identity rebuild, and d9's review. **Hazard the developer must handle:** the pipeline finds
+data from its own file location (`registry.ROOT`, `readings.ROOT`), and the NAS has no symlinks,
+so worktree code cannot see `results/`. Minimal fix, part of the d9-reviewed diff: one environment
+variable `BB_DATA_ROOT`. When it is set, data paths (population, stores, references) resolve under
+it, and **every** output (sweeps, fits, figures, both stamps) goes under
+`results/analysis/basic_behaviour/_water_dev/`. Source hashes keep using the code's own location.
+When it is unset, behaviour is unchanged. So no worktree run can overwrite d9's `hvsmell/` outputs
+or the shared `_golden_pass.json`. The developer verifies this by listing the mtimes of
+`hvsmell/` and `_golden_pass.json` before and after each worktree run (unchanged).
 
 ### File Changes
 
@@ -240,22 +303,26 @@ Edits to `f7_probes.py`, `page_template.html` (and `build_page.py`, which d9 als
 |---|---|
 | `scripts/analysis/basic_behaviour/registry.py` | D1, D2 (`pond_cells`), D4 target, D5 factors/consequences, D6 world features, D7 audit |
 | `scripts/analysis/basic_behaviour/sweep.py` | params rebuild when water on; Hydration read; replay + D3 checks; `y_pond`, `hyd0`, `hyd_sum1`, `pond_corner`, `d_pond0`; `hyd_nut__*` row-t−1 cross-tables; `factor_arrays` kinds `start_hydration`, `spawn_dist_pond` |
-| `scripts/analysis/basic_behaviour/_fig.py` | `TERM_NAMES` 6, 7 |
-| `scripts/analysis/basic_behaviour/f1_behaviours_survival.py` | assert "other" = 0 on water worlds; sixth behaviour drawn |
+| `scripts/analysis/basic_behaviour/_fig.py` | `TERM_NAMES` 6, 7 (water populations only); `FACTOR_LABEL` for `start_hydration`, `spawn_dist_to_pond`, `mean_hydration`, `frac_time_on_pond` |
+| `scripts/analysis/basic_behaviour/f1_behaviours_survival.py` | iterate the targets present in the inventory; `TERM_SHORT` 6/7 and `TARGET_KEY` `pond`; assert "other" = 0 on water worlds; endpoint note |
+| `scripts/analysis/basic_behaviour/f3_univariate.py`, `f4_multivariate.py` | "within-run (one trained policy)" interval captions (finding 10) |
+| `scripts/analysis/studies/hypervigilance/make_population.py` | thirst `CELL_WORLD` names; `Cell` split on `·` or whitespace (D11; d9 reviews) |
+| `scripts/analysis/basic_behaviour/registry.py`, `scripts/analysis/studies/hypervigilance/readings.py` | `BB_DATA_ROOT` (D13) |
+| `docs/environment/CONFIG_CRITICAL_SETTINGS.md` | dated change-log entry for the probe scenes' local water overrides (finding 8; same commit as the scenes) |
 | `scripts/analysis/basic_behaviour/f2_factor_inventory.py` | pond-corner shares and world features |
-| `scripts/analysis/basic_behaviour/f6_crosstabs.py` | hydration × nutrition heat maps (D8) |
+| `scripts/analysis/basic_behaviour/f6_crosstabs.py` | hydration × nutrition heat maps (D8); bout-onset binning for `pond` |
 | `scripts/analysis/basic_behaviour/build_page.py` | refusal reasons for F5 / 7e (D10); `pond` target accepted (after d9) |
 | `scripts/analysis/basic_behaviour/page_template.html` | pond / hydration wording, refusal text (after d9) |
 | `scripts/analysis/basic_behaviour/probes.py`, `f7_probes.py` | D12 generalisation, 7e refusal, data-driven x range and run total (f7 after d9) |
-| `scripts/analysis/basic_behaviour/golden_gate.py` | Gate 3 |
+| `scripts/analysis/basic_behaviour/golden_gate.py` | water-gate mode with its own stamp `_water_pass.json`; `fit.require_stamp` also requires it for water populations |
 | `configs/environment/experiment/behavior_probes/thirst/generate_thirst_probes.py` + 9 × 12 scene YAMLs | D12 (i)–(iii) |
 | `configs/eval_sweeps/thirst/thirst_<cell>_rppo.yaml` × 9 | D12 sweep specs |
 | `tests/analysis/test_basic_behaviour.py` | tests below |
-| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | new caller relations (registry → `core.jax_reset`; golden_gate Gate 3), new generator and sweep specs — same commit |
+| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | new caller relations (registry → `core.jax_reset`; golden_gate water mode → pilot readout; make_population thirst source), new generator and sweep specs — same commit |
 | `docs/develop/active/behavior/BASIC_BEHAVIOUR_ANALYSIS_PIPELINE.md` | one dated cross-link line to this plan |
 
-No `src/` change, no store-schema change, no new config key, no critical-settings change, no
-version number anywhere.
+No `src/` change, no store-schema change, no new config key, no version number anywhere. One
+critical-settings change-log entry (local overrides only, no canonical value changed).
 
 ### Tests (fast, no store reads)
 
@@ -276,17 +343,24 @@ version number anywhere.
 
 ## Checkpoints
 
-- [ ] C1 registry + sweep water paths; tests 1–6 pass
+- [ ] C0 **stores collected and validated**: 18 final-checkpoint (≥ 10 M) stores of 1 M episodes
+      under `results/trajectories_thirst_task/`, each with a manifest, D = 59, `obs_precision`
+      float32, contiguous seeds. **The loop waits here**; nothing that reads a thirst store runs
+      before it (C1–C3 and C7 may)
+- [ ] C1 worktree branch (D13); registry + sweep water paths; tests 1–6 pass
 - [ ] C2 Gates 1 and 2 byte-identical on the edited code; thermal replay passes
-- [ ] C3 Gate 3 passes on the g10sW store; speed before/after recorded
-- [ ] C4 population.json: 18 completed cells (D11)
+- [ ] C2b hvsmell page rebuilt byte-identical (figures) from `v5.0` vs branch; d9 warned about cache refusal
+- [ ] C3 water gate passes on the pilot store (`_water_pass.json`); speed before/after recorded
+- [ ] C4 population.json: 18 completed cells (D11; needs C0 and the §9 doc edit)
 - [ ] C5 sweep of all 18 cells locally; D3 checks zero exceptions on every store (incl. 20×20); no
       unhandled audit row; F1 "other" = 0
 - [ ] C6 F1–F4, F6 built for all six targets; F5 shows its refusal reason
 - [ ] C7 (after d9's go) build_page / template / f7 edits; probe generator + 108 scenes;
       `--check-only` + `env-config-reviewer` pass
-- [ ] C8 probe sweep launched by the parent on its chosen nodes; collation; F7 built with 7e refusal
-- [ ] C9 page through `publish-page` + `artifact-format-reviewer`; diff to d9 for review
+- [ ] C8 probe sweep launched overnight: nodes from live `gpu_status`, pre-flight checks, diary
+      claim at launch, CPU only; collation; pond-visit rule applied; F7 built with 7e refusal
+- [ ] C9 page through `publish-page` + `artifact-format-reviewer`; diff to d9 for review; merge
+      into `v5.0` after d9's review
 
 ## Implementation Report
 

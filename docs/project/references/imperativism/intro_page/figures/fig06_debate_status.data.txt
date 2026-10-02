@@ -1,1 +1,0 @@
-All 8 debates in debates.csv are drawn (100%), with 106 work-in-debate marks (a work that takes part in a debate once, however many positions it holds there). Works before 1994 hold no position in any debate, so the axis starts there without dropping any mark.

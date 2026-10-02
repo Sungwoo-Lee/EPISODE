@@ -1,2 +1,0 @@
-worlds shown (one setting changed from today, plus two checks)|19|19|100.0|the food × predator grid is the next figure; map without a warm bush only (primary verdict)
-rollout starts per world|2,000|2,000|100.0|training-style random starts, 500 steps each

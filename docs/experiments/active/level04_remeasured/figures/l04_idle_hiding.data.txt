@@ -1,4 +1,0 @@
-checkpoints per line|50|50|100.0|every saved checkpoint, both worlds
-episodes per checkpoint|30|30|100.0|fixed seeds
-test scenes|1|12|8.3|the empty scene only — the one where the first world's permeable bush cannot matter
-training runs|4|4|100.0|ordinary and neuromodulated in each world, one seed each

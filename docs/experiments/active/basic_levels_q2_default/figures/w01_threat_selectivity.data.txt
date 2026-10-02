@@ -1,4 +1,0 @@
-wave1 control: checkpoints with BOTH probes|50|50|100.0|a checkpoint counts only where the predator probe and the no-animal probe were both evaluated; the subtraction is within-checkpoint
-wave1 modulated: checkpoints with BOTH probes|50|50|100.0|a checkpoint counts only where the predator probe and the no-animal probe were both evaluated; the subtraction is within-checkpoint
-wave2 control: checkpoints with BOTH probes|50|50|100.0|a checkpoint counts only where the predator probe and the no-animal probe were both evaluated; the subtraction is within-checkpoint
-wave2 modulated: checkpoints with BOTH probes|50|50|100.0|a checkpoint counts only where the predator probe and the no-animal probe were both evaluated; the subtraction is within-checkpoint

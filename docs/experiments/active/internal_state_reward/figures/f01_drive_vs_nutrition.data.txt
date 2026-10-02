@@ -1,2 +1,0 @@
-fullness values swept, new world|201|201|100.0|every whole nutrition point in the reachable range 0-200; analytic sweep through the live calculate_drive, not sampled from episodes
-fullness values swept, pre-change world|101|101|100.0|the same sweep over the old reachable range 0-100, resolved by overriding the three body keys back to their pre-2026-09-22 values

@@ -1,6 +1,0 @@
-run M1 (ordinary, seed 42): logged rows drawn|1,273|1,273|100.0|rows with a full logging window in the five stages; running mean starts 20,000 episodes after each switch
-run M2 (modulated, seed 42): logged rows drawn|1,273|1,273|100.0|rows with a full logging window in the five stages; running mean starts 20,000 episodes after each switch
-run M3 (ordinary, seed 43): logged rows drawn|1,273|1,273|100.0|rows with a full logging window in the five stages; running mean starts 20,000 episodes after each switch
-run M4 (modulated, seed 43): logged rows drawn|1,273|1,273|100.0|rows with a full logging window in the five stages; running mean starts 20,000 episodes after each switch
-run M5 (ordinary, seed 44): logged rows drawn|1,272|1,272|100.0|rows with a full logging window in the five stages; running mean starts 20,000 episodes after each switch
-run M6 (modulated, seed 44): logged rows drawn|1,273|1,273|100.0|rows with a full logging window in the five stages; running mean starts 20,000 episodes after each switch

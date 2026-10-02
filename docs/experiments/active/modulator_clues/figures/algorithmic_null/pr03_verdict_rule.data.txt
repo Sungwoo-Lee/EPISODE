@@ -1,6 +1,0 @@
-status: illustration — toy numbers made by the script to explain a method; not a study result and not read from any analysis output
-decision_rules: none (illustration)
-source: fixed toy values in pr03_verdict_rule.py; the rule is the one in the rules file
-row: ordinary pairs per panel|3|3|100.0|as in the study: 3 seeds give 3 pairs
-row: modulated-vs-ordinary pairs per panel|6|6|100.0|as in the study: 3 x 3 seeds minus the 3 same-seed pairs
-row: panels|3|3|100.0|one per word the rule can give

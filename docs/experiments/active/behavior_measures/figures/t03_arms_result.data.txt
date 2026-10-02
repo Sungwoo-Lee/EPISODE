@@ -1,4 +1,0 @@
-arm × level cells|8|8|100.0|4 thermal arms × 2 curriculum levels; each needs both a plain and a neuromodulated run present
-checkpoints per estimate|20|50|40.0|the newest 20 of 50, the plateau region identified in Figure 1; earlier checkpoints are excluded because they average in a less-trained policy
-episodes per checkpoint|60|60|100.0|30 with a predator and 30 with an empty world
-training seeds per cell|1|1|100.0|a single seed per arm, so intervals describe these runs — not the method

@@ -1,7 +1,0 @@
-{
- "n_rules": "8",
- "n_support": "3",
- "with_forage_support": "R1 and R5",
- "without_forage_support": "0",
- "p1_ab_forget_sum": "+14.4"
-}

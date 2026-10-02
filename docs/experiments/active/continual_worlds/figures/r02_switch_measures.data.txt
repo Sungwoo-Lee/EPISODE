@@ -1,4 +1,0 @@
-switches (drop and recovery)|12|12|100.0|every switch of the three sequences; first 20,000 episodes after each switch
-returns|6|6|100.0|each second visit; last 200,000 episodes of the visit
-drop votes counted|9|12|75.0|not counted when the own-level and shared-level readings disagree
-recovery votes counted|5|12|41.7|a tie when both agents recover in the same logged row, usually the first one

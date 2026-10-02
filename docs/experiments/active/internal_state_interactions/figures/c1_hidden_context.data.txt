@@ -1,6 +1,0 @@
-ordinary agent: episodes in the few / many ambusher bands|727,627|1,000,000|72.8|272,373 episodes with 6-8 ambushers left out by design
-ordinary agent: steps in matched cells (ambusher rows)|188,918,688|188,918,720|100.0|65 of 80 body/time cells had >= 200 steps in both bands
-ordinary agent: steps in matched cells (2 vs 0 predators, smell-matched)|191,079,104|191,200,320|99.9|231 of 400 body/time/smell cells counted
-modulator agent: episodes in the few / many ambusher bands|727,627|1,000,000|72.8|272,373 episodes with 6-8 ambushers left out by design
-modulator agent: steps in matched cells (ambusher rows)|189,520,928|189,521,008|100.0|65 of 80 body/time cells had >= 200 steps in both bands
-modulator agent: steps in matched cells (2 vs 0 predators, smell-matched)|191,555,632|191,606,736|100.0|236 of 400 body/time/smell cells counted

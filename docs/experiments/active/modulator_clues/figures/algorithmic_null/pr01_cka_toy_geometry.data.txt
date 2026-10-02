@@ -1,5 +1,0 @@
-status: illustration — toy numbers made by the script to explain a method; not a study result and not read from any analysis output
-decision_rules: none (illustration)
-source: fixed toy values in pr01_cka_toy_geometry.py
-row: moments per layer|3|3|100.0|chosen by hand so the geometry is visible
-row: layers drawn|5|5|100.0|network A and four versions of network B

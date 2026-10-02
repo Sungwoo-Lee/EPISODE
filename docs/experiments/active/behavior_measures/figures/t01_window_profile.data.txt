@@ -1,3 +1,0 @@
-checkpoints per agent|50|50|100.0|every saved checkpoint of both level-04 runs; the sweep wrote 50 of 50 with no failed cells
-episodes behind each checkpoint|60|60|100.0|30 episodes with a predator and 30 with an empty world, per checkpoint, per agent
-training runs|2|2|100.0|one plain and one neuromodulated run, both seed 42 — a single seed per arm, so the intervals describe these two runs and not the method

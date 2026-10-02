@@ -1,2 +1,0 @@
-simulated episodes|56,000|56,000|100.0|drain sweep at grid 10 and grid sweep at drain 0.625, knows / must find
-recorded level-05 steps (all; the rate uses those outside cover, not resting)|12,866,593|12,866,593|100.0|ordinary agent, final checkpoint, steps outside cover not resting: 0.715 damage per step

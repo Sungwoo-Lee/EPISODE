@@ -1,1 +1,0 @@
-Attempts plotted: 54 of 61 (89%) &mdash; every graded attempt; the 7 left out are 3 pipeline smoke tests and 4 attempts made with two task descriptions that were later corrected.

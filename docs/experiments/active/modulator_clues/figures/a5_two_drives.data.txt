@@ -1,4 +1,0 @@
-world × level cells|7|7|100.0|blind plus levels 04-06; Wave 1 levels 02/03 excluded (unmatched training length)
-episodes per agent per cell|1,000,000|1,000,000|100.0|final-checkpoint store; every episode has a random start
-steps per episode used|25|500|5.0|the first 25, while the assigned values are still intact
-minimum steps per group|5,000|5,000|100.0|groups with fewer steps are left blank

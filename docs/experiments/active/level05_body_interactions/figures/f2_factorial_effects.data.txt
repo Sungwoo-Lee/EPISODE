@@ -1,4 +1,0 @@
-worlds entering every effect|16|16|100.0|one run per agent per world, seed 42; no world collapsed, so none was left out
-ordinary agent: effects beyond SME (noted)|2|15|13.3|PSE 2.15, ME 5.53, SME 11.23 points; noted: healing uses up food, less food per bite
-modulator agent: effects beyond SME (noted)|1|15|6.7|PSE 2.66, ME 6.83, SME 13.86 points; noted: less food per bite
-gap: effects beyond SME (noted)|0|15|0.0|PSE 1.82, ME 4.69, SME 9.52 points; noted: none

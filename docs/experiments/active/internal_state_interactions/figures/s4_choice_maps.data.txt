@@ -1,4 +1,0 @@
-today|3,978|80,886|4.9|three temperature slices shown of all grid states solved; map without a warm bush
-fewer bushes (trip 8) (does not pass)|3,978|80,886|4.9|three temperature slices shown of all grid states solved; map without a warm bush
-heal costs food (2/point) (does not pass)|3,978|80,886|4.9|three temperature slices shown of all grid states solved; map without a warm bush
-heal costs food (1/point) (does not pass)|3,978|80,886|4.9|three temperature slices shown of all grid states solved; map without a warm bush

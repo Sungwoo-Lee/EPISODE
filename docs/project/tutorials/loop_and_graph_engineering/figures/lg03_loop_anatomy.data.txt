@@ -1,1 +1,0 @@
-Conceptual diagram, not a measurement: all 5 of the 5 loop-specification parts named by Macedo (2026) drawn (100%), plus the agent pass and the exit. No run, episode or seed is summarised.

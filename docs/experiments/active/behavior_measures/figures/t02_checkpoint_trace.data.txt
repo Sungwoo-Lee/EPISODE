@@ -1,3 +1,0 @@
-checkpoints drawn|100|100|100.0|50 per agent × 2 agents, both probe conditions; the sweep wrote every one
-episodes per point|30|30|100.0|30 evaluation episodes at fixed seeds behind each plotted marker
-training runs|2|2|100.0|one seed per arm — descriptive only

@@ -1,1 +1,0 @@
-docs/develop/active/thirst/figures/make_render_frames.py

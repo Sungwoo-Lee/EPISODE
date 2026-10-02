@@ -1,4 +1,0 @@
-episodes replayed per agent per world|1,000,000|1,000,000|100.0|full trajectory store, paired seeds across the two worlds
-step-rows kept|20|104|19.2|approximate millions: first 25 steps of randomly-injured episodes only, so the wound precedes the behaviour
-checkpoints|1|50|2.0|the final one only — the stores were collected once; see the limit in the caption
-training runs|4|4|100.0|ordinary and neuromodulated in each world, one seed each

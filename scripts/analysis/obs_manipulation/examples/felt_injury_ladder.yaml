@@ -1,9 +1,0 @@
-# Felt injury held at a fixed value for the whole episode -- the dose ladder.
-# The agent's only injury input is `Interoceptive Nociception` (injury is not directly observable).
-manipulations:
-  - name: felt_injury
-    sensor: Interoceptive Nociception
-    element: 0
-    op: set
-    values: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-    steps: [0, null]

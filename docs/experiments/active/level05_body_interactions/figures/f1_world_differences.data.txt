@@ -1,4 +1,0 @@
-evaluation episodes (32 runs x 1,000,000)|32,000,000|32,000,000|100.0|final checkpoint, greedy policy; one training seed per world
-bootstrap blocks per run (5,000 whole episodes each)|200|200|100.0|4,000 resamples per agent, independently; interval = evaluation noise only, not seed noise
-decision steps inside the four fed/hungry x low/high cells|2,131,444,683|7,210,004,367|29.6|the rest have nutrition 60-100 or injury 20-60, which measure 1 does not use
-worlds whose measure-1 interval excludes zero|15|16|93.8|evaluation noise only; the pre-registered noise judgement is Figure 2's

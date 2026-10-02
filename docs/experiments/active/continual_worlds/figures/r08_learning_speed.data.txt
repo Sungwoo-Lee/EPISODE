@@ -1,6 +1,0 @@
-run M1 (ordinary, seed 42): stage-1 rows|146|375|38.9|left panel: rows up to 600,000 episodes; right panel: rows up to 150 million environment steps
-run M2 (modulated, seed 42): stage-1 rows|146|375|38.9|left panel: rows up to 600,000 episodes; right panel: rows up to 150 million environment steps
-run M3 (ordinary, seed 43): stage-1 rows|146|375|38.9|left panel: rows up to 600,000 episodes; right panel: rows up to 150 million environment steps
-run M4 (modulated, seed 43): stage-1 rows|146|375|38.9|left panel: rows up to 600,000 episodes; right panel: rows up to 150 million environment steps
-run M5 (ordinary, seed 44): stage-1 rows|146|375|38.9|left panel: rows up to 600,000 episodes; right panel: rows up to 150 million environment steps
-run M6 (modulated, seed 44): stage-1 rows|146|375|38.9|left panel: rows up to 600,000 episodes; right panel: rows up to 150 million environment steps

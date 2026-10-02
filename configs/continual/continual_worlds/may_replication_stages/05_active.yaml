@@ -1,5 +1,0 @@
-# May double-return replication, stage 5 of 5 -- ACTIVE predator, second return.
-# Design: docs/experiments/active/continual_worlds/MAY_DOUBLE_RETURN_REPLICATION.md. Schedule: configs/continual/continual_worlds/may_replication.yaml.
-# The whole world is the file named below; this stage file adds nothing, so every visit to a world
-# is the SAME world (one file per stage because train.py reads one YAML per stage, alphabetically).
-extends: environment/experiment/continual_worlds/may_active_10x10

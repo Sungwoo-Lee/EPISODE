@@ -1,2 +1,0 @@
-fullness values evaluated|201|201|100.0|every whole nutrition point in the reachable range 0-200; the drive at each is read from the live calculate_drive, and the nutrition each action moves is read from the resolved EnvParams rather than typed
-episodes used|0|0|0.0|none - this figure is the reward RULE evaluated across the state space, not a measurement of what an agent did. An independent full jax_step measurement of the eat action gave -4.0 at the target and +4.0 at fullness 50, matching this curve

@@ -1,1 +1,0 @@
-Conceptual diagram, not a measurement: all 3 of the 3 graph views in Feng et al. (2026) sections 4.2-4.4 drawn (100%), as 3 invented examples of 5, 4 and 5 nodes. No run, episode or seed is summarised.

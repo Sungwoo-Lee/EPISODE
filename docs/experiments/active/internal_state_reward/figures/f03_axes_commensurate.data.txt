@@ -1,2 +1,0 @@
-deviation fractions evaluated per axis|201|201|100.0|0 to 1 in 201 steps, on the campfire world (basic/05) because it is the only maintained world whose drive has a third axis
-axes compared|4|4|100.0|fullness in both directions, injury, body temperature - every axis the drive has

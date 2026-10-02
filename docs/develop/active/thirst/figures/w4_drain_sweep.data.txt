@@ -1,2 +1,0 @@
-episodes per drain value, agent knows the pond|16,000|16,000|100.0|8 drain values x 2,000 episodes, grid 10, list placement
-episodes per drain value, agent must find it|16,000|16,000|100.0|same settings and seeds, search on

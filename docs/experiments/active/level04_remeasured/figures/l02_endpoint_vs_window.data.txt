@@ -1,4 +1,0 @@
-test scenes|8|12|66.7|every scene the earlier analysis quoted, plus the injured and smell-silenced variants; the four remaining are injured copies of the rabbit scenes
-checkpoints behind each filled dot|20|50|40.0|the newest 20; the hollow ring is the single newest
-episodes per checkpoint|30|30|100.0|fixed seeds shared by both agents
-training runs|2|2|100.0|one seed each

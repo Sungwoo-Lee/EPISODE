@@ -1,4 +1,0 @@
-checkpoints per value|20|50|40.0|the newest 20 of each run's 50
-episodes per checkpoint|30|30|100.0|fixed seeds shared by both agents
-worlds with comparable animal scenes|1|3|33.3|Wave 2 only: Wave 1's scenes predate the bush fix and the blind world has no test scenes
-training runs|2|2|100.0|one seed each

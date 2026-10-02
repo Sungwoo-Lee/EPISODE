@@ -1,6 +1,0 @@
-P1 ordinary agent: logged rows drawn|998|998|100.0|rows with a full 5,000-episode logging window inside stages 1 to 4; the running mean starts 20,000 episodes after each switch
-P1 modulated agent: logged rows drawn|998|998|100.0|rows with a full 5,000-episode logging window inside stages 1 to 4; the running mean starts 20,000 episodes after each switch
-P2 ordinary agent: logged rows drawn|999|999|100.0|rows with a full 5,000-episode logging window inside stages 1 to 4; the running mean starts 20,000 episodes after each switch
-P2 modulated agent: logged rows drawn|997|997|100.0|rows with a full 5,000-episode logging window inside stages 1 to 4; the running mean starts 20,000 episodes after each switch
-P3 ordinary agent: logged rows drawn|1,998|1,998|100.0|rows with a full 5,000-episode logging window inside stages 1 to 4; the running mean starts 20,000 episodes after each switch
-P3 modulated agent: logged rows drawn|1,999|1,999|100.0|rows with a full 5,000-episode logging window inside stages 1 to 4; the running mean starts 20,000 episodes after each switch

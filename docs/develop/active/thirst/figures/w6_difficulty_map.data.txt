@@ -1,2 +1,0 @@
-episodes, agent knows the pond|112,000|112,000|100.0|8 drains x 7 grids x 2,000, list placement
-episodes, agent must find it|112,000|112,000|100.0|same settings and seeds, search on

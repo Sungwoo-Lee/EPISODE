@@ -1,2 +1,0 @@
-conversion factors compared|2|2|100.0|the shipped one read from the live satiation_deviation_range, and the counterfactual that substitutes max_satiation for it
-worlds this applies to|2|7|28.6|only basic/05 and basic/06 switch the temperature system on; the other five maintained levels have a two-axis drive and are untouched by this factor

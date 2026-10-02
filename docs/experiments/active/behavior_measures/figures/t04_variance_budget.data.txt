@@ -1,3 +1,0 @@
-recordings read|240|240|100.0|the newest checkpoint's 30 episodes for each run and condition shown, read step-by-step rather than from the summary CSV
-checkpoints for the between-checkpoint spread|20|50|40.0|the newest 20, matching the window the rest of the page quotes
-arms represented|1|4|25.0|one thermal arm is drawn; the ratio is the same order in the other three, and showing four would repeat the same point

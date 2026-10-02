@@ -1,1 +1,0 @@
-74,000,000 of 74,000,000 episodes (100.0%) across 4 grids. Only steps with an animal 1-2 or 6+ cells away enter the contrast — the 3–5 bins are excluded by construction - and each contrast is taken inside one starting-injury quarter. Panel A pools all four grids; colour there is the modulator's input slice, not the grid.

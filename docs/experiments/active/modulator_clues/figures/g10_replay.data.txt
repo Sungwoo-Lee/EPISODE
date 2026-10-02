@@ -1,9 +1,0 @@
-level 02 ordinary agent|996,525|998,392|99.8|decisions in felt-injury bins with at least 2,000; 2,000 episodes
-level 03 ordinary agent|752,658|755,550|99.6|decisions in felt-injury bins with at least 2,000; 2,000 episodes
-level 03 neuromodulated agent|768,203|770,815|99.7|decisions in felt-injury bins with at least 2,000; 2,000 episodes
-level 04 ordinary agent|585,513|588,410|99.5|decisions in felt-injury bins with at least 2,000; 2,000 episodes
-level 04 neuromodulated agent|602,949|605,428|99.6|decisions in felt-injury bins with at least 2,000; 2,000 episodes
-level 05 ordinary agent|535,117|537,710|99.5|decisions in felt-injury bins with at least 2,000; 2,000 episodes
-level 05 neuromodulated agent|532,439|533,420|99.8|decisions in felt-injury bins with at least 2,000; 2,000 episodes
-level 06 ordinary agent|437,493|441,340|99.1|decisions in felt-injury bins with at least 2,000; 2,000 episodes
-level 06 neuromodulated agent|432,710|435,433|99.4|decisions in felt-injury bins with at least 2,000; 2,000 episodes
