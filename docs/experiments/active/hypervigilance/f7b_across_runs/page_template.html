@@ -22,6 +22,23 @@ td.nw { white-space:nowrap; }
   is near, and how much of that rise is about the rabbit at all.</p>
 </header>
 
+<section class="col toc">
+  <h4>On this page</h4>
+  <ol>
+    <li><a href="#data">The data, in plain words</a></li>
+    <li><a href="#f0">Figure 0 &mdash; when each group was trained</a></li>
+    <li><a href="#compared">What is read from each run</a></li>
+    <li><a href="#two">Figure M &mdash; animal dependence against state dependence</a></li>
+    <li><a href="#f1">Figure 1 &mdash; every run, sorted by the injury effect</a></li>
+    <li><a href="#f2">Figure 2 &mdash; by group of runs</a></li>
+    <li><a href="#f3">Figure 3 &mdash; by the setting that varies inside a group</a></li>
+    <li><a href="#f4">Figure 4a&ndash;4k &mdash; the Figure 7b view, run by run</a></li>
+    <li><a href="#how">How it is computed</a></li>
+    <li><a href="#runs">Runs selected and dropped</a></li>
+    <li><a href="#issues">Issues found while building this page</a></li>
+  </ol>
+</section>
+
 <section class="col" id="data">
   <h2><span class="num">THE DATA</span></h2>
   <p>Every agent on this page is a small learning program that lives on a grid of squares. It can move,
@@ -92,7 +109,7 @@ td.nw { white-space:nowrap; }
     the bush because that is where they heal, rabbit or no rabbit. It is a strong cue, not a proof: the
     runs with and without fast bush healing also differ in date, world version and how much food the body
     can store. The wandering rabbit adds almost nothing on top
-    of that (median {{WANDER_MINUS}} points across {{N_WANDER}} rows).</p>
+    of that (median {{WANDER_MINUS}} points across the {{N_WANDER}} rows that are not hollow).</p>
     <p><strong>2. The chasing rabbit is where runs differ.</strong> Its extra injury effect, beyond
     the no-animal scene's, ranges from {{CHASE_MIN}} to {{CHASE_MAX}} points across runs. The largest
     values come from curriculum wave 1 at level 03 ({{W1_L03}} points, both agents), with two caveats:
@@ -112,21 +129,33 @@ td.nw { white-space:nowrap; }
   </div>
 </section>
 
-<section class="col toc">
-  <h4>On this page</h4>
-  <ol>
-    <li><a href="#data">The data, in plain words</a></li>
-    <li><a href="#f0">Figure 0 &mdash; when each group was trained</a></li>
-    <li><a href="#compared">What is read from each run</a></li>
-    <li><a href="#f1">Figure 1 &mdash; every run, sorted by the injury effect</a></li>
-    <li><a href="#f2">Figure 2 &mdash; by group of runs</a></li>
-    <li><a href="#f3">Figure 3 &mdash; by the setting that varies inside a group</a></li>
-    <li><a href="#f4">Figure 4a&ndash;4h &mdash; the Figure 7b view, run by run</a></li>
-    <li><a href="#how">How it is computed</a></li>
-    <li><a href="#runs">Runs selected and dropped</a></li>
-    <li><a href="#issues">Issues found while building this page</a></li>
-  </ol>
+<section class="col" id="two">
+  <h2><span class="num">TWO KINDS</span></h2>
+  <p>Put every run on one map. Across: <strong>animal dependence</strong> &mdash; how much more the
+  unhurt agent sits in the bush when an animal is there than when the scene is empty. Up:
+  <strong>state dependence</strong> &mdash; how much more it sits in the bush when it starts injured, with
+  no animal at all.</p>
+  <ul>
+    <li><strong>The {{N_SLOW}} runs trained before fast bush healing</strong> lie on the zero line: injury does
+    nothing to them (median {{NONE_SLOW}} points). How much an animal matters varies enormously from run to
+    run: a chasing rabbit adds a median {{ANIM_SLOW_MED}} points, from about nothing (most Dreamer runs) up to
+    {{ANIM_SLOW_MAX}} (the strongest July and August runs).</li>
+    <li><strong>The {{N_FAST}} runs trained with it</strong> sit about {{NONE_NEW}} points up, and react to the
+    chasing rabbit more evenly: a median {{ANIM_FAST_MED}} points, at most {{ANIM_FAST_MAX}}.</li>
+    <li><strong>One older study shows injury working the other way.</strong> In the August rest-premium runs
+    (injury heals faster the longer the agent rests), starting injured often <em>lowers</em> bush dwell when a
+    predator or a wandering rabbit is near (Figure 4h): the injured agent stays out rather than heading for
+    cover.</li>
+    <li><strong>No run is in the top right</strong>: none both reacts strongly to animals and changes with its
+    own injury. Combining the two is the open question this page points to.</li>
+  </ul>
+  <h4 class="fh" id="fmap"><span class="n">Figure M</span>Animal dependence against state dependence, every run</h4>
+  {{FIG:map}}
+  <h4>Group means on the map</h4>
+  <p>Means over the rows of each group, in percentage points of bush dwell, newest 20 checkpoints.</p>
+  {{TABLE:map_groups}}
 </section>
+
 
 <section class="col" id="compared">
   <h2><span class="num">01</span> What is read from each run</h2>
@@ -145,11 +174,12 @@ td.nw { white-space:nowrap; }
     <img data-fig="f7b_rank" alt="Four panels of sorted dots. Top: the injury effect in the chasing-rabbit and wandering-rabbit scenes, mostly between 0 and +15 points, with the no-animal scene's effect for the same run drawn as a dash at a similar height. Bottom: the same minus the no-animal effect, clustered near zero for the wandering rabbit and spread from about -20 to +29 for the chasing rabbit.">
     <p class="zoomhint">Click the figure to view it full size</p>
     <figcaption>
+      <span><b>Figure 1 &mdash; every run, sorted by the injury effect.</b></span>
       <span><b>Axes.</b> Horizontal: runs, sorted from the smallest to the largest value of the
       panel's quantity (no unit; each dot is one run in one scene set). Vertical: injury 70 minus
       injury 0, bush dwell in percentage points. Left column chasing rabbit, right column wandering
       rabbit; top row the injury effect, bottom row that effect minus the same run's no-animal injury
-      effect. Colour is the scene set, shape the agent; a dash in the top row is the same run's
+      effect. Colour is the scene set; shape is the agent (circle ordinary, triangle modulated, square Dreamer); a dash in the top row is the same run's
       no-animal injury effect; a hollow marker means the agent died early in a scene the value uses.</span>
       <span><b>What it shows.</b> In the top row most dashes sit level with their dots: the rabbit
       scenes rise with injury about as much as the empty scene does. The bottom-right panel is flat
@@ -168,10 +198,11 @@ td.nw { white-space:nowrap; }
     <img data-fig="f7b_family" alt="Four panels, one row per group of runs and scene set. The training-world groups (smell study, body rules, thirst task) sit tightly at +5 to +12 points for the injury effect and near zero to slightly negative after subtracting the no-animal effect; curriculum wave 1 sits highest after subtraction; the July runs scatter widely around zero.">
     <p class="zoomhint">Click the figure to view it full size</p>
     <figcaption>
+      <span><b>Figure 2 &mdash; by group of runs.</b></span>
       <span><b>Axes.</b> Horizontal: injury 70 minus injury 0, bush dwell in percentage points.
       Vertical: group of runs, with its scene set after the dot (no unit). Panels as in Figure 1: top
       row the injury effect, bottom row the injury effect minus the no-animal scene's; left chasing
-      rabbit, right wandering rabbit. Each marker is one run (shape = agent, hollow = died early); the
+      rabbit, right wandering rabbit. Each marker is one run (circle ordinary, triangle modulated, square Dreamer; hollow = died early); the
       black bar is the mean of the group.</span>
       <span><b>What it shows.</b> The groups trained and tested in the newer worlds agree with each
       other closely; the July runs, tested in an older scene set in which animals could walk into
@@ -187,9 +218,10 @@ td.nw { white-space:nowrap; }
 <section class="col" id="f3">
   <h3 class="fh"><span class="n">Figure 3</span>By the setting that varies inside a group</h3>
   <figure>
-    <img data-fig="f7b_within" alt="Five stacked panel pairs. Body rules: with healing-costs-food on, the chasing rabbit's extra injury effect sits around +5, with it off around -4, but the on markers are hollow. Smell study: all three smell worlds near -3. Thirst task: all map sizes and smell ranges between -4 and -7. Curriculum wave 1: level 03 highest at about +23. Temperature scene set: the variants without a fire are the most negative.">
+    <img data-fig="f7b_within" alt="Six stacked panel pairs. Body rules: with healing-costs-food on, the chasing rabbit's extra injury effect sits around +5, with it off around -4, but the on markers are hollow. Smell study: all three smell worlds near -3. Thirst task: all map sizes and smell ranges between -4 and -7. Curriculum wave 1: level 03 highest at about +23. Temperature scene set: the variants without a fire are the most negative.">
     <p class="zoomhint">Click the figure to view it full size</p>
     <figcaption>
+      <span><b>Figure 3 &mdash; by the setting that varies inside a group.</b></span>
       <span><b>Axes.</b> Horizontal: injury 70 minus injury 0, bush dwell in percentage points, for
       the chasing-rabbit scene (left: the injury effect; right: minus the no-animal scene's injury
       effect). Vertical: one row per value of the setting that varies inside the group (no unit). For

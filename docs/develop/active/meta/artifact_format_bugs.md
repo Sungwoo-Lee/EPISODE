@@ -2487,3 +2487,16 @@ was "the known pattern"; only a render at phone width shows the page itself over
 **Rule.** Emit the width floor, the scroll wrapper and the cue from ONE helper, never separately.
 **Check:** at 390 px (pinned) the document has no horizontal overflow; every `img[style*=min-width]` has a
 `div.scroll` parent.
+
+### F80 — a hard-coded axis range drops new data, and a refused save leaves the old image in place
+
+**Saw (2026-10-04, "Injury and Rabbit Avoidance Across Runs", after ~60 earlier runs were added).** Figure 0
+(the timeline) still showed 9 groups and 104 runs while its data table said 163 of 163 runs: its date
+ranges and title ("August had no runs") had been written for the earlier set, and the redraw that would
+have exposed this was refused by `house.save` (a label left the axes). The refusal was hidden by a
+redraw loop that filtered the script's output, so the stale PNG was embedded next to a fresh data table.
+Figure M failed the same way once. **Rule.** Axis ranges, titles and per-row labels that describe the
+data are computed from the data, and the figure script fails if any counted point falls outside the plotted
+area. Never filter a figure script's output in a batch redraw; check each exit status. **Check:** open each
+redrawn PNG after a batch redraw (on the NAS, comparing PNG and `.samples.json` modification times is not
+reliable — client-side attribute caching reported a fresh PNG as older than its data file).

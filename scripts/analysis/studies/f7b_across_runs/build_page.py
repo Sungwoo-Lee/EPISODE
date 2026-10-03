@@ -34,8 +34,20 @@ import figures as FX      # noqa: E402
 
 PAGE_DIR = os.path.join(ROOT, "docs/experiments/active/hypervigilance/f7b_across_runs")
 FIG_DIR = os.path.join(PAGE_DIR, "figures")
-LEVEL_GROUPS = ["smell", "body", "thirst", "core", "thermal", "injgrid", "core_old", "july"]
+LEVEL_GROUPS = ["smell", "body", "thirst", "core", "thermal", "injgrid", "core_old", "refuge", "july", "dreamer", "ladder"]
 PLAIN = {   # group -> what the agents were trained in, in plain words
+    "July curriculum": "The first full ladder: one agent per level 00 to 05 as the levels were defined in early "
+                       "July, levels 03 to 05 trained on to 100 million steps. Its level 05 was noise on the senses.",
+    "July re-train, corrected smell fall-off": "Levels 01 to 04 retrained in late July after a fix to how fast a "
+                                               "smell fades with distance; ordinary and early modulated agents.",
+    "Dreamer agents": "A different learning method (Dreamer), which learns a model of the world and plans inside "
+                      "it, on July levels 02 to 04 in many sizes and settings.",
+    "Bush-refuge training": "Levels 01 to 04 retrained in August with a bush that animals cannot enter, so the bush "
+                            "becomes a real refuge.",
+    "Rest premium": "Level 04 with the refuge bush, where injury heals faster the longer the agent rests without "
+                    "interruption; ten settings of how big that reward for resting is.",
+    "Rest premium, no ambush predators": "The same ten rest-premium settings with the hidden ambush predators "
+                                         "removed, to test whether moving around was what made resting risky.",
     "July network size": "July runs of curriculum levels 03 and 04, as those levels were defined in July (not the "
                          "table above), each with a "
                          "smaller or larger network inside the agent.",
@@ -64,6 +76,9 @@ LEVEL_CAP = {
     "thirst": "Thirst task: nine worlds (map 10, 15 or 20 squares; smell across the map, or range 5 or 3) × two agents, one seed each.",
     "core": "Blocking-bush training, level 04, tested in the core scene set (bush blocks animals, no campfire).",
     "core_old": "Curriculum wave 1, levels 02-04, tested in the core scene set before the 2026-09-23 fix, so animals could walk into the test bush.",
+    "refuge": "August bush-refuge and rest-premium runs, tested in scenes whose bush blocks animals, matching their training.",
+    "dreamer": "Dreamer agents (a different learning method), tested in the July scene set.",
+    "ladder": "The July curriculum runs, one per level; the level-05 (noise) run is tested with noisy senses.",
     "thermal": "Blocking-bush training, levels 05 and 06, tested in eight temperature variants of the core scenes (cool or neutral ambient, fire by the bush or away, with or without sensor noise matched to training).",
     "injgrid": "Blocking-bush training, tested in the injury-grid scene set (no chasing rabbit). Only injuries 0 and 70 are shown.",
     "july": "July runs (levels 03 and 04: network sizes, level-04 variants, GAE return, an early modulator design), tested in the July scene set in which animals could enter the bush.",
@@ -161,11 +176,12 @@ def img_tag(stem):
             f'src="data:image/png;base64,{BB.embed_png(png)}"')
 
 
-def figure(stem, alt, axes, shows, prov):
+def figure(stem, alt, axes, shows, prov, title=""):
     rows = json.load(open(os.path.join(FIG_DIR, f"{stem}.samples.json")))
     png = os.path.join(FIG_DIR, f"{stem}.png")
     return (f'<figure>{img_tag(stem)} alt="{html.escape(alt)}"></div>'
             '<p class="zoomhint">Click the figure to view it full size</p><figcaption>'
+            + (f'<span><b>{title}.</b></span>' if title else "") +
             f'<span><b>Axes.</b> {axes}</span><span><b>What it shows.</b> {shows}</span>'
             f'<span>{BB.data_table(stem, rows)}</span></figcaption>'
             f'<p class="prov">Reproduce: <code>{prov}</code></p></figure>')
@@ -202,7 +218,11 @@ def main(argv=None):
         "{{NONE_NEW}}": f"{eff('none', R[R.bush_heal == '25x'].id)['mean'].median():.0f}",
         "{{NONE_SLOW}}": fmt(eff("none", R[R.bush_heal == "1x"].id)["mean"].median()),
         "{{N_FAST}}": str(R[R.bush_heal == "25x"].run_dir.nunique()),
-        "{{N_SETS}}": ["no", "one", "two", "three", "four", "five", "six"][R.scene_set.nunique()],
+        "{{ANIM_SLOW_MED}}": f"{eff('rabbit-vs-none@00', R[R.bush_heal == '1x'].id, interp=False)['mean'].median():.0f}",
+        "{{ANIM_SLOW_MAX}}": f"{eff('rabbit-vs-none@00', R[R.bush_heal == '1x'].id, interp=False)['mean'].max():.0f}",
+        "{{ANIM_FAST_MED}}": f"{eff('rabbit-vs-none@00', R[R.bush_heal == '25x'].id, interp=False)['mean'].median():.0f}",
+        "{{ANIM_FAST_MAX}}": f"{eff('rabbit-vs-none@00', R[R.bush_heal == '25x'].id, interp=False)['mean'].max():.0f}",
+        "{{N_SETS}}": ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"][R.scene_set.nunique()],
         "{{N_SLOW}}": str(R[R.bush_heal == "1x"].run_dir.nunique()),
         "{{WANDER_MINUS}}": fmt(eff("rabbitwander-minus-none")["mean"].median()),
         "{{N_WANDER}}": str(len(eff("rabbitwander-minus-none"))),
@@ -237,23 +257,55 @@ def main(argv=None):
                                       ["group", "training started", "what the agents learned in", "runs",
                                        "agent type", "healing on a bush"], num=("runs",), nowrap=("when",),
                                       min_width=860)
+    tok["{{FIG:map}}"] = figure(
+        "f7b_map", "Scatter of every run: horizontal, how much an animal raises bush dwell; vertical, how much injury "
+        "raises bush dwell with no animal. Runs trained before 22 September lie along the zero line, spread from 0 "
+        "to 75 points across; recent runs sit about 10 points higher with 15 to 45 points across. The top right is "
+        "empty.",
+        "Horizontal: animal dependence, bush dwell with the animal minus bush dwell with no animal, both with the "
+        "agent unhurt, in percentage points (left panel: hunting predator; right panel: chasing rabbit). Vertical: "
+        "state dependence, bush dwell with no animal at injury 70 minus at injury 0, in percentage points. Each "
+        "value is the average over the newest 20 checkpoints, formed checkpoint by checkpoint. Both panels share one "
+        "horizontal scale. Colour = scene set; shape = agent type (circle ordinary, triangle modulated, square "
+        "Dreamer). Group means are in the table under the figure.",
+        "Two separate kinds of behaviour: older runs react to animals but not to their own injury; recent runs "
+        "react to injury even with no animal, and react to animals only moderately. No run does both strongly.",
+        "scripts/analysis/studies/f7b_across_runs/figures.py --figure map", title="Figure M &mdash; animal dependence against state dependence")
+    mg = []
+    for f in FX.FAMILY_ORDER:
+        for k in FX.SET_ORDER:
+            ids = R[(R.family == f) & (R.scene_set == k)].id
+            if not len(ids):
+                continue
+            row = {"group": f, "set": FX.SET_TAG[k], "n": len(ids),
+                   "heal": ", ".join(sorted(R[R.id.isin(ids)].bush_heal.unique()))}
+            for q, c in (("pred-vs-none@00", "ap"), ("rabbit-vs-none@00", "ar"), ("none", "st")):
+                e = eff(q, ids, interp=False)
+                row[c] = f"{e['mean'].mean():+.1f}" if len(e) else "n/a"
+            mg.append(row)
+    tok["{{TABLE:map_groups}}"] = table(pd.DataFrame(mg), ["group", "set", "n", "heal", "ap", "ar", "st"],
+                                        ["group (oldest first)", "scene set", "rows", "healing on a bush",
+                                         "animal dep., predator", "animal dep., chasing rabbit", "state dep."],
+                                        num=("n", "ap", "ar", "st"), min_width=820)
     tok["{{FIG:timeline}}"] = figure(
-        "f7b_timeline", "Timeline of when each group of runs was trained: four July groups in mid to late July, then "
-        "curriculum wave 1 on 21 September, blocking-bush training on 22 September, the body rules and the first "
-        "smell-study pair on 27 September, the rest of the smell study on 1 October and the thirst task on 2 October; "
-        "dashed lines mark four changes to the worlds or tests.",
-        "Horizontal: the date each training run started, read from the run's folder name (July on the left, "
-        "September to October on the right; August is left out because no run on this page started then). "
+        "f7b_timeline", "Timeline of when each group of runs was trained: seven July groups (including the Dreamer runs), three "
+        "August groups, then curriculum wave 1 on 21 September, blocking-bush training on 22 September, the body "
+        "rules and the first smell-study pair on 27 September, the rest of the smell study on 1 October and the "
+        "thirst task on 2 October; dashed lines mark four changes to the worlds or tests.",
+        "Horizontal: the date each training run started in 2026, read from the run's folder name (one axis from "
+        "early July to early October). "
         "Vertical: group of runs (no unit), oldest at the top. One marker per run, several on one day spread "
         "vertically; dark = trained with injury healing 25&times; faster on a bush, grey = trained without it; "
         "circle = ordinary agent, triangle = modulated agent. Numbered dashed lines are changes to the worlds or "
-        "the tests, explained in the legend.",
+        "the tests, explained in the legend. Square = Dreamer agent.",
         "Every run trained without fast bush healing is older than 22 September, and every run trained after it "
         "has it, so on this page bush-healing speed and training date cannot be separated.",
-        "scripts/analysis/studies/f7b_across_runs/figures.py --figure timeline")
+        "scripts/analysis/studies/f7b_across_runs/figures.py --figure timeline", title="Figure 0 &mdash; when each group was trained")
     ss = pd.DataFrame([{"set": FX.SET_TAG[k], "what": FX.SET_SHORT[k].split(" (")[1].rstrip(")") if "(" in FX.SET_SHORT[k] else "",
                         "rows": int((R.scene_set == k).sum())} for k in FX.SET_ORDER])
     ss["what"] = [{"july": "July 2026 runs; animals could walk into the bush; no temperature system",
+                   "july_noise": "the July scenes with noise on the senses, for the agent trained with noise",
+                   "refuge": "August scenes whose bush blocks animals, for the bush-refuge and rest-premium runs",
                    "core_old": "the core scenes as they were before the 2026-09-23 fix: the test bush let animals in",
                    "core": "bush hides the agent and blocks animals; no campfire",
                    "thermal": "core scenes in a level-05/06 body, with one of eight fire and ambient-temperature variants",
@@ -314,7 +366,7 @@ def main(argv=None):
     tok["{{TABLE:runs}}"] = table(R2, ["family", "set", "setting", "agent", "bush_heal", "run", "n_ckpt"],
                                   ["group", "scene set", "setting", "agent", "healing on a bush", "training run",
                                    "checkpoints"], num=("n_ckpt",),
-                                  nowrap=("run",), min_width=1100)
+                                  nowrap=("run",), min_width=1300)
 
     # ---- figures
     for stem in ("f7b_rank", "f7b_family", "f7b_within"):
@@ -327,15 +379,17 @@ def main(argv=None):
     for k, gname in enumerate(LEVEL_GROUPS):
         stem = f"f7b_levels__{gname}"
         title = FX.GROUPS[gname][0]
-        f4.append(f'<h4 class="fh"><span class="n">Figure 4{"abcdefgh"[k]}</span>{html.escape(title)}</h4>')
+        f4.append(f'<h4 class="fh"><span class="n">Figure 4{"abcdefghijk"[k]}</span>{html.escape(title)}</h4>')
         f4.append(figure(stem, f"Bush dwell per scene for each run of the group {title}, at injury 0 and 70.",
                          "Horizontal, in each panel: bush dwell over the newest 20 checkpoints, the share of the "
                          "scene's 100 steps spent on the bush (%, 0&ndash;100). Vertical: one row per run (setting "
                          "&middot; agent; no unit). One panel per scene. Hollow grey ring = start injury 0, filled dark marker = "
-                         "start injury 70; circle = ordinary agent, triangle = modulated agent; * = died early in a "
+                         "start injury 70; circle = ordinary agent, triangle = modulated agent, square = Dreamer agent; "
+                         "* = died early in a "
                          "predator-free scene.",
                          html.escape(LEVEL_CAP[gname]),
-                         f"scripts/analysis/studies/f7b_across_runs/figures.py --figure levels --group {gname}"))
+                         f"scripts/analysis/studies/f7b_across_runs/figures.py --figure levels --group {gname}",
+                         title=f"Figure 4{'abcdefghijk'[k]} &mdash; {html.escape(title)}"))
     tok["{{FIG4}}"] = "\n".join(f4)
 
     # ---- house style

@@ -27,16 +27,19 @@ sys.path.insert(0, os.path.join(ROOT, "scripts", "analysis", "basic_behaviour"))
 import _fig as FG  # noqa: E402
 
 H = FG.H
-SET_ORDER = ["july", "core_old", "core", "thermal", "injgrid", "world"]
-SET_COL = dict(zip(SET_ORDER, ["#a3782f", "#7fb0e6", H.SERIES[0], H.SERIES[1], "#8a6fb3", H.SERIES[2]]))
+SET_ORDER = ["july", "july_noise", "refuge", "core_old", "core", "thermal", "injgrid", "world"]
+SET_COL = dict(zip(SET_ORDER, ["#a3782f", "#4a3520", "#c25a8a", "#7fb0e6", H.SERIES[0], H.SERIES[1], "#8a6fb3",
+                               H.SERIES[2]]))
 SET_SHORT = {"july": "July set (animals can enter the bush)",
+             "july_noise": "July set with noisy senses",
+             "refuge": "August bush-refuge set (bush blocks animals)",
              "core_old": "core set, before the fix (animals can enter the bush)",
              "core": "core set (bush blocks animals)",
              "thermal": "temperature set (8 fire/ambient variants)", "injgrid": "injury-grid set (3 scenes)",
              "world": "training-world set (campfire by the bush)"}
-SET_TAG = {"july": "July set", "core_old": "core set, before fix", "core": "core set", "thermal": "temperature set", "injgrid": "injury-grid set",
+SET_TAG = {"july": "July set", "july_noise": "July set, noisy senses", "refuge": "August refuge set", "core_old": "core set, before fix", "core": "core set", "thermal": "temperature set", "injgrid": "injury-grid set",
            "world": "own-world set"}
-AG_MK = {"ordinary": "o", "modulated": "^"}
+AG_MK = {"ordinary": "o", "modulated": "^", "Dreamer": "s"}
 SHORT_SCENE = {"none": "no animal", "pred": "hunting predator", "rabbit": "chasing rabbit",
                "rabbit_olfzero": "chasing rabbit,\nno smell", "rabbitwander": "wandering rabbit",
                "rabbitwander_predsmell": "predator-smelling\nrabbit"}
@@ -49,9 +52,13 @@ QUANT = [("rabbit", "chasing rabbit: injury effect"),
          ("rabbitwander", "wandering rabbit: injury effect"),
          ("rabbitwander-minus-none", "wandering rabbit: injury effect minus\nthe no-animal scene's injury effect")]
 YLAB = "injury 70 minus injury 0,\nbush dwell (percentage points)"
-GROUPS = {  # page group -> (title, families)
-    "july": ("July runs (levels 03-04)", ["July network size", "July level-04 variants", "July GAE return",
-                                          "July early modulator"]),
+GROUPS = {  # page group -> (title, families); oldest first
+    "ladder": ("July curriculum, levels 00-05", ["July curriculum"]),
+    "july": ("July runs (levels 01-04)", ["July network size", "July level-04 variants", "July GAE return",
+                                          "July early modulator", "July re-train, corrected smell fall-off"]),
+    "dreamer": ("Dreamer agents (July)", ["Dreamer agents"]),
+    "refuge": ("Bush-refuge and rest-premium training (August)", ["Bush-refuge training", "Rest premium",
+                                                                 "Rest premium, no ambush predators"]),
     "core_old": ("Curriculum wave 1, core scenes tested before the bush fix", ["Curriculum wave 1"]),
     "core": ("Blocking-bush training, core scenes", ["Blocking-bush training"]),
     "thermal": ("Blocking-bush training, levels 05-06, temperature scenes", ["Blocking-bush training"]),
@@ -60,7 +67,7 @@ GROUPS = {  # page group -> (title, families)
     "body": ("Body rules, level 05", ["Body rules (level 05)"]),
     "thirst": ("Thirst task", ["Thirst task"]),
 }
-GROUP_SET = {"july": "july", "core_old": "core_old", "core": "core", "thermal": "thermal", "injgrid": "injgrid", "smell": "world",
+GROUP_SET = {"ladder": ("july", "july_noise"), "dreamer": "july", "refuge": "refuge", "july": "july", "core_old": "core_old", "core": "core", "thermal": "thermal", "injgrid": "injgrid", "smell": "world",
              "body": "world", "thirst": "world"}
 FAMILY_ORDER = [f for g in GROUPS.values() for f in g[1]]
 FAMILY_ORDER = list(dict.fromkeys(FAMILY_ORDER))
@@ -113,11 +120,18 @@ def row_label(r):
         st = f"{lvl.replace('level ', 'L')} · {var}"
     elif fam == "Smell study (level 05)":
         st = st.replace(" smell", "").replace(" (control)", " (control)") + f" · seed {int(r['seed'])}"
+    elif fam in ("July curriculum", "Dreamer agents", "July re-train, corrected smell fall-off") or fam.startswith("Rest") \
+            or fam == "Bush-refuge training":
+        st = st.replace(", bush blocks animals in training", "").replace("rest-streak healing premium", "premium") \
+               .replace("level 04 without ambush predators", "no ambush predators")
     elif fam.startswith("July"):
         st = st.replace("network size ", "size ").replace(", early modulator design", "")
         st = f"{ {'July network size': 'size', 'July level-04 variants': 'L04 variant', 'July GAE return': 'GAE', 'July early modulator': 'early modulator'}[fam] }: {st}"
     elif r["scene_set"] in ("core", "core_old"):
         st = st.split(",")[0]
+    if r["agent"] == "Dreamer":
+        d = start_date(r["run_dir"])
+        st = f"{st} · started {d.strftime('%-d %b')}" if pd.notna(d) else st
     return f"{st} · {r['agent']}"
 
 
@@ -149,7 +163,7 @@ def fig_rank(R, L, E, X):
         fl = flagged(L, q)
         for i, r in e.iterrows():
             c = SET_COL[r["scene_set"]]
-            ax.plot([i, i], [r["lo"], r["hi"]], color=c, lw=0.9, alpha=0.5)
+            ax.plot([i, i], [r["lo"], r["hi"]], color="#b9bdb8", lw=0.9)
             ax.plot(i, r["mean"], ls="", marker=AG_MK[r["agent"]], ms=4.5, color=c,
                     mfc=H.PAPER if r["id"] in fl else c, mew=1.2)
             if "minus" not in q and r["id"] in nn.index:
@@ -169,10 +183,10 @@ def fig_rank(R, L, E, X):
         ax.set_ylabel(YLAB, fontsize=H.FS_LABEL)
     axs[0, 0].set_ylim(-32, 42)
     hs = [Line2D([], [], ls="", marker="s", ms=8, color=SET_COL[s], label=SET_SHORT[s]) for s in SET_ORDER]
-    hs += [Line2D([], [], ls="", marker=AG_MK[a], ms=8, color=H.INK_2, label=f"{a} agent") for a in AG_MK]
+    hs += [Line2D([], [], ls="", marker=AG_MK[a], ms=8, color=H.INK_2, label=f"{a} agent") for a in AG_MK if (R.agent == a).any()]
     hs += [hollow_handle()]
     hs += [Line2D([], [], ls="", marker="_", ms=9, mew=1.6, color=H.INK, label="same run, no-animal scene"),
-           Line2D([], [], color=H.INK_2, lw=1.0, label="95% interval (checkpoint-to-checkpoint)")]
+           Line2D([], [], color="#b9bdb8", lw=1.0, label="95% interval (checkpoint-to-checkpoint)")]
     fig.legend(handles=hs, loc="lower center", ncol=3, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.01))
     fig.tight_layout(rect=(0, 0.12, 1, 1), h_pad=1.4, w_pad=1.0)
     return fig, ckpt_rows(R, "all rows") + rows
@@ -194,7 +208,7 @@ def fig_family(R, L, E, X):
             y = len(keys) - 1 - k
             for _, r in g.iterrows():
                 yy = y + rng.uniform(-0.22, 0.22)
-                ax.plot([r["lo"], r["hi"]], [yy, yy], color=SET_COL[s], lw=0.8, alpha=0.4)
+                ax.plot([r["lo"], r["hi"]], [yy, yy], color="#c9cdc9", lw=0.8)
                 ax.plot(r["mean"], yy, ls="", marker=AG_MK[r["agent"]], ms=5, color=SET_COL[s], alpha=0.9,
                         mfc=H.PAPER if r["id"] in fl else SET_COL[s], mew=1.2)
             if len(g):
@@ -212,9 +226,9 @@ def fig_family(R, L, E, X):
         ax.set_yticklabels([f"{f} · {SET_TAG[s]}" for f, s in keys][::-1], fontsize=H.FS_LABEL)
         ax.set_ylim(-0.6, len(keys) - 0.4)
     for ax in axs[1]:
-        ax.set_xlabel(YLAB.replace("\n", " "), fontsize=H.FS_LABEL)
+        ax.set_xlabel("injury 70 minus injury 0 (pp of bush dwell)", fontsize=H.FS_LABEL)
     hs = [Line2D([], [], ls="", marker="s", ms=8, color=SET_COL[s], label=SET_SHORT[s]) for s in SET_ORDER]
-    hs += [Line2D([], [], ls="", marker=AG_MK[a], ms=8, color=H.INK_2, label=f"{a} agent") for a in AG_MK]
+    hs += [Line2D([], [], ls="", marker=AG_MK[a], ms=8, color=H.INK_2, label=f"{a} agent") for a in AG_MK if (R.agent == a).any()]
     hs += [Line2D([], [], color=H.INK, lw=2.0, label="mean of the rows in the group (hollow included)"),
            hollow_handle()]
     fig.legend(handles=hs, loc="lower center", ncol=3, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.005))
@@ -246,6 +260,11 @@ def within_groups(R):
     rows += [(lab, th[th.setting.str.endswith(suf)]["id"].tolist()) for lab, suf in
              (("smell across the map", "across the map"), ("smell range 5", "range 5"), ("smell range 3", "range 3"))]
     out.append(("Thirst task (map size, then smell range; 9 worlds × 2 agents)", rows))
+    rp = R[R.family.str.startswith("Rest premium")].copy()
+    if len(rp):
+        rp["prem"] = rp.setting.str.extract(r"premium (\d+)")[0].astype(int)
+        out.append(("Rest premium, August (healing premium for resting several steps in a row; both series)",
+                    [(f"premium {p}", rp[rp.prem == p]["id"].tolist()) for p in sorted(rp.prem.unique())]))
     w1 = R[R.family == "Curriculum wave 1"]
     out.append(("Curriculum wave 1, core scenes tested before the bush fix (1 run per level and agent)",
                 [(f"level 0{l}", w1[w1.setting == f"level 0{l}"]["id"].tolist()) for l in (2, 3, 4)]))
@@ -291,10 +310,10 @@ def fig_within(R, L, E, X):
                          fontsize=H.FS_LABEL)
     for ax in axs[-1]:
         ax.set_xlabel(YLAB.replace("\n", " "), fontsize=H.FS_LABEL)
-    hs = [Line2D([], [], ls="", marker=AG_MK[a], ms=8, color=H.INK_2, label=f"{a} agent") for a in AG_MK]
+    hs = [Line2D([], [], ls="", marker=AG_MK[a], ms=8, color=H.INK_2, label=f"{a} agent") for a in AG_MK if (R[R.id.isin({x for _, rr in G for _, ids in rr for x in ids})].agent == a).any()]
     hs += [Line2D([], [], color=H.INK, lw=2.0, label="mean of the runs in the row (hollow included)"),
            hollow_handle()]
-    hs += [Line2D([], [], ls="", marker="s", ms=8, color=SET_COL[k], label=SET_SHORT[k]) for k in ("core_old", "thermal", "world")]
+    hs += [Line2D([], [], ls="", marker="s", ms=8, color=SET_COL[k], label=SET_SHORT[k]) for k in ("refuge", "core_old", "thermal", "world")]
     fig.legend(handles=hs, loc="lower center", ncol=2, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.003))
     fig.tight_layout(rect=(0, 1.15 / h, 1, 1), h_pad=1.0, w_pad=1.0)
     rows = [{"what": f"{t.split(' (')[0]}: runs", "used": len({i for _, ids in r for i in ids}),
@@ -326,53 +345,97 @@ def fig_timeline(R, L, E, X):
     if U.date.isna().any():
         raise SystemExit(f"no start date in run folder names: {U[U.date.isna()].run_dir.tolist()}")
     fams = sorted(U.family.unique(), key=lambda f: (U[U.family == f].date.min(), FAMILY_ORDER.index(f)))
-    spans = [(pd.Timestamp("2026-07-10"), pd.Timestamp("2026-07-27")), (pd.Timestamp("2026-09-12"), pd.Timestamp("2026-10-05"))]
-    fig, axs = plt.subplots(1, 2, figsize=(12.0, 0.5 * len(fams) + 4.2), sharey=True,
-                            gridspec_kw={"width_ratios": [17, 23], "wspace": 0.10})
+    lo, hi = U.date.min() - pd.Timedelta(days=4), U.date.max() + pd.Timedelta(days=11)
+    h = 0.42 * len(fams) + 3.6
+    fig, ax = plt.subplots(figsize=(12.0, h))
     rng = np.random.default_rng(1)
-    for ax, (lo, hi) in zip(axs, spans):
-        for k, f in enumerate(fams):
-            y = len(fams) - 1 - k
-            g = U[U.family == f]
-            for _, r in g.iterrows():
-                fast = r["bush_heal"] == "25x"
-                ax.plot(r["date"] + pd.Timedelta(hours=float(rng.uniform(-5, 5))), y + rng.uniform(-0.18, 0.18),
-                        ls="", marker=AG_MK[r["agent"]], ms=6, color=H.INK if fast else "#a9aea8", alpha=0.85)
-            if len(g) and lo <= g.date.max() <= hi:
-                ax.text(g.date.max() + pd.Timedelta(hours=20), y, f"{len(g)} runs", va="center",
-                        fontsize=H.FS_LABEL - 1, color=H.INK_2)
-        for n, (d, lab) in enumerate(EVENTS, 1):
-            d = pd.Timestamp(d)
-            if lo <= d <= hi:
-                ax.axvline(d, color=H.RULE, lw=1.2, ls="--", zorder=0)
-                ax.text(d, len(fams) - 0.25, str(n), ha="center", va="bottom", fontsize=H.FS_LABEL,
-                        fontweight="semibold", color=H.INK_2,
-                        bbox=dict(boxstyle="circle,pad=0.25", fc=H.PAPER, ec=H.RULE))
-        ax.set_xlabel("date the training run started", fontsize=H.FS_LABEL)
-        ax.set_xlim(lo, hi)
-        ax.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=mdates.MO))
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%d %b"))
-        ax.grid(axis="y", visible=False)
-    axs[0].set_yticks(range(len(fams)))
-    axs[0].set_yticklabels(fams[::-1], fontsize=H.FS_LABEL)
-    axs[0].set_ylim(-0.7, len(fams) + 0.3)
-    axs[0].set_title("July 2026", loc="left", fontsize=H.FS_LABEL + 1)
-    axs[1].set_title("September to October 2026 (August had no runs on this page)", loc="left", fontsize=H.FS_LABEL + 1)
-    h = 0.5 * len(fams) + 4.2
+    for k, f in enumerate(fams):
+        y = len(fams) - 1 - k
+        g = U[U.family == f]
+        for _, r in g.iterrows():
+            fast = r["bush_heal"] == "25x"
+            ax.plot(r["date"] + pd.Timedelta(hours=float(rng.uniform(-8, 8))), y + rng.uniform(-0.2, 0.2), ls="",
+                    marker=AG_MK[r["agent"]], ms=5.5, color=H.INK if fast else "#a9aea8", alpha=0.85)
+        ax.text(g.date.max() + pd.Timedelta(days=1.2), y, f"{len(g)} runs", va="center", fontsize=H.FS_LABEL - 1,
+                color=H.INK_2)
+    for n, (d, lab) in enumerate(EVENTS, 1):
+        d = pd.Timestamp(d)
+        ax.axvline(d, color=H.RULE, lw=1.2, ls="--", zorder=0)
+        close = n > 1 and (d - pd.Timestamp(EVENTS[n - 2][0])).days < 4   # stagger events a few days apart
+        ax.text(d, len(fams) - 0.3 - (0.75 if close else 0), str(n), ha="center", va="bottom", fontsize=H.FS_LABEL,
+                fontweight="semibold", color=H.INK_2, bbox=dict(boxstyle="circle,pad=0.25", fc=H.PAPER, ec=H.RULE))
+    if ((U.date < lo) | (U.date > hi)).any():
+        raise SystemExit("a run falls outside the drawn dates")
+    ax.set_xlim(lo, hi)
+    ax.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=mdates.MO, interval=2))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%d %b"))
+    ax.set_yticks(range(len(fams)))
+    ax.set_yticklabels(fams[::-1], fontsize=H.FS_LABEL)
+    ax.set_ylim(-0.7, len(fams) + 0.4)
+    ax.grid(axis="y", visible=False)
+    ax.set_xlabel("date the training run started, 2026 (from the run's folder name; ticks every second Monday)",
+                  fontsize=H.FS_LABEL)
+    present = [a for a in AG_MK if (U.agent == a).any()]
     hs = [Line2D([], [], ls="", marker="o", ms=8, color=H.INK, label="trained with 25\u00d7 healing on a bush"),
-          Line2D([], [], ls="", marker="o", ms=8, color="#a9aea8", label="trained without it"),
-          Line2D([], [], ls="", marker=AG_MK["ordinary"], ms=8, color=H.INK_2, mfc="none", label="ordinary agent (circle)"),
-          Line2D([], [], ls="", marker=AG_MK["modulated"], ms=8, color=H.INK_2, mfc="none", label="modulated agent (triangle)"),
-          Line2D([], [], color=H.RULE, lw=1.2, ls="--", label="a change to the worlds or the tests:")]
+          Line2D([], [], ls="", marker="o", ms=8, color="#a9aea8", label="trained without it")]
+    hs += [Line2D([], [], ls="", marker=AG_MK[a], ms=8, color=H.INK_2, mfc="none", label=f"{a} agent") for a in present]
+    hs += [Line2D([], [], color=H.RULE, lw=1.2, ls="--", label="a change to the worlds or the tests:")]
     hs += [Line2D([], [], ls="", label=f"{n}  {pd.Timestamp(d).strftime('%d %b')}: {lab}") for n, (d, lab) in enumerate(EVENTS, 1)]
     fig.legend(handles=hs, loc="lower center", ncol=2, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.01),
                handlelength=1.6)
-    fig.subplots_adjust(left=0.15, right=0.97, top=1 - 0.55 / h, bottom=2.25 / h, wspace=0.08)
+    fig.subplots_adjust(left=0.27, right=0.95, top=1 - 0.35 / h, bottom=2.2 / h)
     rows = [{"what": "training runs on the page, placed by start date", "used": len(U), "total": len(U),
-             "note": "one marker per distinct run; several markers on one day are spread vertically"},
-            {"what": "runs dropped from the page (not shown here)", "used": 0, "total": int(X.run_dir.nunique()),
-             "note": "listed in the dropped-runs table"}]
+             "note": "one marker per distinct run; several markers on one day are spread vertically"}]
     return fig, rows
+
+
+FAM_SHORT = {"July curriculum": "July curriculum", "July network size": "July sizes",
+             "July level-04 variants": "July L04 variants", "July GAE return": "July GAE",
+             "July early modulator": "July early modulator", "July re-train, corrected smell fall-off": "July re-train",
+             "Dreamer agents": "Dreamer", "Bush-refuge training": "Aug bush refuge", "Rest premium": "Aug rest premium",
+             "Rest premium, no ambush predators": "Aug rest premium, no ambush",
+             "Curriculum wave 1": "Sep wave 1", "Blocking-bush training": "Sep blocking bush",
+             "Smell study (level 05)": "Oct smell study", "Body rules (level 05)": "Sep body rules",
+             "Thirst task": "Oct thirst"}
+
+
+def fig_map(R, L, E, X):
+    """Animal dependence (horizontal) against state dependence (vertical), one dot per run x scene set."""
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    st = E[E.scene == "none"].set_index("id")["mean"]
+    U = R.copy()
+    U["start"] = U.run_dir.map(start_date)
+    keys = sorted({(f, k) for f, k in zip(R.family, R.scene_set)},
+                  key=lambda fk: (U[(U.family == fk[0]) & (U.scene_set == fk[1])].start.min(), SET_ORDER.index(fk[1])))
+    fig, axs = plt.subplots(1, 2, figsize=(12.0, 7.0), sharey=True, sharex=True)
+    rows = []
+    for ax, (q, name) in zip(axs, (("pred-vs-none@00", "hunting predator"), ("rabbit-vs-none@00", "chasing rabbit"))):
+        e = E[E.scene == q].merge(R, on="id")
+        e = e[e.id.isin(st.index)]
+        e["y"] = e.id.map(st)
+        for _, r in e.iterrows():
+            c = SET_COL[r["scene_set"]]
+            ax.plot(r["mean"], r["y"], ls="", marker=AG_MK[r["agent"]], ms=5.5, color=c, alpha=0.75)
+        ax.axhline(0, color=H.RULE, lw=1.1, zorder=0)
+        ax.axvline(0, color=H.RULE, lw=1.1, zorder=0)
+        ax.set_xlabel(f"animal dependence: bush dwell with a {name} minus with no animal,\nboth unhurt (percentage points)",
+                      fontsize=H.FS_LABEL)
+        ax.set_title(f"animal = {name}", loc="left", fontsize=H.FS_BODY)
+        rows.append({"what": f"{name} panel: rows with both values", "used": len(e), "total": len(R),
+                     "note": "rows whose scene set has this scene and a no-animal scene at both injuries"})
+    axs[0].set_ylabel("state dependence: bush dwell with no animal,\ninjury 70 minus injury 0 (percentage points)",
+                      fontsize=H.FS_LABEL)
+    hs = [Line2D([], [], ls="", marker="s", ms=8, color=SET_COL[k], label=SET_SHORT[k]) for k in SET_ORDER
+          if (R.scene_set == k).any()]
+    hs += [Line2D([], [], ls="", marker=AG_MK[a], ms=8, color=H.INK_2, label=f"{a} agent") for a in AG_MK
+           if (R.agent == a).any()]
+    fig.legend(handles=hs, loc="lower center", ncol=3, frameon=False, fontsize=H.FS_LABEL - 1, bbox_to_anchor=(0.5, -0.01),
+               handlelength=1.4)
+    for ax in axs:
+        ax.set_ylim(-20, 33)
+    fig.subplots_adjust(left=0.09, right=0.98, top=0.95, bottom=0.31, wspace=0.06)
+    return fig, ckpt_rows(R, "all rows") + rows
 
 
 def fig_levels(R, L, E, X, group):
@@ -380,9 +443,10 @@ def fig_levels(R, L, E, X, group):
     from matplotlib.lines import Line2D
     title, fams = GROUPS[group]
     sset = GROUP_SET[group]
-    G = R[R.family.isin(fams) & (R.scene_set == sset)].copy()
+    G = R[R.family.isin(fams) & R.scene_set.isin(sset if isinstance(sset, tuple) else (sset,))].copy()
     G["fo"] = G.family.map(fams.index)
-    G = G.sort_values(["fo", "setting", "agent", "seed"]).reset_index(drop=True)
+    G["num"] = pd.to_numeric(G.setting.str.extract(r"premium (\d+)")[0], errors="coerce").fillna(-1)
+    G = G.sort_values(["fo", "num", "setting", "agent", "seed"]).reset_index(drop=True)
     scenes = [s for s in SCENES if G.scenes.str.contains(rf"(^|,){s}(,|$)").any()]
     n = len(G)
     fig, axs = plt.subplots(1, len(scenes), figsize=(12.0, 0.27 * n + 2.3), sharey=True)
@@ -420,8 +484,9 @@ def fig_levels(R, L, E, X, group):
                   fontsize=H.FS_BODY, y=0.62 / h)
     hs = [Line2D([], [], ls="", marker="o", ms=8, color=H.INK_2, mfc="none", mew=1.3, label="start injury 0 (hollow)"),
           Line2D([], [], ls="", marker="o", ms=8, color=H.INK, label="start injury 70 (filled)"),
-          Line2D([], [], ls="", marker="o", ms=8, color=H.INK_2, mfc=H.PAPER, label="ordinary agent (circle)"),
-          Line2D([], [], ls="", marker="^", ms=8, color=H.INK_2, mfc=H.PAPER, label="modulated agent (triangle)")]
+          ] + [Line2D([], [], ls="", marker=AG_MK[a], ms=8, color=H.INK_2, mfc=H.PAPER,
+                      label=f"{a} agent ({ {'o': 'circle', '^': 'triangle', 's': 'square'}[AG_MK[a]] })")
+               for a in AG_MK if (G.agent == a).any()]
     fig.legend(handles=hs, loc="lower center", ncol=4, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.01))
     fig.tight_layout(rect=(0, 0.85 / h, 1, 1), w_pad=1.2)
     return fig, ckpt_rows(G, title) + [{"what": "runs marked * (agent died early in at least one scene)",
@@ -434,7 +499,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
     ap.add_argument("--fig-dir", required=True)
-    ap.add_argument("--figure", required=True, choices=["rank", "family", "within", "timeline", "levels"])
+    ap.add_argument("--figure", required=True, choices=["rank", "family", "within", "timeline", "map", "levels"])
     ap.add_argument("--group", choices=list(GROUPS))
     a = ap.parse_args(argv)
     H.apply()
@@ -445,7 +510,7 @@ def main(argv=None):
         fig, rows = fig_levels(*D, a.group)
         stem = f"f7b_levels__{a.group}"
     else:
-        fig, rows = {"rank": fig_rank, "family": fig_family, "within": fig_within, "timeline": fig_timeline}[a.figure](*D)
+        fig, rows = {"rank": fig_rank, "family": fig_family, "within": fig_within, "timeline": fig_timeline, "map": fig_map}[a.figure](*D)
         stem = f"f7b_{a.figure}"
     FG.record_samples(os.path.abspath(a.fig_dir), stem, rows)
     FG.save(fig, os.path.abspath(a.fig_dir), stem)

@@ -47,6 +47,8 @@ INJ = ["00", "70"]
 # Scene sets: what differs between the fixed test-scene batteries. Never pooled.
 SCENE_SETS = {
     "july": "July set: bush hides the agent, animals can walk into it; no temperature system",
+    "july_noise": "July set with noise on the senses (matching a noise-trained agent)",
+    "refuge": "August bush-refuge set: bush hides the agent and blocks animals; no campfire",
     "core_old": "Core set, tested before the 2026-09-23 fix: the test bush let animals in",
     "core": "Core set: bush hides the agent and blocks animals; no campfire",
     "thermal": "Temperature set: core scenes in a level-05/06 body, one of 8 fire/ambient variants",
@@ -64,6 +66,25 @@ REGISTRY = [
      lambda l: f"level 0{l[2]}, GAE return estimate"),
     ("configs/eval_sweeps/basic_nmn_g32_rppo.yaml", "July early modulator", "july",
      lambda l: f"level 0{l[2]}, early modulator design, {l.split('_')[1].upper()} return"),
+    ("configs/eval_sweeps/dp1_rppo.yaml", "July re-train, corrected smell fall-off", "july",
+     lambda l: f"level 0{l.split('_b0')[1][0] if '_b0' in l else l[2]}" + (", early modulator" if l.startswith("nmn") else "")),
+    ("configs/eval_sweeps/bushrefuge_rppo.yaml", "Bush-refuge training", "refuge",
+     lambda l: f"level 0{l[2]}, bush blocks animals in training"),
+    ("configs/eval_sweeps/restprem_rppo.yaml", "Rest premium", "refuge",
+     lambda l: f"level 04, rest-streak healing premium {l.split('prem')[1]}"),
+    ("configs/eval_sweeps/restprem_nohide_rppo.yaml", "Rest premium, no ambush predators", "refuge",
+     lambda l: f"level 04 without ambush predators, rest-streak healing premium {l.split('prem')[1]}"),
+    ("configs/eval_sweeps/dp1_dreamer.yaml", "Dreamer agents", "july", lambda l: f"level 0{l[2]}, size {l.split('_')[1]}"),
+    ("configs/eval_sweeps/dp1_dreamer_bins6.yaml", "Dreamer agents", "july",
+     lambda l: f"level 03, size XS, narrow value range, replay ratio {l.split('rr')[1].replace('p', '.')}"),
+    ("configs/eval_sweeps/dp1_dreamer_hier.yaml", "Dreamer agents", "july",
+     lambda l: f"level 03, size XS, layered encoder ({l.split('_')[1]})"),
+    ("configs/eval_sweeps/dp1_dreamer_curric.yaml", "Dreamer agents", "july",
+     lambda l: "level 03 after levels 01-02 (curriculum), layered encoder"),
+    ("configs/eval_sweeps/basic04_rr_dreamer.yaml", "Dreamer agents", "july",
+     lambda l: f"level 04, size M, replay ratio {l[2:].replace('p', '.')}"),
+    ("configs/eval_sweeps/dreamer_envcount_compare.yaml", "Dreamer agents", "july",
+     lambda l: f"level 0{l[2]}, size M, {l.split('_')[1].replace('env', '')} parallel worlds"),
     ("configs/eval_sweeps/basicq2_wave1_rppo.yaml", "Curriculum wave 1", "core_old",
      lambda l: f"level 0{l[4]}"),
     ("configs/eval_sweeps/basicq2_wave2_rppo.yaml", "Curriculum wave 2", "superseded",
@@ -94,6 +115,8 @@ def thirst_setting(c):
 
 def agent_of(run_dir):
     n = os.path.basename(run_dir)
+    if "JAX_DreamerSRL" in str(run_dir):
+        return "Dreamer"
     if "t16quad" in n or "_nmn_" in n:
         return "modulated"
     return "ordinary"
@@ -127,6 +150,28 @@ def candidates():
                 out.append({"family": fam, "scene_set": sset, "setting": setting, "spec": os.path.relpath(sp, ROOT),
                             "sweep": name, "label": lab, "run_dir": path, "agent": agent_of(path),
                             "seed": seed_of(path), "leaf": os.path.join(S["output_dir"], lab)})
+    ladder = {"b00": ("20260708-193853_rppo_basic00_static_128env_n109", "level 00"),
+              "b01": ("20260708-193853_rppo_basic01_slow_128env_n109", "level 01"),
+              "b02": ("20260708-193853_rppo_basic02_predrabbit_128env_n110", "level 02"),
+              "b03": ("20260709-183631_rppo_basic03_randinit_128env_100M_n106", "level 03, 100M steps"),
+              "b04": ("20260709-183655_rppo_basic04_jump_128env_100M_n106", "level 04, 100M steps"),
+              "b05": ("20260709-183710_rppo_basic05_noise_128env_100M_n108", "level 05 (noise on the senses), 100M steps")}
+    for b, (run, setting) in ladder.items():   # results/eval/avoidance/metrics_history/README.md (no spec)
+        out.append({"family": "July curriculum", "scene_set": "july_noise" if b == "b05" else "july",
+                    "setting": setting, "spec": "(none; results/eval/avoidance/metrics_history/README.md)",
+                    "sweep": "metrics_history", "label": b, "run_dir": f"results/JAX_RecurrentPPO/{run}",
+                    "agent": "ordinary", "seed": 42, "leaf": f"{AV}/metrics_history/{b}"})
+    for sz in ("xs", "s", "m", "l", "xl"):      # README of the folder (no spec)
+        m = sorted(glob.glob(os.path.join(ROOT, "results/JAX_DreamerSRL", f"*_dsrl_basic04_size_{sz}_rr0p0625")))
+        out.append({"family": "Dreamer agents", "scene_set": "july", "setting": f"level 04, size {sz.upper()}",
+                    "spec": "(none; folder README)", "sweep": "dreamer_basic04_size", "label": sz,
+                    "run_dir": os.path.relpath(m[0], ROOT) if m else "", "agent": "Dreamer", "seed": 0,
+                    "leaf": f"{AV}/metrics_history_dreamer_basic04_size/{sz}"})
+        m = sorted(glob.glob(os.path.join(ROOT, "results/JAX_DreamerSRL", f"*_dsrl_basic02_size_{sz}_rr0p0625")))
+        out.append({"family": "Dreamer agents", "scene_set": "july", "setting": f"level 02, size {sz.upper()}",
+                    "spec": "(none; folder README)", "sweep": "dreamer_basic02_size", "label": sz,
+                    "run_dir": os.path.relpath(m[0], ROOT) if m else "", "agent": "Dreamer", "seed": 0,
+                    "leaf": f"{AV}/metrics_history_dreamer_basic02/{sz}"})
     for lvl, size_tag in (("03", "basic03_size"), ("04", "basic04_size")):
         for leaf in sorted(glob.glob(os.path.join(ROOT, AV, f"metrics_history_rppo_{size_tag}", "sz*"))):
             sz = os.path.basename(leaf)
@@ -142,6 +187,8 @@ def bush_heal(run_dir):
     """How much faster injury heals on a bush, from the run's saved config ('none' if the key is absent:
     runs from before the key existed heal at the same rate everywhere)."""
     f = os.path.join(ROOT, run_dir, "models", "config.yaml")
+    if not os.path.exists(f):
+        f = os.path.join(ROOT, run_dir, "models", "env_config.yaml")   # Dreamer runs
     if not os.path.exists(f):
         return "unknown"
     m = re.search(r"recovery_in_bush_multiplier:\s*([\d.]+)", open(f).read())
@@ -200,6 +247,14 @@ def main(argv=None):
                 v = summarise_safe((m["bush_hiding_70"] - m["bush_hiding_00"]).to_numpy() * 100.0)
                 if v:
                     effects.append({"id": rid, "scene": s, **v})
+        # Animal dependence: a scene minus the no-animal scene, both at injury 0, per checkpoint.
+        for s_ in ("pred", "rabbit"):
+            if (s_, "00") in have and ("none", "00") in have:
+                m = have[(s_, "00")][["step", "bush_hiding"]].merge(
+                    have[("none", "00")][["step", "bush_hiding"]], on="step", suffixes=("_a", "_n"))
+                v = summarise_safe((m["bush_hiding_a"] - m["bush_hiding_n"]).to_numpy() * 100.0)
+                if v:
+                    effects.append({"id": rid, "scene": f"{s_}-vs-none@00", **v})
         # Scene-specific part: a scene's injury effect minus the no-animal scene's, per checkpoint.
         if all(("none", i) in have for i in INJ):
             base = have[("none", "70")][["step", "bush_hiding"]].merge(
