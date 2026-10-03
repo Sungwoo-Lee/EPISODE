@@ -682,6 +682,25 @@ Each spec covers 2 runs × ~50 checkpoints × 12 scenes. Do not delete `_scratch
 Expect it to be slow: about 324 k recordings, NAS-bound. The calibration read about 4,300 episodes in
 about 15 min with 8 workers. Then `probes.py --sweep-specs … --population _water_dev/thirst/population.json --out-root …`.
 
+**Page parts and d9 review notes (2026-10-03, d9 GO 11:05).** `e5c39263` (N3 32-bit seed guard in
+`pond_cells`; N4 `f5_settings.py` stops with screen.py's refusal; N5 the sweep's D3 check and hard stop
+are named functions, and a test injects a hydration rise off the pond; N7 the water stamp check covers
+golden_gate.py) and `87d79927`. The second adds the template's `<!-- WATER -->` section, which is
+stripped for other populations; `page_template_f7_water.html`; `build_page.py` water mode; and the
+`f7_probes.py` pond figures. Both are on `bb-water` and pushed. **hvsmell page identity:** built with
+`v5.0` code and with branch code from the same figures. `basic_behaviour.md` is byte-identical.
+`basic_behaviour.html` is identical except the reproduction-check date, which the branch reads from the
+`_water_dev` stamp under `BB_DATA_ROOT` (an environment difference, not a code difference), and the
+scratch page-folder name. Tests: 30/30. **Side effect:** editing registry/sweep/fit mid-run made the dev
+stamps stale. The remaining multivariate fits (near_predator, warm_cell and pond on some cells) and
+`screen.py` refused. The dev gates are re-running: the water gate passed again, and gates 1/2 are
+running (outputs under `_water_dev` only). The refits, the three missing F4 figures and the F5
+refusal records follow automatically (`tmp/20261003_115000_regate_refit.sh`). C8 sweeps finished at
+11:09: 9 specs, 0 failures, 2 × 50 checkpoints × 12 scenes each. `probe_pond.py collate` is running
+with 24 workers. It is NAS-bound at about 50 cells per minute, so about 3.5 h for 10,800 cells.
+`tmp/20261003_121500_finish_page.sh` then runs `probes.py` → F7 → the page build into
+`docs/develop/active/behavior/basic_behaviour_thirst/basic_behaviour.html`.
+
 **C7a (probe calibration), superseded text (blocker as first found):** `generate_thirst_probes.py` is written in
 the worktree (uncommitted). Every scene fails to load: `_load_water`'s capacity check
 (`config_loader.py:3062`, KNOWN_BUGS ~#117) requires the slot at scan position k to have ≥ k+1 free
