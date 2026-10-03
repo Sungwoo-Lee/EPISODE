@@ -15,6 +15,12 @@ Reads only what probes.py wrote to <out-root>/probes/ (seconds). One figure per 
   training   probe bush dwell vs training-world bush dwell, per run
   other      survival, closest distance to the animal, spatial spread (newest-20 means)
 
+Worlds with a pond (BASIC_BEHAVIOUR_WATER Revision 2; probes.py output marked "water"):
+  pond_traces  --map 10|15|20: rows = scene, columns = smell reach x injury; bush time before the
+               first pond step (solid) and share of episodes reaching the pond (dotted), per agent
+  pond_levels  newest-20 means (within-run 95 % intervals) of the pre-pond bush share, 9 worlds
+  pond_visits  the same for the share of episodes reaching the pond
+
 Encoding, shared with Figures 1-6: colour = world, marker shape = agent; a hollow marker = a value
 that is reported but not interpreted (survival under 95 steps in a scene it uses, or no-animal bush
 dwell above 90 %, pre-stated rules 1 and 9); the black horizontal dash = mean of the three seeds;
@@ -479,15 +485,159 @@ def fig_other(D):
     return fig, rows
 
 
+# ------------------------------------------------------------------ worlds with a pond
+# (docs/develop/active/behavior/BASIC_BEHAVIOUR_WATER.md, Revision 2). probes.py has already put the
+# bush share BEFORE THE FIRST POND STEP in `bush_hiding`, and carries `pond_visit_share` (%) and
+# `n_overdrink`. Nine worlds = map size x smell reach; one run per world x agent, so every interval is
+# within-run (checkpoint-to-checkpoint), never seed-to-seed. Colour = agent here (the world is the
+# panel or the horizontal position), a stated departure from the page's colour = world encoding.
+WATER_FIGS = ("pond_traces", "pond_levels", "pond_visits")
+W_MAPS = ("10", "15", "20")
+W_REACH = ("W", "5", "3")
+W_REACH_NAME = {"W": "smell across the map", "5": "smell 5 squares", "3": "smell 3 squares"}
+W_WORLDS = [f"g{m}s{r}" for m in W_MAPS for r in W_REACH]
+W_COL = {"t1none": H.SERIES[0], "t16quad": H.SERIES[1]}
+
+
+def wlabel_water(w):
+    return f"{w[1:3]}×{w[1:3]}, {W_REACH_NAME[w[-1]]}"
+
+
+def water_rows(D, worlds, measure, what):
+    comp = pd.DataFrame(D["comp"]["rows"])
+    runs = {r["label"]: r for r in D["comp"]["runs"]}
+    rows = []
+    for w in worlds:
+        c = comp[comp.label.isin([l for l, r in runs.items() if r["world"] == w])]
+        found, exp = int(c.found.sum()), int(c.expected.sum())
+        rows.append({"what": f"{what}, {wlabel_water(w)} (2 runs x 12 scenes)",
+                     "used": int(len(c[c.found >= PR.WINDOW]) * PR.WINDOW) if measure else found,
+                     "total": found if measure else exp,
+                     "note": ("the newest 20 saved checkpoints of each run and scene; older ones are drawn in "
+                              "the traces only" if measure else "every saved checkpoint of each run and scene; "
+                              "no scene x checkpoint cell is dropped")})
+        if found < exp:
+            rows.append({"what": f"checkpoints evaluated, {wlabel_water(w)}", "used": found, "total": exp,
+                         "note": "DRAFT: the sweep has not finished every checkpoint"})
+    rows.append({"what": "episodes behind each checkpoint value", "used": 30, "total": 30,
+                 "note": "30 evaluation episodes per checkpoint and scene; every episode counted, its bush "
+                         "time read up to its first pond step"})
+    return rows
+
+
+def fig_pond_traces(D, mp):
+    """Rows = scene, columns = smell reach x injury; solid = bush share before the first pond step,
+    dotted = share of the 30 episodes that reached the pond; one colour per agent; a cross at the top
+    where any episode died of over-drinking."""
+    import matplotlib.pyplot as plt
+    S = D["S"]
+    worlds = [f"g{mp}s{r}" for r in W_REACH]
+    cols = [(w, i) for w in worlds for i in PR.INJURIES]
+    xmax = max(S.step.max() / 1e6, 1.0)
+    fig, axs = plt.subplots(len(PR.SCENES), len(cols), figsize=(12.0, 2.0 * len(PR.SCENES) + 1.6),
+                            sharex=True, sharey=True)
+    for ri, (scene, sname) in enumerate(PR.SCENES):
+        for ci, (w, inj) in enumerate(cols):
+            ax = axs[ri, ci]
+            sub = S[(S.scene == scene) & (S.injury == inj) & S.label.str.startswith(w + "_")]
+            for a in AGENTS:
+                g = sub[sub.label.str.contains(f"_{a}_")]
+                b = g[g.measure == "bush_hiding"].sort_values("step")
+                v = g[g.measure == "pond_visit_share"].sort_values("step")
+                o = g[(g.measure == "n_overdrink") & (g.value > 0)]
+                ax.plot(b.step / 1e6, b.value, color=W_COL[a], lw=1.2)
+                ax.plot(v.step / 1e6, v.value, color=W_COL[a], lw=1.0, ls=":")
+                if len(o):
+                    ax.plot(o.step / 1e6, [101] * len(o), ls="", marker="x", ms=4, color=W_COL[a])
+            ax.set_ylim(-4, 106)
+            ax.set_yticks([0, 50, 100])
+            ax.set_xlim(0, xmax * 1.03)
+            if ri == 0:
+                ax.set_title(f"{W_REACH_NAME[w[-1]]},\n{PR.INJ_NAME[inj]}", fontsize=H.FS_LABEL + 1, loc="left")
+            if ci == 0:
+                ax.set_ylabel(SHORT_SCENE[scene].replace(", ", ",\n"), fontsize=H.FS_LABEL)
+    fig.supxlabel("training progress (millions of training episodes at the checkpoint)", fontsize=H.FS_BODY, y=0.045)
+    fig.supylabel("share (%): bush time before the first pond step, solid; episodes reaching the pond, dotted",
+                  fontsize=H.FS_BODY, x=0.005)
+    from matplotlib.lines import Line2D
+    hs = [Line2D([], [], color=W_COL[a], lw=1.6, label=FG.alabel(a)) for a in AGENTS]
+    hs += [Line2D([], [], color=H.INK_2, lw=1.2, label="bush time before the first pond step"),
+           Line2D([], [], color=H.INK_2, lw=1.0, ls=":", label="share of episodes reaching the pond"),
+           Line2D([], [], ls="", marker="x", color=H.INK_2, label="an over-drinking death at that checkpoint")]
+    fig.legend(handles=hs, loc="lower center", ncol=3, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.005))
+    fig.tight_layout(rect=(0.02, 0.07, 1, 1), h_pad=0.9, w_pad=0.7)
+    return fig, water_rows(D, worlds, False, "checkpoints drawn")
+
+
+def fig_pond_window(D, measure, ylabel):
+    """Newest-20 checkpoint means with lag-1-corrected 95 % intervals (within-run), per world,
+    one marker per agent; panels = scene x injury."""
+    import matplotlib.pyplot as plt
+    R = D["R"]
+    R = R[(R.kind == "level") & (R.measure == measure)].copy()
+    R["injury"] = R["injury"].map(inj_str)
+    fig, axs = plt.subplots(6, 2, figsize=(12.0, 17.0), sharey=True, sharex=True)
+    for k, (scene, sname) in enumerate(PR.SCENES):
+        for j, inj in enumerate(PR.INJURIES):
+            ax = axs[k, j]
+            sub = R[(R.scene == scene) & (R.injury == inj)]
+            for xi, w in enumerate(W_WORLDS):
+                for ai, a in enumerate(AGENTS):
+                    r = sub[(sub.world == w) & (sub.agent == a)]
+                    if not len(r):
+                        continue
+                    r = r.iloc[0]
+                    x = xi + (ai - 0.5) * 0.3
+                    if np.isfinite(r["lo"]):
+                        ax.plot([x, x], [r["lo"], r["hi"]], color=W_COL[a], lw=1.3, alpha=0.75)
+                    ax.plot(x, r["mean"], ls="", marker=MK[a], ms=6, color=W_COL[a])
+            for b in (2.5, 5.5):
+                ax.axvline(b, color=H.RULE, lw=1)
+            ax.set_xticks(range(len(W_WORLDS)))
+            ax.set_xticklabels([f"{w[1:3]}·{'map' if w[-1] == 'W' else w[-1]}" for w in W_WORLDS],
+                               fontsize=H.FS_LABEL)
+            ax.set_xlim(-0.6, len(W_WORLDS) - 0.4)
+            ax.set_ylim(-4, 104)
+            ax.grid(axis="x", visible=False)
+            ax.set_title(f"{SHORT_SCENE[scene]} · inj. {int(inj)}", fontsize=H.FS_LABEL + 1, loc="left")
+            if j == 0:
+                ax.set_ylabel(ylabel, fontsize=H.FS_LABEL)
+    fig.supxlabel("world: map size · smell reach (squares, or the whole map)", fontsize=H.FS_BODY, y=0.03)
+    from matplotlib.lines import Line2D
+    hs = [Line2D([], [], ls="", marker=MK[a], ms=8, color=W_COL[a], label=FG.alabel(a)) for a in AGENTS]
+    hs.append(Line2D([], [], color=H.INK_2, lw=1.3, label="95% interval, within-run (checkpoint-to-checkpoint)"))
+    fig.legend(handles=hs, loc="lower center", ncol=3, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.003))
+    fig.tight_layout(rect=(0, 0.045, 1, 1), h_pad=1.3, w_pad=0.8)
+    return fig, water_rows(D, W_WORLDS, True, "checkpoints summarised")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out-root", required=True)
     ap.add_argument("--fig-dir", required=True)
-    ap.add_argument("--figure", required=True, choices=FIGS)
+    ap.add_argument("--figure", required=True, choices=FIGS + WATER_FIGS)
     ap.add_argument("--world", choices=WORLDS, help="required for --figure traces")
+    ap.add_argument("--map", choices=W_MAPS, help="required for --figure pond_traces")
     a = ap.parse_args(argv)
     H.apply()
     D = load(os.path.abspath(a.out_root))
+    if a.figure in WATER_FIGS:
+        if not json.load(open(os.path.join(os.path.abspath(a.out_root), "probes", "provenance.json"))).get("water"):
+            raise SystemExit(f"--figure {a.figure} is for probe scenes with a pond; probes.py found none")
+        if a.figure == "pond_traces":
+            if not a.map:
+                raise SystemExit("--figure pond_traces needs --map")
+            fig, rows = fig_pond_traces(D, a.map)
+            stem = f"f7_pond_traces__g{a.map}"
+        elif a.figure == "pond_levels":
+            fig, rows = fig_pond_window(D, "bush_hiding", "bush time before the\nfirst pond step (%)")
+            stem = "f7_pond_levels"
+        else:
+            fig, rows = fig_pond_window(D, "pond_visit_share", "episodes reaching\nthe pond (%)")
+            stem = "f7_pond_visits"
+        FG.record_samples(os.path.abspath(a.fig_dir), stem, rows)
+        FG.save(fig, os.path.abspath(a.fig_dir), stem)
+        return
     if a.figure == "traces":
         if not a.world:
             raise SystemExit("--figure traces needs --world")

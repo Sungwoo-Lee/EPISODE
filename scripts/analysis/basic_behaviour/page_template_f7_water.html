@@ -1,0 +1,117 @@
+<!-- BLOCK F7 -->
+<section class="col">
+  <h2><span class="num">07</span> Experiment tests: bush time in controlled scenes with a pond</h2>
+  <div class="callout warn"><p class="eyebrow">Exploratory</p>
+  <p>This section is not part of the thirst study's pre-registered read-outs. It shows how each agent
+  behaves in twelve small, fixed test scenes at every checkpoint saved during training. With one
+  training run per world and agent, it describes those runs; it does not compare agents or worlds.
+  {{W_F7_BUDGET}}</p></div>
+  <p>Each scene is built on the trained world itself: its own map size, smell reach, pond size, body and
+  temperature system. Only the layout is fixed: the agent starts at the same square, a hiding bush sits
+  three squares to its west with a campfire beside it, and a pond sits three squares diagonally south-east,
+  at the same distance at every map size. Six animal setups &mdash; <strong>no animal</strong>, a
+  <strong>hunting predator</strong>, a harmless <strong>chasing rabbit</strong>, the chasing rabbit with
+  its predator-like smell channel removed, a harmless <strong>wandering rabbit</strong>, and a wandering
+  rabbit that <strong>smells like a predator</strong> &mdash; are each run with the agent unhurt (injury 0)
+  and badly injured (injury 70 of 100), 30 episodes of 100 steps per checkpoint. Every episode starts at
+  hydration {{W_CALIB_S}}. An agent that walks to the pond is no longer showing how much it hides, so
+  <strong>bush time is read in each episode only up to its first step onto the pond</strong>, and the
+  share of episodes that reached the pond is drawn beside it.</p>
+</section>
+<figure>
+  <h3 class="bb-fh" id="f7a"><span class="bb-n">Figure 7a</span>Bush time and pond visits over training, per map size</h3>
+  <img data-fig="f7_pond_traces__g10" alt="10 by 10 map: a grid of small line charts, one row per test scene and one column per smell reach and injury level, each with the bush time before the first pond step and the share of episodes reaching the pond, per agent, at every saved checkpoint.">
+  <img data-fig="f7_pond_traces__g15" alt="15 by 15 map: the same grid of line charts.">
+  <img data-fig="f7_pond_traces__g20" alt="20 by 20 map: the same grid of line charts.">
+  <p class="zoomhint">Click a figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
+  <figcaption>
+    <span><b>Figure 7a &mdash; bush time before the first pond step, and pond visits, in each test scene
+    across training; one chart per map size (10&times;10, then 15&times;15, then 20&times;20).</b>
+    <b>Axes.</b> Every small panel: horizontal, training progress in millions of training episodes at the
+    saved checkpoint; vertical, a percentage from 0 to 100. Solid line: the share of each episode's steps
+    before its first pond step that the agent spent on the bush, averaged over the 30 episodes. Dotted
+    line: the share of the 30 episodes in which the agent reached the pond. Rows are the six animal
+    setups; columns are the smell reach (whole map, 5 squares, 3 squares) and the injury at the start
+    (0, 70). Colour is the agent type (a departure from the page's colour-for-world, since each panel is
+    one world); a cross at the top marks a checkpoint where an episode ended by over-drinking.</span>
+    <span>{{DATA:f7_pond_traces__g10}}</span>
+    <span>{{DATA:f7_pond_traces__g15}}</span>
+    <span>{{DATA:f7_pond_traces__g20}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>{{CMD:f7_pond_traces__g10}}</code> (and <code>--map 15</code>, <code>--map 20</code>)</p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>For every checkpoint saved while a run trained, the agent is replayed for 30 episodes of each of the
+    twelve scenes, with the same episode seeds every time, and every step is recorded. The pond's cells are
+    not typed into the analysis: they are recovered by replaying the scene's own reset, and every step of
+    every episode is checked &mdash; hydration rose exactly when the agent stood on a pond cell &mdash; so
+    that a wrong pond position would stop the analysis rather than mislead it. In each episode, the first
+    step on which the agent stands on the pond ends the window. Bush time is the share of steps before that
+    point spent on the bush; an episode that never reaches the pond keeps all its steps, and its value then
+    equals the ordinary bush dwell. No episode and no scene is dropped. Read the two lines together: an
+    agent that drinks early has a short window that begins three squares from the bush, so a low solid line
+    with a high dotted line can mean early drinking rather than little hiding. Over-drinking needs about
+    four consecutive steps on the pond from the start level and is counted.</p>
+  </div>
+</figure>
+<figure>
+  <h3 class="bb-fh" id="f7b"><span class="bb-n">Figure 7b</span>Bush time before the first pond step, late in training</h3>
+  <img data-fig="f7_pond_levels" alt="Twelve dot-plot panels, one per scene and injury level, each showing each run's late-training bush time before the first pond step with a within-run 95 percent interval, across the nine worlds.">
+  <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
+  <figcaption>
+    <span><b>Figure 7b &mdash; late-training bush time before the first pond step, in each scene.</b>
+    <b>Axes.</b> Every panel: horizontal, the world (map size and smell reach), with the ordinary agent
+    (circles) left and the modulated agent (triangles) right; vertical, the share of steps before the
+    first pond step spent on the bush, in percent from 0 to 100, averaged over the newest 20 checkpoints.
+    The vertical line through a marker is a 95% interval within one run (checkpoint-to-checkpoint), not
+    between seeds.</span>
+    <span>{{DATA:f7_pond_levels}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>{{CMD:f7_pond_levels}}</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>Each marker summarises one run in one scene by the mean of its newest 20 checkpoints, the same window
+    the other experiment-test sections of this project use. The interval around it is a 95% interval for
+    that mean, built from how much those 20 checkpoint values differ from one another. Neighbouring
+    checkpoints can resemble each other, which would make 20 of them worth fewer than 20 independent
+    readings; so the interval measures the lag-one autocorrelation &mdash; how strongly each checkpoint's
+    value predicts the next &mdash; and, when it is positive, shrinks the count to an effective number of
+    checkpoints, 20 &times; (1 &minus; r) / (1 + r), before computing the usual t-interval. This describes
+    how much one trained policy wobbles late in training. It says nothing about how a different training
+    seed would behave, because each world and agent has a single run; a gap between markers is therefore
+    not evidence of a difference between agents or worlds. Each value is the bush time before the first
+    pond step, so it must be read next to Figure 7c: where most episodes reach the pond, the windows are
+    short.</p>
+  </div>
+</figure>
+<figure>
+  <h3 class="bb-fh" id="f7c"><span class="bb-n">Figure 7c</span>How often the agent reaches the pond, late in training</h3>
+  <img data-fig="f7_pond_visits" alt="Twelve dot-plot panels, one per scene and injury level, each showing each run's late-training share of episodes reaching the pond with a within-run 95 percent interval, across the nine worlds.">
+  <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
+  <figcaption>
+    <span><b>Figure 7c &mdash; late-training share of episodes reaching the pond, in each scene.</b>
+    <b>Axes.</b> Every panel: horizontal, the world (map size and smell reach), ordinary agent (circles)
+    left and modulated agent (triangles) right; vertical, the percentage of the 30 episodes in which the
+    agent stood on the pond at least once, from 0 to 100, averaged over the newest 20 checkpoints, with a
+    95% interval within one run.</span>
+    <span>{{DATA:f7_pond_visits}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>{{CMD:f7_pond_visits}}</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>An episode counts as reaching the pond if, at any step after the start, the agent stands on one of the
+    pond's cells. The pond's cells are recovered by replaying the scene's own reset, and the analysis checks
+    on every step that hydration rose exactly when the agent stood on them. For each checkpoint, the share is
+    the number of the 30 episodes that reached the pond divided by 30; the marker is the mean of that share
+    over the newest 20 checkpoints, with the same within-run interval as Figure 7b, corrected for neighbouring
+    checkpoints resembling one another. This figure exists to qualify Figure 7b. Where nearly every episode
+    reaches the pond, bush time is measured over short windows that start three squares from the bush, so
+    it is low for a reason that has nothing to do with hiding. The scenes start every episode at the same
+    hydration, chosen in advance by a written rule, which is why the pond is visited much more often on the
+    small map than on the large one at the same distance; the calibration table above gives the numbers.</p>
+  </div>
+</figure>
+<div class="col"><div class="callout bb-cannot"><p class="eyebrow">What this section cannot tell you</p>
+  <p>Whether one agent or one world hides more than another: each has a single training run, and the
+  intervals describe that run only. Nor what an agent would do in a scene without a pond.</p></div></div>
+<!-- /BLOCK F7 -->

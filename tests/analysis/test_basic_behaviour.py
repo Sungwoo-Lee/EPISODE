@@ -548,3 +548,34 @@ def test_pond_replay_refuses_seeds_past_32_bits():
     cfg, _ = load("g10sW")
     with pytest.raises(SystemExit, match=r"outside \[0, 2\*\*31\)"):
         REG.pond_cells(REG.rebuild_params(cfg), [2 ** 31 + 5])
+
+
+def test_f7_water_figures_on_synthetic_probes(tmp_path):
+    """The water Figure 7 parts draw from probes.py-shaped tables (9 worlds x 2 agents, one run each)
+    and declare every checkpoint they use."""
+    import pandas as pd
+    import f7_probes as F7
+    import probes as PRB
+    rows, series, comp, runs = [], [], [], []
+    steps = np.arange(1, 51) * 200_000
+    for w in F7.W_WORLDS:
+        for a in F7.AGENTS:
+            lab = f"{w}_{a}_s42"
+            runs.append({"label": lab, "world": w, "agent": a})
+            for scene, _ in PRB.SCENES:
+                for inj in PRB.INJURIES:
+                    comp.append({"label": lab, "scene": scene, "injury": inj, "found": 50, "expected": 50})
+                    for m, v in (("bush_hiding", 30.0), ("pond_visit_share", 60.0), ("n_overdrink", 0.0)):
+                        rows.append({"label": lab, "world": w, "agent": a, "seed": 42, "kind": "level",
+                                     "quantity": f"{m}:{scene}:{inj}", "scene": scene, "injury": inj,
+                                     "measure": m, "mean": v, "lo": v - 5, "hi": v + 5})
+                        series += [{"label": lab, "scene": scene, "injury": inj, "measure": m, "step": int(st),
+                                    "value": v + (1.0 if m == "n_overdrink" and st == steps[-1] else 0.0)}
+                                   for st in steps]
+    D = {"R": pd.DataFrame(rows), "S": pd.DataFrame(series), "comp": {"rows": comp, "runs": runs}}
+    F7.H.apply()
+    fig, r1 = F7.fig_pond_traces(D, "10")
+    assert len(fig.axes) == 6 * 6 and r1[0]["total"] == r1[0]["used"] == 2 * 12 * 50
+    fig, r2 = F7.fig_pond_window(D, "bush_hiding", "x")
+    assert len([r for r in r2 if r["what"].startswith("checkpoints summarised")]) == 9
+    assert all(r["used"] == 2 * 12 * 20 for r in r2 if r["what"].startswith("checkpoints summarised"))

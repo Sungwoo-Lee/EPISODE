@@ -324,7 +324,11 @@ def collate(a) -> int:
     if a.workers > 1:
         import multiprocessing as mp
         with mp.get_context("spawn").Pool(a.workers) as pool:
-            res = pool.map(_collate_cell, jobs, chunksize=4)
+            res = []
+            for i, r in enumerate(pool.imap(_collate_cell, jobs, chunksize=4)):
+                res.append(r)
+                if (i + 1) % 500 == 0:
+                    print(f"  {i + 1}/{len(jobs)} cells", flush=True)
     else:
         res = [_collate_cell(j) for j in jobs]
     by = {}
