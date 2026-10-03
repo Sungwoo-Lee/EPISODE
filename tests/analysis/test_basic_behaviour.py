@@ -519,3 +519,63 @@ def test_collate_tolerance_matches_4_decimal_csv():
     m = 0.123456
     assert abs(m - float(f"{m:.4f}")) <= PP.CSV_TOL
     assert abs(m - 0.1236) > PP.CSV_TOL
+
+
+def test_sweep_hard_stop_on_hydration_rise_off_pond():
+    """d9 review N5: one injected row where hydration rose while the agent was off the pond is
+    counted by the sweep's own per-step check, and the sweep's hard stop then refuses the store."""
+    import sweep as SW
+    # two episodes of 4 rows each (t = 0..3); the agent is on the pond at episode 0, t = 2 only
+    on = np.array([0, 0, 1, 0, 0, 0, 0, 0], bool)
+    hyd = np.array([100, 99.375, 104.375, 103.75, 150, 149.375, 148.75, 148.125])
+    t = np.array([0, 1, 2, 3, 0, 1, 2, 3])
+    idx = np.flatnonzero(t >= 1)
+    prev = idx - 1
+    assert SW.pond_step_exceptions(on, hyd, idx, prev) == 0
+    WC = {"episodes_checked": 2, "start_cell_mismatches": 0, "steps_checked": 6, "step_exceptions": 0,
+          "reset_hydration_max_abs_diff": 0.0}
+    SW.require_water_checks(WC, 2, 6)                       # clean store passes
+    bad = hyd.copy()
+    bad[6] = bad[5] + 1.0                                   # hydration rose off the pond (episode 1, t = 2)
+    n = SW.pond_step_exceptions(on, bad, idx, prev)
+    assert n == 1
+    with pytest.raises(SystemExit, match="water integrity checks failed"):
+        SW.require_water_checks(dict(WC, step_exceptions=n), 2, 6)
+
+
+def test_pond_replay_refuses_seeds_past_32_bits():
+    """d9 review N3: PRNGKey truncates seeds to 32 bits; the replay refuses rather than mismatch."""
+    cfg, _ = load("g10sW")
+    with pytest.raises(SystemExit, match=r"outside \[0, 2\*\*31\)"):
+        REG.pond_cells(REG.rebuild_params(cfg), [2 ** 31 + 5])
+
+
+def test_f7_water_figures_on_synthetic_probes(tmp_path):
+    """The water Figure 7 parts draw from probes.py-shaped tables (9 worlds x 2 agents, one run each)
+    and declare every checkpoint they use."""
+    import pandas as pd
+    import f7_probes as F7
+    import probes as PRB
+    rows, series, comp, runs = [], [], [], []
+    steps = np.arange(1, 51) * 200_000
+    for w in F7.W_WORLDS:
+        for a in F7.AGENTS:
+            lab = f"{w}_{a}_s42"
+            runs.append({"label": lab, "world": w, "agent": a})
+            for scene, _ in PRB.SCENES:
+                for inj in PRB.INJURIES:
+                    comp.append({"label": lab, "scene": scene, "injury": inj, "found": 50, "expected": 50})
+                    for m, v in (("bush_hiding", 30.0), ("pond_visit_share", 60.0), ("n_overdrink", 0.0)):
+                        rows.append({"label": lab, "world": w, "agent": a, "seed": 42, "kind": "level",
+                                     "quantity": f"{m}:{scene}:{inj}", "scene": scene, "injury": inj,
+                                     "measure": m, "mean": v, "lo": v - 5, "hi": v + 5})
+                        series += [{"label": lab, "scene": scene, "injury": inj, "measure": m, "step": int(st),
+                                    "value": v + (1.0 if m == "n_overdrink" and st == steps[-1] else 0.0)}
+                                   for st in steps]
+    D = {"R": pd.DataFrame(rows), "S": pd.DataFrame(series), "comp": {"rows": comp, "runs": runs}}
+    F7.H.apply()
+    fig, r1 = F7.fig_pond_traces(D, "10")
+    assert len(fig.axes) == 6 * 6 and r1[0]["total"] == r1[0]["used"] == 2 * 12 * 50
+    fig, r2 = F7.fig_pond_window(D, "bush_hiding", "x")
+    assert len([r for r in r2 if r["what"].startswith("checkpoints summarised")]) == 9
+    assert all(r["used"] == 2 * 12 * 20 for r in r2 if r["what"].startswith("checkpoints summarised"))

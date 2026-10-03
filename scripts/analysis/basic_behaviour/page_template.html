@@ -52,6 +52,44 @@ details.bb-data[open] > summary { margin-bottom:8px; }
   {{N_PENDING}} runs of the manifest are not yet available.</p>
 </section>
 
+<!-- WATER -->
+<section class="col">
+  <h2><span class="num">WATER</span> What changes in worlds with a pond</h2>
+  <p>Every world of this population has <strong>one pond</strong> per episode and a <strong>hydration</strong>
+  level that drains a little every step and rises only while the agent stands on the pond. Running dry
+  (<strong>died of thirst</strong>) and filling past the maximum (<strong>over-drank</strong>) end an
+  episode, so Figure 1 shows these two ways an episode can end as well. The page measures a
+  <strong>sixth behaviour, time on the pond (drinking)</strong>: the share of chosen steps on which the
+  agent stands on a pond cell. The pond's position is not stored with the recordings; it is rebuilt from
+  each episode's random seed by replaying the environment's own reset, and every step of every episode is
+  checked (hydration rose exactly when the agent stood on the pond) &mdash; {{W_CHECKS}}. Hydration at the
+  start of an episode and the start distance to the pond are new episode features; the pond's corner is
+  tabulated in Figure 2, not fitted. In Figure 6 the hydration panels for the pond count only steps where
+  the agent was <em>off</em> the pond one step earlier, so they show how often a thirsty agent
+  <em>arrives</em>, not how long a drinking bout lasts.</p>
+  <div class="callout warn"><p class="eyebrow">One training run per world and agent</p>
+  <p>{{W_ENDPOINT}} Each world and agent has a single training run (seed 42). Every interval on this page
+  is therefore <strong>within one trained policy</strong> &mdash; episode-to-episode or
+  checkpoint-to-checkpoint spread &mdash; never seed-to-seed variation. The thirst study states the limit
+  (THIRST_TASK, section 5.4): &ldquo;One seed <strong>cannot</strong> support any modulator claim, any
+  interaction claim, any size &times; reach claim, or any &lsquo;no difference&rsquo; claim.&rdquo; The page
+  draws no modulated-minus-ordinary comparison, and the cross-run screening (Figure 5) and the
+  seed-to-seed budget of Figure 7 are refused: {{W_REFUSALS}}</p></div>
+  <div class="callout warn"><p class="eyebrow">Experiment-test scenes: start hydration chosen by a fallback rule</p>
+  <p>The test scenes of Figure 7 contain a pond (the environment always places one). Bush time is
+  therefore read in each episode only up to the agent's first step onto the pond, with the share of
+  episodes that reached the pond shown beside it; no episode is dropped. The scenes start every episode
+  at a fixed hydration chosen in advance by a written rule: the lowest of 150, 165 and 180 at which at
+  most 20&nbsp;% of episodes reach the pond in both test worlds. <strong>No value met the rule</strong>,
+  so its first fallback chose {{W_CALIB_S}} (the lowest worse-world share with no over-drinking). On the
+  10&times;10 map most episodes still reach the pond; on 20&times;20 almost none do, with the pond at the
+  same distance from the agent:</p>
+  {{W_CALIB_TABLE}}
+  <p>To make these scenes loadable, the environment's load-time pond check was corrected the same day
+  (it counted every earlier object, not only those whose placement area overlaps; validation only, no
+  change to where anything is placed). Both choices are defaults the user may revisit.</p></div>
+</section>
+<!-- /WATER -->
 {{TOC}}
 
 <section class="col">

@@ -40,6 +40,14 @@ ROOT = FG.ROOT
 HOUSE = os.path.join(ROOT, "docs/develop/active/meta/house_style_sheet.template.html")
 FONTS = os.path.join(ROOT, "assets/fonts/pretendard/subset")
 TEMPLATE = os.path.join(HERE, "page_template.html")
+# Populations with water (BASIC_BEHAVIOUR_WATER): the <!-- WATER --> sections of the template are kept
+# (and stripped for every other population, which then builds exactly as before), and Figure 7 comes
+# from this block instead of the template's.
+TEMPLATE_F7_WATER = os.path.join(HERE, "page_template_f7_water.html")
+F7W_STEMS = ["f7_pond_traces__g10", "f7_pond_traces__g15", "f7_pond_traces__g20", "f7_pond_levels",
+             "f7_pond_visits"]
+F7W_ARGS = {**{f"f7_pond_traces__g{m}": f"--figure pond_traces --map {m}" for m in ("10", "15", "20")},
+            "f7_pond_levels": "--figure pond_levels", "f7_pond_visits": "--figure pond_visits"}
 BLOCKS = {"F1": ("f1_behaviours_survival", False), "F2": ("f2_factor_inventory", True),
           "F3": ("f3_univariate", True), "F4": ("f4_multivariate", True),
           "F5": ("f5_settings", True), "F6": ("f6_crosstabs", True),
@@ -281,10 +289,63 @@ def run_table(D):
             + "".join(rows) + "</tbody></table></div>")
 
 
+def water_tokens(D, population, out_root):
+    """The WATER section's tokens, from what the pipeline wrote (never typed)."""
+    cal_p = os.path.join(out_root, "probes", "calibration.json")
+    if not os.path.exists(cal_p):
+        fail(f"water population: no {cal_p} (copy the R2.3 calibration record there)")
+    cal = json.load(open(cal_p))
+    if "choice" not in cal:
+        fail(f"{cal_p}: the calibration has no choice (it failed its checks)")
+    S = cal["choice"]["S"]
+    rows = "".join(f"<tr><td class=\"n\">{float(k):g}</td>" + "".join(
+        f"<td class=\"n\">{100 * v[w]['P_visit']:.1f}%</td><td class=\"n\">{100 * v[w]['P_od']:.1f}%</td>"
+        for w in sorted(v)) + "</tr>" for k, v in sorted(cal["table"].items(), key=lambda kv: float(kv[0])))
+    worlds = sorted(next(iter(cal["table"].values())))
+    head = "".join(f"<th class=\"n\">{html.escape(FG.wlabel(w))}: reached the pond</th>"
+                   f"<th class=\"n\">over-drank</th>" for w in worlds)
+    table = ('<p class="cue" hidden>&larr; scroll sideways</p><div class="scroll"><table class="wide" '
+             'style="min-width:640px"><thead><tr><th class="n">start hydration</th>' + head +
+             f'</tr></thead><tbody>{rows}</tbody></table></div><p>Rule outcome: {html.escape(cal["choice"]["branch"])}.'
+             f' Each cell: 720 episodes (two agents &times; 12 scenes &times; 30), final checkpoints.</p>')
+    wc = [c["inv"]["water_checks"] for c in D["cells"] if c["inv"].get("water_checks")]
+    exc = sum(w["step_exceptions"] + w["start_cell_mismatches"] for w in wc)
+    checks = (f"{sum(w['steps_checked'] for w in wc):,} steps in {sum(w['episodes_checked'] for w in wc):,} "
+              f"episodes of {len(wc)} runs, {exc} exceptions")
+    M = json.load(open(population))
+    cks = sorted(int(c["checkpoint"]) for c in M["cells"] if c.get("checkpoint"))
+    endpoint = (f"Every run trained its full budget; early stopping was not applied (the user cancelled the "
+                f"stop checker), so every figure reads each run's final checkpoint "
+                f"({cks[0]:,}&ndash;{cks[-1]:,} training episodes)." if cks else "")
+    refusals = []
+    for t in REG.TARGETS:
+        pj = os.path.join(out_root, "screen", t, "prefit.json")
+        if os.path.exists(pj) and "refused" in json.load(open(pj)):
+            refusals.append(json.load(open(pj))["refused"])
+    prov = os.path.join(out_root, "probes", "provenance.json")
+    budget = json.load(open(prov)).get("budget_refused") if os.path.exists(prov) else None
+    ref = []
+    if refusals:
+        ref.append(f"Figure 5, because {html.escape(refusals[0])}")
+    if budget:
+        ref.append(f"Figure 7's seed-to-seed budget, because {html.escape(budget)}")
+    ref_txt = ("; ".join(ref) + ".") if ref else "(their refusal records are not written yet)."
+    return {"{{W_CHECKS}}": checks, "{{W_ENDPOINT}}": endpoint, "{{W_REFUSALS}}": ref_txt,
+            "{{W_CALIB_S}}": f"{float(S):g}", "{{W_CALIB_TABLE}}": table,
+            "{{W_F7_BUDGET}}": (f"The seed-to-seed comparison is refused: {html.escape(budget)}." if budget else "")}
+
+
 def build(population, out_root, page_dir):
     fig_dir = os.path.join(page_dir, "figures")
     D = FG.load_outputs(population, out_root)
     page = open(TEMPLATE).read()
+    water = FG.has_water(D["cells"])
+    if water:
+        page = page.replace("<!-- WATER -->\n", "").replace("<!-- /WATER -->\n", "")
+        f7w = re.search(r"<!-- BLOCK F7 -->.*?<!-- /BLOCK F7 -->", open(TEMPLATE_F7_WATER).read(), re.S).group(0)
+        page = re.sub(r"<!-- BLOCK F7 -->.*?<!-- /BLOCK F7 -->", lambda _: f7w, page, flags=re.S)
+    else:
+        page = re.sub(r"<!-- WATER -->\n.*?<!-- /WATER -->\n", "", page, flags=re.S)
     house = open(HOUSE).read()
     m = re.search(r'(<link rel="stylesheet".*?</style>)', house, re.S)
     vm = re.search(r'(<div class="lb fit" id="lb".*?\n</div>)', house, re.S)
@@ -296,8 +357,8 @@ def build(population, out_root, page_dir):
     on_disk = sorted(os.listdir(fig_dir)) if os.path.isdir(fig_dir) else []
     stems = {}
     for f in on_disk:
-        m7 = re.fullmatch(r"(f7_probe_[a-z_]+?(?:__hv[0-9a-z]+)?)\.(png|svg|pdf|samples\.json)", f)
-        if m7 and m7.group(1) in F7_STEMS:
+        m7 = re.fullmatch(r"(f7_(?:probe|pond)_[a-z_]+?(?:__(?:hv[0-9a-z]+|g\d+))?)\.(png|svg|pdf|samples\.json)", f)
+        if m7 and m7.group(1) in (F7W_STEMS if water else F7_STEMS):
             stems.setdefault(("f7_probes", m7.group(1)), set()).add(m7.group(2))
             continue
         mm = re.fullmatch(r"(f\d_[a-z_]+?)(?:__([a-z_]+))?\.(png|svg|pdf|samples\.json)", f)
@@ -312,7 +373,7 @@ def build(population, out_root, page_dir):
     for bid, (base, per_target) in BLOCKS.items():
         block = blocks[bid]
         if per_target is None:
-            page, ok = build_f7(page, block, stems, fig_dir, out_root, mirror, toc)
+            page, ok = build_f7(page, block, stems, fig_dir, out_root, mirror, toc, water)
             (present if ok else pending).append(bid)
             continue
         targets = [t for t in REG.TARGETS if (base, t) in stems] if per_target else \
@@ -320,6 +381,20 @@ def build(population, out_root, page_dir):
         if not targets:
             title = re.search(r"<h2>(.*?)</h2>", block, re.S).group(1)
             title = re.sub(r"\s*&mdash;\s*\{\{TARGET_LABEL\}\}", "", title)
+            refused = {}
+            for t in REG.TARGETS if (water and bid == "F5") else []:
+                pj = os.path.join(out_root, "screen", t, "prefit.json")
+                if os.path.exists(pj) and "refused" in json.load(open(pj)):
+                    refused[t] = json.load(open(pj))["refused"]
+            if refused:                     # D10: refused by design, with the reason, not "pending"
+                page = page.replace(block, f'<section class="col"><h2>{title}</h2><div class="bb-pending">'
+                                    f'<b>Figure {bid[1]} &mdash; not drawn, by design.</b> The cross-run '
+                                    f'screening needs at least two training runs per world and agent; it '
+                                    f'refused for {len(refused)} behaviours ('
+                                    f'{html.escape(", ".join(FG.TARGET_NOUN[t] for t in refused))}): '
+                                    f'{html.escape(next(iter(refused.values())))}</div></section>')
+                present.append(bid)
+                continue
             page = page.replace(block, f'<section class="col"><h2>{title}</h2><div class="bb-pending">'
                                 f'<b>Figure {bid[1]} &mdash; not yet produced.</b> Run '
                                 f'<code>scripts/analysis/basic_behaviour/{base}.py</code>, then rebuild.'
@@ -347,8 +422,8 @@ def build(population, out_root, page_dir):
             rows = json.load(open(os.path.join(fig_dir, f"{stem}.samples.json")))
             b = b.replace(f"{{{{DATA:{stem}}}}}", data_table(stem, rows))
             cmd = (f"python scripts/analysis/basic_behaviour/{base}.py --population "
-                   f"{os.path.relpath(population, ROOT)} --out-root {os.path.relpath(out_root, ROOT)} "
-                   f"--fig-dir {os.path.relpath(fig_dir, ROOT)}" + (f" --target {t}" if t else ""))
+                   f"{os.path.relpath(population, REG.DATA_ROOT)} --out-root {os.path.relpath(out_root, REG.DATA_ROOT)} "
+                   f"--fig-dir {os.path.relpath(fig_dir, REG.DATA_ROOT)}" + (f" --target {t}" if t else ""))
             b = b.replace(f"{{{{CMD:{stem}}}}}", html.escape(cmd))
             if t is not None and f"{{{{REASONS:{t}}}}}" in b:
                 b = b.replace(f"{{{{REASONS:{t}}}}}", reasons_table(D, t))
@@ -368,15 +443,17 @@ def build(population, out_root, page_dir):
             present.append(stem)
         page = page.replace(block, block.replace(pm.group(0), "\n".join(parts)) if pm else "\n".join(parts))
     n_ep = sum(c["inv"]["n_episodes"] for c in D["cells"])
-    golden = os.path.join(FG.ROOT, "results/analysis/basic_behaviour/_golden_pass.json")
+    golden = os.path.join(REG.BB_ROOT, "_golden_pass.json")
     gtxt = (f"passed on {json.load(open(golden))['date'][:10]}" if os.path.exists(golden) else "not passed")
     tok = {"{{POPULATION}}": html.escape(D["population"]), "{{N_RUNS}}": str(len(D["cells"])),
            "{{N_EPISODES}}": f"{n_ep:,}", "{{N_PENDING}}": str(len(D["unswept"]) + len(D["not_completed"])),
-           "{{RUN_TABLE}}": run_table(D), "{{MANIFEST}}": html.escape(os.path.relpath(population, ROOT)),
-           "{{OUT_ROOT}}": html.escape(os.path.relpath(out_root, ROOT)), "{{GOLDEN}}": html.escape(gtxt),
+           "{{RUN_TABLE}}": run_table(D), "{{MANIFEST}}": html.escape(os.path.relpath(population, REG.DATA_ROOT)),
+           "{{OUT_ROOT}}": html.escape(os.path.relpath(out_root, REG.DATA_ROOT)), "{{GOLDEN}}": html.escape(gtxt),
            "{{TOC}}": toc_html(toc),
            "{{STATUS_LINE}}": ("All seven figures are present." if not pending else
                                f"Figures not yet produced: {', '.join(pending)}.")}
+    if water:
+        tok.update(water_tokens(D, population, out_root))
     for k, v in tok.items():
         page = page.replace(k, v)
     page = page.replace("{{HOUSE_STYLE}}", m.group(1))
@@ -410,15 +487,17 @@ def build(population, out_root, page_dir):
     return present, pending
 
 
-def build_f7(page, block, stems, fig_dir, out_root, mirror, toc):
-    """Figure 7: every stem in F7_STEMS must be complete, or the block becomes a pending box."""
-    have = [st for st in F7_STEMS if ("f7_probes", st) in stems]
+def build_f7(page, block, stems, fig_dir, out_root, mirror, toc, water=False):
+    """Figure 7: every stem in F7_STEMS (F7W_STEMS for water) must be complete, or the block becomes a
+    pending box."""
+    STEMS, ARGS = (F7W_STEMS, F7W_ARGS) if water else (F7_STEMS, F7_ARGS)
+    have = [st for st in STEMS if ("f7_probes", st) in stems]
     if not have:
         title = re.search(r"<h2>(.*?)</h2>", block, re.S).group(1)
         return page.replace(block, f'<section class="col"><h2>{title}</h2><div class="bb-pending">'
                             '<b>Figure 7 &mdash; not yet produced.</b> Run <code>scripts/analysis/basic_behaviour/'
                             'probes.py</code> then <code>f7_probes.py</code>, then rebuild.</div></section>'), False
-    for st in F7_STEMS:
+    for st in STEMS:
         missing = [e for e in EXTS if e not in stems.get(("f7_probes", st), set())]
         if missing:
             fail(f"{st}: missing {missing} in {fig_dir} (Figure 7 is built whole or not at all)")
@@ -432,16 +511,17 @@ def build_f7(page, block, stems, fig_dir, out_root, mirror, toc):
         print("build_page: WARNING - Figure 7 is built from a PARTIAL / development probe summary")
     check_block("F7", block)
     b = block
-    for st in F7_STEMS:
+    for st in STEMS:
         rows = json.load(open(os.path.join(fig_dir, f"{st}.samples.json")))
         tbl = data_table(st, rows)
         if "__" in st:                       # three trace charts share one caption: name the world
             w = {"hv2ch": "two-channel (control)", "hv1ch": "single-channel",
-                 "hv1chm": "matched-strength"}[st.split("__")[1]]
+                 "hv1chm": "matched-strength", "g10": "10&times;10 map", "g15": "15&times;15 map",
+                 "g20": "20&times;20 map"}[st.split("__")[1]]
             tbl = tbl.replace("<b>Data.</b>", f"<b>Data, {w} chart.</b>", 1)
         b = b.replace(f"{{{{DATA:{st}}}}}", tbl)
         cmd = (P["command"] + " && python scripts/analysis/basic_behaviour/f7_probes.py --out-root "
-               f"{os.path.relpath(out_root, ROOT)} --fig-dir {os.path.relpath(fig_dir, ROOT)} {F7_ARGS[st]}")
+               f"{os.path.relpath(out_root, REG.DATA_ROOT)} --fig-dir {os.path.relpath(fig_dir, REG.DATA_ROOT)} {ARGS[st]}")
         b = b.replace(f"{{{{CMD:{st}}}}}", html.escape(cmd))
         png = os.path.join(fig_dir, f"{st}.png")
         im_tag = re.search(rf'<img data-fig="{st}"[^>]*>', b)

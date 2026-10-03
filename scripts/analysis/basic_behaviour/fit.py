@@ -283,7 +283,9 @@ def require_stamp(water: bool = False):
         if not os.path.exists(WATER_STAMP):
             raise SystemExit(f"water stamp missing: {WATER_STAMP}\n  run golden_gate.py --water first")
         ws = json.load(open(WATER_STAMP))
-        bad = [p for p in FIT_SOURCES if ws["sources"].get(p) !=
+        # the water gate stamps FIT_SOURCES + golden_gate.py (its STAMP_SOURCES; d9 review N7)
+        bad = [p for p in FIT_SOURCES + ["scripts/analysis/basic_behaviour/golden_gate.py"]
+               if ws["sources"].get(p) !=
                hashlib.sha256(open(os.path.join(ROOT, p), "rb").read()).hexdigest()]
         if bad:
             raise SystemExit("sources changed since the water gate passed -- re-run golden_gate.py "
