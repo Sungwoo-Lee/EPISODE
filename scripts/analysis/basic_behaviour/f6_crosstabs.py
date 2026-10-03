@@ -83,11 +83,15 @@ def main(argv=None):
     nrow_h = int(np.ceil(ng / 3))
     worlds = D["worlds"]
     nrow_w = nrow_h if water else 0         # one row of hydration maps per row of injury maps
-    fig = plt.figure(figsize=(12.0, 3.6 * (nrow_h + nrow_w) + 7.6))
+    fact = FG.factorial(worlds)             # map size x smell reach: a smell panel for EVERY world
+    nsm = int(np.ceil(len(worlds) / 3)) if fact else 1
+    height = 3.6 * (nrow_h + nrow_w) + 7.6 + 4.1 * (nsm - 1)
+    fig = plt.figure(figsize=(12.0, height))
     # heat maps in columns 0-2, a dedicated narrow column for the colour bar (it must not sit over a
     # panel title: register F18 amendment); then one smell panel per world; then the nearby-animals panel
-    gs = fig.add_gridspec(nrow_h + nrow_w + 2, 4, width_ratios=[1, 1, 1, 0.06],
-                          height_ratios=[1] * (nrow_h + nrow_w) + [1.15, 1.15], hspace=0.95, wspace=0.42)
+    gs = fig.add_gridspec(nrow_h + nrow_w + nsm + 1, 4, width_ratios=[1, 1, 1, 0.06],
+                          height_ratios=[1] * (nrow_h + nrow_w) + [1.15] * nsm + [1.15],
+                          hspace=1.15 if fact else 0.95, wspace=0.55 if fact else 0.42)
     vals = {g: 100 * h[0] / np.maximum(h[1], 1) for g, h in heat.items()}
     lo = min(v[heat[g][1] > 0].min() for g, v in vals.items())
     hi = max(v[heat[g][1] > 0].max() for g, v in vals.items())
@@ -108,7 +112,7 @@ def main(argv=None):
         ax.grid(False)
         seeds = sorted(heat[g][2])
         ax.set_title(f"{FG.WORLD_SHORT.get(g[0], g[0])}, {FG.AGENT_SHORT.get(g[1], g[1])}\n"
-                     f"seeds {', '.join(map(str, seeds))}", fontsize=H.FS_LABEL)
+                     f"seed{'s' if len(seeds) > 1 else ''} {', '.join(map(str, seeds))}", fontsize=H.FS_LABEL)
         ax.set_xlabel("nutrition one step earlier")
         ax.set_ylabel("injury one step earlier")
     cax = fig.add_subplot(gs[0:nrow_h, 3])
@@ -129,8 +133,8 @@ def main(argv=None):
         ax.text(0.5, 0.5, "By the rabbit's smell: not defined for this behaviour. These episodes contain "
                 "no predator,\nso the share of steps near a predator is zero by construction.",
                 ha="center", va="center", transform=ax.transAxes, fontsize=H.FS_BODY, color=H.INK_2)
-    for k, w in enumerate([] if undefined else worlds[:3]):
-        ax = fig.add_subplot(gs[nrow_h + nrow_w, k])
+    for k, w in enumerate([] if undefined else (worlds if fact else worlds[:3])):
+        ax = fig.add_subplot(gs[nrow_h + nrow_w + k // 3, k % 3])
         for c in [c for c in cells if c["world"] == w]:
             xs, yv = ladder[c["label"]]
             ax.plot(xs, yv, color=D["colour"][w], marker=D["marker"][c["agent"]], ms=5.5, lw=1.3, alpha=0.9)
@@ -139,9 +143,9 @@ def main(argv=None):
         ax.axvline(0, color=H.RULE, lw=1)
         ax.set_title(f"{FG.WORLD_SHORT.get(w, w)}: by the rabbit's smell", fontsize=H.FS_LABEL)
         ax.set_xlabel("rabbit smell (nats, sextile means)")
-        if k == 0:
+        if k % 3 == 0:
             ax.set_ylabel("share of chosen steps (%)")
-    ax = fig.add_subplot(gs[nrow_h + nrow_w + 1, 0:3])
+    ax = fig.add_subplot(gs[nrow_h + nrow_w + nsm, 0:3])
     for j, c in enumerate(cells):
         off = (j - (len(cells) - 1) / 2) * (0.7 / max(len(cells), 1))
         for k in range(4):
@@ -152,9 +156,14 @@ def main(argv=None):
     ax.set_ylim(bottom=0)
     ax.set_ylabel("share of chosen steps (%)")
     ax.set_title("By nearby animals (within 2 squares, one step earlier); one marker per run", fontsize=H.FS_BODY)
-    fig.legend(handles=FG.legend_handles(D), loc="lower center", ncol=len(D["worlds"]) + len(D["agents"]),
-               frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.005))
-    fig.subplots_adjust(left=0.08, right=0.94, top=0.95, bottom=0.08)
+    if fact:                                # absolute margins on a tall canvas (no blank band)
+        fig.legend(handles=FG.legend_handles(D), loc="lower center", ncol=FG.legend_ncol(D),
+                   frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, 0.1 / height))
+        fig.subplots_adjust(left=0.08, right=0.94, top=1 - 0.5 / height, bottom=1.55 / height)
+    else:
+        fig.legend(handles=FG.legend_handles(D), loc="lower center", ncol=FG.legend_ncol(D),
+                   frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.005))
+        fig.subplots_adjust(left=0.08, right=0.94, top=0.95, bottom=0.08)
     stem = f"{STEM}__{a.target}"
     FG.record_samples(a.fig_dir, stem, rows)
     FG.save(fig, a.fig_dir, stem)
@@ -185,10 +194,10 @@ def hydration_maps(fig, gs, groups, hheat, r0, nrow, cm, onset, H):
                         fontsize=H.FS_LABEL, color=H.INK, path_effects=H.halo())
         ax.set_xticks(range(4)); ax.set_xticklabels(NUT, fontsize=H.FS_LABEL)
         ax.set_yticks(range(4)); ax.set_yticklabels(HYD, fontsize=H.FS_LABEL)
-        ax.set_title(title + ("\narrivals: off the pond one step earlier" if onset else
-                              "\nby hydration"), fontsize=H.FS_LABEL)
+        ax.set_title(title + ("\narrivals on the pond" if onset else "\nby hydration"), fontsize=H.FS_LABEL)
         ax.set_xlabel("nutrition one step earlier")
-        ax.set_ylabel("hydration one step earlier")
+        if k % 3 == 0:
+            ax.set_ylabel("hydration one step earlier")
     if im is not None:
         cax = fig.add_subplot(gs[r0:r0 + nrow, 3])
         cb = fig.colorbar(im, cax=cax)

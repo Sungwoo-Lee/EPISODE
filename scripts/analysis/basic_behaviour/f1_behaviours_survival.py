@@ -15,6 +15,7 @@ evaluation metric); share of episodes ending in each way, per run.
 from __future__ import annotations
 
 import os
+import textwrap
 import sys
 
 import numpy as np
@@ -80,16 +81,21 @@ def main(argv=None):
         rows.append({"what": f"not completed: {c['label']}", "used": 0, "total": 0,
                      "note": f"manifest status '{c['status']}'"})
 
-    # behaviour panels + survival take one slot each; the termination panel takes two
+    fact = FG.factorial(D["worlds"])
+    # behaviour panels + survival take one slot each; the termination panel takes two (factorial
+    # designs: a whole row, so seven end causes x 18 runs stay legible)
     ncol = 4
     k = len(targets) + 1                  # first slot of the termination panel
     if k % ncol == ncol - 1:              # no room for two slots on this row
         k += 1
-    nrow = int(np.ceil((k + 2) / ncol))
+    if fact:
+        k = int(np.ceil(k / ncol)) * ncol
+    span = ncol if fact else 2
+    nrow = int(np.ceil((k + span) / ncol))
     fig = plt.figure(figsize=(12.0, 5.0 * nrow))
     gs = fig.add_gridspec(nrow, ncol)
     axs = [fig.add_subplot(gs[i // ncol, i % ncol]) for i in range(len(targets) + 1)]
-    axs.append(fig.add_subplot(gs[k // ncol, k % ncol:k % ncol + 2]))
+    axs.append(fig.add_subplot(gs[k // ncol, k % ncol:k % ncol + span]))
 
     def top(ax, vmax):
         ax.set_ylim(0, vmax * 1.18 if vmax > 0 else 1)
@@ -102,13 +108,18 @@ def main(argv=None):
             ax.plot(pos[c["label"]], v, ls="", marker=D["marker"][c["agent"]], ms=7,
                     color=D["colour"][c["world"]], alpha=0.9)
         ax.set_xticks(ticks)
-        ax.set_xticklabels(labels, fontsize=H.FS_LABEL, rotation=90)
-        ax.set_xlim(min(ticks) - 0.6, max(ticks) + 0.6)
+        if fact:
+            xs = list(pos.values())
+            ax.set_xticklabels(labels, fontsize=H.FS_LABEL)
+            ax.set_xlim(min(xs) - 0.5, max(xs) + 0.5)
+        else:
+            ax.set_xticklabels(labels, fontsize=H.FS_LABEL, rotation=90)
+            ax.set_xlim(min(ticks) - 0.6, max(ticks) + 0.6)
 
     for i, t in enumerate(targets):
         ax = axs[i]
         dots(ax, t)
-        ax.set_title(FG.TARGET_TITLE[t], fontsize=H.FS_BODY)
+        ax.set_title(textwrap.fill(FG.TARGET_TITLE[t], 24) if fact else FG.TARGET_TITLE[t], fontsize=H.FS_BODY)
         ax.set_ylabel("share of chosen steps (%)")
         top(ax, max(stats[c["label"]].get(t, 0) for c in cells))
     ax = axs[len(targets)]
@@ -127,7 +138,7 @@ def main(argv=None):
     ax.set_title("How episodes end", fontsize=H.FS_BODY)
     ax.set_ylabel("share of episodes (%)")
     top(ax, max(max(stats[c["label"]]["term"].values()) for c in cells))
-    fig.legend(handles=FG.legend_handles(D), loc="lower center", ncol=len(D["worlds"]) + len(D["agents"]),
+    fig.legend(handles=FG.legend_handles(D), loc="lower center", ncol=FG.legend_ncol(D),
                frameon=False, bbox_to_anchor=(0.5, -0.02), fontsize=H.FS_LABEL)
     fig.tight_layout(rect=(0, 0.06, 1, 1), h_pad=2.2, w_pad=1.6)
     FG.record_samples(a.fig_dir, STEM, rows)

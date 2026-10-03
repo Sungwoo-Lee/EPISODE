@@ -289,6 +289,35 @@ def run_table(D):
             + "".join(rows) + "</tbody></table></div>")
 
 
+def world_table(D):
+    """Section 02 (water): map, pond size, sensor radius and the share of episodes per pond corner,
+    per run, from each run's inventory (the sweep's replayed pond corners)."""
+    K = max(len(c["inv"]["water"]["pond_corners"]) for c in D["cells"] if "water" in c["inv"])
+    head = "".join(f'<th class="n">corner {k + 1}</th>' for k in range(K))
+    body = []
+    for c in D["cells"]:
+        w = c["inv"].get("water")
+        if w is None:
+            continue
+        cnt = w["pond_corner_counts"]
+        n = sum(cnt)
+        body.append(f"<tr><td>{html.escape(FG.run_short(c))}</td><td class=\"n\">{'×'.join(map(str, w['map_size']))}</td>"
+                    f"<td class=\"n\">{'×'.join(map(str, w['pond_size']))}</td><td class=\"n\">{w['sensor_radius']}</td>"
+                    + "".join(f"<td class=\"n\">{100 * x / n:.1f}%</td>" for x in cnt)
+                    + "<td class=\"n\">&mdash;</td>" * (K - len(cnt)) + f"<td class=\"n\">{n:,}</td></tr>")
+    corners = sorted({", ".join(f"[{r + 1}, {cc + 1}]" for r, cc in c["inv"]["water"]["pond_corners"])
+                      for c in D["cells"] if "water" in c["inv"]})
+    return ('<details class="bb-data"><summary><b>World features and where the pond was.</b> map, pond size, '
+            'smell reach (sensor radius, squares) and the share of each run\'s episodes per pond corner, '
+            'rebuilt from each episode\'s seed</summary><p class="cue" hidden>&larr; scroll sideways</p>'
+            '<div class="scroll"><table class="wide" style="min-width:760px"><thead><tr><th>run</th>'
+            '<th class="n">map</th><th class="n">pond</th><th class="n">sensor radius</th>' + head +
+            '<th class="n">episodes</th></tr></thead><tbody>' + "".join(body) + '</tbody></table></div>'
+            f'<p>Pond corners (top-left square, 1-based row, column), per map: {html.escape("; ".join(corners))}. '
+            'The corner is tabulated, not fitted: its effect runs through the start distance to the pond.</p>'
+            '</details>')
+
+
 def water_tokens(D, population, out_root):
     """The water sections' tokens, every count and claim from a record the pipeline or the study wrote
     (guide 11: never typed): the calibration record, the sweep inventories, the population manifest and
@@ -310,12 +339,21 @@ def water_tokens(D, population, out_root):
         for k, v in sorted(tab.items(), key=lambda kv: float(kv[0])))
     head = "".join(f"<th class=\"n\">{html.escape(FG.wlabel(w))}: reached the pond</th>"
                    f"<th class=\"n\">over-drank</th><th class=\"n\">episodes</th>" for w in worlds)
+    rule_ok = cal["choice"]["branch"].startswith("rule")
+    rr = cal["rule"]
+    branch_words = (
+        f"the rule was met" if rule_ok else
+        f"no start value had at most {100 * rr['P_visit_max']:g}% of episodes reaching the pond in every test "
+        f"world, so the first fallback took the value whose worse world had the lowest share, among values "
+        f"with at most {100 * rr['P_od_max']:g}% over-drinking deaths in every world"
+        if cal["choice"]["branch"].startswith("FALLBACK 1") else
+        f"no start value had at most {100 * rr['P_od_max']:g}% over-drinking deaths in every test world, so "
+        f"the second fallback took the value with the lowest over-drinking risk")
     table = ('<p class="cue" hidden>&larr; scroll sideways</p><div class="scroll"><table class="wide" '
              'style="min-width:760px"><thead><tr><th class="n">start hydration</th>' + head +
-             f'</tr></thead><tbody>{rows}</tbody></table></div><p>Rule outcome, as recorded: '
-             f'{html.escape(cal["choice"]["branch"])}. Episodes per cell pool both agents\' final checkpoints '
-             'over every scene.</p>')
-    rule_ok = cal["choice"]["branch"].startswith("rule")
+             f'</tr></thead><tbody>{rows}</tbody></table></div><p>Rule outcome: '
+             f'{html.escape(branch_words).replace("at most", "&le;")}. Episodes per cell pool both agents\' '
+             'final checkpoints over every scene.</p>')
     at_s = "; ".join(f"{html.escape(FG.wlabel(w))}: {100 * tab[Skey][w]['P_visit']:.1f}% of "
                      f"{tab[Skey][w]['n']:,} episodes reached the pond" for w in worlds)
     calib = ((f"{float(S):g} met the rule." if rule_ok else
@@ -382,7 +420,7 @@ def water_tokens(D, population, out_root):
         n = Sx[Sx.measure == "n_episodes"]["value"]
         if len(n):
             ep_txt = f"{int(n.min())}" if n.min() == n.max() else f"{int(n.min())}&ndash;{int(n.max())}"
-    return {"{{W_CHECKS}}": checks, "{{W_ENDPOINT}}": endpoint, "{{W_REFUSALS}}": ref_txt,
+    return {"{{W_WORLD_TABLE}}": world_table(D), "{{W_CHECKS}}": checks, "{{W_ENDPOINT}}": endpoint, "{{W_REFUSALS}}": ref_txt,
             "{{W_CALIB_S}}": f"{float(S):g}", "{{W_CALIB_TABLE}}": table, "{{W_CALIB_RESULT}}": calib, "{{W_CALIB_RULE}}": rule_txt,
             "{{W_CALIB_TITLE}}": calib_title, "{{W_RUNS_TITLE}}": runs_title, "{{W_RUNS}}": runs,
             "{{W_RUNS_SHORT}}": runs_short, "{{W_EP_PER_CKPT}}": ep_txt,
@@ -394,6 +432,14 @@ def build(population, out_root, page_dir):
     D = FG.load_outputs(population, out_root)
     page = open(TEMPLATE).read()
     water = FG.has_water(D["cells"])
+    # the hydration heat maps' axes sentence of Figure 6 (water only; empty, so unchanged, otherwise),
+    # substituted before the blocks are read so the generated mirror carries it too
+    page = page.replace("{{W_F6_HYD}}", (
+        " Hydration heat maps, one per world and agent below the injury maps, with their own grey scale "
+        "and colour bar: horizontal, nutrition one step earlier; vertical, hydration one step earlier (four "
+        "bands: under 50, 50&ndash;100, 100&ndash;150, 150 and over); shade and number, the share of chosen "
+        "steps in percent, except for time on the pond, where they show the share of steps off the pond one "
+        "step earlier that arrive on it." if water else ""))
     if water:
         page = page.replace("<!-- WATER -->\n", "").replace("<!-- /WATER -->\n", "")
         f7w = re.search(r"<!-- BLOCK F7 -->.*?<!-- /BLOCK F7 -->", open(TEMPLATE_F7_WATER).read(), re.S).group(0)

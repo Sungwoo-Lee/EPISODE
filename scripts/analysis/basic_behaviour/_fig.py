@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 
 import numpy as np
@@ -135,13 +136,46 @@ def ordered(values, order):
     return [v for v in order if v in vs] + [v for v in vs if v not in order]
 
 
+FACTORIAL_RE = re.compile(r"^g(?P<size>\d+)s(?P<reach>[W\d]+)$")
+REACH_SHADE = {"W": 0.0, "5": 0.4, "3": 0.68}     # mix toward the page ground: whole map, 5, 3 squares
+REACH_NAME = {"W": "smell across the map", "5": "smell reach 5 squares", "3": "smell reach 3 squares"}
+
+
+def factorial(worlds) -> bool:
+    """A map-size x smell-reach world design (the thirst task) with more worlds than palette hues.
+    Only such populations get the two-part encoding; every other population is drawn as before."""
+    return len(worlds) > len(H.SERIES) and all(FACTORIAL_RE.match(w) for w in worlds)
+
+
+def _mix(hex_colour, t):
+    r, g, b = (int(hex_colour[i:i + 2], 16) for i in (1, 3, 5))
+    pr, pg, pb = (int(H.PAPER[i:i + 2], 16) for i in (1, 3, 5))
+    return "#%02x%02x%02x" % tuple(round(x + (p - x) * t) for x, p in ((r, pr), (g, pg), (b, pb)))
+
+
 def encode(cells):
-    """{world: colour}, {agent: marker} - fixed for a population, shared by every figure."""
+    """{world: colour}, {agent: marker} - fixed for a population, shared by every figure.
+    A factorial map-size x smell-reach design: hue = map size, shade = smell reach. Any other design
+    with more worlds than hues is refused (colours would repeat)."""
     worlds = ordered([c["world"] for c in cells], WORLD_ORDER)
     agents = ordered([c["agent"] for c in cells], AGENT_ORDER)
-    col = {w: H.SERIES[i % len(H.SERIES)] for i, w in enumerate(worlds)}
+    if factorial(worlds):
+        sizes = sorted({int(FACTORIAL_RE.match(w)["size"]) for w in worlds})
+        if len(sizes) > len(H.SERIES):
+            raise SystemExit(f"{len(sizes)} map sizes but {len(H.SERIES)} palette hues")
+        col = {w: _mix(H.SERIES[sizes.index(int(FACTORIAL_RE.match(w)["size"]))],
+                       REACH_SHADE[FACTORIAL_RE.match(w)["reach"]]) for w in worlds}
+    else:
+        if len(worlds) > len(H.SERIES):
+            raise SystemExit(f"{len(worlds)} worlds but {len(H.SERIES)} palette hues: colours would repeat")
+        col = {w: H.SERIES[i % len(H.SERIES)] for i, w in enumerate(worlds)}
     mk = {a: MARKERS[i % len(MARKERS)] for i, a in enumerate(agents)}
     return worlds, agents, col, mk
+
+
+def legend_ncol(D: dict) -> int:
+    """Columns of the shared legend: one row of every entry, as before; four for a factorial design."""
+    return 4 if factorial(D["worlds"]) else len(D["worlds"]) + len(D["agents"])
 
 
 def load_outputs(population: str, out_root: str, need_episodes: bool = False) -> dict:
@@ -197,7 +231,24 @@ def run_short(c) -> str:
 
 
 def group_positions(D: dict, gap: float = 0.6, width: float = 0.5):
-    """x position of each run: one group per world x agent cell, seeds jittered inside the group."""
+    """x position of each run: one group per world x agent cell, seeds jittered inside the group.
+    Factorial design: one tick per map size (colour and marker identify the run inside it)."""
+    if factorial(D["worlds"]):
+        pos, ticks, labels, x = {}, [], [], 0.0
+        sizes = sorted({int(FACTORIAL_RE.match(w)["size"]) for w in D["worlds"]})
+        for s in sizes:
+            start = x
+            for w in [w for w in D["worlds"] if int(FACTORIAL_RE.match(w)["size"]) == s]:
+                for a in D["agents"]:
+                    grp = [c for c in D["cells"] if c["world"] == w and c["agent"] == a]
+                    for c in grp:
+                        pos[c["label"]] = x
+                    if grp:
+                        x += 0.32
+            ticks.append((start + x - 0.32) / 2)
+            labels.append(f"{s}×{s}")
+            x += 0.9
+        return pos, ticks, labels
     pos, ticks, labels, x = {}, [], [], 0.0
     for w in D["worlds"]:
         for a in D["agents"]:
@@ -215,6 +266,18 @@ def group_positions(D: dict, gap: float = 0.6, width: float = 0.5):
 
 def legend_handles(D: dict, extra=()):
     from matplotlib.lines import Line2D
+    if factorial(D["worlds"]):
+        sizes = sorted({int(FACTORIAL_RE.match(w)["size"]) for w in D["worlds"]})
+        hs = [Line2D([], [], ls="", marker="s", ms=9, color=H.SERIES[i], label=f"{s}×{s} map")
+              for i, s in enumerate(sizes)]
+        reaches = [r for r in REACH_SHADE if any(FACTORIAL_RE.match(w)["reach"] == r for w in D["worlds"])]
+        hs += [Line2D([], [], ls="", marker="s", ms=9, color=_mix(H.INK_2, REACH_SHADE[r]),
+                      label=f"shade: {REACH_NAME[r]}") for r in reaches]
+        hs += [Line2D([], [], ls="", marker=D["marker"][a], ms=8, color=H.INK_2, label=alabel(a))
+               for a in D["agents"]]
+        for marker, label in extra:
+            hs.append(Line2D([], [], ls="", marker=marker, ms=11, mew=2.2, color=H.INK, label=label))
+        return hs
     hs = [Line2D([], [], ls="", marker="o", ms=8, color=D["colour"][w], label=wlabel(w))
           for w in D["worlds"]]
     hs += [Line2D([], [], ls="", marker=D["marker"][a], ms=8, color=H.INK_2, label=alabel(a))
