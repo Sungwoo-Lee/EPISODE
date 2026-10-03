@@ -13,7 +13,7 @@
   <strong>hunting predator</strong>, a harmless <strong>chasing rabbit</strong>, the chasing rabbit with
   its predator-like smell channel removed, a harmless <strong>wandering rabbit</strong>, and a wandering
   rabbit that <strong>smells like a predator</strong> &mdash; are each run with the agent unhurt (injury 0)
-  and badly injured (injury 70 of 100), 30 episodes of 100 steps per checkpoint. Every episode starts at
+  and badly injured (injury 70 of 100), {{W_EP_PER_CKPT}} episodes of up to 100 steps per checkpoint. Every episode starts at
   hydration {{W_CALIB_S}}. An agent that walks to the pond is no longer showing how much it hides, so
   <strong>bush time is read in each episode only up to its first step onto the pond</strong>, and the
   share of episodes that reached the pond is drawn beside it.</p>
@@ -29,8 +29,8 @@
     across training; one chart per map size (10&times;10, then 15&times;15, then 20&times;20).</b>
     <b>Axes.</b> Every small panel: horizontal, training progress in millions of training episodes at the
     saved checkpoint; vertical, a percentage from 0 to 100. Solid line: the share of each episode's steps
-    before its first pond step that the agent spent on the bush, averaged over the 30 episodes. Dotted
-    line: the share of the 30 episodes in which the agent reached the pond. Rows are the six animal
+    before its first pond step that the agent spent on the bush, averaged over the {{W_EP_PER_CKPT}} episodes. Dotted
+    line: the share of the {{W_EP_PER_CKPT}} episodes in which the agent reached the pond. Rows are the six animal
     setups; columns are the smell reach (whole map, 5 squares, 3 squares) and the injury at the start
     (0, 70). Colour is the agent type (a departure from the page's colour-for-world, since each panel is
     one world); a cross at the top marks a checkpoint where an episode ended by over-drinking.</span>
@@ -41,7 +41,7 @@
   <p class="prov">Reproduce: <code>{{CMD:f7_pond_traces__g10}}</code> (and <code>--map 15</code>, <code>--map 20</code>)</p>
   <div class="howto">
     <p class="eyebrow">How it is computed</p>
-    <p>For every checkpoint saved while a run trained, the agent is replayed for 30 episodes of each of the
+    <p>For every checkpoint saved while a run trained, the agent is replayed for {{W_EP_PER_CKPT}} episodes of each of the
     twelve scenes, with the same episode seeds every time, and every step is recorded. The pond's cells are
     not typed into the analysis: they are recovered by replaying the scene's own reset, and every step of
     every episode is checked &mdash; hydration rose exactly when the agent stood on a pond cell &mdash; so
@@ -78,7 +78,7 @@
     value predicts the next &mdash; and, when it is positive, shrinks the count to an effective number of
     checkpoints, 20 &times; (1 &minus; r) / (1 + r), before computing the usual t-interval. This describes
     how much one trained policy wobbles late in training. It says nothing about how a different training
-    seed would behave, because each world and agent has a single run; a gap between markers is therefore
+    seed would behave ({{W_RUNS_SHORT}}); a gap between markers is therefore
     not evidence of a difference between agents or worlds. Each value is the bush time before the first
     pond step, so it must be read next to Figure 7c: where most episodes reach the pond, the windows are
     short.</p>
@@ -91,7 +91,7 @@
   <figcaption>
     <span><b>Figure 7c &mdash; late-training share of episodes reaching the pond, in each scene.</b>
     <b>Axes.</b> Every panel: horizontal, the world (map size and smell reach), ordinary agent (circles)
-    left and modulated agent (triangles) right; vertical, the percentage of the 30 episodes in which the
+    left and modulated agent (triangles) right; vertical, the percentage of the {{W_EP_PER_CKPT}} episodes in which the
     agent stood on the pond at least once, from 0 to 100, averaged over the newest 20 checkpoints, with a
     95% interval within one run.</span>
     <span>{{DATA:f7_pond_visits}}</span>
@@ -102,16 +102,17 @@
     <p>An episode counts as reaching the pond if, at any step after the start, the agent stands on one of the
     pond's cells. The pond's cells are recovered by replaying the scene's own reset, and the analysis checks
     on every step that hydration rose exactly when the agent stood on them. For each checkpoint, the share is
-    the number of the 30 episodes that reached the pond divided by 30; the marker is the mean of that share
+    the number of the {{W_EP_PER_CKPT}} episodes that reached the pond divided by that number; the marker is the mean of that share
     over the newest 20 checkpoints, with the same within-run interval as Figure 7b, corrected for neighbouring
     checkpoints resembling one another. This figure exists to qualify Figure 7b. Where nearly every episode
     reaches the pond, bush time is measured over short windows that start three squares from the bush, so
     it is low for a reason that has nothing to do with hiding. The scenes start every episode at the same
-    hydration, chosen in advance by a written rule, which is why the pond is visited much more often on the
-    small map than on the large one at the same distance; the calibration table above gives the numbers.</p>
+    hydration, chosen in advance by a written rule, at the same distance from the pond in every world, so a
+    difference between worlds in how often the pond is reached is part of what is shown; the calibration
+    table above gives the rates measured before the sweep.</p>
   </div>
 </figure>
 <div class="col"><div class="callout bb-cannot"><p class="eyebrow">What this section cannot tell you</p>
-  <p>Whether one agent or one world hides more than another: each has a single training run, and the
-  intervals describe that run only. Nor what an agent would do in a scene without a pond.</p></div></div>
+  <p>Whether one agent or one world hides more than another: {{W_RUNS_SHORT}}, and the
+  intervals describe one run only. Nor what an agent would do in a scene without a pond.</p></div></div>
 <!-- /BLOCK F7 -->
