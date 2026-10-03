@@ -126,7 +126,9 @@ def main(argv=None):
         "{{WANDER_MINUS}}": fmt(eff("rabbitwander-minus-none")["mean"].median()),
         "{{N_WANDER}}": str(len(eff("rabbitwander-minus-none"))),
         "{{CHASE_MIN}}": fmt(ch["mean"].min()), "{{CHASE_MAX}}": fmt(ch["mean"].max()),
-        "{{W1_L03}}": " and ".join(fmt(v) for v in eff("rabbit-minus-none", w1, interp=False)["mean"]),
+        "{{W1_L03}}": " and ".join(fmt(v) for v in eff("rabbit-minus-none", w1, interp=False).set_index("id").loc[list(w1)]["mean"]),
+        "{{W1_NONE}}": " and ".join(fmt(v) for v in eff("none", w1, interp=False).set_index("id").loc[list(w1)]["mean"]),
+        "{{W1_RAW}}": " and ".join(fmt(v) for v in eff("rabbit", w1, interp=False).set_index("id").loc[list(w1)]["mean"]),
         "{{SMELL_MINUS}}": fmt(fam_mean("Smell study (level 05)")),
         "{{THIRST_MINUS}}": fmt(fam_mean("Thirst task")),
         "{{THERMAL_MINUS}}": fmt(eff("rabbit-minus-none", R[R.scene_set == "thermal"].id, interp=False)["mean"].mean()),
@@ -232,6 +234,8 @@ def main(argv=None):
     for w in set(re.findall(r"\{\{FONT:([A-Za-z]+)\}\}", page)):
         page = page.replace(f"{{{{FONT:{w}}}}}", base64.b64encode(
             open(os.path.join(BB.FONTS, f"Pretendard-{w}.latin.woff"), "rb").read()).decode())
+    # keep command-line flags whole when a Reproduce chip wraps (register F49)
+    page = re.sub(r'<p class="prov">.*?</p>', lambda m: m.group(0).replace("--", "&#8209;&#8209;"), page, flags=re.S)
     left = re.findall(r"\{\{[^}]+\}\}", page)
     if left:
         raise SystemExit(f"unsubstituted tokens: {sorted(set(left))}")
@@ -240,7 +244,7 @@ def main(argv=None):
     out = os.path.join(PAGE_DIR, "f7b_across_runs.html")
     open(out, "w").write(page)
     print(f"wrote {out}: {len(page.encode()):,} bytes")
-    for k in ("{{NONE_NEW}}", "{{WANDER_MINUS}}", "{{CHASE_MIN}}", "{{CHASE_MAX}}", "{{W1_L03}}", "{{SMELL_MINUS}}",
+    for k in ("{{W1_NONE}}", "{{W1_RAW}}", "{{NONE_NEW}}", "{{WANDER_MINUS}}", "{{CHASE_MIN}}", "{{CHASE_MAX}}", "{{W1_L03}}", "{{SMELL_MINUS}}",
               "{{THIRST_MINUS}}", "{{THERMAL_MINUS}}", "{{HC_ON}}", "{{HC_OFF}}", "{{HC_SURV}}"):
         print(f"  {k} = {tok[k]}")
 

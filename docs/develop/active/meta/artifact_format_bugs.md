@@ -2476,3 +2476,14 @@ display names. **Check:** the build fails if emitted prose contains `[(`, `{'` o
 values of 0–3.3 %, so differently shaded cells all read "1" or "0". **Rule.** Derive label decimals from
 the panel's value range. **Check:** no two differently shaded cells in one panel carry the same label
 where their values differ by more than half a displayed unit.
+
+### F79 — a figure's width floor copied without its scroll wrapper
+
+**Saw (2026-10-04, "Injury and Rabbit Avoidance Across Runs", first build).** The builder reused the Basic
+Behaviour page's F65 width floor (`min-width` on every `<img data-fig>`) but not the `<p class="cue">` +
+`<div class="scroll">` that page wraps around it, so at 390 px the whole document was 741 px wide and every
+text block could be dragged sideways, with no cue shown. Reading the builder looked right because the floor
+was "the known pattern"; only a render at phone width shows the page itself overflowing. Sibling of F60/F65.
+**Rule.** Emit the width floor, the scroll wrapper and the cue from ONE helper, never separately.
+**Check:** at 390 px (pinned) the document has no horizontal overflow; every `img[style*=min-width]` has a
+`div.scroll` parent.

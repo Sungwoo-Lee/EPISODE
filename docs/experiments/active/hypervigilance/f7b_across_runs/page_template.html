@@ -1,0 +1,247 @@
+<title>Injury and Rabbit Avoidance Across Runs</title>
+{{HOUSE_STYLE}}
+<style>
+/* hue is spent on data (scene sets, injury levels); chrome goes to ink (register F11 amendment) */
+:root { --accent:var(--ink); --accent-text:var(--ink); --warn:var(--ink-2); }
+.wrap > .col { max-width:880px; }
+.fh { margin:0 0 2px; }
+.fh .n { font-family:var(--f-head); font-weight:600; color:var(--ink-3); margin-right:8px; }
+.toc ol { margin:0; padding-left:22px; display:flex; flex-direction:column; gap:6px; }
+details.bb-data > summary, details.more > summary { cursor:pointer; color:var(--ink-2); font-size:14.5px; }
+details.bb-data[open] > summary, details.more[open] > summary { margin-bottom:8px; }
+td.nw { white-space:nowrap; }
+
+</style>
+<div class="wrap">
+
+<header class="col">
+  <p class="eyebrow">grid_world_pain &middot; hypervigilance &middot; experiment tests across runs &middot; exploratory</p>
+  <h1>Does injury make agents avoid the rabbit more, and in which runs?</h1>
+  <p class="lede">The same fixed test scenes, replayed for {{N_SEL}} trained agents from {{N_FAMILIES}}
+  groups of training runs, to see where a high starting injury raises time in the bush when a rabbit
+  is near, and how much of that rise is about the rabbit at all.</p>
+</header>
+
+<section class="col">
+  <h2><span class="num">QUESTION</span></h2>
+  <p>On the <a href="https://claude.ai/artifact/YULHh3RkJtrc1TVE2yC5M8">Basic Behaviour page</a>, Figure 7b
+  showed that agents spend more time in the bush when a harmless rabbit chases them if they start the
+  test badly injured (injury 70) than if they start uninjured (injury 0). That looks like injury making
+  the agent treat a harmless animal as a threat. This page asks the same question of every trained agent
+  that has, or could be given, the same <strong>experiment tests</strong>: short 100-step scenes with
+  the agent, one bush and at most one animal, replayed at every saved checkpoint. These are not the
+  agent's training environment; they are controlled scenes in which only the animal and the starting
+  injury change.</p>
+  <p>This is exploration, not a test of a hypothesis. The aim is to find which settings make the
+  injury effect larger or smaller, as cues for what to train next.</p>
+</section>
+
+<section class="col">
+  <h2><span class="num">HEADLINE</span></h2>
+  <div class="callout">
+    <p class="eyebrow">What the runs show</p>
+    <p><strong>1. Most of the injury effect is not about the rabbit.</strong> In the newer scene sets,
+    starting at injury 70 raises bush dwell by about {{NONE_NEW}} percentage points even when
+    <em>no animal</em> is present. One possible reason, not checked here: injured agents may go to
+    the bush to rest while they heal. The wandering rabbit adds almost nothing on top of that (median
+    {{WANDER_MINUS}} points across {{N_WANDER}} rows).</p>
+    <p><strong>2. The chasing rabbit is where runs differ.</strong> Its extra injury effect, beyond
+    the no-animal scene's, ranges from {{CHASE_MIN}} to {{CHASE_MAX}} points across runs. The largest
+    values come from curriculum wave 1 at level 03 ({{W1_L03}} points, both agents), and part of that
+    comes from the empty scene, not the rabbit: those two agents' no-animal injury effects are
+    {{W1_NONE}} points, and their chasing-rabbit injury effects {{W1_RAW}}. Most other groups
+    sit at or below zero: the smell study {{SMELL_MINUS}}, the thirst task {{THIRST_MINUS}}, the
+    temperature scene set {{THERMAL_MINUS}}.</p>
+    <p><strong>3. One body rule separates cleanly, but the test cannot be trusted there.</strong> In the
+    body-rules worlds, the chasing rabbit's extra injury effect is {{HC_ON}} points when healing costs
+    food and {{HC_OFF}} when it does not. Those same agents starve in the test: the scenes hold no food,
+    and healing from injury 70 uses it up, so average survival falls to {{HC_SURV}} of 100 steps. Their
+    values are drawn hollow and are not interpreted.</p>
+    <p><strong>4. The two agent types overlap.</strong> Inside each group the modulated agents
+    (triangles in Figures 2 and 3) and the ordinary agents (circles) spread over the same range; this
+    page does not separate them further.</p>
+  </div>
+</section>
+
+<section class="col toc">
+  <h4>On this page</h4>
+  <ol>
+    <li><a href="#compared">What was compared</a></li>
+    <li><a href="#f1">Figure 1 &mdash; every run, sorted by the injury effect</a></li>
+    <li><a href="#f2">Figure 2 &mdash; by group of runs</a></li>
+    <li><a href="#f3">Figure 3 &mdash; by the setting that varies inside a group</a></li>
+    <li><a href="#f4">Figure 4a&ndash;4g &mdash; the Figure 7b view, run by run</a></li>
+    <li><a href="#how">How it is computed</a></li>
+    <li><a href="#runs">Runs selected and dropped</a></li>
+    <li><a href="#issues">Issues found while building this page</a></li>
+  </ol>
+</section>
+
+<section class="col" id="compared">
+  <h2><span class="num">01</span> What was compared</h2>
+  <p>Each agent was tested in six scenes, each at starting injury 0 and 70: <strong>no animal</strong>;
+  a <strong>hunting predator</strong> that can hurt it; a <strong>chasing rabbit</strong> that moves
+  exactly like the predator but is harmless; the same rabbit with its smell removed; a
+  <strong>wandering rabbit</strong>; and a wandering rabbit that smells like a predator. The agent starts
+  three squares from the bush; the animal starts on the far side. Each scene is played 30 times per
+  checkpoint.</p>
+  <p>The runs come from {{N_FAMILIES}} groups, and their tests come in five <strong>scene sets</strong>
+  that differ in ways that matter. They are kept apart in every figure and never averaged together:</p>
+  {{TABLE:scene_sets}}
+  <p>Three quantities are read from each run, all in percentage points of bush dwell (the share of the
+  test's steps the agent spends on the bush): the <strong>injury effect</strong> in a scene, injury 70
+  minus injury 0; the same in the no-animal scene; and their difference, the part of the injury effect
+  that the animal adds.</p>
+</section>
+
+<hr>
+
+<section class="col" id="f1">
+  <h2><span class="num">02</span> Figures</h2>
+  <h3 class="fh"><span class="n">Figure 1</span>Every run, sorted by the injury effect</h3>
+  <figure>
+    <img data-fig="f7b_rank" alt="Four panels of sorted dots. Top: the injury effect in the chasing-rabbit and wandering-rabbit scenes, mostly between 0 and +15 points, with the no-animal scene's effect for the same run drawn as a dash at a similar height. Bottom: the same minus the no-animal effect, clustered near zero for the wandering rabbit and spread from about -20 to +29 for the chasing rabbit.">
+    <p class="zoomhint">Click the figure to view it full size</p>
+    <figcaption>
+      <span><b>Axes.</b> Horizontal: runs, sorted from the smallest to the largest value of the
+      panel's quantity (no unit; each dot is one run in one scene set). Vertical: injury 70 minus
+      injury 0, bush dwell in percentage points. Left column chasing rabbit, right column wandering
+      rabbit; top row the injury effect, bottom row that effect minus the same run's no-animal injury
+      effect. Colour is the scene set, shape the agent; a dash in the top row is the same run's
+      no-animal injury effect; a hollow marker means the agent died early in a scene the value uses.</span>
+      <span><b>What it shows.</b> In the top row most dashes sit level with their dots: the rabbit
+      scenes rise with injury about as much as the empty scene does. The bottom-right panel is flat
+      near zero; the bottom-left panel is where runs spread out.</span>
+      <span><b>Data.</b> {{DATA:f7b_rank}}</span>
+    </figcaption>
+    <p class="prov">Reproduce: <code>scripts/analysis/studies/f7b_across_runs/figures.py --figure rank</code></p>
+  </figure>
+  <h4>Largest and smallest values of the chasing rabbit's extra injury effect</h4>
+  {{TABLE:extremes}}
+</section>
+
+<section class="col" id="f2">
+  <h3 class="fh"><span class="n">Figure 2</span>By group of runs</h3>
+  <figure>
+    <img data-fig="f7b_family" alt="Four panels, one row per group of runs and scene set. The training-world groups (smell study, body rules, thirst task) sit tightly at +5 to +12 points for the injury effect and near zero to slightly negative after subtracting the no-animal effect; curriculum wave 1 sits highest after subtraction; the July runs scatter widely around zero.">
+    <p class="zoomhint">Click the figure to view it full size</p>
+    <figcaption>
+      <span><b>Axes.</b> Horizontal: injury 70 minus injury 0, bush dwell in percentage points.
+      Vertical: group of runs, with its scene set after the dot (no unit). Panels as in Figure 1: top
+      row the injury effect, bottom row the injury effect minus the no-animal scene's; left chasing
+      rabbit, right wandering rabbit. Each marker is one run (shape = agent, hollow = died early); the
+      black bar is the mean of the group.</span>
+      <span><b>What it shows.</b> The groups trained and tested in the newer worlds agree with each
+      other closely; the July runs, tested in an older scene set in which animals could walk into
+      the bush, scatter on both sides of zero.</span>
+      <span><b>Data.</b> {{DATA:f7b_family}}</span>
+    </figcaption>
+    <p class="prov">Reproduce: <code>scripts/analysis/studies/f7b_across_runs/figures.py --figure family</code></p>
+  </figure>
+  <h4>Group means</h4>
+  {{TABLE:groups}}
+</section>
+
+<section class="col" id="f3">
+  <h3 class="fh"><span class="n">Figure 3</span>By the setting that varies inside a group</h3>
+  <figure>
+    <img data-fig="f7b_within" alt="Five stacked panel pairs. Body rules: with healing-costs-food on, the chasing rabbit's extra injury effect sits around +5, with it off around -4, but the on markers are hollow. Smell study: all three smell worlds near -3. Thirst task: all map sizes and smell ranges between -4 and -7. Curriculum wave 1: level 03 highest at about +23. Temperature scene set: the variants without a fire are the most negative.">
+    <p class="zoomhint">Click the figure to view it full size</p>
+    <figcaption>
+      <span><b>Axes.</b> Horizontal: injury 70 minus injury 0, bush dwell in percentage points, for
+      the chasing-rabbit scene (left: the injury effect; right: minus the no-animal scene's injury
+      effect). Vertical: one row per value of the setting that varies inside the group (no unit). For
+      the body rules each rule has an "on" row and an "off" row, each holding every world with the rule
+      in that state. Colour = scene set, as in Figures 1 and 2; shape = agent; hollow = died early;
+      black bar = mean of the row.</span>
+      <span><b>What it shows.</b> Inside the smell study and the thirst task no setting moves the
+      effect. Level 03 of curriculum wave 1 and healing-costs-food in the body rules stand out, the
+      second only among values that are not interpreted.</span>
+      <span><b>Data.</b> {{DATA:f7b_within}}</span>
+    </figcaption>
+    <p class="prov">Reproduce: <code>scripts/analysis/studies/f7b_across_runs/figures.py --figure within</code></p>
+  </figure>
+</section>
+
+<section class="col" id="f4">
+  <h3 class="fh"><span class="n">Figure 4</span>The Figure 7b view, run by run</h3>
+  <p>These panels repeat the Basic Behaviour page's Figure 7b for every run: late-training bush dwell
+  in each scene, at injury 0 (hollow grey ring) and injury 70 (filled dark marker). They are drawn in
+  greys because colour on this page means the scene set. A long line between the two is
+  a large injury effect. Rows marked * are runs whose agent died early (average survival under 95 of
+  100 steps) in at least one predator-free scene.</p>
+  {{FIG4}}
+</section>
+
+<section class="col" id="how">
+  <h2><span class="num">03</span> How it is computed</h2>
+  <div class="howto">
+    <p>Every saved checkpoint of a run was replayed 30 times in each scene, by the project's dwell-sweep
+    driver. For one run, one scene and one starting injury this gives one bush-dwell number per
+    checkpoint: the share of the test's steps the agent spent on the bush, averaged over the 30
+    episodes. Early checkpoints come from an agent that is still learning, so only the
+    <strong>newest 20 checkpoints</strong> are summarised, as on the Basic Behaviour page. The injury
+    effect is formed checkpoint by checkpoint first (injury 70 minus injury 0, same checkpoint), and the
+    20 differences are then averaged. The rabbit's extra effect subtracts the no-animal scene's injury
+    effect, again checkpoint by checkpoint. Each interval is a 95% t-interval on those 20 values (the range
+    that would contain the true average 95 times in 100 if the values were independent draws, using
+    Student's t distribution because 20 values is a small sample), widened when neighbouring checkpoints are correlated: the effective number of values is
+    20&nbsp;&times;&nbsp;(1&nbsp;&minus;&nbsp;r)&nbsp;/&nbsp;(1&nbsp;+&nbsp;r), where r is the correlation between each checkpoint and the next. The
+    interval therefore describes how much the value moves from checkpoint to checkpoint within
+    <em>one</em> training run. It says nothing about seed-to-seed variation; only the smell study has
+    more than one seed per setting. A value is drawn hollow when, in a scene it uses, the agent's
+    average survival is under 95 of 100 steps: bush dwell is then a share of a shorter episode and is
+    not interpreted. A run needs at least 20 tested checkpoints to be included.</p>
+  </div>
+</section>
+
+<section class="col" id="runs">
+  <h2><span class="num">04</span> Runs selected and dropped</h2>
+  <p>{{N_SEL}} run-and-scene-set rows from {{N_UNIQUE}} distinct training runs were selected (the
+  temperature and injury-grid scene sets test the same few runs in several variants, which is why rows
+  outnumber runs). {{N_DROP}} runs were dropped. {{N_NEW}} runs, the level-05 body-rules study, had no
+  experiment tests and were tested for this page.</p>
+  {{TABLE:families}}
+  <h4>Dropped runs</h4>
+  {{TABLE:dropped}}
+  <details class="more"><summary>Every selected row (open)</summary>
+  {{TABLE:runs}}
+  </details>
+</section>
+
+<section class="col" id="issues">
+  <h2><span class="num">05</span> Issues found while building this page</h2>
+  <ol>
+    <li><strong>The body-rules agents starve in the experiment tests.</strong> The scenes hold no food.
+    In worlds where healing costs food, an agent starting at injury 70 uses its food to heal and dies
+    around step 71&ndash;82. Their injury effects are drawn hollow. A fair test of those worlds needs a
+    scene with food, or a start with more food.</li>
+    <li><strong>The July runs use an older scene set.</strong> Their tests ran before the bush was
+    made to block animals, so a rabbit could follow the agent into it. They also wrote the bush-dwell
+    measure under an older column name; it is the same quantity (share of the episode's steps on the
+    bush cell) and was renamed when read.</li>
+    <li><strong>The injury-grid scene set has no chasing rabbit.</strong> Its 30 rows appear only in the
+    wandering-rabbit panels.</li>
+    <li><strong>One seed per setting, except the smell study.</strong> The intervals are within-run
+    only, so a difference between two single-seed runs may be seed-to-seed variation.</li>
+    <li><strong>The temperature variants with no fire are the most negative.</strong> In those scenes
+    the agent is cold and the warm cell, not the bush, may decide where it goes; this is a cue to
+    check, not a finding.</li>
+  </ol>
+</section>
+
+<hr>
+
+<section class="col">
+  <h4>Provenance</h4>
+  <p class="foot">Data: <code>scripts/analysis/studies/f7b_across_runs/collect.py --out results/analysis/f7b_across_runs</code>
+  (reads the dwell-sweep CSVs under <code>results/eval/avoidance/</code> for every run named in the sweep
+  specs under <code>configs/eval_sweeps/</code>). New experiment tests: scenes from
+  <code>configs/environment/experiment/behavior_probes/l05body/generate_l05body_probes.py</code>, sweep
+  specs <code>configs/eval_sweeps/l05body/</code>, run with <code>scripts/eval/dwell_sweep/run_sweep.py</code>
+  and collated with <code>scripts/analysis/studies/f7b_across_runs/aggregate_only.py</code>. Figures:
+  <code>figures.py</code>; page: <code>build_page.py</code>, both in the same folder. Built {{BUILT}}.</p>
+</section>
+
+</div>
+{{LIGHTBOX}}
