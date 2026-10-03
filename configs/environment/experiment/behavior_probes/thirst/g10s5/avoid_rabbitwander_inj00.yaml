@@ -1,0 +1,113 @@
+# ============================================================================
+# THIRST PROBE -- world `g10s5` (10x10 map, smell reach 5 squares), scene `avoid_rabbitwander_inj00`
+#
+# One of 9 worlds x 12 scenes built for the thirst task (docs/experiments/active/thirst_task/THIRST_TASK.md), Figure 7 of its Basic
+# Behaviour page (plan docs/develop/active/behavior/BASIC_BEHAVIOUR_WATER.md). GENERATED -- do not hand-edit; regenerate with
+#   /home/vncuser/miniconda3/envs/grid_world_pain/bin/python configs/environment/experiment/behavior_probes/thirst/generate_thirst_probes.py \
+#       --start-hydration 180 --worlds <cells>
+#
+# The file `extends:` the trained world, so everything the scene does not restate is the
+# trained world's value. Kept from the world: map size 10x10, smell reach, pond size 2x2,
+# water physics, temperature system, 59-number observation, visualization.local_view_size.
+#
+# SCENE (from configs/environment/experiment/behavior_probes/core/avoidance/avoid_rabbitwander_inj00.yaml; layout coordinates unchanged, grid / grass / patrol area set to the world's map):
+#   Avoidance matrix — animal=rabbitwander (a WANDERING, harmless rabbit — in-distribution neutral
+#   motion, does NOT chase the agent), start injury=0.
+#   10x10, agent center [5,5]; hides_agent bush 3 cells LEFT [5,2]; rabbit spawns RIGHT [5,9] and wanders.
+#
+# ADDED vs the core probe:
+#   - one campfire (the world's own entry) at config [5,3], beside the hiding bush at [5,2]
+#     (the world is cold; the bush is warm and survivable, the start cell [5,5] is not);
+#   - the pond: one candidate, top-left config [8,8] (start + (3,3)) at every map size;
+#   - start hydration FIXED at 180 (random_start_hydration: false), chosen by the pre-registered
+#     calibration in the plan, section R2.3 (results/analysis/basic_behaviour/thirst/probes/calibration.json). Bush time is read only up to the
+#     agent's first pond step (plan, section R2.2).
+#
+# MEASURED at generation (trainer loader + real env reset):
+#   observation width 59; survivable cells 8/100; bush settles +5.98;
+#   start cell settles -18.73; pond cells (array, 0-based) [(7, 7), (7, 8), (8, 7), (8, 8)]; animal odour [0.0, 0.5, 0.7, 0.0, 0.0]
+# ============================================================================
+extends: environment/experiment/thirst/pond_thirst_10x10_smell5
+environment:
+  max_steps: 100
+  height: 10
+  width: 10
+  start_pos: [5, 5]
+  random_start_pos: false
+  location_areas:
+  - type: grass
+    area:
+    - [1, 1]
+    - [10, 10]
+  - type: sand
+    area:
+    - [0, 0]
+    - [0, 0]
+  resources: []
+  entities:
+  - class: neutral
+    behaviour: wander
+    tag: rabbitwander
+    count: 1
+    properties: [0.0, 0.5, 0.7, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    move_interval: 1
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.1
+    spawn_area:
+    - [5, 9]
+    - [5, 9]
+    patrol_area:
+    - [1, 1]
+    - [10, 10]
+    detection_range: 12
+    max_stamina: 30
+    stamina_recovery_rate: 1
+    hunt_stamina_threshold: 0.7
+    lose_interest_multiplier: 1.5
+    attack_delay: 0
+  obstacles:
+  - name: bush
+    count: 1
+    area:
+    - [5, 2]
+    - [5, 2]
+    blocking: false
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.0
+    hides_agent: true
+    blocks_animals: true
+    properties: [0.0, 0.0, 0.0, 1.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+  - name: campfire
+    area:
+    - [5, 3]
+    - [5, 3]
+    temperature_ratio: [11, 11]
+    blocking: false
+    blocks_sight: false
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.0
+    properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    count: 1
+body:
+  random_start_satiation: false
+  random_start_nutrition: false
+  random_start_injury: true
+  start_satiation: 100
+  start_nutrition: 100
+  start_injury_low: 0
+  start_injury_high: 0
+water:
+  placement: list
+  candidates:
+  - [8, 8]
+  random_start_hydration: false
+  start_hydration: 180.0
