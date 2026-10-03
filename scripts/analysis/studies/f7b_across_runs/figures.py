@@ -303,6 +303,78 @@ def fig_within(R, L, E, X):
     return fig, ckpt_rows(R[R.id.isin({i for _, r in G for _, ids in r for i in ids})], "runs in this figure") + rows
 
 
+EVENTS = [  # (date, label) -- each is documented where cited on the page
+    ("2026-09-16", "levels renumbered: cold becomes level 05"),
+    ("2026-09-22", "first runs trained with 25\u00d7 healing on a bush"),
+    ("2026-09-23", "test bush fixed to keep animals out"),
+    ("2026-09-30", "pond added as level 06; noise moves to level 07"),
+]
+
+
+def start_date(run_dir):
+    import re as _re
+    m = _re.match(r"(\d{8})[-_]", os.path.basename(str(run_dir)))
+    return pd.Timestamp(m.group(1)) if m else pd.NaT
+
+
+def fig_timeline(R, L, E, X):
+    import matplotlib.pyplot as plt
+    import matplotlib.dates as mdates
+    from matplotlib.lines import Line2D
+    U = R.drop_duplicates("run_dir").copy()
+    U["date"] = U.run_dir.map(start_date)
+    if U.date.isna().any():
+        raise SystemExit(f"no start date in run folder names: {U[U.date.isna()].run_dir.tolist()}")
+    fams = sorted(U.family.unique(), key=lambda f: (U[U.family == f].date.min(), FAMILY_ORDER.index(f)))
+    spans = [(pd.Timestamp("2026-07-10"), pd.Timestamp("2026-07-27")), (pd.Timestamp("2026-09-12"), pd.Timestamp("2026-10-05"))]
+    fig, axs = plt.subplots(1, 2, figsize=(12.0, 0.5 * len(fams) + 4.2), sharey=True,
+                            gridspec_kw={"width_ratios": [17, 23], "wspace": 0.10})
+    rng = np.random.default_rng(1)
+    for ax, (lo, hi) in zip(axs, spans):
+        for k, f in enumerate(fams):
+            y = len(fams) - 1 - k
+            g = U[U.family == f]
+            for _, r in g.iterrows():
+                fast = r["bush_heal"] == "25x"
+                ax.plot(r["date"] + pd.Timedelta(hours=float(rng.uniform(-5, 5))), y + rng.uniform(-0.18, 0.18),
+                        ls="", marker=AG_MK[r["agent"]], ms=6, color=H.INK if fast else "#a9aea8", alpha=0.85)
+            if len(g) and lo <= g.date.max() <= hi:
+                ax.text(g.date.max() + pd.Timedelta(hours=20), y, f"{len(g)} runs", va="center",
+                        fontsize=H.FS_LABEL - 1, color=H.INK_2)
+        for n, (d, lab) in enumerate(EVENTS, 1):
+            d = pd.Timestamp(d)
+            if lo <= d <= hi:
+                ax.axvline(d, color=H.RULE, lw=1.2, ls="--", zorder=0)
+                ax.text(d, len(fams) - 0.25, str(n), ha="center", va="bottom", fontsize=H.FS_LABEL,
+                        fontweight="semibold", color=H.INK_2,
+                        bbox=dict(boxstyle="circle,pad=0.25", fc=H.PAPER, ec=H.RULE))
+        ax.set_xlabel("date the training run started", fontsize=H.FS_LABEL)
+        ax.set_xlim(lo, hi)
+        ax.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=mdates.MO))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%d %b"))
+        ax.grid(axis="y", visible=False)
+    axs[0].set_yticks(range(len(fams)))
+    axs[0].set_yticklabels(fams[::-1], fontsize=H.FS_LABEL)
+    axs[0].set_ylim(-0.7, len(fams) + 0.3)
+    axs[0].set_title("July 2026", loc="left", fontsize=H.FS_LABEL + 1)
+    axs[1].set_title("September to October 2026 (August had no runs on this page)", loc="left", fontsize=H.FS_LABEL + 1)
+    h = 0.5 * len(fams) + 4.2
+    hs = [Line2D([], [], ls="", marker="o", ms=8, color=H.INK, label="trained with 25\u00d7 healing on a bush"),
+          Line2D([], [], ls="", marker="o", ms=8, color="#a9aea8", label="trained without it"),
+          Line2D([], [], ls="", marker=AG_MK["ordinary"], ms=8, color=H.INK_2, mfc="none", label="ordinary agent (circle)"),
+          Line2D([], [], ls="", marker=AG_MK["modulated"], ms=8, color=H.INK_2, mfc="none", label="modulated agent (triangle)"),
+          Line2D([], [], color=H.RULE, lw=1.2, ls="--", label="a change to the worlds or the tests:")]
+    hs += [Line2D([], [], ls="", label=f"{n}  {pd.Timestamp(d).strftime('%d %b')}: {lab}") for n, (d, lab) in enumerate(EVENTS, 1)]
+    fig.legend(handles=hs, loc="lower center", ncol=2, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.01),
+               handlelength=1.6)
+    fig.subplots_adjust(left=0.15, right=0.97, top=1 - 0.55 / h, bottom=2.25 / h, wspace=0.08)
+    rows = [{"what": "training runs on the page, placed by start date", "used": len(U), "total": len(U),
+             "note": "one marker per distinct run; several markers on one day are spread vertically"},
+            {"what": "runs dropped from the page (not shown here)", "used": 0, "total": int(X.run_dir.nunique()),
+             "note": "listed in the dropped-runs table"}]
+    return fig, rows
+
+
 def fig_levels(R, L, E, X, group):
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
@@ -362,7 +434,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
     ap.add_argument("--fig-dir", required=True)
-    ap.add_argument("--figure", required=True, choices=["rank", "family", "within", "levels"])
+    ap.add_argument("--figure", required=True, choices=["rank", "family", "within", "timeline", "levels"])
     ap.add_argument("--group", choices=list(GROUPS))
     a = ap.parse_args(argv)
     H.apply()
@@ -373,7 +445,7 @@ def main(argv=None):
         fig, rows = fig_levels(*D, a.group)
         stem = f"f7b_levels__{a.group}"
     else:
-        fig, rows = {"rank": fig_rank, "family": fig_family, "within": fig_within}[a.figure](*D)
+        fig, rows = {"rank": fig_rank, "family": fig_family, "within": fig_within, "timeline": fig_timeline}[a.figure](*D)
         stem = f"f7b_{a.figure}"
     FG.record_samples(os.path.abspath(a.fig_dir), stem, rows)
     FG.save(fig, os.path.abspath(a.fig_dir), stem)

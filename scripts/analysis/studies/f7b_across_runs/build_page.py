@@ -222,17 +222,35 @@ def main(argv=None):
     # ---- tables
     tok["{{TABLE:levels}}"] = level_table()
     pl = []
-    for f in FX.FAMILY_ORDER:
+    R["start"] = R.run_dir.map(FX.start_date)
+    for f in sorted(R.family.unique(), key=lambda f: R[R.family == f].start.min()):
         g = R[R.family == f]
-        if not len(g):
-            continue
-        pl.append({"group": f, "trained": PLAIN[f], "runs": g.run_dir.nunique(),
+        d0, d1 = g.start.min(), g.start.max()
+        when = d0.strftime("%-d %b %Y") if d0 == d1 else (
+            f"{d0.strftime('%-d')}\u2013{d1.strftime('%-d %b %Y')}" if d0.month == d1.month else
+            f"{d0.strftime('%-d %b')} \u2013 {d1.strftime('%-d %b %Y')}")
+        pl.append({"group": f, "when": when, "trained": PLAIN[f], "runs": g.run_dir.nunique(),
                    "agents": "both" if g.agent.nunique() == 2 else g.agent.iloc[0],
                    "heal": ", ".join(sorted(g.bush_heal.unique())).replace("25x", "25 times faster")
                                                                    .replace("1x", "same as elsewhere")})
-    tok["{{TABLE:datasets}}"] = table(pd.DataFrame(pl), ["group", "trained", "runs", "agents", "heal"],
-                                      ["group", "what the agents learned in", "runs", "agent type",
-                                       "healing on a bush"], num=("runs",), min_width=760)
+    tok["{{TABLE:datasets}}"] = table(pd.DataFrame(pl), ["group", "when", "trained", "runs", "agents", "heal"],
+                                      ["group", "training started", "what the agents learned in", "runs",
+                                       "agent type", "healing on a bush"], num=("runs",), nowrap=("when",),
+                                      min_width=860)
+    tok["{{FIG:timeline}}"] = figure(
+        "f7b_timeline", "Timeline of when each group of runs was trained: four July groups in mid to late July, then "
+        "curriculum wave 1 on 21 September, blocking-bush training on 22 September, the body rules and the first "
+        "smell-study pair on 27 September, the rest of the smell study on 1 October and the thirst task on 2 October; "
+        "dashed lines mark four changes to the worlds or tests.",
+        "Horizontal: the date each training run started, read from the run's folder name (July on the left, "
+        "September to October on the right; August is left out because no run on this page started then). "
+        "Vertical: group of runs (no unit), oldest at the top. One marker per run, several on one day spread "
+        "vertically; dark = trained with injury healing 25&times; faster on a bush, grey = trained without it; "
+        "circle = ordinary agent, triangle = modulated agent. Numbered dashed lines are changes to the worlds or "
+        "the tests, explained in the legend.",
+        "Every run trained without fast bush healing is older than 22 September, and every run trained after it "
+        "has it, so on this page bush-healing speed and training date cannot be separated.",
+        "scripts/analysis/studies/f7b_across_runs/figures.py --figure timeline")
     ss = pd.DataFrame([{"set": FX.SET_TAG[k], "what": FX.SET_SHORT[k].split(" (")[1].rstrip(")") if "(" in FX.SET_SHORT[k] else "",
                         "rows": int((R.scene_set == k).sum())} for k in FX.SET_ORDER])
     ss["what"] = [{"july": "July 2026 runs; animals could walk into the bush; no temperature system",
