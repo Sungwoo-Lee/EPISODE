@@ -51,9 +51,7 @@ def main(argv=None):
     from matplotlib.colors import ListedColormap
     D = FG.load_outputs(a.population, a.out_root)
     cells = [c for c in D["cells"] if (c["inv"]["targets"].get(a.target) or {}).get("available")]
-    water = FG.has_water(cells)
-    for c in cells if water else []:
-        c["ep"] = np.load(os.path.join(c["dir"], "episodes.npz"))
+    water = FG.has_water(cells)     # world features + pond corners: an HTML table on the page (build_page)
     names, kinds = [], {}
     for c in cells:
         for f in c["inv"]["factors"]:
@@ -96,16 +94,11 @@ def main(argv=None):
     # used / uni / dup / con / few / out / n-a / unh: distinct neutral steps plus one warm tint for
     # "unhandled"; no series hue, since colour means smell world elsewhere on the page
     shades = [H.INK_2, "#9aa0a8", "#c3c7cc", "#dfe1e3", "#e9e3d3", "#d8cfe0", H.PAPER, "#efc9b8"]
+    if water:                       # populations with water: distinct steps, "used" clearly the darkest
+        shades = ["#2f3640", "#7d8590", "#b4bac2", "#e3e6ea", "#e9e3d3", "#d8cfe0", H.PAPER, "#efc9b8"]
     cmap = ListedColormap(shades)
     h = 0.3 * len(rowsn) + 5.6
-    if not water:
-        fig, ax = plt.subplots(figsize=(12.0, h))
-    else:                                   # D5 / D6: world features + pond-corner shares below
-        hw = 0.32 * len(cells) + 1.6
-        fig = plt.figure(figsize=(12.0, h + hw))
-        gs = fig.add_gridspec(2, 1, height_ratios=[h, hw], hspace=0.08)
-        ax = fig.add_subplot(gs[0])
-        world_table(fig.add_subplot(gs[1]), cells, rows, H)
+    fig, ax = plt.subplots(figsize=(12.0, h))
     ax.imshow(M, cmap=cmap, vmin=-0.5, vmax=len(CODES) - 0.5, aspect="auto", interpolation="nearest")
     for i in range(M.shape[0]):
         for j in range(M.shape[1]):
@@ -122,6 +115,11 @@ def main(argv=None):
     ax.set_xticklabels([short_run(c) for c in cells], rotation=90, fontsize=H.FS_LABEL)
     ax.xaxis.tick_top()
     ax.grid(False)
+    if water:                       # white cell borders so neighbouring cells read as separate
+        ax.set_xticks(np.arange(-0.5, M.shape[1]), minor=True)
+        ax.set_yticks(np.arange(-0.5, M.shape[0]), minor=True)
+        ax.grid(which="minor", color="white", linewidth=1.6)
+        ax.tick_params(which="minor", length=0)
     ax.set_xlabel("run: smell world · agent type · training seed")
     ax.xaxis.set_label_position("top")
     ax.set_ylabel("feature of the episode")
@@ -136,37 +134,6 @@ def main(argv=None):
     fig.tight_layout(rect=(0, 0.09, 1, 1))
     FG.record_samples(a.fig_dir, f"{STEM}__{a.target}", rows)
     FG.save(fig, a.fig_dir, f"{STEM}__{a.target}")
-
-
-def world_table(ax, cells, rows, H):
-    """One line per run: map, pond size, sensor radius, and the share of episodes whose pond sat in
-    each corner (the pond's table row, 0-based top-left). Tabulated, not fitted (D5)."""
-    ax.axis("off")
-    K = max(len(c["inv"]["water"]["pond_corners"]) for c in cells if "water" in c["inv"])
-    head = ["run", "map", "pond", "sensor radius"] + [f"pond corner {k + 1} (%)" for k in range(K)]
-    body = []
-    for c in cells:
-        w = c["inv"].get("water")
-        if w is None:
-            body.append([short_run(c), "-", "no water", "-"] + ["-"] * K)
-            continue
-        cnt = np.bincount(c["ep"]["pond_corner"], minlength=len(w["pond_corners"]))
-        n = int(cnt.sum())
-        body.append([short_run(c), "×".join(map(str, w["map_size"])), "×".join(map(str, w["pond_size"])),
-                     str(w["sensor_radius"])] + [f"{100 * x / n:.1f}" for x in cnt]
-                    + ["-"] * (K - len(cnt)))
-        corners = ", ".join(f"[{r + 1}, {cc + 1}]" for r, cc in w["pond_corners"])
-        rows.append({"what": f"pond corner recovered, {FG.run_label(c)}", "used": n, "total": c["inv"]["n_episodes"],
-                     "note": f"pond rebuilt from each episode's seed; corners (top-left, 1-based) {corners}"})
-    tb = ax.table(cellText=body, colLabels=head, loc="upper center", cellLoc="center")
-    tb.auto_set_font_size(False)
-    tb.set_fontsize(H.FS_LABEL)
-    for (i, j), cl in tb.get_celld().items():
-        cl.set_edgecolor(H.RULE)
-        if i == 0:
-            cl.set_text_props(color=H.INK_2)
-    ax.set_title("World features and where the pond was (share of episodes per corner)",
-                 fontsize=H.FS_BODY)
 
 
 if __name__ == "__main__":

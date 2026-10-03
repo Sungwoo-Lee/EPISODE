@@ -88,7 +88,7 @@ def main(argv=None):
         ax.grid(axis="y", visible=False)
         ax.set_title(SHORT[mid] + "  (own horizontal scale)", fontsize=H.FS_BODY)
         ax.set_xlabel("change in share of steps (percentage points per +1 standard deviation, other terms held fixed)")
-    fig.legend(handles=FG.legend_handles(D), loc="lower center", ncol=len(D["worlds"]) + len(D["agents"]),
+    fig.legend(handles=FG.legend_handles(D), loc="lower center", ncol=FG.legend_ncol(D),
                frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.005))
     fig.tight_layout(rect=(0, 0.025, 1, 1), h_pad=1.6)
     stem = f"{STEM}__{a.target}"
