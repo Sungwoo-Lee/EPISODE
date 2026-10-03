@@ -466,3 +466,56 @@ def test_make_population_cell_split(tmp_path):
     got = [(c["world"], c["agent"], c["label"]) for c in MP.from_study_doc(str(md), ["results/none"])]
     assert got == [("g10sW", "t1none", "g10sW_t1none_s42_1"), ("g20s3", "t16quad", "g20s3_t16quad_s42_2"),
                    ("hv1ch", "t1none", "hv1ch_t1none_s42_3")]
+
+
+# --------------------------------------------------------- probe scenes with a pond (Revision 2) ----
+def _synthetic_episode(bush_flags, pond_flags, hyd):
+    bush, pond, away = (4, 1), (7, 7), (4, 4)
+    snaps = []
+    for b, p in zip(bush_flags, pond_flags):
+        pos = bush if b else (pond if p else away)
+        snaps.append({"agent_pos": np.array(pos), "obs_pos": [np.array(bush)], "animal_pos": [],
+                      "injury_level": 0.0})
+    return {"snapshots": snaps}, np.asarray(pond_flags, bool), np.asarray(hyd, float)
+
+
+def test_prepond_truncation():
+    """Test 8: no pond step -> equals episode_measures' bush_hiding; first pond step at k -> mean of
+    the bush flags over 0..k-1; a hydration rise off the pond is an integrity failure."""
+    import probe_pond as PP
+    bush = [0, 1, 1, 1, 0, 0, 1, 1, 0, 0]
+    ep, on, _ = _synthetic_episode(bush, [0] * 10, [150 - 0.625 * i for i in range(10)])
+    share, k = PP.prepond(np.array(bush, bool), on)
+    assert k == 10 and share == PP.episode_measures(ep)["bush_hiding"]
+    pond = [0, 0, 0, 0, 0, 1, 1, 0, 0, 0]
+    bush2 = [0, 1, 1, 1, 0, 0, 0, 1, 0, 0]
+    hyd = [150.0]
+    for p in pond[1:]:
+        hyd.append(hyd[-1] + (5.0 if p else -0.625))
+    share, k = PP.prepond(np.array(bush2, bool), np.array(pond, bool))
+    assert k == 5 and share == pytest.approx(np.mean(bush2[:5]))
+    assert PP.integrity(np.array(pond, bool), np.array(hyd)) == []
+    bad = list(hyd)
+    bad[3] = bad[2] + 1.0                     # hydration rose while off the pond
+    assert PP.integrity(np.array(pond, bool), np.array(bad)) == [3]
+
+
+def test_calibration_rule_branches():
+    """Test 9: lowest qualifying S; fallback 1 (lowest worse-world P_visit with P_od ok); fallback 2."""
+    import probe_pond as PP
+    T = lambda pv, po: {"g10sW": {"P_visit": pv[0], "P_od": po[0]}, "g20sW": {"P_visit": pv[1], "P_od": po[1]}}
+    c = PP.choose({150: T((0.25, 0.1), (0, 0)), 165: T((0.18, 0.2), (0.01, 0)), 180: T((0.1, 0.1), (0, 0))})
+    assert c["S"] == 165 and c["branch"].startswith("rule")
+    c = PP.choose({150: T((0.4, 0.3), (0, 0)), 165: T((0.3, 0.35), (0, 0)), 180: T((0.1, 0.1), (0.05, 0))})
+    assert c["S"] == 165 and "FALLBACK 1" in c["branch"]          # worse-world 0.40 vs 0.35; 180 fails P_od
+    c = PP.choose({150: T((0.4, 0.3), (0.03, 0)), 165: T((0.3, 0.3), (0.05, 0)), 180: T((0.1, 0.1), (0.1, 0))})
+    assert c["S"] == 150 and "FALLBACK 2" in c["branch"]
+
+
+def test_collate_tolerance_matches_4_decimal_csv():
+    """R2-1: the driver CSV is rounded to 4 decimals, so a mean like 0.123456 must pass against
+    '0.1235' and a real disagreement must not."""
+    import probe_pond as PP
+    m = 0.123456
+    assert abs(m - float(f"{m:.4f}")) <= PP.CSV_TOL
+    assert abs(m - 0.1236) > PP.CSV_TOL

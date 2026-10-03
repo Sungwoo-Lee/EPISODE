@@ -381,3 +381,42 @@ def test_respawn_repair_is_uniform_over_area_minus_pond(area, allowed_n):
     print(f"[repair] area {area}: {len(cells)} respawns over {len(allowed)} cells, chi2 {chi2:.1f}")
     assert set(cells) == allowed
     assert _chi2.sf(chi2, len(allowed) - 1) > 0.001, counts
+
+
+def _fixed_single_cell_layout(d):
+    """A probe-like fixed scene: bush, campfire and one predator each on ONE cell, disjoint
+    areas (BASIC_BEHAVIOUR_WATER, 2026-10-03). The old bound (k + 1 cells for the slot at
+    scan position k) refused this whatever the pond; the overlap-aware bound accepts it."""
+    env = d["environment"]
+    _fixed_start(d, [5, 5])
+    env["resources"] = []
+    bush = next(o for o in env["obstacles"] if o["name"] == "bush")
+    fire = next(o for o in env["obstacles"] if o["name"] == "campfire")
+    pred = next(e for e in env["entities"] if e["tag"] == "pred")
+    for o, cell in ((bush, [5, 2]), (fire, [5, 3])):
+        for k in ("count_low", "count_high", "edge_margin"):
+            o.pop(k, None)
+        o.update(count=1, area=[cell, cell])
+    for k in ("count_low", "count_high"):
+        pred.pop(k, None)
+    pred.update(count=1, spawn_area=[[5, 9], [5, 9]])
+    env["obstacles"], env["entities"] = [bush, fire], [pred]
+    d["water"].update(candidates=[[8, 8]])
+    return d
+
+
+def test_capacity_check_counts_only_overlapping_earlier_slots():
+    # (a) single-cell disjoint areas, pond elsewhere: loads, and every slot lands in its cell
+    d = _fixed_single_cell_layout(_lvl06_dict())
+    p = _params(d)
+    st = jax.vmap(core.jax_reset, in_axes=(None, 0))(p, jax.random.split(jax.random.PRNGKey(0), 20))
+    pos, act = np.asarray(st.obs_pos), np.asarray(st.obs_active)
+    assert all({tuple(x) for x in pos[i][act[i]]} == {(4, 1), (4, 2)} for i in range(20))
+    ap = np.asarray(st.animal_pos)[:, 0]
+    assert (ap == np.asarray([4, 8])).all()
+    # (b) two slots sharing one single cell still fail: the second has no free cell
+    d2 = _fixed_single_cell_layout(_lvl06_dict())
+    fire = next(o for o in d2["environment"]["obstacles"] if o["name"] == "campfire")
+    fire["area"] = [[5, 2], [5, 2]]
+    with pytest.raises(ValueError, match=r"water: capacity check failed.*1 earlier slots"):
+        _params(d2)

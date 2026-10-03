@@ -44,6 +44,8 @@ import yaml
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
+# data (run dirs, sweep outputs): $BB_DATA_ROOT when set (a worktree, BASIC_BEHAVIOUR_WATER D13)
+DATA = os.path.realpath(os.environ["BB_DATA_ROOT"]) if os.environ.get("BB_DATA_ROOT") else ROOT
 sys.path.insert(0, os.path.join(ROOT, "scripts", "analysis", "studies", "basicq2_waves"))
 sys.path.insert(0, os.path.join(ROOT, "scripts", "eval", "dwell_sweep"))
 import window_profile as W                                              # noqa: E402
@@ -61,6 +63,11 @@ SCENE_NAME = dict(SCENES)
 INJURIES = ["00", "70"]
 INJ_NAME = {"00": "injury 0", "70": "injury 70"}
 MEASURES = {"bush_hiding": 100.0, "survival_steps": 1.0, "closest_approach": 1.0, "spatial_spread": 1.0}
+# Worlds with a pond (BASIC_BEHAVIOUR_WATER R2.2, R2.4): `bush_hiding` is replaced by the bush share
+# BEFORE THE FIRST POND STEP (probe_pond.py collate, <label>/pond/<cond>.csv, joined on `step`), so
+# every contrast and the ceiling check use it; the pond-visit share and the over-drinking count ride
+# along. Code 6 (thirst) is asserted zero by probe_pond.py.
+MEASURES_WATER = {**MEASURES, "pond_visit_share": 100.0, "n_overdrink": 1.0}
 
 # spec world -> population world tag; sweep agent word -> population agent tag
 SPEC_WORLD = {"two_channel": "hv2ch", "single_channel": "hv1ch", "matched_strength": "hv1chm"}
@@ -93,33 +100,65 @@ def cond(scene, inj):
     return f"avoid_{scene}_inj{inj}"
 
 
+def spec_has_water(S) -> bool:
+    """Any scene of the spec's probe folder carries a `water:` block (the thirst generator writes one)."""
+    import glob
+    pdir = S["probe"] if os.path.isabs(S["probe"]) else os.path.join(ROOT, S["probe"])
+    return any("water" in (yaml.safe_load(open(f)) or {})
+               for f in glob.glob(os.path.join(pdir, "avoid_*.yaml")))
+
+
+def read_series(out, sweep_label, c, water):
+    """One run x scene series: the driver CSV, and for water worlds its pond CSV joined on `step`
+    (bush_hiding := bush_hiding_prepond). Returns (frame or None, rows in the driver CSV)."""
+    f = os.path.join(out, sweep_label, f"{c}.csv")
+    if not os.path.exists(f):
+        return None, 0
+    d = pd.read_csv(f).sort_values("step").reset_index(drop=True)
+    if not water:
+        return d, len(d)
+    fp = os.path.join(out, sweep_label, "pond", f"{c}.csv")
+    if not os.path.exists(fp):
+        return None, len(d)
+    p = pd.read_csv(fp)
+    m = d.drop(columns=["bush_hiding"]).merge(
+        p[["step", "bush_hiding_prepond", "pond_visit_share", "n_overdrink", "n_thirst"]], on="step", how="inner")
+    m = m.rename(columns={"bush_hiding_prepond": "bush_hiding"}).sort_values("step").reset_index(drop=True)
+    return m, len(d)
+
+
 def load_runs(spec_paths):
-    """Every run of every spec, with its CSV series. Labels follow <world>_<agent>_s<seed>."""
+    """Every run of every spec, with its CSV series. Labels follow <world>_<agent>_s<seed>.
+    hvsmell specs map their folder name to the world tag (SPEC_WORLD); any other spec's world tag
+    is its output folder name (the thirst cells), and its labels must carry it."""
     sys.path.insert(0, os.path.join(ROOT, "scripts", "eval", "dwell_sweep"))
     from run_sweep import list_checkpoints, resolve_run_dir
     runs = []
     for sp in spec_paths:
         S = yaml.safe_load(open(sp))
-        out = os.path.join(ROOT, S["output_dir"])
+        out = os.path.join(DATA, S["output_dir"])
         world_key = os.path.basename(os.path.normpath(S["output_dir"]))
-        if world_key not in SPEC_WORLD:
-            raise SystemExit(f"{sp}: output_dir {S['output_dir']} is not one of {sorted(SPEC_WORLD)}")
+        world = SPEC_WORLD.get(world_key, world_key)
+        water = spec_has_water(S)
         for r in S["runs"]:
             wtag, agent, seed = r["label"].rsplit("_", 2)
-            if wtag != SPEC_WORLD[world_key] or agent not in SPEC_AGENT or not seed.startswith("s"):
+            if wtag != world or agent not in SPEC_AGENT or not seed.startswith("s"):
                 raise SystemExit(f"{sp}: run label {r['label']!r} does not parse as <world>_<agent>_s<seed>")
-            run_dir = resolve_run_dir(r["path"], S["algo"])
+            run_dir = resolve_run_dir(r["path"] if os.path.isabs(r["path"]) else os.path.join(DATA, r["path"]),
+                                      S["algo"])
             e = {"sweep_label": r["label"], "world": wtag, "agent": SPEC_AGENT[agent],
                  "seed": int(seed[1:]), "label": f"{wtag}_{SPEC_AGENT[agent]}_{seed}",
-                 "run_dir": str(run_dir), "out": out, "spec": os.path.relpath(sp, ROOT),
-                 "expected": len(list_checkpoints(S["algo"], run_dir)), "series": {}}
+                 "run_dir": str(run_dir), "out": out, "spec": os.path.relpath(sp, ROOT), "water": water,
+                 "expected": len(list_checkpoints(S["algo"], run_dir)), "series": {}, "driver_rows": {}}
             for scene, _ in SCENES:
                 for inj in INJURIES:
-                    f = os.path.join(out, r["label"], f"{cond(scene, inj)}.csv")
-                    if os.path.exists(f):
-                        d = pd.read_csv(f).sort_values("step").reset_index(drop=True)
+                    d, n = read_series(out, r["label"], cond(scene, inj), water)
+                    e["driver_rows"][(scene, inj)] = n
+                    if d is not None:
                         e["series"][(scene, inj)] = d
             runs.append(e)
+    if len({e["water"] for e in runs}) > 1:
+        raise SystemExit("the sweep specs mix worlds with and without water")
     return runs
 
 
@@ -134,6 +173,9 @@ def completeness(runs):
                              "expected": e["expected"]})
                 if n < e["expected"]:
                     gaps.append(f"{e['sweep_label']} {cond(scene, inj)}: {n}/{e['expected']}")
+                if e["water"] and n < e["driver_rows"].get((scene, inj), 0):
+                    gaps.append(f"{e['sweep_label']} {cond(scene, inj)}: {n} pond rows for "
+                                f"{e['driver_rows'][(scene, inj)]} driver CSV rows (run probe_pond.py collate)")
     return rows, gaps
 
 
@@ -178,7 +220,7 @@ def run_summary(runs):
     for e in runs:
         late = {}
         for (scene, inj), d in e["series"].items():
-            for m, sc in MEASURES.items():
+            for m, sc in (MEASURES_WATER if e["water"] else MEASURES).items():
                 s = summarise(d[m].to_numpy() * sc)
                 for st, v in zip(d["step"], d[m].to_numpy() * sc):
                     series_rows.append({"label": e["label"], "scene": scene, "injury": inj, "measure": m,
@@ -255,7 +297,7 @@ def training_world(population, out_root, runs):
         c = cells.get(e["label"])
         if c is None:
             raise SystemExit(f"run {e['label']} (sweep {e['sweep_label']}) is not in {population}")
-        if os.path.normpath(os.path.join(ROOT, c["run"])) != os.path.normpath(e["run_dir"]):
+        if os.path.normpath(os.path.join(DATA, c["run"])) != os.path.normpath(e["run_dir"]):
             raise SystemExit(f"{e['label']}: sweep run dir {e['run_dir']} != population run {c['run']}")
         f = os.path.join(out_root, e["label"], "episodes.npz")
         if not os.path.exists(f):
@@ -295,7 +337,17 @@ def main(argv=None):
                          f"not finished or a checkpoint crashed - re-run the driver (incremental) "
                          f"or pass --allow-partial for a draft")
     R, S = run_summary(runs)
-    WS = world_summary(R)
+    per_world = {}
+    for e in runs:
+        per_world[(e["world"], e["agent"])] = per_world.get((e["world"], e["agent"]), 0) + 1
+    budget_refused = None
+    if min(per_world.values()) < 2:            # D12 (iv): the seed-to-seed budget needs >= 2 runs
+        budget_refused = (f"worlds with fewer than 2 runs per agent: the seed-to-seed variance budget "
+                          f"(7e) cannot be computed ({ {f'{w}/{g}': n for (w, g), n in per_world.items()} })")
+    elif any(w not in ("hv2ch", "hv1ch", "hv1chm") for w, _ in per_world):
+        budget_refused = "this population declares no world contrasts"
+    WS = world_summary(R) if budget_refused is None else pd.DataFrame(
+        columns=["agent", "quantity", "seed_sd", "ckpt_sd", "share_between", "n_runs", "flagged_runs"])
     TW = training_world(os.path.abspath(a.population), os.path.abspath(a.out_root), runs)
     od = os.path.join(os.path.abspath(a.out_root), "probes")
     os.makedirs(od, exist_ok=True)
@@ -313,7 +365,8 @@ def main(argv=None):
            + f" --out-root {os.path.relpath(os.path.abspath(a.out_root), ROOT)}")
     json.dump({"command": cmd, "written": datetime.datetime.now().isoformat(timespec="seconds"),
                "partial": partial, "csv_root_override": a.csv_root_override,
-               "output_dirs": sorted({os.path.relpath(e["out"], ROOT) for e in runs})},
+               "water": bool(runs[0]["water"]), "budget_refused": budget_refused,
+               "output_dirs": sorted({os.path.relpath(e["out"], DATA) for e in runs})},
               open(os.path.join(od, "provenance.json"), "w"), indent=1)
     n_found = sum(r["found"] for r in comp)
     n_exp = sum(r["expected"] for r in comp)
