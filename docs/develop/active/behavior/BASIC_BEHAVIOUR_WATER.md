@@ -639,6 +639,49 @@ every slot in its cell over 20 resets, and a shared single cell is still refused
 "water capacity check counted every earlier slot, not only overlapping ones; refused fixed
 single-cell layouts; fixed 2026-10-03, row ~#117 family."*
 
+Loader fix committed on `v5.0` as **`e10fcd8f`** (pushed), and identically on `bb-water` in `a49fde7b`.
+
+**C7a calibration (done 2026-10-03 08:13–09:50, local CPU).** 72 scenes (S ∈ {150, 165, 180} × g10sW,
+g20sW × 12) generated and `--check-only` passed. 4 rollouts (final checkpoints, 30 episodes, seed 0)
+took 27 min. `probe_pond.py calibrate` reported zero integrity failures over 4,320 episodes.
+
+| S | 10 × 10 (g10sW) P_visit | 20 × 20 (g20sW) P_visit | P_od (both) |
+|---|---|---|---|
+| 150 | 0.949 | 0.029 | 0.000 |
+| 165 | 0.928 | 0.025 | 0.000 |
+| 180 | **0.896** | 0.021 | 0.000 |
+
+🔴 **Red flag: no candidate met P_visit ≤ 0.20 in both worlds. The pre-registered rule's FALLBACK 1
+chose S = 180** (lowest worse-world visit share among values with P_od ≤ 0.02). In the 10 × 10 world,
+69–100 % of episodes reach the pond in every scene at S = 180 (lowest with a predator: 0.65–0.72),
+both agents (ordinary 0.875, modulated 0.917). In the 20 × 20 world, 0–10 % do, with the same pond
+offset (3, 3). So Figure 7's 10 × 10 bush numbers are mostly short pre-pond windows; the visit share
+must be read beside them. The user may want to revisit (for example, a start nearer 200, or accept
+it). Record: `results/analysis/basic_behaviour/thirst/probes/calibration.json`.
+
+**C7b (done).** 108 scenes at S = 180 + 9 sweep specs were generated in `bb-water`. `--check-only`
+passed for all 9 worlds: ALL CHECKS PASSED; nearest-pond offset (3, 3) in every scene; observation
+breakdown and sensor radius equal to each trained run's saved config; thermal contract held at every
+size. The files were copied byte-identical (118 files cmp-equal) to the shared folder and committed on
+`v5.0` with the CONFIG_CRITICAL_SETTINGS entry: **`9b3b3d86`**, pushed. The same files sit
+**untracked** in the worktree and are not committed on `bb-water`, so the merge has no add/add. The
+generator on `v5.0` imports `registry.DATA_ROOT` and runs there only after the merge; the scenes and
+specs need nothing from it. `env-config-reviewer` has **not** been run.
+
+**C7c (done, except f7/template/build_page, which wait for d9).** `probe_pond.py` (calibrate +
+collate; R2-1 5e-5 tolerance; R2-3 all failures collected, `pond_failures.json`, nothing written on
+failure). A pond is replayed once per scene, since a scene has one candidate (asserted). `probes.py`
+water mode. Tests 8, 9 and a tolerance test: `test_basic_behaviour.py` 27/27. Committed on `bb-water`
+as **`a49fde7b`**, pushed.
+
+**C8 launch commands (not launched).** From the shared folder, one spec per node, after filling
+`nodes:` in the spec:
+`cd /media/nas01/projects/Interoceptive-AI/grid_world_pain && /home/vncuser/miniconda3/envs/grid_world_pain/bin/python scripts/eval/dwell_sweep/run_sweep.py configs/eval_sweeps/thirst/thirst_<cell>_rppo.yaml`
+Each spec covers 2 runs × ~50 checkpoints × 12 scenes. Do not delete `_scratch/`. Then, locally:
+`cd .claude/worktrees/bb-water && BB_DATA_ROOT=/media/nas01/projects/Interoceptive-AI/grid_world_pain /home/vncuser/miniconda3/envs/grid_world_pain/bin/python scripts/analysis/basic_behaviour/probe_pond.py collate --sweep-specs configs/eval_sweeps/thirst/*.yaml --workers 8`
+Expect it to be slow: about 324 k recordings, NAS-bound. The calibration read about 4,300 episodes in
+about 15 min with 8 workers. Then `probes.py --sweep-specs … --population _water_dev/thirst/population.json --out-root …`.
+
 **C7a (probe calibration), superseded text (blocker as first found):** `generate_thirst_probes.py` is written in
 the worktree (uncommitted). Every scene fails to load: `_load_water`'s capacity check
 (`config_loader.py:3062`, KNOWN_BUGS ~#117) requires the slot at scan position k to have ≥ k+1 free
