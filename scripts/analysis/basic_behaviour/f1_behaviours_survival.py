@@ -25,9 +25,15 @@ import registry as REG                                                  # noqa: 
 
 STEM = "f1_behaviours_survival"
 TERM_SHORT = {1: "step limit\nreached", 2: "starved", 3: "over-ate", 4: "injury at\nmaximum",
-              5: "temperature\nout of range"}
+              5: "temperature\nout of range", 6: "died of\nthirst", 7: "over-drank"}
 TARGET_KEY = {"bush_dwell": "bush_steps", "eating": "y_eat", "near_rabbit": "y_near_rab",
-              "near_predator": "y_near_pred", "warm_cell": "y_warm"}
+              "near_predator": "y_near_pred", "warm_cell": "y_warm", "pond": "y_pond"}
+
+
+def target_info(c, t) -> dict:
+    """The inventory's entry for target t; a target the world does not have (the pond, in a world
+    without water, or an inventory written before the pond target existed) is unavailable."""
+    return c["inv"]["targets"].get(t) or {"available": False, "reason": "this world has no water"}
 
 
 def main(argv=None):
@@ -39,7 +45,8 @@ def main(argv=None):
     cells = D["cells"]
     if not cells:
         raise SystemExit("no swept cells")
-    targets = [t for t in REG.TARGETS if any(c["inv"]["targets"][t]["available"] for c in cells)]
+    targets = [t for t in REG.TARGETS if any(target_info(c, t)["available"] for c in cells)]
+    TERM = FG.term_names(cells)             # codes 6 and 7 only for populations with water (D9)
     pos, ticks, labels = FG.group_positions(D)
     rows = []
     stats = {}
@@ -49,20 +56,20 @@ def main(argv=None):
         s = {"n": int(L.size), "survival": float(e["length"].mean()), "steps": float(L.sum()),
              "rows": float(e["n_rows"].sum())}
         for t in targets:
-            if c["inv"]["targets"][t]["available"]:
+            if target_info(c, t)["available"]:
                 s[t] = 100.0 * float(e[f"y__{t}"].sum() / L.sum())
         term = e["term"]
-        s["term"] = {k: 100.0 * float((term == k).mean()) for k in FG.TERM_NAMES}
-        other = 100.0 * float((~np.isin(term, list(FG.TERM_NAMES))).mean())
+        s["term"] = {k: 100.0 * float((term == k).mean()) for k in TERM}
+        other = 100.0 * float((~np.isin(term, list(TERM))).mean())
         if other > 0:
             raise SystemExit(f"{c['label']}: {other:.3f}% of episodes have an unknown termination code")
         stats[c["label"]] = s
         rows.append({"what": f"episodes, {FG.run_label(c)}", "used": s["n"], "total": s["n"],
                      "note": "every evaluation episode in the store"})
-        for t in REG.TARGETS:
-            if not c["inv"]["targets"][t]["available"]:
+        for t in [t for t in REG.TARGETS if t in c["inv"]["targets"] or t in targets]:
+            if not target_info(c, t)["available"]:
                 rows.append({"what": f"{FG.TARGET_NOUN[t]}, {FG.run_label(c)}", "used": 0, "total": s["n"],
-                             "note": f"not available: {c['inv']['targets'][t]['reason']}"})
+                             "note": f"not available: {target_info(c, t)['reason']}"})
     rows.append({"what": "chosen steps (t >= 1), all runs", "used": int(sum(s["steps"] for s in stats.values())),
                  "total": int(sum(s["rows"] for s in stats.values())),
                  "note": "the reset row t = 0 is the random spawn, not a step the agent chose"})
@@ -110,13 +117,13 @@ def main(argv=None):
     ax.set_ylabel("mean episode length (steps)")
     top(ax, max(stats[c["label"]]["survival"] for c in cells))
     ax = axs[len(targets) + 1]
-    for k, (code, name) in enumerate(FG.TERM_NAMES.items()):
+    for k, (code, name) in enumerate(TERM.items()):
         for j, c in enumerate(cells):
             off = (j - (len(cells) - 1) / 2) * (0.7 / max(len(cells), 1))
             ax.plot(k + off, stats[c["label"]]["term"][code], ls="", marker=D["marker"][c["agent"]],
                     ms=6, color=D["colour"][c["world"]], alpha=0.9)
-    ax.set_xticks(range(len(FG.TERM_NAMES)))
-    ax.set_xticklabels([TERM_SHORT[c] for c in FG.TERM_NAMES], fontsize=H.FS_LABEL)
+    ax.set_xticks(range(len(TERM)))
+    ax.set_xticklabels([TERM_SHORT[c] for c in TERM], fontsize=H.FS_LABEL)
     ax.set_title("How episodes end", fontsize=H.FS_BODY)
     ax.set_ylabel("share of episodes (%)")
     top(ax, max(max(stats[c["label"]]["term"].values()) for c in cells))

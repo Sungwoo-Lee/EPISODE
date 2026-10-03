@@ -26,6 +26,13 @@ environment's own reset is replayed and the field at the agent's square equals t
 reconstruction at every step (1e-4); the recovered baseline temperature equals the replayed draw
 (1e-4); M1 sees every episode.
 
+WATER GATE (`--water`; docs/develop/active/behavior/BASIC_BEHAVIOUR_WATER.md, Gates). On a
+thirst-pilot store: the Hydration index is found by name, 20 replayed resets match the stored start
+hydration and the swept pond, and the pipeline's chosen steps, pond steps, share of episodes that
+drank and termination shares equal the pilot readout JSON written earlier by other code. Pass ->
+its own stamp `_water_pass.json` (required by fit.py only for populations with water);
+`_golden_pass.json` is never touched by it.
+
 Pass of everything -> results/analysis/basic_behaviour/_golden_pass.json (source sha256s, reference
 sha256s, HEAD, sweep seconds, every check). Any failure -> no stamp, non-zero exit, the first 40
 differing lines / arrays printed. Runs LOCALLY only.
@@ -51,17 +58,24 @@ import sweep as SW                                                       # noqa:
 import fit as FT                                                         # noqa: E402
 
 ROOT = REG.ROOT
+DATA = REG.DATA_ROOT                     # runs, stores and references ($BB_DATA_ROOT when set)
 PY = sys.executable
 BB = SW.BB_ROOT
 A01_RUN = "results/JAX_RecurrentPPO/20260810-185749_rppo_restprem_a01_n106"
 A01_STORE_ROOT = "results/trajectories"
 HV1CH_RUN = "results/JAX_RecurrentPPO/20261001-002402_rppo_hv1ch_t1none_s42"
 HV_STORE_ROOT = "results/trajectories_hvsmell"
-HV_REF_DIR = os.path.join(ROOT, "results/analysis/hypervigilance/_golden_scratch/g3_reference")
-HV_STAMP = os.path.join(ROOT, "results/analysis/hypervigilance/_golden_sweep_pass.json")
+HV_REF_DIR = os.path.join(DATA, "results/analysis/hypervigilance/_golden_scratch/g3_reference")
+HV_STAMP = os.path.join(DATA, "results/analysis/hypervigilance/_golden_sweep_pass.json")
 REF_DIR = os.path.join(BB, "_golden_reference", "a01")
 REF_FILES = ("univariate.csv", "multivariate.csv", "summary.json")
 STAMP_SOURCES = FT.FIT_SOURCES + ["scripts/analysis/basic_behaviour/golden_gate.py"]
+# Water gate (BASIC_BEHAVIOUR_WATER, Gates, Revision 1 findings 5 and 6): a thirst-pilot store and the
+# pilot readout written earlier by other code (THIRST_PILOT section 4.2 store_reader.py).
+WATER_RUN = "results/JAX_RecurrentPPO/20261001_132200_rppo_l06pilot_t16quad_s42"
+WATER_STORE_ROOT = "results/analysis/thirst_pilot"
+WATER_CKPT = 2000001
+WATER_READOUT = "results/analysis/thirst_pilot/readout/t16quad_s42_2000001.json"
 LEGACY_ORDER = ["start_injury", "start_nutrition", "n_predators", "n_rabbits", "n_bushes", "n_rocks",
                 "n_food", "n_ambush_predators", "spawn_dist_to_bush",
                 "pred_detection_range", "pred_attack_delay", "pred_attack_range", "pred_max_stamina",
@@ -100,7 +114,7 @@ def copy_references(g: Gate) -> dict:
                 raise SystemExit(f"hv reference {src} sha256 {sha(src)} != recorded {want[f]}; "
                                  f"never regenerated silently")
             shutil.copy2(src, os.path.join(REF_DIR, f))
-        json.dump({f: want[f] for f in REF_FILES} | {"copied_from": os.path.relpath(HV_REF_DIR, ROOT),
+        json.dump({f: want[f] for f in REF_FILES} | {"copied_from": os.path.relpath(HV_REF_DIR, DATA),
                    "copied_at": _dt.datetime.now().isoformat(timespec="seconds")},
                   open(rec_p, "w"), indent=1)
     rec = json.load(open(rec_p))
@@ -185,7 +199,7 @@ def gate1(g: Gate, scratch: str) -> dict:
 # --------------------------------------------------------------------------------- gate 2 ----
 def legacy_hv1ch() -> str:
     hd = sha(os.path.join(ROOT, "scripts/analysis/hiding_drivers.py"))
-    d = os.path.join(BB, "_golden_scratch", f"legacy_hv1ch_{hd[:12]}")
+    d = os.path.join(REG.DATA_BB_ROOT, "_golden_scratch", f"legacy_hv1ch_{hd[:12]}")   # a reference
     meta_p = os.path.join(d, "_legacy_run.json")
     done = all(os.path.exists(os.path.join(d, f)) for f in ("aggregate.npz", "univariate.csv",
                                                             "multivariate.csv"))
@@ -197,6 +211,9 @@ def legacy_hv1ch() -> str:
             print(f"  legacy hv1ch outputs reused ({os.path.relpath(d, ROOT)})")
             return d
         raise SystemExit(f"{d}: legacy outputs from another run or script -- remove them")
+    if DATA != ROOT:
+        raise SystemExit(f"{d}: no reusable legacy hv1ch outputs; with BB_DATA_ROOT set they are read, "
+                         f"never produced (run golden_gate.py once from the data checkout)")
     os.makedirs(d, exist_ok=True)
     json.dump({"run": HV1CH_RUN, "store_root": [HV_STORE_ROOT], "hiding_drivers_sha256": hd,
                "started": _dt.datetime.now().isoformat(timespec="seconds")}, open(meta_p, "w"))
@@ -319,7 +336,7 @@ def thermal_replay(g: Gate, out_root: str, label: str, mrec: dict, n_eps: int = 
     g.check("S0.3 body-temperature index differs from its alphabetical position (the trap is real)",
             ob["body_temp"] != ob["alphabetical_body_temp"],
             f"order index {ob['body_temp']}, alphabetical {ob['alphabetical_body_temp']}")
-    cfg = yaml.safe_load(open(os.path.join(ROOT, HV1CH_RUN, "models", "config.yaml")))
+    cfg = yaml.safe_load(open(os.path.join(DATA, HV1CH_RUN, "models", "config.yaml")))
     lo, hi = cfg["thermal"]["start_body_temp_low"], cfg["thermal"]["start_body_temp_high"]
     bt0 = cell.a("bt0")
     g.check(f"S0.3 every start body temperature in [{lo}, {hi}] with non-zero variance",
@@ -328,7 +345,7 @@ def thermal_replay(g: Gate, out_root: str, label: str, mrec: dict, n_eps: int = 
     params = REG.rebuild_params(cfg)
     import readings as RD
     pop = RD.load_population(os.path.join(os.path.dirname(out_root), "bb_golden_hv1ch", "population.json"))
-    store = os.path.join(ROOT, pop["cells"][0]["stores"][0])
+    store = os.path.join(DATA, pop["cells"][0]["stores"][0])
     f0 = sorted(f for f in os.listdir(store) if f.startswith("steps_"))[0]
     tb = pq.read_table(os.path.join(store, f0), columns=["episode_seed", "t", "agent_row", "agent_col",
                                                           "obs_true"])
@@ -380,18 +397,104 @@ def thermal_replay(g: Gate, out_root: str, label: str, mrec: dict, n_eps: int = 
             "ambient_defined_share": share, "min_abs_denominator_all": float(np.abs(den).min())}
 
 
+# ----------------------------------------------------------------------------- water gate ----
+def water_gate(g: Gate, scratch: str) -> dict:
+    """(a) Hydration index found by name, not alphabetically; (b) 20 replayed resets: start hydration
+    == max x obs_true[Hydration] (1e-4) and the replayed pond == the sweep's pond row; (c) the
+    pipeline's numbers == the pilot readout (an external reference); (d) D3 checks zero exceptions;
+    (e) no unhandled audit row."""
+    print("\n=== Water gate: thirst-pilot store vs the pilot readout ===")
+    import jax
+    from src.environment.core import jax_reset
+    ref_p = os.path.join(DATA, WATER_READOUT)
+    ref = json.load(open(ref_p))
+    pop = population(scratch, "bb_water_pilot",
+                     ["--runs", WATER_RUN, "--world", "l06pilot", "--store-root", WATER_STORE_ROOT,
+                      "--checkpoint-nearest", str(WATER_CKPT)])
+    out_root = os.path.join(scratch, "water")
+    c, pv = sweep_one(pop, out_root)
+    if int(c["checkpoint"]) != WATER_CKPT or len(c["stores"]) != 1 or \
+            os.path.realpath(os.path.join(DATA, c["stores"][0])) != os.path.realpath(ref["store"]):
+        raise SystemExit(f"water gate: population store {c['stores']} at {c['checkpoint']} is not the "
+                         f"readout's store {ref['store']}")
+    cell = FT.Cell(out_root, c["label"])
+    inv = cell.inv
+    ob = inv["obs_indices"]
+    g.check("W(a) Hydration index differs from its alphabetical position (found by name)",
+            ob["hydration"] is not None and ob["hydration"] != ob["alphabetical_hydration"],
+            f"order index {ob['hydration']}, alphabetical {ob['alphabetical_hydration']}")
+    import yaml
+    cfg = yaml.safe_load(open(os.path.join(DATA, c["run"], "models", "config.yaml")))
+    params = REG.rebuild_params(cfg)
+    seeds = cell.a("seed")
+    pick = seeds[np.linspace(0, len(seeds) - 1, 20).astype(int)]
+    st = jax.vmap(jax_reset, in_axes=(None, 0))(params, jax.vmap(jax.random.PRNGKey)(
+        np.asarray(pick, dtype=np.int64)))
+    j = np.searchsorted(seeds, pick)
+    hd = float(np.abs(np.asarray(st.hydration, np.float64) - cell.a("hyd0")[j]).max())
+    g.check("W(b) replayed start hydration == max x obs_true[Hydration] at t = 0 (20 episodes, <= 1e-4)",
+            hd <= 1e-4, f"max |diff| {hd:.3g}")
+    table = np.asarray(params.water_topleft_table)
+    top = np.asarray(st.water_pos)[:, 0, :]
+    g.check("W(b) replayed pond top-left == the sweep's pond_corner row (20 episodes)",
+            np.array_equal(top, table[cell.a("pond_corner")[j]]))
+    n = cell.n
+    steps = int(cell.a("n_steps").sum())
+    g.check("W(c) chosen steps == readout check2_steps_checked", steps == ref["check2_steps_checked"],
+            f"{steps} vs {ref['check2_steps_checked']}")
+    want = ref["bouts_per_episode"] * ref["n_episodes"] * ref["steps_per_bout_mean"]
+    pond = float(cell.a("y__pond").sum())
+    integral = abs(want - round(want)) <= 1e-6
+    g.check("W(c) pond steps == bouts_per_episode x n_episodes x steps_per_bout_mean (an integer)",
+            integral and pond == round(want), f"{pond:.0f} vs {want!r}")
+    drank = int((cell.a("y__pond") > 0).sum())
+    g.check("W(c) episodes with any pond step == share_episodes_drank x n",
+            n == ref["n_episodes"] and drank == round(ref["share_episodes_drank"] * n)
+            and abs(drank / n - ref["share_episodes_drank"]) < 1e-12,
+            f"{drank} / {n} vs {ref['share_episodes_drank']}")
+    term = cell.a("term")
+    bad = {k: (int((term == int(k)).sum()), v) for k, v in ref["term_share"].items()
+           if int((term == int(k)).sum()) != round(v * n) or abs((term == int(k)).mean() - v) > 1e-12}
+    outside = int((~np.isin(term, [int(k) for k in ref["term_share"]])).sum())
+    g.check("W(c) termination shares == readout term_share (codes 0-7)", not bad and not outside,
+            json.dumps(bad) + (f"; {outside} episodes with another code" if outside else ""))
+    wc = inv["water_checks"]
+    g.check("W(d) D3 integrity checks: zero start-cell mismatches and zero step exceptions",
+            wc["start_cell_mismatches"] == 0 and wc["step_exceptions"] == 0
+            and wc["episodes_checked"] == n and wc["steps_checked"] == steps, json.dumps(wc))
+    g.check("W(e) audit: zero unhandled markers", not inv["unhandled"], json.dumps(inv["unhandled"]))
+    return {"cell": c["label"], "store": c["stores"][0], "sweep_seconds": pv.get("seconds"),
+            "readout": WATER_READOUT, "readout_sha256": sha(ref_p), "water_checks": wc,
+            "pond_steps": pond, "chosen_steps": steps, "episodes_drank": drank,
+            "max_start_hydration_diff": hd}
+
+
 # ----------------------------------------------------------------------------------- main ----
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--skip-gate1", action="store_true", help="development only; never stamps")
+    ap.add_argument("--water", action="store_true",
+                    help="run only the water gate; on a pass write its own stamp _water_pass.json")
     a = ap.parse_args(argv)
     sys.path.insert(0, os.path.join(REG.A_DIR, "studies", "hypervigilance"))
     srcs = {p: sha(os.path.join(ROOT, p)) for p in STAMP_SOURCES}
     h12 = hashlib.sha256(json.dumps(srcs, sort_keys=True).encode()).hexdigest()[:12]
     scratch = os.path.join(BB, "_golden_scratch", h12)
     os.makedirs(scratch, exist_ok=True)
-    print(f"sources hash {h12}; scratch {os.path.relpath(scratch, ROOT)}")
+    print(f"sources hash {h12}; scratch {os.path.relpath(scratch, DATA)}")
     g = Gate()
+    if a.water:
+        rw = water_gate(g, scratch)
+        result = {"date": _dt.datetime.now().isoformat(timespec="seconds"), "head": SW.git_head(),
+                  "sources": srcs, "combined": h12, "water": rw, "checks": g.checks}
+        json.dump(result, open(os.path.join(scratch, "_water_gate_result.json"), "w"), indent=1,
+                  default=str)
+        if not g.ok:
+            print(f"\nWATER GATE FAILED: {[c['check'] for c in g.checks if not c['ok']]}; no stamp written")
+            sys.exit(1)
+        json.dump(result, open(FT.WATER_STAMP, "w"), indent=1, default=str)
+        print(f"\nWATER GATE PASSED -> {FT.WATER_STAMP}")
+        return
     refs = copy_references(g)
     r1 = None if a.skip_gate1 else gate1(g, scratch)
     r2 = gate2(g, scratch)
@@ -406,7 +509,7 @@ def main(argv=None):
         print(f"\nGOLDEN GATE {'NOT RUN IN FULL' if a.skip_gate1 else 'FAILED'}: {bad}; no stamp written")
         sys.exit(1)
     json.dump(result, open(FT.STAMP, "w"), indent=1, default=str)
-    print(f"\nGOLDEN GATE PASSED -> {os.path.relpath(FT.STAMP, ROOT)}")
+    print(f"\nGOLDEN GATE PASSED -> {FT.STAMP}")
 
 
 if __name__ == "__main__":

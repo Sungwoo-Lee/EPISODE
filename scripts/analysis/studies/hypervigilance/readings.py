@@ -57,8 +57,11 @@ INJ_Q_EDGES = [25.0, 50.0, 75.0]            # start-injury quarters (_ladder.INJ
 MIN_WLS_EPISODES = 30
 TERM_STARVED, TERM_KILLED = 2, 4            # core.py termination codes (_ladder.TERM_NAMES)
 A01_FIXED_BINS = (-0.2, 0.6)                # a01 curves.py: bottom < -0.2, top >= 0.6
-HV_ROOT = os.path.join(ROOT, "results", "analysis", "hypervigilance")
-LIVE_LADDER_ROOT = os.path.join(ROOT, "results", "analysis", "ladder")
+# Data location: $BB_DATA_ROOT when set (a worktree without results/; BASIC_BEHAVIOUR_WATER D13),
+# else this checkout. Source hashes and subprocess working directories keep using ROOT.
+DATA_ROOT = os.path.realpath(os.environ["BB_DATA_ROOT"]) if os.environ.get("BB_DATA_ROOT") else ROOT
+HV_ROOT = os.path.join(DATA_ROOT, "results", "analysis", "hypervigilance")
+LIVE_LADDER_ROOT = os.path.join(DATA_ROOT, "results", "analysis", "ladder")
 YARDSTICK = os.path.join(HV_ROOT, "cmp10m", "yardstick.json")
 SWEEP_STAMP = os.path.join(HV_ROOT, "_golden_sweep_pass.json")
 ASSEMBLY_STAMP = os.path.join(HV_ROOT, "_golden_assembly_pass.json")
@@ -195,12 +198,12 @@ def load_population(path: str) -> dict:
                              f"must mark one of them failed")
         seen[k] = c["label"]
         validate_cell(c)
-        if not os.path.exists(os.path.join(ROOT, c["run"], "models", "config.yaml")):
+        if not os.path.exists(os.path.join(DATA_ROOT, c["run"], "models", "config.yaml")):
             raise SystemExit(f"{c['label']}: {c['run']}/models/config.yaml does not exist")
         if not c.get("stores"):
             raise SystemExit(f"{c['label']}: completed but no store")
         for st in c["stores"]:
-            if not os.path.isdir(os.path.join(ROOT, st)):
+            if not os.path.isdir(os.path.join(DATA_ROOT, st)):
                 raise SystemExit(f"{c['label']}: store {st} does not exist")
     labels = [c["label"] for c in done]
     if len(set(labels)) != len(labels):
@@ -210,7 +213,7 @@ def load_population(path: str) -> dict:
 
 def load_cfg(c) -> dict:
     import yaml
-    return yaml.safe_load(open(os.path.join(ROOT, c["run"], "models", "config.yaml")))
+    return yaml.safe_load(open(os.path.join(DATA_ROOT, c["run"], "models", "config.yaml")))
 
 
 # ---------------------------------------------------------------------------------- check ----
@@ -228,7 +231,7 @@ def check_cell(c) -> dict:
                          f"{spec.layout}")
     lay = ENV.slot_layout(cfg)
     na = lay["n_animal"]
-    f0 = sorted(glob.glob(os.path.join(ROOT, c["stores"][0], "episodes_*.parquet")))
+    f0 = sorted(glob.glob(os.path.join(DATA_ROOT, c["stores"][0], "episodes_*.parquet")))
     if not f0:
         raise SystemExit(f"{c['label']}: no episodes shard in {c['stores'][0]}")
     tb = pq.read_table(f0[0], columns=["animal_active", "animal_property_sampled"])
@@ -250,7 +253,7 @@ def check_cell(c) -> dict:
                        if len(v) else None,
                        "total_mean": float(spec.intensity(v).mean()) if len(v) else None}
     return {"label": c["label"], "layout": spec.layout, "channels": list(spec.channels),
-            "non_emitting_channels_zero": True, "shard": os.path.relpath(f0[0], ROOT),
+            "non_emitting_channels_zero": True, "shard": os.path.relpath(f0[0], DATA_ROOT),
             "empirical_means": means}
 
 

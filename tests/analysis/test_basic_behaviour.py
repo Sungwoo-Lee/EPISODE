@@ -26,7 +26,12 @@ import screen as SC                                                     # noqa: 
 RUNS = {"a01": ("results/JAX_RecurrentPPO/20260810-185749_rppo_restprem_a01_n106", "results/trajectories"),
         "hv1ch": ("results/JAX_RecurrentPPO/20261001-002402_rppo_hv1ch_t1none_s42", "results/trajectories_hvsmell"),
         "hv1chm": ("results/JAX_RecurrentPPO/20261001-002455_rppo_hv1chm_t1none_s42", "results/trajectories_hvsmell"),
-        "hv2ch": ("results/JAX_RecurrentPPO/20261001-002435_rppo_hv2ch_t1none_s43", "results/trajectories_hvsmell")}
+        "hv2ch": ("results/JAX_RecurrentPPO/20261001-002435_rppo_hv2ch_t1none_s43", "results/trajectories_hvsmell"),
+        # thirst task (BASIC_BEHAVIOUR_WATER): a 10x10 and a 20x20 world with water
+        "g10sW": ("results/JAX_RecurrentPPO/20261002_012801_rppo_thirst_g10sW_t1none_s42",
+                  "results/trajectories_thirst_task"),
+        "g20sW": ("results/JAX_RecurrentPPO/20261002_012738_rppo_thirst_g20sW_t1none_s42",
+                  "results/trajectories_thirst_task")}
 LEGACY_A01 = ["start_injury", "start_nutrition", "n_predators", "n_rabbits", "n_bushes", "n_rocks",
               "n_food", "n_ambush_predators", "spawn_dist_to_bush", "pred_detection_range",
               "pred_attack_delay", "pred_attack_range", "pred_max_stamina", "pred_smell_predatorness",
@@ -36,11 +41,11 @@ LEGACY_A01 = ["start_injury", "start_nutrition", "n_predators", "n_rabbits", "n_
 
 def load(world):
     run, root = RUNS[world]
-    p = os.path.join(ROOT, run, "models", "config.yaml")
+    p = os.path.join(REG.DATA_ROOT, run, "models", "config.yaml")      # $BB_DATA_ROOT in a worktree
     if not os.path.exists(p):
         pytest.skip(f"{p} not present")
     cfg = yaml.safe_load(open(p))
-    man = json.load(open(glob.glob(os.path.join(ROOT, root, os.path.basename(run), "*", "*",
+    man = json.load(open(glob.glob(os.path.join(REG.DATA_ROOT, root, os.path.basename(run), "*", "*",
                                                 "_manifest.json"))[0]))
     return cfg, man
 
@@ -338,3 +343,179 @@ def test_data_table_requires_reason_and_merges_identical_rows():
     rows[0]["note"] = ""
     with pytest.raises(SystemExit, match="gives no reason"):
         BP.data_table("x", rows)
+
+
+# ------------------------------------------------------------------- water (BASIC_BEHAVIOUR_WATER) ----
+def describe_water(cfg, man):
+    params = REG.rebuild_params(cfg)
+    obs = REG.obs_indices(cfg, man, params)
+    thermo = REG.thermal_info(cfg, params) if cfg["thermal"]["enabled"] else None
+    T = REG.targets(cfg, man, ["agent_in_bush", "ate_food", "obs_true"], obs, thermo)
+    F = REG.factors(cfg, man, obs, thermo)
+    REG.add_thermal_consequence(F, T["warm_cell"]["available"])
+    REG.add_water_factors(F, cfg, T)
+    return params, obs, thermo, T, F
+
+
+def test_water_audit_claims_every_draw():
+    """Test 1: water draws are claimed (W1, W2); start_hydration_low/_high is looked up in the water
+    block (on the pre-water code it was stamped 'not a draw' via body.random_start_hydration)."""
+    cfg, man = load("g10sW")
+    _, _, thermo, _, F = describe_water(cfg, man)
+    rows = {r["path"]: r for r in REG.audit(cfg, F, thermo)}
+    assert REG.unhandled(list(rows.values())) == []
+    assert rows["water.random_start_hydration"]["claimed_by"] == "handler W1 (start_hydration)"
+    assert rows["water.start_hydration_low/_high"]["claimed_by"] == "handler W1 (start_hydration)"
+    assert rows["water.placement"]["claimed_by"].startswith("handler W2 (pond_corner")
+    c1 = copy.deepcopy(cfg)
+    c1["water"]["candidates"] = c1["water"]["candidates"][:1]
+    r1 = {r["path"]: r for r in REG.audit(c1, F, thermo)}
+    assert r1["water.placement"]["claimed_by"].startswith("not a draw")
+    c2 = copy.deepcopy(cfg)
+    c2["water"]["random_start_hydration"] = False
+    r2 = {r["path"]: r for r in REG.audit(c2, F, thermo)}
+    assert r2["water.start_hydration_low/_high"]["claimed_by"] == \
+        "not a draw (random_start_hydration is false)"
+    # a world without water: identical rows, with or without a disabled water block
+    cfg, man = load("a01")
+    _, _, _, Fa = describe(cfg, man)
+    base = REG.audit(cfg, Fa, None)
+    c3 = copy.deepcopy(cfg)
+    c3["water"] = copy.deepcopy(c1["water"]) | {"enabled": False}
+    assert REG.audit(c3, Fa, None) == base
+    assert not any(r["path"].startswith("water") for r in base)
+
+
+def test_hydration_index_by_name_not_alphabetical():
+    """Test 2: the Hydration slot comes from the observation order, not the manifest's sorted keys."""
+    cfg, man = load("g10sW")
+    _, obs, _, _, _ = describe_water(cfg, man)
+    assert obs["hydration"] == obs["order"].index("Hydration") == 2
+    assert obs["alphabetical_hydration"] == 7 != obs["hydration"]
+    assert obs["hydration_scale"] == float(cfg["water"]["max_hydration"])
+    cfg, man = load("hv1ch")                        # no water: no hydration keys at all
+    obs, _, _, _ = describe(cfg, man)
+    assert "hydration" not in obs
+
+
+def test_pond_replay_corner_and_cells():
+    """Test 3: every replayed pond is one table row; cells inside the grid; 4x4 = 16 distinct cells."""
+    for world, n_cells in (("g10sW", 4), ("g20sW", 16)):
+        cfg, _ = load(world)
+        params = REG.rebuild_params(cfg)
+        R = REG.pond_cells(params, np.arange(1000000, 1000050))
+        H, W = R["H"], R["W"]
+        assert R["water_pos"].shape == (50, n_cells, 2)
+        assert ((R["water_pos"] >= 0).all() and (R["water_pos"][..., 0] < H).all()
+                and (R["water_pos"][..., 1] < W).all())
+        for i in range(50):
+            assert len({tuple(x) for x in R["water_pos"][i]}) == n_cells
+            flat = R["water_pos"][i, :, 0] * W + R["water_pos"][i, :, 1]
+            assert set(np.flatnonzero(R["masks"][R["corner"][i]])) == set(flat.tolist())
+        assert len(set(R["corner"].tolist())) > 1           # 50 draws over 4 corners
+
+
+def test_hydration_band_edge_guard():
+    """Test 4: a float32 round-trip of an edge value stays in the band of the true value."""
+    true100 = float(np.float32(100.0 / 200.0 - 1e-7) * 200.0)       # 99.99998
+    assert REG.hyd_band(np.array([100.0, true100, 49.99996, 150.0, 0.0, 200.0])).tolist() == \
+        [2, 2, 1, 3, 0, 3]
+
+
+def test_term_names_cover_water_codes():
+    """Test 5: codes 1-7 for populations with water; 1-5 otherwise (other pages unchanged)."""
+    sys.path.insert(0, BB)
+    import _fig as FG
+    assert sorted(FG.term_names([{"inv": {"water": {}}}])) == [1, 2, 3, 4, 5, 6, 7]
+    assert sorted(FG.term_names([{"inv": {}}])) == [1, 2, 3, 4, 5]
+
+
+def test_pond_target_availability():
+    """Test 6: pond available on a water world; unavailable with a reason at float16; absent without water."""
+    cfg, man = load("g10sW")
+    params, obs, thermo, T, F = describe_water(cfg, man)
+    assert T["pond"]["available"] and T["pond"]["reason"] is None
+    names = [f["name"] for f in F]
+    assert names[-4:] == ["start_hydration", "spawn_dist_to_pond", "mean_hydration", "frac_time_on_pond"]
+    m16 = dict(man, obs_precision="float16")
+    T16 = REG.targets(cfg, m16, ["agent_in_bush", "ate_food", "obs_true"], obs, thermo)
+    assert not T16["pond"]["available"] and "float16" in T16["pond"]["reason"]
+    F16 = REG.factors(cfg, m16, obs, thermo)
+    REG.add_water_factors(F16, cfg, T16)
+    assert not any(f["name"] in ("start_hydration", "frac_time_on_pond") for f in F16)
+    cfg, man = load("hv1ch")
+    _, _, T, _ = describe(cfg, man)
+    assert "pond" not in T
+
+
+def test_make_population_cell_split(tmp_path):
+    """D11: the Cell column splits on a middle dot ('1ch · ordinary') or a space ('g10sW ordinary')."""
+    sys.path.insert(0, os.path.join(ROOT, "scripts", "analysis", "studies", "hypervigilance"))
+    import make_population as MP
+    md = tmp_path / "study.md"
+    md.write_text("## 9. Launch Manifest\n\n"
+                  "| Run | Status | Cell | Tag (= wandb-name) | Seed | Log path |\n"
+                  "|---|---|---|---|---|---|\n"
+                  "| 1 | planned | g10sW ordinary | `rppo_thirst_g10sW_t1none_s42` | 42 | - |\n"
+                  "| 2 | planned | g20s3 modulated | `rppo_thirst_g20s3_t16quad_s42` | 42 | - |\n"
+                  "| 3 | planned | 1ch · ordinary | `rppo_hv1ch_t1none_s42` | 42 | - |\n"
+                  "| 4 | planned | g10sW  ·  modulated x | `t` | 42 | - |\n")
+    with pytest.raises(SystemExit):
+        MP.from_study_doc(str(md), ["results/none"])
+    md.write_text("\n".join(md.read_text().splitlines()[:-1]) + "\n")
+    got = [(c["world"], c["agent"], c["label"]) for c in MP.from_study_doc(str(md), ["results/none"])]
+    assert got == [("g10sW", "t1none", "g10sW_t1none_s42_1"), ("g20s3", "t16quad", "g20s3_t16quad_s42_2"),
+                   ("hv1ch", "t1none", "hv1ch_t1none_s42_3")]
+
+
+# --------------------------------------------------------- probe scenes with a pond (Revision 2) ----
+def _synthetic_episode(bush_flags, pond_flags, hyd):
+    bush, pond, away = (4, 1), (7, 7), (4, 4)
+    snaps = []
+    for b, p in zip(bush_flags, pond_flags):
+        pos = bush if b else (pond if p else away)
+        snaps.append({"agent_pos": np.array(pos), "obs_pos": [np.array(bush)], "animal_pos": [],
+                      "injury_level": 0.0})
+    return {"snapshots": snaps}, np.asarray(pond_flags, bool), np.asarray(hyd, float)
+
+
+def test_prepond_truncation():
+    """Test 8: no pond step -> equals episode_measures' bush_hiding; first pond step at k -> mean of
+    the bush flags over 0..k-1; a hydration rise off the pond is an integrity failure."""
+    import probe_pond as PP
+    bush = [0, 1, 1, 1, 0, 0, 1, 1, 0, 0]
+    ep, on, _ = _synthetic_episode(bush, [0] * 10, [150 - 0.625 * i for i in range(10)])
+    share, k = PP.prepond(np.array(bush, bool), on)
+    assert k == 10 and share == PP.episode_measures(ep)["bush_hiding"]
+    pond = [0, 0, 0, 0, 0, 1, 1, 0, 0, 0]
+    bush2 = [0, 1, 1, 1, 0, 0, 0, 1, 0, 0]
+    hyd = [150.0]
+    for p in pond[1:]:
+        hyd.append(hyd[-1] + (5.0 if p else -0.625))
+    share, k = PP.prepond(np.array(bush2, bool), np.array(pond, bool))
+    assert k == 5 and share == pytest.approx(np.mean(bush2[:5]))
+    assert PP.integrity(np.array(pond, bool), np.array(hyd)) == []
+    bad = list(hyd)
+    bad[3] = bad[2] + 1.0                     # hydration rose while off the pond
+    assert PP.integrity(np.array(pond, bool), np.array(bad)) == [3]
+
+
+def test_calibration_rule_branches():
+    """Test 9: lowest qualifying S; fallback 1 (lowest worse-world P_visit with P_od ok); fallback 2."""
+    import probe_pond as PP
+    T = lambda pv, po: {"g10sW": {"P_visit": pv[0], "P_od": po[0]}, "g20sW": {"P_visit": pv[1], "P_od": po[1]}}
+    c = PP.choose({150: T((0.25, 0.1), (0, 0)), 165: T((0.18, 0.2), (0.01, 0)), 180: T((0.1, 0.1), (0, 0))})
+    assert c["S"] == 165 and c["branch"].startswith("rule")
+    c = PP.choose({150: T((0.4, 0.3), (0, 0)), 165: T((0.3, 0.35), (0, 0)), 180: T((0.1, 0.1), (0.05, 0))})
+    assert c["S"] == 165 and "FALLBACK 1" in c["branch"]          # worse-world 0.40 vs 0.35; 180 fails P_od
+    c = PP.choose({150: T((0.4, 0.3), (0.03, 0)), 165: T((0.3, 0.3), (0.05, 0)), 180: T((0.1, 0.1), (0.1, 0))})
+    assert c["S"] == 150 and "FALLBACK 2" in c["branch"]
+
+
+def test_collate_tolerance_matches_4_decimal_csv():
+    """R2-1: the driver CSV is rounded to 4 decimals, so a mean like 0.123456 must pass against
+    '0.1235' and a real disagreement must not."""
+    import probe_pond as PP
+    m = 0.123456
+    assert abs(m - float(f"{m:.4f}")) <= PP.CSV_TOL
+    assert abs(m - 0.1236) > PP.CSV_TOL

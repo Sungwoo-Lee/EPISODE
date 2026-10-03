@@ -35,8 +35,9 @@ import registry as REG                                                  # noqa: 
 ROOT, A_DIR = REG.ROOT, REG.A_DIR
 from hiding_drivers import quasi_binomial_fit                           # noqa: E402
 
-BB_ROOT = os.path.join(ROOT, "results", "analysis", "basic_behaviour")
+BB_ROOT = REG.BB_ROOT                     # under $BB_DATA_ROOT/.../_water_dev when that is set
 STAMP = os.path.join(BB_ROOT, "_golden_pass.json")
+WATER_STAMP = os.path.join(BB_ROOT, "_water_pass.json")      # BASIC_BEHAVIOUR_WATER Gates
 FIT_SOURCES = ["scripts/analysis/basic_behaviour/registry.py",
                "scripts/analysis/basic_behaviour/sweep.py",
                "scripts/analysis/basic_behaviour/fit.py",
@@ -275,8 +276,18 @@ def multivariate(cell: Cell, target: str, pf: dict, arrays=None):
 
 
 # ------------------------------------------------------------------------------------ stamp ----
-def require_stamp():
+def require_stamp(water: bool = False):
+    """The golden stamp on the current sources; with water=True also the water gate's own stamp."""
     import hashlib
+    if water:
+        if not os.path.exists(WATER_STAMP):
+            raise SystemExit(f"water stamp missing: {WATER_STAMP}\n  run golden_gate.py --water first")
+        ws = json.load(open(WATER_STAMP))
+        bad = [p for p in FIT_SOURCES if ws["sources"].get(p) !=
+               hashlib.sha256(open(os.path.join(ROOT, p), "rb").read()).hexdigest()]
+        if bad:
+            raise SystemExit("sources changed since the water gate passed -- re-run golden_gate.py "
+                             "--water:\n  " + "\n  ".join(bad))
     if not os.path.exists(STAMP):
         raise SystemExit(f"golden stamp missing: {STAMP}\n  run golden_gate.py first")
     st = json.load(open(STAMP))
@@ -331,6 +342,11 @@ def main(argv=None):
             print(f"{lab}: not swept yet -- skipped")
             continue
         inv = json.load(open(os.path.join(a.out_root, lab, "inventory.json")))
+        if "water" in inv:
+            require_stamp(water=True)       # populations with water also need the water gate
+        if a.target not in inv["targets"]:
+            print(f"{lab}: {a.target} does not exist in this world -- skipped")
+            continue
         if not inv["targets"][a.target]["available"]:
             print(f"{lab}: {a.target} unavailable ({inv['targets'][a.target]['reason']}) -- skipped")
             continue
