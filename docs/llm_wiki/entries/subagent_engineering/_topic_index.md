@@ -6,8 +6,8 @@
 > To improve a row, set a `headline:` field on the entry itself.
 
 **Folder definition**: Subagent + worktree usage gotchas
-**Insights**: 23
-**Last updated**: 2026-09-09
+**Insights**: 24
+**Last updated**: 2026-10-03
 
 ---
 
@@ -15,6 +15,7 @@
 
 | Date | Time | ID | Summary |
 |---|---|---|---|
+| 2026-10-03 | 07:50 | [20261003_0750_plumbing_commit_partial_index_deletes_tree](20261003_0750_plumbing_commit_partial_index_deletes_tree.md) | A sub-agent that built a commit by hand from a temporary git index holding only its one edited file produced a commit recording 5,437 track… |
 | 2026-09-09 | 14:04 | [20260909_1404_verify_handover_claims_against_code](20260909_1404_verify_handover_claims_against_code.md) | A handover note written by the session that did the work was wrong about the codebase in three of its six bug claims and in its central dia… |
 | 2026-07-28 | 16:47 | [20260728_1647_agent_jargon_rename_vs_gloss_drift_check](20260728_1647_agent_jargon_rename_vs_gloss_drift_check.md) | Replaced software jargon across all agent profiles with plain words (blocker/concern/nit -> Critical/Moderate/Low; pre-mortem, blast radius… |
 | 2026-07-28 | 16:45 | [20260728_1645_agent_model_tiering_fable_reviewers_no_sonnet](20260728_1645_agent_model_tiering_fable_reviewers_no_sonnet.md) | Team re-tiered to 10 Fable / 11 Opus with Sonnet retired entirely: all four reviewers plus the six professors run on Fable, while orchestra… |

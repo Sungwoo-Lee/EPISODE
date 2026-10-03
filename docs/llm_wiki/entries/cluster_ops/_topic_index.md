@@ -6,8 +6,8 @@
 > To improve a row, set a `headline:` field on the entry itself.
 
 **Folder definition**: Lab cluster ops and env mgmt
-**Insights**: 46
-**Last updated**: 2026-09-09
+**Insights**: 49
+**Last updated**: 2026-10-03
 
 ---
 
@@ -15,6 +15,9 @@
 
 | Date | Time | ID | Summary |
 |---|---|---|---|
+| 2026-10-03 | 08:00 | [20261003_0800_collection_failed_cells_counted_as_claimed](20261003_0800_collection_failed_cells_counted_as_claimed.md) | Two trajectory-collection cells failed on node 114 because its conda env lacks pyarrow, and launch_collection.py then counted them as finis… |
+| 2026-10-03 | 07:54 | [20261003_0754_nas_read_throughput_full_store_validation_infeasible](20261003_0754_nas_read_throughput_full_store_validation_infeasible.md) | Reading the 18 thirst trajectory stores (~700 GB) from this container ran at only 5–10 MB/s per process, so the collection tool's full vali… |
+| 2026-10-03 | 07:52 | [20261003_0752_nas_slow_commit_breaks_stale_lock_rule](20261003_0752_nas_slow_commit_breaks_stale_lock_rule.md) | On a heavily loaded NAS a live git commit held index.lock for over 25 minutes, so the project's 'empty and older than 10 minutes means stal… |
 | 2026-09-09 | 14:03 | [20260909_1403_cpu_pin_directory_conftest_not_repo_wide](20260909_1403_cpu_pin_directory_conftest_not_repo_wide.md) | The CPU backend for tests/env is pinned by a directory conftest, not a repo-wide setting: a repo-wide pin would make test_gpu_buffer.py sil… |
 | 2026-08-19 | 19:44 | [20260819_1944_run_command_parallel_race_and_remote_pkill_self_kill](20260819_1944_run_command_parallel_race_and_remote_pkill_self_kill.md) | run_command.py is NOT safe to invoke concurrently: five parallel calls to five different nodes all returned node 112's two PIDs (532510/532… |
 | 2026-08-18 | 16:21 | [20260818_1621_wandb_log_code_walks_whole_repo](20260818_1621_wandb_log_code_walks_whole_repo.md) | wandb.run.log_code('.') walked the ENTIRE repo before every training run: wandb's filtered_dir() iterates os.walk(root) and DISCARDS the di… |

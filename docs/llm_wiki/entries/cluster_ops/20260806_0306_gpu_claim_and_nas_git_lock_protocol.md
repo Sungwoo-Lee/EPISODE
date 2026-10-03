@@ -56,4 +56,6 @@ Three operational lessons came out of running seven long GPU jobs across three n
 ## Backlinks
 - [[20260818_1621_wandb_log_code_walks_whole_repo]] (cluster_ops, 2026-08-18) — wandb.run.log_code('.') walked the ENTIRE repo before every training run: wandb'
 - [[20260819_1944_run_command_parallel_race_and_remote_pkill_self_kill]] (cluster_ops, 2026-08-19) — run_command.py is NOT safe to invoke concurrently: five parallel calls to five d
+- [[20261003_0750_plumbing_commit_partial_index_deletes_tree]] (subagent_engineering, 2026-10-03) — A sub-agent that built a commit by hand from a temporary git index holding only 
+- [[20261003_0752_nas_slow_commit_breaks_stale_lock_rule]] (cluster_ops, 2026-10-03) — On a heavily loaded NAS a live git commit held index.lock for over 25 minutes, s
 <!-- END BACKLINKS -->
