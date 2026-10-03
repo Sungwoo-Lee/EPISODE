@@ -137,7 +137,7 @@ def ordered(values, order):
 
 
 FACTORIAL_RE = re.compile(r"^g(?P<size>\d+)s(?P<reach>[W\d]+)$")
-REACH_SHADE = {"W": 0.0, "5": 0.4, "3": 0.68}     # mix toward the page ground: whole map, 5, 3 squares
+REACH_SHADE = {"W": 0.0, "5": 0.33, "3": 0.55}     # mix toward the page ground: whole map, 5, 3 squares
 REACH_NAME = {"W": "smell across the map", "5": "smell reach 5 squares", "3": "smell reach 3 squares"}
 
 
@@ -277,6 +277,13 @@ def legend_handles(D: dict, extra=()):
                for a in D["agents"]]
         for marker, label in extra:
             hs.append(Line2D([], [], ls="", marker=marker, ms=11, mew=2.2, color=H.INK, label=label))
+        ncol = legend_ncol(D)
+        if len(hs) == 2 * ncol and len(sizes) == len(reaches) == ncol - 1:
+            # matplotlib fills legend columns first: interleave so row 1 = map sizes + first agent,
+            # row 2 = smell-reach shades + second agent (the three hues stay together)
+            row1 = hs[:len(sizes)] + [hs[2 * len(sizes)]]
+            row2 = hs[len(sizes):2 * len(sizes)] + [hs[2 * len(sizes) + 1]]
+            hs = [h for pair in zip(row1, row2) for h in pair]
         return hs
     hs = [Line2D([], [], ls="", marker="o", ms=8, color=D["colour"][w], label=wlabel(w))
           for w in D["worlds"]]

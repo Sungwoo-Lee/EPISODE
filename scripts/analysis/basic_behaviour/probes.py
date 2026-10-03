@@ -344,7 +344,7 @@ def main(argv=None):
     budget_refused = None
     if min(per_world.values()) < 2:            # D12 (iv): the seed-to-seed budget needs >= 2 runs
         budget_refused = (f"worlds with fewer than 2 runs per agent: the seed-to-seed variance budget "
-                          f"(7e) cannot be computed ({ {f'{w}/{g}': n for (w, g), n in per_world.items()} })")
+                          f"cannot be computed ({'; '.join(f'{w} / {g}: {n} run(s)' for (w, g), n in per_world.items())})")
     elif any(w not in ("hv2ch", "hv1ch", "hv1chm") for w, _ in per_world):
         budget_refused = "this population declares no world contrasts"
     WS = world_summary(R) if budget_refused is None else pd.DataFrame(

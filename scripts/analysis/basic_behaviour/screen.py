@@ -145,8 +145,10 @@ def design(runs: list[dict]) -> dict:
     n = {c: sum(1 for r in runs if (r["world"], r["agent"]) == c) for c in cells}
     short = [c for c, k in n.items() if k < 2]
     return {"cells": cells, "n": n, "N": len(runs), "df": len(runs) - len(cells),
-            "refuse": (f"cells with fewer than 2 completed runs: {short} -- the seed-to-seed SD is "
-                       f"undefined, so the run-level screening cannot be computed") if short else None}
+            "refuse": (f"{len(short)} of {len(cells)} world x agent cells have fewer than 2 completed runs "
+                       f"({'; '.join(f'{w} / {a}' for w, a in short)}), so the standard deviation between "
+                       f"training seeds is undefined and the run-level screening cannot be computed")
+            if short else None}
 
 
 def tcdf2(t, df):

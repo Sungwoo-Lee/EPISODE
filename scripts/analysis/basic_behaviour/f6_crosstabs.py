@@ -102,10 +102,12 @@ def main(argv=None):
         ax = fig.add_subplot(gs[k // 3, k % 3])
         V = vals[g].reshape(4, 4)
         im = ax.imshow(V, cmap=cm, vmin=lo, vmax=hi, origin="upper", aspect="auto")
+        nn = heat[g][1].reshape(4, 4)
+        fmt = cell_format(V, nn) if water else ".0f"
         for i in range(4):
             for j in range(4):
-                n = heat[g][1].reshape(4, 4)[i, j]
-                ax.text(j, i, f"{V[i, j]:.0f}" if n > 0 else "-", ha="center", va="center",
+                n = nn[i, j]
+                ax.text(j, i, f"{V[i, j]:{fmt}}" if n > 0 else "-", ha="center", va="center",
                         fontsize=H.FS_LABEL, color=H.INK, path_effects=H.halo())
         ax.set_xticks(range(4)); ax.set_xticklabels(NUT, fontsize=H.FS_LABEL)
         ax.set_yticks(range(4)); ax.set_yticklabels(INJ, fontsize=H.FS_LABEL)
@@ -169,6 +171,13 @@ def main(argv=None):
     FG.save(fig, a.fig_dir, stem)
 
 
+def cell_format(V, n):
+    """Decimals for a heat map's cell labels: one when the panel's values span less than 10 points
+    (small shares such as pond arrivals would otherwise all print 0-3), none otherwise."""
+    v = V[n > 0]
+    return ".1f" if v.size and (v.max() - v.min()) < 10 else ".0f"
+
+
 def hydration_maps(fig, gs, groups, hheat, r0, nrow, cm, onset, H):
     """D8: share of chosen steps by hydration band x nutrition band, both one step earlier, per world
     x agent; for the pond, the bout-onset rate (steps off the pond one step earlier only)."""
@@ -190,7 +199,7 @@ def hydration_maps(fig, gs, groups, hheat, r0, nrow, cm, onset, H):
         im = ax.imshow(V, cmap=cm, vmin=lo, vmax=hi, origin="upper", aspect="auto")
         for i in range(4):
             for j in range(4):
-                ax.text(j, i, f"{V[i, j]:.0f}" if n[i, j] > 0 else "-", ha="center", va="center",
+                ax.text(j, i, f"{V[i, j]:{cell_format(V, n)}}" if n[i, j] > 0 else "-", ha="center", va="center",
                         fontsize=H.FS_LABEL, color=H.INK, path_effects=H.halo())
         ax.set_xticks(range(4)); ax.set_xticklabels(NUT, fontsize=H.FS_LABEL)
         ax.set_yticks(range(4)); ax.set_yticklabels(HYD, fontsize=H.FS_LABEL)
