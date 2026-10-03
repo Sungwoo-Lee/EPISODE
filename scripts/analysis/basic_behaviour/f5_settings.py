@@ -15,6 +15,7 @@ Plan: BASIC_BEHAVIOUR_ANALYSIS_PIPELINE.md (Revision 2), A7, B5, Figure scripts,
 """
 from __future__ import annotations
 
+import json
 import os
 import sys
 
@@ -42,6 +43,9 @@ def main(argv=None):
     import matplotlib.pyplot as plt
     D = FG.load_outputs(a.population, a.out_root)
     sd = os.path.join(a.out_root, "screen", a.target)
+    pj = os.path.join(sd, "prefit.json")
+    if os.path.exists(pj) and "refused" in json.load(open(pj)):        # screen.py refused by design
+        raise SystemExit(f"screen.py refused {a.target}: {json.load(open(pj))['refused']}")
     for f in ("per_run.csv", "cells.csv", "contrasts.csv", "variance.csv"):
         if not os.path.exists(os.path.join(sd, f)):
             raise SystemExit(f"no {sd}/{f} -- run screen.py --target {a.target}")

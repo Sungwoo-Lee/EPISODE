@@ -519,3 +519,32 @@ def test_collate_tolerance_matches_4_decimal_csv():
     m = 0.123456
     assert abs(m - float(f"{m:.4f}")) <= PP.CSV_TOL
     assert abs(m - 0.1236) > PP.CSV_TOL
+
+
+def test_sweep_hard_stop_on_hydration_rise_off_pond():
+    """d9 review N5: one injected row where hydration rose while the agent was off the pond is
+    counted by the sweep's own per-step check, and the sweep's hard stop then refuses the store."""
+    import sweep as SW
+    # two episodes of 4 rows each (t = 0..3); the agent is on the pond at episode 0, t = 2 only
+    on = np.array([0, 0, 1, 0, 0, 0, 0, 0], bool)
+    hyd = np.array([100, 99.375, 104.375, 103.75, 150, 149.375, 148.75, 148.125])
+    t = np.array([0, 1, 2, 3, 0, 1, 2, 3])
+    idx = np.flatnonzero(t >= 1)
+    prev = idx - 1
+    assert SW.pond_step_exceptions(on, hyd, idx, prev) == 0
+    WC = {"episodes_checked": 2, "start_cell_mismatches": 0, "steps_checked": 6, "step_exceptions": 0,
+          "reset_hydration_max_abs_diff": 0.0}
+    SW.require_water_checks(WC, 2, 6)                       # clean store passes
+    bad = hyd.copy()
+    bad[6] = bad[5] + 1.0                                   # hydration rose off the pond (episode 1, t = 2)
+    n = SW.pond_step_exceptions(on, bad, idx, prev)
+    assert n == 1
+    with pytest.raises(SystemExit, match="water integrity checks failed"):
+        SW.require_water_checks(dict(WC, step_exceptions=n), 2, 6)
+
+
+def test_pond_replay_refuses_seeds_past_32_bits():
+    """d9 review N3: PRNGKey truncates seeds to 32 bits; the replay refuses rather than mismatch."""
+    cfg, _ = load("g10sW")
+    with pytest.raises(SystemExit, match=r"outside \[0, 2\*\*31\)"):
+        REG.pond_cells(REG.rebuild_params(cfg), [2 ** 31 + 5])

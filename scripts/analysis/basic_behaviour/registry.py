@@ -268,6 +268,10 @@ def pond_cells(params, seeds) -> dict:
     import jax
     from src.environment.core import jax_reset
     seeds = np.asarray(seeds, dtype=np.int64)
+    # PRNGKey takes a 32-bit seed (jax x64 is off): a larger seed would be truncated silently and the
+    # replayed pond would belong to another episode (d9 review N3)
+    if len(seeds) and (seeds.min() < 0 or seeds.max() >= 2 ** 31):
+        raise SystemExit(f"pond replay: episode seeds outside [0, 2**31): {seeds.min()}..{seeds.max()}")
     f = jax.jit(lambda s: (lambda st: (st.water_pos, st.agent_pos, st.hydration))(
         jax.vmap(jax_reset, in_axes=(None, 0))(params, jax.vmap(jax.random.PRNGKey)(s))))
     wp, ap, hy = [], [], []

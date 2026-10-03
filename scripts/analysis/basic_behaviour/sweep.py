@@ -344,7 +344,7 @@ def aggregate(stores, d: dict, verbose=True) -> tuple[dict, dict]:
             WC["reset_hydration_max_abs_diff"] = max(WC["reset_hydration_max_abs_diff"], float(
                 np.abs(hyd[st] - PR["hydration"][gidx]).max()))
             WC["steps_checked"] += len(idx)
-            WC["step_exceptions"] += int((on[idx] != (hyd[idx] > hyd[prev])).sum())
+            WC["step_exceptions"] += pond_step_exceptions(on, hyd, idx, prev)
             G["y_pond"][gidx] += bc(on[m].astype(float))
             G["hyd0"][gidx] = hyd[st]
             G["hyd_sum1"][gidx] += bc(hyd[m])
@@ -384,12 +384,23 @@ def aggregate(stores, d: dict, verbose=True) -> tuple[dict, dict]:
         assert XT["hyd_nut_trials"].sum() == G["n_steps"].sum()
         WC["episodes_expected"] = int(nep)
         d["water_checks"] = WC
-        bad = (WC["episodes_checked"] != nep or WC["start_cell_mismatches"] or WC["step_exceptions"]
-               or WC["steps_checked"] != int(G["n_steps"].sum())
-               or WC["reset_hydration_max_abs_diff"] > 1e-4)
-        if bad:
-            raise SystemExit(f"water integrity checks failed (D3): {WC}")
+        require_water_checks(WC, nep, int(G["n_steps"].sum()))
     return dict(**E, **G, IB=IB, NB=NB, traits=traits), XT
+
+
+def pond_step_exceptions(on, hyd, idx, prev) -> int:
+    """D3 per-step check: rows t >= 1 (idx) where [on a pond cell at t] disagrees with
+    [hydration(t) > hydration(t-1)] (prev = the row t-1 of the same episode)."""
+    return int((on[idx] != (hyd[idx] > hyd[prev])).sum())
+
+
+def require_water_checks(WC: dict, nep: int, n_steps: int) -> None:
+    """The sweep's hard stop on the D3 counts (every episode and every chosen step checked, zero
+    start-cell mismatches, zero step exceptions, reset hydration within 1e-4)."""
+    bad = (WC["episodes_checked"] != nep or WC["start_cell_mismatches"] or WC["step_exceptions"]
+           or WC["steps_checked"] != n_steps or WC["reset_hydration_max_abs_diff"] > 1e-4)
+    if bad:
+        raise SystemExit(f"water integrity checks failed (D3): {WC}")
 
 
 def factor_arrays(A: dict, d: dict) -> dict:
