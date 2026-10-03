@@ -35,6 +35,13 @@ td.nw { white-space:nowrap; }
   turns what it senses into a move. The <strong>modulated agent</strong> has, in addition, a small
   second network that reads the body's state and adjusts how the main network works &mdash; a rough model
   of how chemicals such as noradrenaline change how the brain processes the same input.</p>
+  <h4>The levels</h4>
+  <p>Agents are trained on a ladder of worlds called <strong>levels</strong>. Each level keeps everything
+  from the one below it and adds something new, so a level-05 agent has met every challenge of levels 00 to
+  04 plus the cold. The table shows what is switched on at each level today, read from the level files
+  themselves. Levels were renumbered twice (16 and 30 September), so an older run's level number can
+  mean a slightly different world; the group table below says where that matters.</p>
+  {{TABLE:levels}}
   <h4>The groups of runs</h4>
   <p>The runs come from {{N_FAMILIES}} groups, trained at different times for different questions. The
   last column matters more than it looks: from 22 September on, a rule was added that makes injury heal

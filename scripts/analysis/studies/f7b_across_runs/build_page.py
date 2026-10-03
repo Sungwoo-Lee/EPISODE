@@ -36,7 +36,8 @@ PAGE_DIR = os.path.join(ROOT, "docs/experiments/active/hypervigilance/f7b_across
 FIG_DIR = os.path.join(PAGE_DIR, "figures")
 LEVEL_GROUPS = ["smell", "body", "thirst", "core", "thermal", "injgrid", "core_old", "july"]
 PLAIN = {   # group -> what the agents were trained in, in plain words
-    "July network size": "July runs of curriculum levels 03 and 04 (the July versions of those worlds), each with a "
+    "July network size": "July runs of curriculum levels 03 and 04, as those levels were defined in July (not the "
+                         "table above), each with a "
                          "smaller or larger network inside the agent.",
     "July level-04 variants": "July runs of level 04, each with one or two rules changed: slower movement, a shorter "
                               "predator jump, less damage, slower or faster animals, or combinations.",
@@ -48,14 +49,14 @@ PLAIN = {   # group -> what the agents were trained in, in plain words
                          "animals. Level 04: adds a predator that can jump at the agent.",
     "Blocking-bush training": "The same levels retrained a day later (levels 02 to 06) with new body rules: injury "
                               "heals 25 times faster while the agent sits on a bush, and the body stores twice as much "
-                              "food. Level 05 adds cold and campfires; level 06 here adds noise to the senses.",
+                              "food. Their level 06 is today's level 07 (noise on the senses); the pond level was added later.",
     "Smell study (level 05)": "Level 05 (cold world with campfires) in three versions that differ only in how the "
                               "predator and the rabbit smell: two different smells, one smell differing only in "
                               "strength, or the same mixture of both. Three seeds each.",
     "Body rules (level 05)": "Level 05 with up to four extra body rules switched on: hunger slows healing; healing "
                              "uses up food; staying warm uses up food; less food in the world.",
-    "Thirst task": "Level 05 plus a pond and thirst, on maps of 10, 15 or 20 squares, with smells that carry "
-                   "across the whole map or only 5 or 3 squares.",
+    "Thirst task": "Level 06 (level 05 plus a pond and thirst), on maps of 10, 15 or 20 squares, with smells "
+                   "that carry across the whole map or only 5 or 3 squares.",
 }
 LEVEL_CAP = {
     "smell": "Smell study, level 05: three smell worlds × two agents × three seeds, tested in scenes built on each smell world.",
@@ -75,6 +76,58 @@ def num_text(v):
     if re.fullmatch(r"-0(\.0+)?", t):
         t = t[1:]
     return re.sub(r"(?<![\w.])-(?=\d)", "\u2212", t)
+
+
+LEVEL_FILES = "configs/environment/experiment/basic/0[0-7]-*.yaml"
+
+
+def level_table():
+    """On/off table of the training curriculum, read from the level configs themselves (extends resolved)."""
+    import glob as G
+    sys.path.insert(0, ROOT)
+    from src.environment.config_loader import load_env_config
+    feats = [
+        ("map size (squares)", lambda c, e, b, P, Rb: f"{e['height']}&times;{e['width']}"),
+        ("hidden ambush predators (fixed squares that bite)",
+         lambda c, e, b, P, Rb: any(r.get("type") == "hiding_predator" for r in e.get("resources", []))),
+        ("hunting predator that chases the agent", lambda c, e, b, P, Rb: bool(P)),
+        ("&hellip; moving at full speed (not every third step)",
+         lambda c, e, b, P, Rb: bool(P) and all(np.max(np.atleast_1d(p.get("move_interval", 1))) == 1 for p in P)),
+        ("&hellip; able to jump at the agent from 2&ndash;3 squares",
+         lambda c, e, b, P, Rb: any(np.max(np.atleast_1d(p.get("attack_range", 0))) > 1 for p in P)),
+        ("harmless rabbit", lambda c, e, b, P, Rb: bool(Rb)),
+        ("bush to hide in", lambda c, e, b, P, Rb: any(o.get("name") == "bush" for o in e.get("obstacles", []) or [])),
+        ("random starting hunger and injury", lambda c, e, b, P, Rb: bool(b.get("random_start_injury"))),
+        ("random number of animals each episode",
+         lambda c, e, b, P, Rb: any(x.get("count_high") is not None for x in P + Rb)),
+        ("cold, with campfires to stay warm", lambda c, e, b, P, Rb: bool(c["thermal"]["enabled"])),
+        ("pond and thirst", lambda c, e, b, P, Rb: bool(c["water"]["enabled"])),
+        ("noise on the senses", lambda c, e, b, P, Rb: bool(c["perceptual_noise"]["enabled"])),
+        ("injury heals 25&times; faster on a bush",
+         lambda c, e, b, P, Rb: float(b.get("recovery_in_bush_multiplier", 1)) >= 25),
+    ]
+    files = sorted(G.glob(os.path.join(ROOT, LEVEL_FILES)))
+    if len(files) != 8:
+        raise SystemExit(f"expected 8 curriculum levels, found {len(files)}")
+    cols = []
+    for f in files:
+        c = load_env_config(f).to_dict()
+        e, b = c["environment"], c["body"]
+        ents = e.get("entities", []) or []
+        P = [x for x in ents if x.get("class") == "predator"]
+        Rb = [x for x in ents if x.get("class") == "neutral"]
+        cols.append([fn(c, e, b, P, Rb) for _, fn in feats])
+    head = "".join(f'<th class="n">{os.path.basename(f)[:2]}</th>' for f in files)
+    rows = []
+    for i, (name, _) in enumerate(feats):
+        cells = "".join(
+            f'<td class="n">{v}</td>' if isinstance(v, str) else
+            (f'<td class="n"><b>on</b></td>' if v else '<td class="n" style="color:var(--ink-3)">&ndash;</td>')
+            for v in (col[i] for col in cols))
+        rows.append(f"<tr><td>{name}</td>{cells}</tr>")
+    return ('<p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p><div class="scroll">'
+            '<table class="wide" style="min-width:720px"><thead><tr><th>level</th>' + head + "</tr></thead><tbody>"
+            + "".join(rows) + "</tbody></table></div>")
 
 
 def table(df, cols, heads, num=(), nowrap=(), min_width=720):
@@ -167,6 +220,7 @@ def main(argv=None):
     }
 
     # ---- tables
+    tok["{{TABLE:levels}}"] = level_table()
     pl = []
     for f in FX.FAMILY_ORDER:
         g = R[R.family == f]
