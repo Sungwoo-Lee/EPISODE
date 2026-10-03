@@ -565,7 +565,8 @@ def test_f7_water_figures_on_synthetic_probes(tmp_path):
             for scene, _ in PRB.SCENES:
                 for inj in PRB.INJURIES:
                     comp.append({"label": lab, "scene": scene, "injury": inj, "found": 50, "expected": 50})
-                    for m, v in (("bush_hiding", 30.0), ("pond_visit_share", 60.0), ("n_overdrink", 0.0)):
+                    for m, v in (("bush_hiding", 30.0), ("pond_visit_share", 60.0), ("n_overdrink", 0.0),
+                                 ("n_episodes", 30.0)):
                         rows.append({"label": lab, "world": w, "agent": a, "seed": 42, "kind": "level",
                                      "quantity": f"{m}:{scene}:{inj}", "scene": scene, "injury": inj,
                                      "measure": m, "mean": v, "lo": v - 5, "hi": v + 5})
@@ -579,3 +580,6 @@ def test_f7_water_figures_on_synthetic_probes(tmp_path):
     fig, r2 = F7.fig_pond_window(D, "bush_hiding", "x")
     assert len([r for r in r2 if r["what"].startswith("checkpoints summarised")]) == 9
     assert all(r["used"] == 2 * 12 * 20 for r in r2 if r["what"].startswith("checkpoints summarised"))
+    assert all("(2 runs x 12 scenes)" in r["what"] for r in r2 if r["what"].startswith("checkpoints summarised"))
+    ep = next(r for r in r2 if r["what"].startswith("episodes behind"))
+    assert ep["used"] == 9 * 2 * 12 * 50 * 30 and ep["note"].startswith("30-30")

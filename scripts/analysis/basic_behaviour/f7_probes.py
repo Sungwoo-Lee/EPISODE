@@ -504,13 +504,15 @@ def wlabel_water(w):
 
 
 def water_rows(D, worlds, measure, what):
+    """Data statement rows; every count comes from probes.py's completeness record and series."""
     comp = pd.DataFrame(D["comp"]["rows"])
     runs = {r["label"]: r for r in D["comp"]["runs"]}
     rows = []
     for w in worlds:
         c = comp[comp.label.isin([l for l, r in runs.items() if r["world"] == w])]
         found, exp = int(c.found.sum()), int(c.expected.sum())
-        rows.append({"what": f"{what}, {wlabel_water(w)} (2 runs x 12 scenes)",
+        n_runs, n_scenes = c.label.nunique(), len(c.groupby(["scene", "injury"]))
+        rows.append({"what": f"{what}, {wlabel_water(w)} ({n_runs} runs x {n_scenes} scenes)",
                      "used": int(len(c[c.found >= PR.WINDOW]) * PR.WINDOW) if measure else found,
                      "total": found if measure else exp,
                      "note": ("the newest 20 saved checkpoints of each run and scene; older ones are drawn in "
@@ -519,9 +521,13 @@ def water_rows(D, worlds, measure, what):
         if found < exp:
             rows.append({"what": f"checkpoints evaluated, {wlabel_water(w)}", "used": found, "total": exp,
                          "note": "DRAFT: the sweep has not finished every checkpoint"})
-    rows.append({"what": "episodes behind each checkpoint value", "used": 30, "total": 30,
-                 "note": "30 evaluation episodes per checkpoint and scene; every episode counted, its bush "
-                         "time read up to its first pond step"})
+    S = D["S"]
+    n = S[(S.measure == "n_episodes") & S.label.str.match("|".join(f"{w}_" for w in worlds))]["value"]
+    if not len(n):
+        raise SystemExit("probes series has no n_episodes rows (re-run probes.py on the pond CSVs)")
+    rows.append({"what": "episodes behind the checkpoint values", "used": int(n.sum()), "total": int(n.sum()),
+                 "note": f"{int(n.min())}-{int(n.max())} evaluation episodes per checkpoint and scene; every "
+                         f"episode counted, its bush time read up to its first pond step"})
     return rows
 
 

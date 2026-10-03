@@ -290,7 +290,10 @@ def run_table(D):
 
 
 def water_tokens(D, population, out_root):
-    """The WATER section's tokens, from what the pipeline wrote (never typed)."""
+    """The water sections' tokens, every count and claim from a record the pipeline or the study wrote
+    (guide 11: never typed): the calibration record, the sweep inventories, the population manifest and
+    the study doc's launch-manifest status cells, probes.py's series and refusal records."""
+    import numpy as np
     cal_p = os.path.join(out_root, "probes", "calibration.json")
     if not os.path.exists(cal_p):
         fail(f"water population: no {cal_p} (copy the R2.3 calibration record there)")
@@ -298,25 +301,66 @@ def water_tokens(D, population, out_root):
     if "choice" not in cal:
         fail(f"{cal_p}: the calibration has no choice (it failed its checks)")
     S = cal["choice"]["S"]
+    Skey = f"{float(S):g}"
+    tab = cal["table"]
+    worlds = sorted(next(iter(tab.values())))
     rows = "".join(f"<tr><td class=\"n\">{float(k):g}</td>" + "".join(
         f"<td class=\"n\">{100 * v[w]['P_visit']:.1f}%</td><td class=\"n\">{100 * v[w]['P_od']:.1f}%</td>"
-        for w in sorted(v)) + "</tr>" for k, v in sorted(cal["table"].items(), key=lambda kv: float(kv[0])))
-    worlds = sorted(next(iter(cal["table"].values())))
+        f"<td class=\"n\">{v[w]['n']:,}</td>" for w in worlds) + "</tr>"
+        for k, v in sorted(tab.items(), key=lambda kv: float(kv[0])))
     head = "".join(f"<th class=\"n\">{html.escape(FG.wlabel(w))}: reached the pond</th>"
-                   f"<th class=\"n\">over-drank</th>" for w in worlds)
+                   f"<th class=\"n\">over-drank</th><th class=\"n\">episodes</th>" for w in worlds)
     table = ('<p class="cue" hidden>&larr; scroll sideways</p><div class="scroll"><table class="wide" '
-             'style="min-width:640px"><thead><tr><th class="n">start hydration</th>' + head +
-             f'</tr></thead><tbody>{rows}</tbody></table></div><p>Rule outcome: {html.escape(cal["choice"]["branch"])}.'
-             f' Each cell: 720 episodes (two agents &times; 12 scenes &times; 30), final checkpoints.</p>')
+             'style="min-width:760px"><thead><tr><th class="n">start hydration</th>' + head +
+             f'</tr></thead><tbody>{rows}</tbody></table></div><p>Rule outcome, as recorded: '
+             f'{html.escape(cal["choice"]["branch"])}. Episodes per cell pool both agents\' final checkpoints '
+             'over every scene.</p>')
+    rule_ok = cal["choice"]["branch"].startswith("rule")
+    at_s = "; ".join(f"{html.escape(FG.wlabel(w))}: {100 * tab[Skey][w]['P_visit']:.1f}% of "
+                     f"{tab[Skey][w]['n']:,} episodes reached the pond" for w in worlds)
+    calib = ((f"{float(S):g} met the rule." if rule_ok else
+              f"<strong>No value met the rule</strong>, so a fallback of the rule chose {float(S):g}.")
+             + f" At {float(S):g}: {at_s}. The pond sits at the same distance from the agent in every scene:")
+    r = cal["rule"]
+    cands = [f"{float(x):g}" for x in r["candidates"]]
+    rule_txt = (f"the lowest of {', '.join(cands[:-1])} and {cands[-1]} at which at most "
+                f"{100 * r['P_visit_max']:g}&nbsp;% of episodes reach the pond and at most "
+                f"{100 * r['P_od_max']:g}&nbsp;% die of over-drinking, in each of the {len(worlds)} test worlds.")
+    calib_title = ("Experiment-test scenes: start hydration chosen by the pre-stated rule" if rule_ok else
+                   "Experiment-test scenes: start hydration chosen by a fallback of the pre-stated rule")
     wc = [c["inv"]["water_checks"] for c in D["cells"] if c["inv"].get("water_checks")]
     exc = sum(w["step_exceptions"] + w["start_cell_mismatches"] for w in wc)
     checks = (f"{sum(w['steps_checked'] for w in wc):,} steps in {sum(w['episodes_checked'] for w in wc):,} "
               f"episodes of {len(wc)} runs, {exc} exceptions")
+    # endpoint: the study doc's own launch-manifest status cells (the population's source)
     M = json.load(open(population))
+    src = M.get("source")
+    if not isinstance(src, str):
+        fail("water population: the population manifest has no study-doc source to read run statuses from")
+    sys.path.insert(0, os.path.join(FG.A_DIR, "studies", "hypervigilance"))
+    import make_population as MP
+    status = sorted({re.sub(r"final checkpoint \d+", "final checkpoint N", r["Status"])
+                     for r in MP.parse_launch_manifest(os.path.join(REG.DATA_ROOT, src))})
     cks = sorted(int(c["checkpoint"]) for c in M["cells"] if c.get("checkpoint"))
-    endpoint = (f"Every run trained its full budget; early stopping was not applied (the user cancelled the "
-                f"stop checker), so every figure reads each run's final checkpoint "
-                f"({cks[0]:,}&ndash;{cks[-1]:,} training episodes)." if cks else "")
+    endpoint = ("The study's launch manifest records the runs as: " +
+                "; ".join(f"&ldquo;{html.escape(x)}&rdquo;" for x in status) +
+                f". Every figure reads each run's store at the checkpoint in the population manifest "
+                f"({cks[0]:,}&ndash;{cks[-1]:,} training episodes).")
+    per = {}
+    for c in D["cells"]:
+        per.setdefault((c["world"], c["agent"]), []).append(c["seed"])
+    nmax = max(len(v) for v in per.values())
+    seeds = sorted({s for v in per.values() for s in v})
+    if nmax == 1:
+        runs_title = "One training run per world and agent"
+        runs = (f"Each of the {len(per)} world &times; agent combinations has a single training run "
+                f"(seed{'s' if len(seeds) > 1 else ''} {', '.join(map(str, seeds))}).")
+        runs_short = "each world and agent has a single training run"
+    else:
+        runs_title = "Training runs per world and agent"
+        runs = (f"World &times; agent combinations have {min(len(v) for v in per.values())}&ndash;{nmax} "
+                f"training runs (seeds {', '.join(map(str, seeds))}).")
+        runs_short = f"each world and agent has at most {nmax} training runs"
     refusals = []
     for t in REG.TARGETS:
         pj = os.path.join(out_root, "screen", t, "prefit.json")
@@ -330,8 +374,18 @@ def water_tokens(D, population, out_root):
     if budget:
         ref.append(f"Figure 7's seed-to-seed budget, because {html.escape(budget)}")
     ref_txt = ("; ".join(ref) + ".") if ref else "(their refusal records are not written yet)."
+    ser = os.path.join(out_root, "probes", "series.csv.gz")
+    ep_txt = "the recorded number of"
+    if os.path.exists(ser):
+        import pandas as pd
+        Sx = pd.read_csv(ser)
+        n = Sx[Sx.measure == "n_episodes"]["value"]
+        if len(n):
+            ep_txt = f"{int(n.min())}" if n.min() == n.max() else f"{int(n.min())}&ndash;{int(n.max())}"
     return {"{{W_CHECKS}}": checks, "{{W_ENDPOINT}}": endpoint, "{{W_REFUSALS}}": ref_txt,
-            "{{W_CALIB_S}}": f"{float(S):g}", "{{W_CALIB_TABLE}}": table,
+            "{{W_CALIB_S}}": f"{float(S):g}", "{{W_CALIB_TABLE}}": table, "{{W_CALIB_RESULT}}": calib, "{{W_CALIB_RULE}}": rule_txt,
+            "{{W_CALIB_TITLE}}": calib_title, "{{W_RUNS_TITLE}}": runs_title, "{{W_RUNS}}": runs,
+            "{{W_RUNS_SHORT}}": runs_short, "{{W_EP_PER_CKPT}}": ep_txt,
             "{{W_F7_BUDGET}}": (f"The seed-to-seed comparison is refused: {html.escape(budget)}." if budget else "")}
 
 

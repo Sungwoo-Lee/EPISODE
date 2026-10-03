@@ -67,7 +67,7 @@ MEASURES = {"bush_hiding": 100.0, "survival_steps": 1.0, "closest_approach": 1.0
 # BEFORE THE FIRST POND STEP (probe_pond.py collate, <label>/pond/<cond>.csv, joined on `step`), so
 # every contrast and the ceiling check use it; the pond-visit share and the over-drinking count ride
 # along. Code 6 (thirst) is asserted zero by probe_pond.py.
-MEASURES_WATER = {**MEASURES, "pond_visit_share": 100.0, "n_overdrink": 1.0}
+MEASURES_WATER = {**MEASURES, "pond_visit_share": 100.0, "n_overdrink": 1.0, "n_episodes": 1.0}
 
 # spec world -> population world tag; sweep agent word -> population agent tag
 SPEC_WORLD = {"two_channel": "hv2ch", "single_channel": "hv1ch", "matched_strength": "hv1chm"}
@@ -122,7 +122,8 @@ def read_series(out, sweep_label, c, water):
         return None, len(d)
     p = pd.read_csv(fp)
     m = d.drop(columns=["bush_hiding"]).merge(
-        p[["step", "bush_hiding_prepond", "pond_visit_share", "n_overdrink", "n_thirst"]], on="step", how="inner")
+        p[["step", "bush_hiding_prepond", "pond_visit_share", "n_overdrink", "n_thirst", "n_episodes"]],
+        on="step", how="inner")
     m = m.rename(columns={"bush_hiding_prepond": "bush_hiding"}).sort_values("step").reset_index(drop=True)
     return m, len(d)
 
