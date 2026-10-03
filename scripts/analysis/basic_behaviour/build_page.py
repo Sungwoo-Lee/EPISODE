@@ -199,7 +199,8 @@ def toc_html(toc):
     items = []
     for bid, figs in toc:
         if bid == "F7":
-            subs = " &middot; ".join(f'<a href="#{fid}">{fid[1:]} {lab}</a>' for fid, lab in F7_TOC)
+            subs = " &middot; ".join(f'<a href="#{fid}">{fid[1:]} {lab}</a>'
+                                     for fid, lab in (figs if figs and figs[0][0] != None else F7_TOC))
             items.append(f'<li>Figure 7 &middot; {TOC_TITLE[bid]}<br><span class="bb-sub">{subs}</span></li>')
         elif len(figs) == 1 and figs[0][0] is None:
             items.append(f'<li><a href="#{figs[0][1]}">Figure {bid[1]}</a> &middot; {TOC_TITLE[bid]}</li>')
@@ -305,8 +306,10 @@ def world_table(D):
                     f"<td class=\"n\">{'×'.join(map(str, w['pond_size']))}</td><td class=\"n\">{w['sensor_radius']}</td>"
                     + "".join(f"<td class=\"n\">{100 * x / n:.1f}%</td>" for x in cnt)
                     + "<td class=\"n\">&mdash;</td>" * (K - len(cnt)) + f"<td class=\"n\">{n:,}</td></tr>")
-    corners = sorted({", ".join(f"[{r + 1}, {cc + 1}]" for r, cc in c["inv"]["water"]["pond_corners"])
+    corners = sorted({(tuple(c["inv"]["water"]["map_size"]),
+                       ", ".join(f"[{r + 1}, {cc + 1}]" for r, cc in c["inv"]["water"]["pond_corners"]))
                       for c in D["cells"] if "water" in c["inv"]})
+    corners = [f"{m[0]}×{m[1]} map: {txt}" for m, txt in corners]
     return ('<details class="bb-data"><summary><b>World features and where the pond was.</b> map, pond size, '
             'smell reach (sensor radius, squares) and the share of each run\'s episodes per pond corner, '
             'rebuilt from each episode\'s seed</summary><p class="cue" hidden>&larr; scroll sideways</p>'
@@ -316,6 +319,87 @@ def world_table(D):
             f'<p>Pond corners (top-left square, 1-based row, column), per map: {html.escape("; ".join(corners))}. '
             'The corner is tabulated, not fitted: its effect runs through the start distance to the pond.</p>'
             '</details>')
+
+
+def runs_reason(D) -> str:
+    """Why the seed-to-seed comparisons cannot be computed, in words (never a Python container)."""
+    per = {}
+    for c in D["cells"]:
+        per.setdefault((c["world"], c["agent"]), []).append(c["seed"])
+    seeds = sorted({s for v in per.values() for s in v})
+    one = [k for k, v in per.items() if len(v) < 2]
+    if len(one) == len(per):
+        return (f"every one of the {len(per)} world &times; agent combinations has a single training run "
+                f"(seed{'s' if len(seeds) > 1 else ''} {', '.join(map(str, seeds))}), so the spread between "
+                f"training seeds cannot be estimated")
+    names = "; ".join(f"{html.escape(FG.wlabel(w))}, {html.escape(FG.alabel(a))}" for w, a in sorted(one))
+    return f"{len(one)} of the {len(per)} world &times; agent combinations have a single training run ({names})"
+
+
+def status_line(present, pending, withheld) -> str:
+    """The lede's last sentence: which of Figures 1-7 are drawn, withheld by design, or pending."""
+    num = lambda x: int(re.match(r"[fF](\d)", x).group(1))
+    drawn = sorted({num(x) for x in present} - {num(x) for x in withheld})
+    def fmt(ns):
+        ns = [str(n) for n in ns]
+        return ns[0] if len(ns) == 1 else ", ".join(ns[:-1]) + " and " + ns[-1]
+    out = f"Figure{'s' if len(drawn) > 1 else ''} {fmt(drawn)} {'are' if len(drawn) > 1 else 'is'} drawn."
+    if withheld:
+        out += (f" Figure {fmt(sorted(num(x) for x in withheld))} is not drawn, by design: it needs at least "
+                "two training runs per world and agent.")
+    if pending:
+        out += f" Not yet produced: Figure {fmt(sorted({num(x) for x in pending}))}."
+    return out
+
+
+RAW_PROSE = re.compile(r"\[\(|\{'|':|\('")
+
+
+def check_prose(page):
+    """No Python container text in the emitted prose (outside code, scripts and styles)."""
+    t = re.sub(r"<(code|script|style)\b.*?</\1>", " ", page, flags=re.S)
+    t = html.unescape(re.sub(r"<[^>]+>", " ", t))
+    m = RAW_PROSE.search(t)
+    if m:
+        fail(f"raw Python container text in the page prose: ...{t[max(0, m.start() - 80):m.end() + 80]!r}...")
+
+
+def check_links(page):
+    ids = set(re.findall(r'\bid="([^"]+)"', page))
+    bad = sorted(set(re.findall(r'href="#([^"]+)"', page)) - ids)
+    if bad:
+        fail(f"in-page links without a target id: {bad}")
+
+
+# Population-specific wording for worlds with water (map size x smell reach, one run per world and
+# agent). Applied to the template before any block is read, only for such populations.
+WATER_SWAPS = [
+    ("spends on five behaviours, how long", "spends on six behaviours, how long"),
+    ("It measures five behaviours, each as a share", "It measures six behaviours, each as a share"),
+    ("""standing <strong>on a warm square</strong>.
+  It also reports""", """standing <strong>on a warm square</strong>, and, in worlds with
+  water, standing <strong>on the pond</strong> (drinking).
+  It also reports"""),
+    ("""  <p>One marker per training run. Colour is the smell world, marker shape is the agent type, and runs
+  of the same world and agent sit side by side, one per training seed. The same encoding is used on
+  every figure of this page.</p>""", """  <p>One marker per training run. Colour is the map size and its shade the smell reach (darkest: smell
+  across the whole map; then 5 squares; palest: 3 squares); marker shape is the agent type. Each world
+  and agent has one run, and runs are grouped by map size. The same encoding is used on Figures 1 to
+  6.</p>"""),
+    ("horizontal, the world and agent type of the run (one marker per training seed); vertical,",
+     "horizontal, the map size, one marker per run (shade = smell reach, shape = agent type); vertical,"),
+    ("  Differences between seeds of the same setting show how much training alone varies.</p>",
+     "  With one training run per world and agent, it cannot show how much training alone varies.</p>"),
+    ("charts, one per smell world: horizontal", "charts, one per world: horizontal"),
+    ("""every chosen step of every
+    seed of a setting is put in one""", """every chosen step of the
+    run is put in one"""),
+    ("""; the seeds are pooled
+    by adding their steps.""", "."),
+    ("The line charts, one per smell world, use only", "The line charts, one per world, use only"),
+    ("so all three panels share one horizontal axis.", "so every panel shares one horizontal axis."),
+    ("The tables describe; Figures 3 to 5 adjust.", "The tables describe; Figures 3 and 4 adjust."),
+]
 
 
 def water_tokens(D, population, out_root):
@@ -337,8 +421,9 @@ def water_tokens(D, population, out_root):
         f"<td class=\"n\">{100 * v[w]['P_visit']:.1f}%</td><td class=\"n\">{100 * v[w]['P_od']:.1f}%</td>"
         f"<td class=\"n\">{v[w]['n']:,}</td>" for w in worlds) + "</tr>"
         for k, v in sorted(tab.items(), key=lambda kv: float(kv[0])))
-    head = "".join(f"<th class=\"n\">{html.escape(FG.wlabel(w))}: reached the pond</th>"
-                   f"<th class=\"n\">over-drank</th><th class=\"n\">episodes</th>" for w in worlds)
+    head = ("".join(f'<th colspan="3" class="n">{html.escape(FG.wlabel(w))}</th>' for w in worlds)
+            + '</tr><tr>' + "".join('<th class="n">reached the pond</th><th class="n">over-drank</th>'
+                                    '<th class="n">episodes</th>' for w in worlds))
     rule_ok = cal["choice"]["branch"].startswith("rule")
     rr = cal["rule"]
     branch_words = (
@@ -350,7 +435,7 @@ def water_tokens(D, population, out_root):
         f"no start value had at most {100 * rr['P_od_max']:g}% over-drinking deaths in every test world, so "
         f"the second fallback took the value with the lowest over-drinking risk")
     table = ('<p class="cue" hidden>&larr; scroll sideways</p><div class="scroll"><table class="wide" '
-             'style="min-width:760px"><thead><tr><th class="n">start hydration</th>' + head +
+             'style="min-width:760px"><thead><tr><th class="n" rowspan="2">start hydration</th>' + head +
              f'</tr></thead><tbody>{rows}</tbody></table></div><p>Rule outcome: '
              f'{html.escape(branch_words).replace("at most", "&le;")}. Episodes per cell pool both agents\' '
              'final checkpoints over every scene.</p>')
@@ -377,11 +462,11 @@ def water_tokens(D, population, out_root):
         fail("water population: the population manifest has no study-doc source to read run statuses from")
     sys.path.insert(0, os.path.join(FG.A_DIR, "studies", "hypervigilance"))
     import make_population as MP
-    status = sorted({re.sub(r"final checkpoint \d+", "final checkpoint N", r["Status"])
+    status = sorted({re.sub(r"final checkpoint \d+", "final checkpoint &hellip;", html.escape(r["Status"]))
                      for r in MP.parse_launch_manifest(os.path.join(REG.DATA_ROOT, src))})
     cks = sorted(int(c["checkpoint"]) for c in M["cells"] if c.get("checkpoint"))
     endpoint = ("The study's launch manifest records the runs as: " +
-                "; ".join(f"&ldquo;{html.escape(x)}&rdquo;" for x in status) +
+                "; ".join(f"&ldquo;{x}&rdquo;" for x in status) +
                 f". Every figure reads each run's store at the checkpoint in the population manifest "
                 f"({cks[0]:,}&ndash;{cks[-1]:,} training episodes).")
     per = {}
@@ -406,12 +491,12 @@ def water_tokens(D, population, out_root):
             refusals.append(json.load(open(pj))["refused"])
     prov = os.path.join(out_root, "probes", "provenance.json")
     budget = json.load(open(prov)).get("budget_refused") if os.path.exists(prov) else None
-    ref = []
-    if refusals:
-        ref.append(f"Figure 5, because {html.escape(refusals[0])}")
-    if budget:
-        ref.append(f"Figure 7's seed-to-seed budget, because {html.escape(budget)}")
-    ref_txt = ("; ".join(ref) + ".") if ref else "(their refusal records are not written yet)."
+    which = [x for x, on in (("the cross-run screening of Figure 5", bool(refusals)),
+                             ("Figure 7's comparison of worlds against the spread between training seeds",
+                              bool(budget))) if on]
+    ref_txt = (f"{' and '.join(which)[0].upper() + ' and '.join(which)[1:]} "
+               f"{'are' if len(which) > 1 else 'is'} not drawn: {runs_reason(D)}." if which else
+               "The comparisons that need several training runs per world and agent have not been run yet.")
     ser = os.path.join(out_root, "probes", "series.csv.gz")
     ep_txt = "the recorded number of"
     if os.path.exists(ser):
@@ -424,7 +509,8 @@ def water_tokens(D, population, out_root):
             "{{W_CALIB_S}}": f"{float(S):g}", "{{W_CALIB_TABLE}}": table, "{{W_CALIB_RESULT}}": calib, "{{W_CALIB_RULE}}": rule_txt,
             "{{W_CALIB_TITLE}}": calib_title, "{{W_RUNS_TITLE}}": runs_title, "{{W_RUNS}}": runs,
             "{{W_RUNS_SHORT}}": runs_short, "{{W_EP_PER_CKPT}}": ep_txt,
-            "{{W_F7_BUDGET}}": (f"The seed-to-seed comparison is refused: {html.escape(budget)}." if budget else "")}
+            "{{W_F7_BUDGET}}": (f"The comparison of worlds against the spread between training seeds is not "
+                                f"drawn: {runs_reason(D)}." if budget else "")}
 
 
 def build(population, out_root, page_dir):
@@ -432,6 +518,11 @@ def build(population, out_root, page_dir):
     D = FG.load_outputs(population, out_root)
     page = open(TEMPLATE).read()
     water = FG.has_water(D["cells"])
+    if water:
+        for a, b in WATER_SWAPS:
+            if page.count(a) < 1:
+                fail(f"water text swap: template no longer contains {a[:60]!r}")
+            page = page.replace(a, b)
     # the hydration heat maps' axes sentence of Figure 6 (water only; empty, so unchanged, otherwise),
     # substituted before the blocks are read so the generated mirror carries it too
     page = page.replace("{{W_F6_HYD}}", (
@@ -469,7 +560,7 @@ def build(population, out_root, page_dir):
     blocks = blocks_of(page)
     if sorted(blocks) != sorted(BLOCKS):
         fail(f"template blocks {sorted(blocks)} != {sorted(BLOCKS)}")
-    present, pending, mirror, toc = [], [], [], []
+    present, pending, mirror, toc, withheld = [], [], [], [], []
     for bid, (base, per_target) in BLOCKS.items():
         block = blocks[bid]
         if per_target is None:
@@ -489,10 +580,11 @@ def build(population, out_root, page_dir):
             if refused:                     # D10: refused by design, with the reason, not "pending"
                 page = page.replace(block, f'<section class="col"><h2>{title}</h2><div class="bb-pending">'
                                     f'<b>Figure {bid[1]} &mdash; not drawn, by design.</b> The cross-run '
-                                    f'screening needs at least two training runs per world and agent; it '
-                                    f'refused for {len(refused)} behaviours ('
-                                    f'{html.escape(", ".join(FG.TARGET_NOUN[t] for t in refused))}): '
-                                    f'{html.escape(next(iter(refused.values())))}</div></section>')
+                                    f'screening compares settings against the spread between training seeds, '
+                                    f'so it needs at least two training runs per world and agent. Here '
+                                    f'{runs_reason(D)}, so it was not computed for any of the '
+                                    f'{len(refused)} behaviours.</div></section>')
+                withheld.append(bid)
                 present.append(bid)
                 continue
             page = page.replace(block, f'<section class="col"><h2>{title}</h2><div class="bb-pending">'
@@ -550,7 +642,8 @@ def build(population, out_root, page_dir):
            "{{RUN_TABLE}}": run_table(D), "{{MANIFEST}}": html.escape(os.path.relpath(population, REG.DATA_ROOT)),
            "{{OUT_ROOT}}": html.escape(os.path.relpath(out_root, REG.DATA_ROOT)), "{{GOLDEN}}": html.escape(gtxt),
            "{{TOC}}": toc_html(toc),
-           "{{STATUS_LINE}}": ("All seven figures are present." if not pending else
+           "{{STATUS_LINE}}": (status_line(present, pending, withheld) if water else
+                               "All seven figures are present." if not pending else
                                f"Figures not yet produced: {', '.join(pending)}.")}
     if water:
         tok.update(water_tokens(D, population, out_root))
@@ -564,6 +657,9 @@ def build(population, out_root, page_dir):
         if not os.path.exists(f):
             fail(f"font {w}: no subset at {f}")
         page = page.replace(f"{{{{FONT:{w}}}}}", base64.b64encode(open(f, "rb").read()).decode())
+    check_links(page)
+    if water:
+        check_prose(page)
     left = re.findall(r"\{\{[^}]+\}\}", page)
     if left:
         fail(f"unsubstituted tokens remain: {sorted(set(left))}")
@@ -636,7 +732,12 @@ def build_f7(page, block, stems, fig_dir, out_root, mirror, toc, water=False):
         figs = re.findall(r"<figure\b.*?</figure>", b, re.S)
         fig_html = next(f for f in figs if f'data-fig="{st}"' in f)
         mirror.append((st, axes_sentence(fig_html), rows))
-    toc.append(("F7", [(None, "f7a")]))
+    if water:                               # the sub-list from the headings actually emitted
+        toc.append(("F7", [(fid, html.unescape(re.sub(r"<[^>]+>", "", lab)).strip()) for fid, lab in
+                           re.findall(r'<h3 class="bb-fh" id="(f7[a-z])"><span class="bb-n">[^<]*</span>(.*?)</h3>',
+                                      b, re.S)]))
+    else:
+        toc.append(("F7", [(None, "f7a")]))
     return page.replace(block, b), True
 
 

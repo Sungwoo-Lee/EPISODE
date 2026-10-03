@@ -580,6 +580,6 @@ def test_f7_water_figures_on_synthetic_probes(tmp_path):
     fig, r2 = F7.fig_pond_window(D, "bush_hiding", "x")
     assert len([r for r in r2 if r["what"].startswith("checkpoints summarised")]) == 9
     assert all(r["used"] == 2 * 12 * 20 for r in r2 if r["what"].startswith("checkpoints summarised"))
-    assert all("(2 runs x 12 scenes)" in r["what"] for r in r2 if r["what"].startswith("checkpoints summarised"))
+    assert all("(2 runs × 12 scenes)" in r["what"] for r in r2 if r["what"].startswith("checkpoints summarised"))
     ep = next(r for r in r2 if r["what"].startswith("episodes behind"))
-    assert ep["used"] == 9 * 2 * 12 * 50 * 30 and ep["note"].startswith("30-30")
+    assert ep["used"] == 9 * 2 * 12 * 50 * 30 and ep["note"].startswith("30 evaluation")

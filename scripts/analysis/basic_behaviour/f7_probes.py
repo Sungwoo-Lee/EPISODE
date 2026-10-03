@@ -496,7 +496,9 @@ W_MAPS = ("10", "15", "20")
 W_REACH = ("W", "5", "3")
 W_REACH_NAME = {"W": "smell across the map", "5": "smell 5 squares", "3": "smell 3 squares"}
 W_WORLDS = [f"g{m}s{r}" for m in W_MAPS for r in W_REACH]
-W_COL = {"t1none": H.SERIES[0], "t16quad": H.SERIES[1]}
+# agents in neutral ink, told apart by marker shape (the agent channel of the whole page): the hues
+# mean map size on this page
+W_COL = {"t1none": H.INK, "t16quad": H.INK_2}
 
 
 def wlabel_water(w):
@@ -512,7 +514,7 @@ def water_rows(D, worlds, measure, what):
         c = comp[comp.label.isin([l for l, r in runs.items() if r["world"] == w])]
         found, exp = int(c.found.sum()), int(c.expected.sum())
         n_runs, n_scenes = c.label.nunique(), len(c.groupby(["scene", "injury"]))
-        rows.append({"what": f"{what}, {wlabel_water(w)} ({n_runs} runs x {n_scenes} scenes)",
+        rows.append({"what": f"{what}, {wlabel_water(w)} ({n_runs} runs × {n_scenes} scenes)",
                      "used": int(len(c[c.found >= PR.WINDOW]) * PR.WINDOW) if measure else found,
                      "total": found if measure else exp,
                      "note": ("the newest 20 saved checkpoints of each run and scene; older ones are drawn in "
@@ -526,7 +528,8 @@ def water_rows(D, worlds, measure, what):
     if not len(n):
         raise SystemExit("probes series has no n_episodes rows (re-run probes.py on the pond CSVs)")
     rows.append({"what": "episodes behind the checkpoint values", "used": int(n.sum()), "total": int(n.sum()),
-                 "note": f"{int(n.min())}-{int(n.max())} evaluation episodes per checkpoint and scene; every "
+                 "note": f"{int(n.min()) if n.min() == n.max() else f'{int(n.min())}-{int(n.max())}'} "
+                         f"evaluation episodes per checkpoint and scene; every "
                          f"episode counted, its bush time read up to its first pond step"})
     return rows
 
@@ -551,8 +554,9 @@ def fig_pond_traces(D, mp):
                 b = g[g.measure == "bush_hiding"].sort_values("step")
                 v = g[g.measure == "pond_visit_share"].sort_values("step")
                 o = g[(g.measure == "n_overdrink") & (g.value > 0)]
-                ax.plot(b.step / 1e6, b.value, color=W_COL[a], lw=1.2)
-                ax.plot(v.step / 1e6, v.value, color=W_COL[a], lw=1.0, ls=":")
+                ax.plot(b.step / 1e6, b.value, color=W_COL[a], lw=1.2, marker=MK[a], ms=3.2, markevery=5)
+                ax.plot(v.step / 1e6, v.value, color=W_COL[a], lw=1.0, ls=":", marker=MK[a], ms=3.2,
+                        markevery=5, mfc=H.PAPER)
                 if len(o):
                     ax.plot(o.step / 1e6, [101] * len(o), ls="", marker="x", ms=4, color=W_COL[a])
             ax.set_ylim(-4, 106)
@@ -566,7 +570,7 @@ def fig_pond_traces(D, mp):
     fig.supylabel("share (%): bush time before the first pond step, solid; episodes reaching the pond, dotted",
                   fontsize=H.FS_BODY, x=0.005)
     from matplotlib.lines import Line2D
-    hs = [Line2D([], [], color=W_COL[a], lw=1.6, label=FG.alabel(a)) for a in AGENTS]
+    hs = [Line2D([], [], color=W_COL[a], lw=1.6, marker=MK[a], ms=5, label=FG.alabel(a)) for a in AGENTS]
     hs += [Line2D([], [], color=H.INK_2, lw=1.2, label="bush time before the first pond step"),
            Line2D([], [], color=H.INK_2, lw=1.0, ls=":", label="share of episodes reaching the pond"),
            Line2D([], [], ls="", marker="x", color=H.INK_2, label="an over-drinking death at that checkpoint")]
@@ -595,7 +599,8 @@ def fig_pond_window(D, measure, ylabel):
                     r = r.iloc[0]
                     x = xi + (ai - 0.5) * 0.3
                     if np.isfinite(r["lo"]):
-                        ax.plot([x, x], [r["lo"], r["hi"]], color=W_COL[a], lw=1.3, alpha=0.75)
+                        ax.plot([x, x], [max(r["lo"], 0.0), min(r["hi"], 100.0)], color=W_COL[a], lw=1.3,
+                                alpha=0.75)            # a share's interval is clipped to 0-100 %
                     ax.plot(x, r["mean"], ls="", marker=MK[a], ms=6, color=W_COL[a])
             for b in (2.5, 5.5):
                 ax.axvline(b, color=H.RULE, lw=1)
