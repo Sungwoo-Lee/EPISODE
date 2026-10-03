@@ -27,12 +27,14 @@ sys.path.insert(0, os.path.join(ROOT, "scripts", "analysis", "basic_behaviour"))
 import _fig as FG  # noqa: E402
 
 H = FG.H
-SET_ORDER = ["july", "core", "thermal", "injgrid", "world"]
-SET_COL = dict(zip(SET_ORDER, ["#a3782f", H.SERIES[0], H.SERIES[1], "#8a6fb3", H.SERIES[2]]))
-SET_SHORT = {"july": "July set (animals can enter the bush)", "core": "core set (bush blocks animals)",
+SET_ORDER = ["july", "core_old", "core", "thermal", "injgrid", "world"]
+SET_COL = dict(zip(SET_ORDER, ["#a3782f", "#7fb0e6", H.SERIES[0], H.SERIES[1], "#8a6fb3", H.SERIES[2]]))
+SET_SHORT = {"july": "July set (animals can enter the bush)",
+             "core_old": "core set, before the fix (animals can enter the bush)",
+             "core": "core set (bush blocks animals)",
              "thermal": "temperature set (8 fire/ambient variants)", "injgrid": "injury-grid set (3 scenes)",
              "world": "training-world set (campfire by the bush)"}
-SET_TAG = {"july": "July set", "core": "core set", "thermal": "temperature set", "injgrid": "injury-grid set",
+SET_TAG = {"july": "July set", "core_old": "core set, before fix", "core": "core set", "thermal": "temperature set", "injgrid": "injury-grid set",
            "world": "own-world set"}
 AG_MK = {"ordinary": "o", "modulated": "^"}
 SHORT_SCENE = {"none": "no animal", "pred": "hunting predator", "rabbit": "chasing rabbit",
@@ -50,15 +52,15 @@ YLAB = "injury 70 minus injury 0,\nbush dwell (percentage points)"
 GROUPS = {  # page group -> (title, families)
     "july": ("July runs (levels 03-04)", ["July network size", "July level-04 variants", "July GAE return",
                                           "July early modulator"]),
-    "core": ("Curriculum waves and blocking-bush training, core scenes", ["Curriculum wave 1", "Curriculum wave 2",
-                                                                         "Blocking-bush training"]),
+    "core_old": ("Curriculum wave 1, core scenes tested before the bush fix", ["Curriculum wave 1"]),
+    "core": ("Blocking-bush training, core scenes", ["Blocking-bush training"]),
     "thermal": ("Blocking-bush training, levels 05-06, temperature scenes", ["Blocking-bush training"]),
     "injgrid": ("Blocking-bush training, injury-grid scenes", ["Blocking-bush training"]),
     "smell": ("Smell study, level 05", ["Smell study (level 05)"]),
     "body": ("Body rules, level 05", ["Body rules (level 05)"]),
     "thirst": ("Thirst task", ["Thirst task"]),
 }
-GROUP_SET = {"july": "july", "core": "core", "thermal": "thermal", "injgrid": "injgrid", "smell": "world",
+GROUP_SET = {"july": "july", "core_old": "core_old", "core": "core", "thermal": "thermal", "injgrid": "injgrid", "smell": "world",
              "body": "world", "thirst": "world"}
 FAMILY_ORDER = [f for g in GROUPS.values() for f in g[1]]
 FAMILY_ORDER = list(dict.fromkeys(FAMILY_ORDER))
@@ -114,9 +116,8 @@ def row_label(r):
     elif fam.startswith("July"):
         st = st.replace("network size ", "size ").replace(", early modulator design", "")
         st = f"{ {'July network size': 'size', 'July level-04 variants': 'L04 variant', 'July GAE return': 'GAE', 'July early modulator': 'early modulator'}[fam] }: {st}"
-    elif r["scene_set"] == "core":
-        st = {"Curriculum wave 1": "wave 1", "Curriculum wave 2": "wave 2",
-              "Blocking-bush training": "blocking-bush training"}[fam] + " · " + st.split(",")[0]
+    elif r["scene_set"] in ("core", "core_old"):
+        st = st.split(",")[0]
     return f"{st} · {r['agent']}"
 
 
@@ -246,7 +247,7 @@ def within_groups(R):
              (("smell across the map", "across the map"), ("smell range 5", "range 5"), ("smell range 3", "range 3"))]
     out.append(("Thirst task (map size, then smell range; 9 worlds × 2 agents)", rows))
     w1 = R[R.family == "Curriculum wave 1"]
-    out.append(("Curriculum wave 1, core scenes (1 run per level and agent)",
+    out.append(("Curriculum wave 1, core scenes tested before the bush fix (1 run per level and agent)",
                 [(f"level 0{l}", w1[w1.setting == f"level 0{l}"]["id"].tolist()) for l in (2, 3, 4)]))
     t = R[(R.scene_set == "thermal")]
     vs = sorted(t.setting.str.split("scene variant ").str[1].unique())
@@ -293,7 +294,7 @@ def fig_within(R, L, E, X):
     hs = [Line2D([], [], ls="", marker=AG_MK[a], ms=8, color=H.INK_2, label=f"{a} agent") for a in AG_MK]
     hs += [Line2D([], [], color=H.INK, lw=2.0, label="mean of the runs in the row (hollow included)"),
            hollow_handle()]
-    hs += [Line2D([], [], ls="", marker="s", ms=8, color=SET_COL[k], label=SET_SHORT[k]) for k in ("core", "thermal", "world")]
+    hs += [Line2D([], [], ls="", marker="s", ms=8, color=SET_COL[k], label=SET_SHORT[k]) for k in ("core_old", "thermal", "world")]
     fig.legend(handles=hs, loc="lower center", ncol=2, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.003))
     fig.tight_layout(rect=(0, 1.15 / h, 1, 1), h_pad=1.0, w_pad=1.0)
     rows = [{"what": f"{t.split(' (')[0]}: runs", "used": len({i for _, ids in r for i in ids}),

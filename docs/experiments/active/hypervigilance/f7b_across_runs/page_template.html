@@ -17,10 +17,43 @@ td.nw { white-space:nowrap; }
 <header class="col">
   <p class="eyebrow">grid_world_pain &middot; hypervigilance &middot; experiment tests across runs &middot; exploratory</p>
   <h1>Does injury make agents avoid the rabbit more, and in which runs?</h1>
-  <p class="lede">The same fixed test scenes, replayed for {{N_SEL}} trained agents from {{N_FAMILIES}}
+  <p class="lede">The same fixed test scenes, replayed for {{N_UNIQUE}} trained agents from {{N_FAMILIES}}
   groups of training runs, to see where a high starting injury raises time in the bush when a rabbit
   is near, and how much of that rise is about the rabbit at all.</p>
 </header>
+
+<section class="col" id="data">
+  <h2><span class="num">THE DATA</span></h2>
+  <p>Every agent on this page is a small learning program that lives on a grid of squares. It can move,
+  eat, hide on a <strong>bush</strong> square, and get hurt by a <strong>predator</strong>; a
+  <strong>rabbit</strong> looks and moves like an animal but is harmless. The agent senses its own body:
+  how hungry it is and how <strong>injured</strong> it is, on a scale from 0 (unhurt) to 100. It learns by
+  trial and error over millions of steps, and a copy of it is saved about 50 times along the way; each
+  saved copy is a <strong>checkpoint</strong>. A <strong>run</strong> is one such training from start to
+  end; runs that differ only in their random starting point are different <strong>seeds</strong>.</p>
+  <p>Two kinds of agent appear throughout. The <strong>ordinary agent</strong> has one network that
+  turns what it senses into a move. The <strong>modulated agent</strong> has, in addition, a small
+  second network that reads the body's state and adjusts how the main network works &mdash; a rough model
+  of how chemicals such as noradrenaline change how the brain processes the same input.</p>
+  <h4>The groups of runs</h4>
+  <p>The runs come from {{N_FAMILIES}} groups, trained at different times for different questions. The
+  last column matters more than it looks: from 22 September on, a rule was added that makes injury heal
+  25 times faster while the agent sits on a bush.</p>
+  {{TABLE:datasets}}
+  <h4>The tests</h4>
+  <p>None of these numbers come from the world the agent trained in. Each agent was put into short
+  <strong>experiment tests</strong>: a 10&times;10 grid with the agent in the middle, one bush three
+  squares to its left, and at most one animal starting on the far right; 100 steps; no food. There are six
+  scenes &mdash; <strong>no animal</strong>; a <strong>hunting predator</strong> that can hurt it; a
+  <strong>chasing rabbit</strong> that moves exactly like the predator but is harmless; the same rabbit
+  with its smell removed; a <strong>wandering rabbit</strong>; and a wandering rabbit that smells like a
+  predator &mdash; each played with the agent starting unhurt (<strong>injury 0</strong>) or badly hurt
+  (<strong>injury 70</strong>), 30 times at every checkpoint. What is measured is <strong>bush
+  dwell</strong>: the share of the 100 steps the agent spends on the bush.</p>
+  <p>The tests were built at different times, so they come in {{N_SETS}} versions (scene sets). Their
+  differences matter, so they are kept apart in every figure and never averaged together:</p>
+  {{TABLE:scene_sets}}
+</section>
 
 <section class="col">
   <h2><span class="num">QUESTION</span></h2>
@@ -40,18 +73,22 @@ td.nw { white-space:nowrap; }
   <h2><span class="num">HEADLINE</span></h2>
   <div class="callout">
     <p class="eyebrow">What the runs show</p>
-    <p><strong>1. Most of the injury effect is not about the rabbit.</strong> In the newer scene sets,
-    starting at injury 70 raises bush dwell by about {{NONE_NEW}} percentage points even when
-    <em>no animal</em> is present. One possible reason, not checked here: injured agents may go to
-    the bush to rest while they heal. The wandering rabbit adds almost nothing on top of that (median
-    {{WANDER_MINUS}} points across {{N_WANDER}} rows).</p>
+    <p><strong>1. Most of the injury effect is not about the rabbit, and it follows one rule of the
+    body.</strong> In the {{N_FAST}} runs trained with fast healing on a bush, starting at injury 70 raises
+    bush dwell by about {{NONE_NEW}} percentage points even when <em>no animal</em> is present. In the
+    {{N_SLOW}} runs trained without it, the same number is {{NONE_SLOW}}. That fits injured agents going to
+    the bush because that is where they heal, rabbit or no rabbit. It is a strong cue, not a proof: the
+    runs with and without fast bush healing also differ in date, world version and how much food the body
+    can store. The wandering rabbit adds almost nothing on top
+    of that (median {{WANDER_MINUS}} points across {{N_WANDER}} rows).</p>
     <p><strong>2. The chasing rabbit is where runs differ.</strong> Its extra injury effect, beyond
     the no-animal scene's, ranges from {{CHASE_MIN}} to {{CHASE_MAX}} points across runs. The largest
-    values come from curriculum wave 1 at level 03 ({{W1_L03}} points, both agents), and part of that
-    comes from the empty scene, not the rabbit: those two agents' no-animal injury effects are
-    {{W1_NONE}} points, and their chasing-rabbit injury effects {{W1_RAW}}. Most other groups
-    sit at or below zero: the smell study {{SMELL_MINUS}}, the thirst task {{THIRST_MINUS}}, the
-    temperature scene set {{THERMAL_MINUS}}.</p>
+    values come from curriculum wave 1 at level 03 ({{W1_L03}} points, both agents), with two caveats:
+    those tests ran before the test bush was fixed to keep animals out, and much of the value comes from
+    the empty scene &mdash; those agents' no-animal injury effects are {{W1_NONE}} points, their
+    chasing-rabbit injury effects {{W1_RAW}}. The groups trained with fast bush healing sit at or below
+    zero: the smell study {{SMELL_MINUS}}, the thirst task {{THIRST_MINUS}}, the temperature scene set
+    {{THERMAL_MINUS}}.</p>
     <p><strong>3. One body rule separates cleanly, but the test cannot be trusted there.</strong> In the
     body-rules worlds, the chasing rabbit's extra injury effect is {{HC_ON}} points when healing costs
     food and {{HC_OFF}} when it does not. Those same agents starve in the test: the scenes hold no food,
@@ -66,11 +103,12 @@ td.nw { white-space:nowrap; }
 <section class="col toc">
   <h4>On this page</h4>
   <ol>
-    <li><a href="#compared">What was compared</a></li>
+    <li><a href="#data">The data, in plain words</a></li>
+    <li><a href="#compared">What is read from each run</a></li>
     <li><a href="#f1">Figure 1 &mdash; every run, sorted by the injury effect</a></li>
     <li><a href="#f2">Figure 2 &mdash; by group of runs</a></li>
     <li><a href="#f3">Figure 3 &mdash; by the setting that varies inside a group</a></li>
-    <li><a href="#f4">Figure 4a&ndash;4g &mdash; the Figure 7b view, run by run</a></li>
+    <li><a href="#f4">Figure 4a&ndash;4h &mdash; the Figure 7b view, run by run</a></li>
     <li><a href="#how">How it is computed</a></li>
     <li><a href="#runs">Runs selected and dropped</a></li>
     <li><a href="#issues">Issues found while building this page</a></li>
@@ -78,16 +116,7 @@ td.nw { white-space:nowrap; }
 </section>
 
 <section class="col" id="compared">
-  <h2><span class="num">01</span> What was compared</h2>
-  <p>Each agent was tested in six scenes, each at starting injury 0 and 70: <strong>no animal</strong>;
-  a <strong>hunting predator</strong> that can hurt it; a <strong>chasing rabbit</strong> that moves
-  exactly like the predator but is harmless; the same rabbit with its smell removed; a
-  <strong>wandering rabbit</strong>; and a wandering rabbit that smells like a predator. The agent starts
-  three squares from the bush; the animal starts on the far side. Each scene is played 30 times per
-  checkpoint.</p>
-  <p>The runs come from {{N_FAMILIES}} groups, and their tests come in five <strong>scene sets</strong>
-  that differ in ways that matter. They are kept apart in every figure and never averaged together:</p>
-  {{TABLE:scene_sets}}
+  <h2><span class="num">01</span> What is read from each run</h2>
   <p>Three quantities are read from each run, all in percentage points of bush dwell (the share of the
   test's steps the agent spends on the bush): the <strong>injury effect</strong> in a scene, injury 70
   minus injury 0; the same in the no-animal scene; and their difference, the part of the injury effect
@@ -220,6 +249,13 @@ td.nw { white-space:nowrap; }
     made to block animals, so a rabbit could follow the agent into it. They also wrote the bush-dwell
     measure under an older column name; it is the same quantity (share of the episode's steps on the
     bush cell) and was renamed when read.</li>
+    <li><strong>Curriculum wave 1 was tested before the test bush was fixed.</strong> Its tests ran on
+    22 September; on 23 September the test scenes were found to let animals walk into the bush, which the
+    training worlds never allowed, and were fixed. Wave 1 was never re-tested, so it sits in its own scene
+    set. The two "wave 2" test results are the same two runs as the blocking-bush level-04 rows, measured
+    before the fix; their re-test after the fix is used instead, and the old one is in the dropped table.</li>
+    <li><strong>Bush healing speed is read from each run's saved settings.</strong> Wave 1 states it
+    (no bonus); the July runs predate the setting, so "same as elsewhere" is assumed for them, not read.</li>
     <li><strong>The injury-grid scene set has no chasing rabbit.</strong> Its 30 rows appear only in the
     wandering-rabbit panels.</li>
     <li><strong>One seed per setting, except the smell study.</strong> The intervals are within-run

@@ -47,6 +47,7 @@ INJ = ["00", "70"]
 # Scene sets: what differs between the fixed test-scene batteries. Never pooled.
 SCENE_SETS = {
     "july": "July set: bush hides the agent, animals can walk into it; no temperature system",
+    "core_old": "Core set, tested before the 2026-09-23 fix: the test bush let animals in",
     "core": "Core set: bush hides the agent and blocks animals; no campfire",
     "thermal": "Temperature set: core scenes in a level-05/06 body, one of 8 fire/ambient variants",
     "injgrid": "Injury-grid set: only 3 scenes (no animal, hunting predator, wandering rabbit)",
@@ -63,9 +64,9 @@ REGISTRY = [
      lambda l: f"level 0{l[2]}, GAE return estimate"),
     ("configs/eval_sweeps/basic_nmn_g32_rppo.yaml", "July early modulator", "july",
      lambda l: f"level 0{l[2]}, early modulator design, {l.split('_')[1].upper()} return"),
-    ("configs/eval_sweeps/basicq2_wave1_rppo.yaml", "Curriculum wave 1", "core",
+    ("configs/eval_sweeps/basicq2_wave1_rppo.yaml", "Curriculum wave 1", "core_old",
      lambda l: f"level 0{l[4]}"),
-    ("configs/eval_sweeps/basicq2_wave2_rppo.yaml", "Curriculum wave 2", "core",
+    ("configs/eval_sweeps/basicq2_wave2_rppo.yaml", "Curriculum wave 2", "superseded",
      lambda l: f"level 0{l[4]}"),
     ("configs/eval_sweeps/basicq2_wave2_blocking_bush_rppo.yaml", "Blocking-bush training", "core",
      lambda l: f"level 0{l[4]}, bush blocks animals in training"),
@@ -137,6 +138,16 @@ def candidates():
     return out
 
 
+def bush_heal(run_dir):
+    """How much faster injury heals on a bush, from the run's saved config ('none' if the key is absent:
+    runs from before the key existed heal at the same rate everywhere)."""
+    f = os.path.join(ROOT, run_dir, "models", "config.yaml")
+    if not os.path.exists(f):
+        return "unknown"
+    m = re.search(r"recovery_in_bush_multiplier:\s*([\d.]+)", open(f).read())
+    return "1x" if m is None else f"{float(m.group(1)):g}x"   # absent key = before the bush bonus existed
+
+
 def read(leaf, scene, inj):
     f = os.path.join(ROOT, leaf, f"avoid_{scene}_inj{inj}.csv")
     if not os.path.exists(f):
@@ -159,6 +170,11 @@ def main(argv=None):
     runs, dropped, levels, effects = [], [], [], []
     for c in candidates():
         rid = f"{c['sweep']}/{c['label']}"
+        if c["scene_set"] == "superseded":
+            dropped.append({**c, "id": rid, "reason": "same two runs as the blocking-bush level-04 rows, tested before "
+                            "the 2026-09-23 fix (the test bush let animals in); their re-test after the fix is included"})
+            continue
+        c["bush_heal"] = bush_heal(c["run_dir"])
         series = {(s, i): read(c["leaf"], s, i) for s in SCENES for i in INJ}
         have = {k: v for k, v in series.items() if v is not None}
         if not have:

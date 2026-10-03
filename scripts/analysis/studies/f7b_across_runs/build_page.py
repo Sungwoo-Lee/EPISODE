@@ -34,12 +34,35 @@ import figures as FX      # noqa: E402
 
 PAGE_DIR = os.path.join(ROOT, "docs/experiments/active/hypervigilance/f7b_across_runs")
 FIG_DIR = os.path.join(PAGE_DIR, "figures")
-LEVEL_GROUPS = ["smell", "body", "thirst", "core", "thermal", "injgrid", "july"]
+LEVEL_GROUPS = ["smell", "body", "thirst", "core", "thermal", "injgrid", "core_old", "july"]
+PLAIN = {   # group -> what the agents were trained in, in plain words
+    "July network size": "July runs of curriculum levels 03 and 04 (the July versions of those worlds), each with a "
+                         "smaller or larger network inside the agent.",
+    "July level-04 variants": "July runs of level 04, each with one or two rules changed: slower movement, a shorter "
+                              "predator jump, less damage, slower or faster animals, or combinations.",
+    "July GAE return": "July runs of levels 03 and 04 that learn with a different way of estimating how good the "
+                       "future will be (called GAE in the literature).",
+    "July early modulator": "July runs of levels 03 and 04 with the first version of the modulated agent.",
+    "Curriculum wave 1": "The first September run of curriculum levels 02, 03 and 04. Level 02: a predator and a "
+                         "harmless rabbit. Level 03: adds random starting hunger and injury and a random number of "
+                         "animals. Level 04: adds a predator that can jump at the agent.",
+    "Blocking-bush training": "The same levels retrained a day later (levels 02 to 06) with new body rules: injury "
+                              "heals 25 times faster while the agent sits on a bush, and the body stores twice as much "
+                              "food. Level 05 adds cold and campfires; level 06 here adds noise to the senses.",
+    "Smell study (level 05)": "Level 05 (cold world with campfires) in three versions that differ only in how the "
+                              "predator and the rabbit smell: two different smells, one smell differing only in "
+                              "strength, or the same mixture of both. Three seeds each.",
+    "Body rules (level 05)": "Level 05 with up to four extra body rules switched on: hunger slows healing; healing "
+                             "uses up food; staying warm uses up food; less food in the world.",
+    "Thirst task": "Level 05 plus a pond and thirst, on maps of 10, 15 or 20 squares, with smells that carry "
+                   "across the whole map or only 5 or 3 squares.",
+}
 LEVEL_CAP = {
     "smell": "Smell study, level 05: three smell worlds × two agents × three seeds, tested in scenes built on each smell world.",
     "body": "Body rules, level 05: fifteen worlds × two agents, one seed each. Rules on: H hunger slows healing, C healing costs food, W warmth costs food, F scarcer food.",
     "thirst": "Thirst task: nine worlds (map 10, 15 or 20 squares; smell across the map, or range 5 or 3) × two agents, one seed each.",
-    "core": "Curriculum waves 1 and 2 and blocking-bush training, tested in the core scene set (bush blocks animals, no campfire).",
+    "core": "Blocking-bush training, level 04, tested in the core scene set (bush blocks animals, no campfire).",
+    "core_old": "Curriculum wave 1, levels 02-04, tested in the core scene set before the 2026-09-23 fix, so animals could walk into the test bush.",
     "thermal": "Blocking-bush training, levels 05 and 06, tested in eight temperature variants of the core scenes (cool or neutral ambient, fire by the bush or away, with or without sensor noise matched to training).",
     "injgrid": "Blocking-bush training, tested in the injury-grid scene set (no chasing rabbit). Only injuries 0 and 70 are shown.",
     "july": "July runs (levels 03 and 04: network sizes, level-04 variants, GAE return, an early modulator design), tested in the July scene set in which animals could enter the bush.",
@@ -69,7 +92,8 @@ def table(df, cols, heads, num=(), nowrap=(), min_width=720):
 
 
 def fmt(x):
-    return f"{x:+.1f}".replace("-", "&minus;")
+    t = f"{x:+.1f}"
+    return "0.0" if t in ("+0.0", "-0.0") else t.replace("-", "&minus;")
 
 
 CUE = ('<p class="cue" hidden>&larr; the figure is wider than the screen &mdash; scroll it sideways, '
@@ -122,7 +146,11 @@ def main(argv=None):
     tok = {
         "{{N_SEL}}": str(len(R)), "{{N_DROP}}": str(len(X)), "{{N_UNIQUE}}": str(R.run_dir.nunique()),
         "{{N_FAMILIES}}": str(R.family.nunique()), "{{N_NEW}}": str(int((R.family == "Body rules (level 05)").sum())),
-        "{{NONE_NEW}}": f"{eff('none', new_ids)['mean'].median():.0f}",
+        "{{NONE_NEW}}": f"{eff('none', R[R.bush_heal == '25x'].id)['mean'].median():.0f}",
+        "{{NONE_SLOW}}": fmt(eff("none", R[R.bush_heal == "1x"].id)["mean"].median()),
+        "{{N_FAST}}": str(R[R.bush_heal == "25x"].run_dir.nunique()),
+        "{{N_SETS}}": ["no", "one", "two", "three", "four", "five", "six"][R.scene_set.nunique()],
+        "{{N_SLOW}}": str(R[R.bush_heal == "1x"].run_dir.nunique()),
         "{{WANDER_MINUS}}": fmt(eff("rabbitwander-minus-none")["mean"].median()),
         "{{N_WANDER}}": str(len(eff("rabbitwander-minus-none"))),
         "{{CHASE_MIN}}": fmt(ch["mean"].min()), "{{CHASE_MAX}}": fmt(ch["mean"].max()),
@@ -139,15 +167,30 @@ def main(argv=None):
     }
 
     # ---- tables
+    pl = []
+    for f in FX.FAMILY_ORDER:
+        g = R[R.family == f]
+        if not len(g):
+            continue
+        pl.append({"group": f, "trained": PLAIN[f], "runs": g.run_dir.nunique(),
+                   "agents": "both" if g.agent.nunique() == 2 else g.agent.iloc[0],
+                   "heal": ", ".join(sorted(g.bush_heal.unique())).replace("25x", "25 times faster")
+                                                                   .replace("1x", "same as elsewhere")})
+    tok["{{TABLE:datasets}}"] = table(pd.DataFrame(pl), ["group", "trained", "runs", "agents", "heal"],
+                                      ["group", "what the agents learned in", "runs", "agent type",
+                                       "healing on a bush"], num=("runs",), min_width=760)
     ss = pd.DataFrame([{"set": FX.SET_TAG[k], "what": FX.SET_SHORT[k].split(" (")[1].rstrip(")") if "(" in FX.SET_SHORT[k] else "",
                         "rows": int((R.scene_set == k).sum())} for k in FX.SET_ORDER])
     ss["what"] = [{"july": "July 2026 runs; animals could walk into the bush; no temperature system",
+                   "core_old": "the core scenes as they were before the 2026-09-23 fix: the test bush let animals in",
                    "core": "bush hides the agent and blocks animals; no campfire",
                    "thermal": "core scenes in a level-05/06 body, with one of eight fire and ambient-temperature variants",
                    "injgrid": "only three scenes (no animal, hunting predator, wandering rabbit) at ten injury levels",
                    "world": "scenes rebuilt on the agent's own training world, with a campfire beside the bush"}[k]
                   for k in FX.SET_ORDER]
-    tok["{{TABLE:scene_sets}}"] = table(ss, ["set", "what", "rows"], ["scene set", "what differs", "rows"], num=("rows",))
+    ss["used"] = [", ".join(f for f in FX.FAMILY_ORDER if ((R.family == f) & (R.scene_set == k)).any()) for k in FX.SET_ORDER]
+    tok["{{TABLE:scene_sets}}"] = table(ss, ["set", "what", "used", "rows"], ["scene set", "what differs", "groups tested in it", "rows"],
+                                        num=("rows",), min_width=760)
     g = []
     for f in FX.FAMILY_ORDER:
         for s in FX.SET_ORDER:
@@ -179,12 +222,13 @@ def main(argv=None):
     tok["{{TABLE:extremes}}"] = table(ex, ["family", "set", "row", "value", "ci", "note"],
                                       ["group", "scene set", "run", "extra effect (pp)", "95% interval", "note"],
                                       num=("value",), nowrap=("ci",), min_width=820)
-    fams = R.groupby(["family", "scene_set"]).agg(rows=("id", "size"), runs=("run_dir", "nunique"),
+    fams = R.groupby(["family", "scene_set", "bush_heal"]).agg(rows=("id", "size"), runs=("run_dir", "nunique"),
                                                    ckpts=("n_ckpt", "median")).reset_index()
     fams["set"] = fams.scene_set.map(FX.SET_TAG)
     fams["ckpts"] = fams.ckpts.map(lambda v: f"{v:.0f}")
-    tok["{{TABLE:families}}"] = table(fams, ["family", "set", "rows", "runs", "ckpts"],
-                                      ["group", "scene set", "rows", "distinct runs", "checkpoints tested (median)"],
+    tok["{{TABLE:families}}"] = table(fams, ["family", "set", "bush_heal", "rows", "runs", "ckpts"],
+                                      ["group", "scene set", "healing on a bush", "rows", "distinct runs",
+                                       "checkpoints tested (median)"],
                                       num=("rows", "runs", "ckpts"))
     X2 = X.copy()
     X2["reason"] = X2.reason.str.replace("no experiment-test results on disk",
@@ -195,8 +239,9 @@ def main(argv=None):
     R2 = R.copy()
     R2["set"] = R2.scene_set.map(FX.SET_TAG)
     R2["run"] = R2.run_dir.map(os.path.basename)
-    tok["{{TABLE:runs}}"] = table(R2, ["family", "set", "setting", "agent", "run", "n_ckpt"],
-                                  ["group", "scene set", "setting", "agent", "training run", "checkpoints"], num=("n_ckpt",),
+    tok["{{TABLE:runs}}"] = table(R2, ["family", "set", "setting", "agent", "bush_heal", "run", "n_ckpt"],
+                                  ["group", "scene set", "setting", "agent", "healing on a bush", "training run",
+                                   "checkpoints"], num=("n_ckpt",),
                                   nowrap=("run",), min_width=1100)
 
     # ---- figures
@@ -210,7 +255,7 @@ def main(argv=None):
     for k, gname in enumerate(LEVEL_GROUPS):
         stem = f"f7b_levels__{gname}"
         title = FX.GROUPS[gname][0]
-        f4.append(f'<h4 class="fh"><span class="n">Figure 4{"abcdefg"[k]}</span>{html.escape(title)}</h4>')
+        f4.append(f'<h4 class="fh"><span class="n">Figure 4{"abcdefgh"[k]}</span>{html.escape(title)}</h4>')
         f4.append(figure(stem, f"Bush dwell per scene for each run of the group {title}, at injury 0 and 70.",
                          "Horizontal, in each panel: bush dwell over the newest 20 checkpoints, the share of the "
                          "scene's 100 steps spent on the bush (%, 0&ndash;100). Vertical: one row per run (setting "
