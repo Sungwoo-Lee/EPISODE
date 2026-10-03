@@ -2425,3 +2425,54 @@ that draw that encoding. **Check:** count the markers of that kind in one panel 
 with the row (here 1 hollow marker per predator panel × 2 panels = 2 for the control world, matching
 the row "2 of 24").
 
+
+### F73 — a one-row figure legend widens the saved canvas into blank space
+
+**Saw (2026-10-03, Basic Behaviour page for the 18 thirst-task runs, trial build, format gate).** Figures
+1, 3, 4 and 6 scrolled sideways on a 1440 px desktop over a canvas that was mostly empty: the legend was
+drawn with `ncol = len(worlds) + len(agents)` (11 entries in one row with 9 worlds), the tight-bbox save
+widened the canvas to 5,888 px to fit it, the panels' ink covered only 43 % of the width, and the page
+builder then set the figure's minimum display width from that inflated canvas. The layout checker passed
+it, because a scroll box with its cue is legitimate.
+
+**Rule.** Cap legend columns (≈ 3–4) or use a structured legend; a legend never sets the canvas width.
+**Check:** the panels' ink spans at least ~80 % of the saved canvas width, and no sideways-scroll cue is
+visible at 1440 px.
+
+### F74 — a palette indexed modulo its length silently reuses colours
+
+**Saw (2026-10-03, same page, trial build).** `SERIES[i % len(SERIES)]` gave 9 worlds 4 colours, so one
+blue stood for three different worlds while the page said "colour is the smell world"; the legend listed
+each colour two or three times. **Rule.** Encoding helpers fail on palette overflow instead of wrapping;
+a factorial design gets a factorial encoding (here hue = map size, shade = smell reach, marker = agent).
+**Check:** the number of distinct colours in the legend equals the number of series it claims to encode.
+
+### F75 — a fixed panel count carried over from a smaller population
+
+**Saw (2026-10-03, same page, trial build).** `worlds[:3]` in Figure 6, written for a three-world page,
+drew 3 of 9 worlds, and the hand-written caption ("all three panels") hid the loss. **Rule.** No fixed
+slices over population lists; panel counts and caption counts come from the same list. **Check:** the
+number of panels equals the number of worlds in the population record.
+
+### F76 — a contents sub-list hard-coded in the builder instead of built from the headings it emits
+
+**Saw (2026-10-03, same page, final build).** The Figure 7 entries in Contents were a fixed list written
+for another population: four links (`#f7d`–`#f7g`) pointed at ids that did not exist and the 7a–7c labels
+did not match the figures. No checker follows `href`s, so geometry passes were clean. **Rule.** Build
+every contents entry from the headings actually emitted. **Check:** every `href="#…"` in the built page
+resolves to an `id` in the same page; the build fails otherwise.
+
+### F77 — a refusal or limit sentence filled with `str()` of a Python container
+
+**Saw (2026-10-03, same page, final build).** Three callouts printed raw tuples and dicts
+(`[('g10s3', 't16quad'), …]`, `{'g10s3/t1none': 1, …}`) — about 20 lines on a phone of internal codes the
+page translated everywhere else — and cited a figure ("7e") the page did not have. The template read fine
+because the placeholder looked innocent. **Rule.** Refusal and limit reasons are written as sentences with
+display names. **Check:** the build fails if emitted prose contains `[(`, `{'` or `':`.
+
+### F78 — heat-map cell labels with fixed decimals on a target with a small value range
+
+**Saw (2026-10-03, same page, final build).** Figure 6f labelled pond-arrival cells with `f"{V:.0f}"` on
+values of 0–3.3 %, so differently shaded cells all read "1" or "0". **Rule.** Derive label decimals from
+the panel's value range. **Check:** no two differently shaded cells in one panel carry the same label
+where their values differ by more than half a displayed unit.
