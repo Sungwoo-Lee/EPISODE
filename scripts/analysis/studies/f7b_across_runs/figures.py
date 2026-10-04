@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = None
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "scripts", "analysis", "basic_behaviour"))
 import _fig as FG  # noqa: E402
@@ -60,9 +61,9 @@ GROUPS = {  # page group -> (title, families); oldest first
     "refuge": ("Bush-refuge and rest-premium training (August)", ["Bush-refuge training", "Rest premium",
                                                                  "Rest premium, no ambush predators"]),
     "core_old": ("Curriculum wave 1, core scenes tested before the bush fix", ["Curriculum wave 1"]),
-    "core": ("Blocking-bush training, core scenes", ["Blocking-bush training"]),
-    "thermal": ("Blocking-bush training, levels 05-06, temperature scenes", ["Blocking-bush training"]),
-    "injgrid": ("Blocking-bush training, injury-grid scenes", ["Blocking-bush training"]),
+    "core": ("Fast bush healing (22 Sep), core scenes", ["Fast bush healing (22 Sep)"]),
+    "thermal": ("Fast bush healing (22 Sep), levels 05-06, temperature scenes", ["Fast bush healing (22 Sep)"]),
+    "injgrid": ("Fast bush healing (22 Sep), injury-grid scenes", ["Fast bush healing (22 Sep)"]),
     "smell": ("Smell study, level 05", ["Smell study (level 05)"]),
     "body": ("Body rules, level 05", ["Body rules (level 05)"]),
     "thirst": ("Thirst task", ["Thirst task"]),
@@ -270,7 +271,7 @@ def within_groups(R):
                 [(f"level 0{l}", w1[w1.setting == f"level 0{l}"]["id"].tolist()) for l in (2, 3, 4)]))
     t = R[(R.scene_set == "thermal")]
     vs = sorted(t.setting.str.split("scene variant ").str[1].unique())
-    out.append(("Blocking-bush training, levels 05-06, temperature scenes (variant of the scene)",
+    out.append(("Fast bush healing (22 Sep), levels 05-06, temperature scenes (variant of the scene)",
                 [(v, t[t.setting.str.endswith(v)]["id"].tolist()) for v in vs]))
     return out
 
@@ -394,7 +395,7 @@ FAM_SHORT = {"July curriculum": "July curriculum", "July network size": "July si
              "July early modulator": "July early modulator", "July re-train, corrected smell fall-off": "July re-train",
              "Dreamer agents": "Dreamer", "Bush-refuge training": "Aug bush refuge", "Rest premium": "Aug rest premium",
              "Rest premium, no ambush predators": "Aug rest premium, no ambush",
-             "Curriculum wave 1": "Sep wave 1", "Blocking-bush training": "Sep blocking bush",
+             "Curriculum wave 1": "Sep wave 1", "Fast bush healing (22 Sep)": "Sep fast bush healing",
              "Smell study (level 05)": "Oct smell study", "Body rules (level 05)": "Sep body rules",
              "Thirst task": "Oct thirst"}
 
@@ -442,6 +443,48 @@ def fig_map(R, L, E, X):
     return fig, ckpt_rows(R, "all rows") + rows
 
 
+def fig_factors(R, L, E, X):
+    """Matched-pair effect of each factor on T1 and T2 (from factors.py)."""
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    P = pd.read_csv(os.path.join(DATA_DIR, "factor_pairs.csv"))
+    m = P.groupby("factor").dT1.mean()
+    order = sorted(m.index, key=lambda f: (-round(abs(m[f]), 1), f))   # same key as the page table
+    n = len(order)
+    h = 0.42 * n + 2.6
+    fig, axs = plt.subplots(1, 2, figsize=(12.0, h), sharey=True, sharex=True)
+    rng = np.random.default_rng(2)
+    for ax, (col, name) in zip(axs, (("dT1", "A. hides more when injured,\nwandering rabbit present"),
+                                            ("dT2", "B. treats the wandering rabbit\nas a threat when injured"))):
+        for k, fct in enumerate(order):
+            y = n - 1 - k
+            g = P[P.factor == fct]
+            for _, r in g.iterrows():
+                yy = y + rng.uniform(-0.2, 0.2)
+                ax.plot(r[col], yy, ls="", marker="o", ms=5, color=H.SERIES[0], alpha=0.75,
+                        mfc=H.PAPER if r["hollow"] else H.SERIES[0], mew=1.1)
+            ax.plot([g[col].mean()] * 2, [y - 0.36, y + 0.36], color=H.INK, lw=2.2)
+        ax.axvline(0, color=H.RULE, lw=1.1, zorder=0)
+        ax.set_title(name, loc="left", fontsize=H.FS_LABEL)
+        ax.set_xlabel("change when switched on (pp)", fontsize=H.FS_LABEL)
+        ax.grid(axis="y", visible=False)
+    axs[0].set_yticks(range(n))
+    axs[0].set_yticklabels([f"{f} ({(P.factor == f).sum()})" for f in order][::-1], fontsize=H.FS_LABEL - 1)
+    axs[0].set_ylim(-0.7, n - 0.3)
+    hs = [Line2D([], [], ls="", marker="o", ms=7, color=H.SERIES[0], label="one matched pair of runs (or tests)"),
+          Line2D([], [], ls="", marker="o", ms=7, color=H.SERIES[0], mfc=H.PAPER, mew=1.1,
+                 label="hollow: agent died early in a scene used (not interpreted)"),
+          Line2D([], [], color=H.INK, lw=2.2, label="mean over pairs")]
+    fig.legend(handles=hs, loc="lower center", ncol=3, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.005))
+    fig.subplots_adjust(left=0.36, right=0.98, top=1 - 0.75 / h, bottom=1.25 / h, wspace=0.08)
+    rows = [{"what": f"{f}: matched pairs", "used": int((P.factor == f).sum()), "total": int((P.factor == f).sum()),
+             "note": "every pair the existing runs allow; the number is shown after each factor name"} for f in order]
+    rows.append({"what": "pairs with a hollow side", "used": int(P.hollow.sum()), "total": len(P),
+                 "note": "drawn hollow: the agent died early in a scene the value uses (mostly body rules with "
+                         "healing that costs food)"})
+    return fig, rows
+
+
 def fig_levels(R, L, E, X, group):
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
@@ -467,7 +510,7 @@ def fig_levels(R, L, E, X, group):
                 continue
             ax.plot([a["mean"], b["mean"]], [y, y], color=H.INK_2, lw=1.0, alpha=0.6)
             ax.plot(b["mean"], y, ls="", marker=AG_MK[r["agent"]], ms=5.5, color=H.INK, zorder=3)
-            ax.plot(a["mean"], y, ls="", marker=AG_MK[r["agent"]], ms=7.0, color=H.INK_2, mfc="none",
+            ax.plot(a["mean"], y, ls="", marker=AG_MK[r["agent"]], ms=7.0, color=H.INK_2, mfc="#d3d6d2",
                     mew=1.3, zorder=4)   # drawn on top so a coinciding injury-0 value stays visible
         for i in range(1, n):
             if G.family[i] != G.family[i - 1]:
@@ -486,9 +529,9 @@ def fig_levels(R, L, E, X, group):
     h = 0.27 * n + 2.3
     fig.supxlabel("bush dwell, newest 20 checkpoints: share of the scene's steps on the bush (%)",
                   fontsize=H.FS_BODY, y=0.62 / h)
-    hs = [Line2D([], [], ls="", marker="o", ms=8, color=H.INK_2, mfc="none", mew=1.3, label="start injury 0 (hollow)"),
-          Line2D([], [], ls="", marker="o", ms=8, color=H.INK, label="start injury 70 (filled)"),
-          ] + [Line2D([], [], ls="", marker=AG_MK[a], ms=8, color=H.INK_2, mfc=H.PAPER,
+    hs = [Line2D([], [], ls="", marker="o", ms=8, color=H.INK_2, mfc="#d3d6d2", mew=1.3, label="start injury 0 (light grey)"),
+          Line2D([], [], ls="", marker="o", ms=8, color=H.INK, label="start injury 70 (dark)"),
+          ] + [Line2D([], [], ls="", marker=AG_MK[a], ms=8, color=H.INK_2, mfc=H.INK_2,
                       label=f"{a} agent ({ {'o': 'circle', '^': 'triangle', 's': 'square'}[AG_MK[a]] })")
                for a in AG_MK if (G.agent == a).any()]
     fig.legend(handles=hs, loc="lower center", ncol=4, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.01))
@@ -503,10 +546,12 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
     ap.add_argument("--fig-dir", required=True)
-    ap.add_argument("--figure", required=True, choices=["rank", "family", "within", "timeline", "map", "levels"])
+    ap.add_argument("--figure", required=True, choices=["rank", "family", "within", "timeline", "map", "factors", "levels"])
     ap.add_argument("--group", choices=list(GROUPS))
     a = ap.parse_args(argv)
     H.apply()
+    global DATA_DIR
+    DATA_DIR = a.data
     D = load(a.data)
     if a.figure == "levels":
         if not a.group:
@@ -514,7 +559,7 @@ def main(argv=None):
         fig, rows = fig_levels(*D, a.group)
         stem = f"f7b_levels__{a.group}"
     else:
-        fig, rows = {"rank": fig_rank, "family": fig_family, "within": fig_within, "timeline": fig_timeline, "map": fig_map}[a.figure](*D)
+        fig, rows = {"rank": fig_rank, "family": fig_family, "within": fig_within, "timeline": fig_timeline, "map": fig_map, "factors": fig_factors}[a.figure](*D)
         stem = f"f7b_{a.figure}"
     FG.record_samples(os.path.abspath(a.fig_dir), stem, rows)
     FG.save(fig, os.path.abspath(a.fig_dir), stem)

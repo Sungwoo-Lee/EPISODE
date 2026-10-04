@@ -89,10 +89,10 @@ REGISTRY = [
      lambda l: f"level 0{l[4]}"),
     ("configs/eval_sweeps/basicq2_wave2_rppo.yaml", "Curriculum wave 2", "superseded",
      lambda l: f"level 0{l[4]}"),
-    ("configs/eval_sweeps/basicq2_wave2_blocking_bush_rppo.yaml", "Blocking-bush training", "core",
-     lambda l: f"level 0{l[4]}, bush blocks animals in training"),
-    ("configs/eval_sweeps/injury_grid/injurygrid_*_rppo.yaml", "Blocking-bush training", "injgrid", None),
-    ("configs/eval_sweeps/thermal_probes/thermalprobe_*_rppo.yaml", "Blocking-bush training", "thermal", None),
+    ("configs/eval_sweeps/basicq2_wave2_blocking_bush_rppo.yaml", "Fast bush healing (22 Sep)", "core",
+     lambda l: f"level 0{l[4]}"),
+    ("configs/eval_sweeps/injury_grid/injurygrid_*_rppo.yaml", "Fast bush healing (22 Sep)", "injgrid", None),
+    ("configs/eval_sweeps/thermal_probes/thermalprobe_*_rppo.yaml", "Fast bush healing (22 Sep)", "thermal", None),
     ("configs/eval_sweeps/hvsmell/hvsmell_*_rppo.yaml", "Smell study (level 05)", "world",
      lambda l: {"hv2ch": "two-channel smell (control)", "hv1ch": "single-channel smell",
                 "hv1chm": "matched-strength smell"}[l.split("_")[0]]),
@@ -145,7 +145,7 @@ def candidates():
                     setting = body_setting(name.split("_")[1])
                 else:
                     setting = thirst_setting(name.split("_")[1])
-                if fam == "Blocking-bush training" and sset == "core":
+                if fam == "Fast bush healing (22 Sep)" and sset == "core":
                     pass
                 out.append({"family": fam, "scene_set": sset, "setting": setting, "spec": os.path.relpath(sp, ROOT),
                             "sweep": name, "label": lab, "run_dir": path, "agent": agent_of(path),
@@ -218,7 +218,7 @@ def main(argv=None):
     for c in candidates():
         rid = f"{c['sweep']}/{c['label']}"
         if c["scene_set"] == "superseded":
-            dropped.append({**c, "id": rid, "reason": "same two runs as the blocking-bush level-04 rows, tested before "
+            dropped.append({**c, "id": rid, "reason": "same two runs as the fast-bush-healing level-04 rows, tested before "
                             "the 2026-09-23 fix (the test bush let animals in); their re-test after the fix is included"})
             continue
         c["bush_heal"] = bush_heal(c["run_dir"])

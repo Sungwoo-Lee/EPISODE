@@ -27,8 +27,10 @@ td.nw { white-space:nowrap; }
   <ol>
     <li><a href="#data">The data, in plain words</a></li>
     <li><a href="#f0">Figure 0 &mdash; when each group was trained</a></li>
-    <li><a href="#compared">What is read from each run</a></li>
     <li><a href="#two">Figure M &mdash; animal dependence against state dependence</a></li>
+    <li><a href="#factors">Figure F &mdash; which factor matters most</a></li>
+    <li><a href="#bush">Did the blocking bush matter?</a></li>
+    <li><a href="#compared">What is read from each run</a></li>
     <li><a href="#f1">Figure 1 &mdash; every run, sorted by the injury effect</a></li>
     <li><a href="#f2">Figure 2 &mdash; by group of runs</a></li>
     <li><a href="#f3">Figure 3 &mdash; by the setting that varies inside a group</a></li>
@@ -160,6 +162,65 @@ td.nw { white-space:nowrap; }
   {{TABLE:map_groups}}
 </section>
 
+<section class="col" id="factors">
+  <h2><span class="num">FACTORS</span></h2>
+  <h4>Which factor makes the agent (A) hide more when injured with a wandering rabbit, and (B) treat the
+  wandering rabbit like a threat?</h4>
+  <p>Each factor is measured only between runs that differ in that factor and as little else as the
+  existing runs allow: the same runs tested two ways, the same seed and agent in two smell worlds, two
+  body-rule worlds that differ in one rule, and so on. <strong>A</strong> is bush dwell with a wandering
+  rabbit at injury 70 minus at injury 0. <strong>B</strong> is bush dwell with a wandering rabbit minus with
+  no animal, both at injury 70: how much more the injured agent hides because the rabbit is there.</p>
+  <ul>
+    <li><strong>A has one strong factor: fast healing on a bush.</strong> Going from curriculum wave 1 to the
+    runs trained a day later raises A in every one of the six matched pairs (Figure F, top row). Nothing else
+    moves A by more than a few points on average.</li>
+    <li><strong>The same factor lowers B.</strong> Once the bush heals, the injured agent goes there whether
+    or not the rabbit is present, so the rabbit itself adds less.</li>
+    <li><strong>No factor in the existing runs raises B much.</strong> The largest average rises are small
+    and mixed: a predator that can jump (level 04 instead of 03) and a training bush that keeps animals out.
+    Removing the ambush predators lowers B.</li>
+  </ul>
+  <p>So hiding more when injured and treating a harmless animal as a threat are moved by different things;
+  getting both at once is not something any existing run shows.</p>
+  {{FIG:factors}}
+  {{TABLE:factors}}
+  <p class="foot">Caveats: most factors have one seed per side; the fast-healing pairs also differ in the
+  food store and base healing rates and in the test scene set (wave 1 was tested before the test-bush fix);
+  body-rule pairs are mostly hollow because those agents starve in the food-free tests.</p>
+</section>
+
+<section class="col" id="bush">
+  <h2><span class="num">BUSH</span></h2>
+  <h4>Did the blocking bush matter?</h4>
+  <p>A bush can let animals in, or keep them out so that it is a real refuge. Three comparisons on this
+  page separate that from everything else. Each cell reads <em>before &rarr; after</em>, in percentage
+  points of bush dwell, averaged over the newest 20 checkpoints. Animal dependence is bush dwell with the
+  animal minus with no animal, both unhurt; state dependence is bush dwell with no animal at injury 70
+  minus injury 0.</p>
+  <p><strong>1. Same agents, test bush changed.</strong> The two level-04 agents trained on 22 September were
+  tested before and after the test bush was fixed to keep animals out. Nothing about the agents differs, only
+  the test.</p>
+  {{TABLE:bush_test}}
+  <p>Animal dependence moves by a few points, in no consistent direction. State dependence cannot change: the
+  no-animal scene has no animal to keep out.</p>
+  <p><strong>2. Training bush changed.</strong> The late-July re-train (bush animals can enter) against the
+  August bush-refuge training (bush blocks animals), levels 01 to 04, one ordinary agent each. These also
+  differ in date and in the scene set they were tested in, so this is weak evidence.</p>
+  {{TABLE:bush_train}}
+  <p>No consistent change in animal dependence, and state dependence stays at zero in both.</p>
+  <p><strong>3. Bush already blocking, healing rule changed.</strong> Curriculum wave 1 (21 September) and the
+  runs one day later both trained with a bush that keeps animals out. What changed between them is that injury
+  heals 25&times; faster on a bush, the body stores twice as much food and the base healing rates changed.
+  Wave 1 was tested before the test-bush fix and the 22 September runs after it, which affects the predator
+  column but not the no-animal column.</p>
+  {{TABLE:bush_heal}}
+  <p><strong>Reading.</strong> The blocking bush on its own changes little and does not create state
+  dependence. The injury effect appears together with the healing rule. That is why the 22 September group is
+  called <em>fast bush healing</em> on this page, not &ldquo;blocking bush&rdquo; as in an earlier version.</p>
+</section>
+
+
 
 <section class="col" id="compared">
   <h2><span class="num">01</span> What is read from each run</h2>
@@ -244,7 +305,7 @@ td.nw { white-space:nowrap; }
 <section class="col" id="f4">
   <h3 class="fh"><span class="n">Figure 4</span>The Figure 7b view, run by run</h3>
   <p>These panels repeat the Basic Behaviour page's Figure 7b for every run: late-training bush dwell
-  in each scene, at injury 0 (hollow grey ring) and injury 70 (filled dark marker). They are drawn in
+  in each scene, at injury 0 (light grey marker) and injury 70 (dark marker). They are drawn in
   greys because colour on this page means the scene set. A long line between the two is
   a large injury effect. Rows marked * are runs whose agent died early (average survival under 95 of
   100 steps) in at least one predator-free scene.</p>
@@ -301,7 +362,7 @@ td.nw { white-space:nowrap; }
     <li><strong>Curriculum wave 1 was tested before the test bush was fixed.</strong> Its tests ran on
     22 September; on 23 September the test scenes were found to let animals walk into the bush, which the
     training worlds never allowed, and were fixed. Wave 1 was never re-tested, so it sits in its own scene
-    set. The two "wave 2" test results are the same two runs as the blocking-bush level-04 rows, measured
+    set. The two "wave 2" test results are the same two runs as the fast-bush-healing level-04 rows, measured
     before the fix; their re-test after the fix is used instead, and the old one is in the dropped table.</li>
     <li><strong>Bush healing speed is read from each run's saved settings.</strong> Wave 1 states it
     (no bonus); the July runs predate the setting, so "same as elsewhere" is assumed for them, not read.</li>

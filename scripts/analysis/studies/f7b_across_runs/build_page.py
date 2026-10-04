@@ -23,6 +23,7 @@ import pandas as pd
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "scripts", "analysis", "basic_behaviour"))
+sys.path.insert(0, os.path.join(ROOT, "scripts", "analysis", "basic_behaviour"))
 import importlib.util  # noqa: E402
 # the Basic Behaviour builder shares this file's name, so it is loaded by path (helpers only)
 _spec = importlib.util.spec_from_file_location(
@@ -59,7 +60,7 @@ PLAIN = {   # group -> what the agents were trained in, in plain words
     "Curriculum wave 1": "The first September run of curriculum levels 02, 03 and 04. Level 02: a predator and a "
                          "harmless rabbit. Level 03: adds random starting hunger and injury and a random number of "
                          "animals. Level 04: adds a predator that can jump at the agent.",
-    "Blocking-bush training": "The same levels retrained a day later (levels 02 to 06) with new body rules: injury "
+    "Fast bush healing (22 Sep)": "The same levels retrained a day later (levels 02 to 06) with new body rules: injury "
                               "heals 25 times faster while the agent sits on a bush, and the body stores twice as much "
                               "food. Their level 06 is today's level 07 (noise on the senses); the pond level was added later.",
     "Smell study (level 05)": "Level 05 (cold world with campfires) in three versions that differ only in how the "
@@ -74,13 +75,13 @@ LEVEL_CAP = {
     "smell": "Smell study, level 05: three smell worlds × two agents × three seeds, tested in scenes built on each smell world.",
     "body": "Body rules, level 05: fifteen worlds × two agents, one seed each. Rules on: H hunger slows healing, C healing costs food, W warmth costs food, F scarcer food.",
     "thirst": "Thirst task: nine worlds (map 10, 15 or 20 squares; smell across the map, or range 5 or 3) × two agents, one seed each.",
-    "core": "Blocking-bush training, level 04, tested in the core scene set (bush blocks animals, no campfire).",
+    "core": "Fast bush healing (22 Sep), level 04, tested in the core scene set (bush blocks animals, no campfire).",
     "core_old": "Curriculum wave 1, levels 02-04, tested in the core scene set before the 2026-09-23 fix, so animals could walk into the test bush.",
     "refuge": "August bush-refuge and rest-premium runs, tested in scenes whose bush blocks animals, matching their training.",
     "dreamer": "Dreamer agents (a different learning method), tested in the July scene set.",
     "ladder": "The July curriculum runs, one per level; the level-05 (noise) run is tested with noisy senses.",
-    "thermal": "Blocking-bush training, levels 05 and 06, tested in eight temperature variants of the core scenes (cool or neutral ambient, fire by the bush or away, with or without sensor noise matched to training).",
-    "injgrid": "Blocking-bush training, tested in the injury-grid scene set (no chasing rabbit). Only injuries 0 and 70 are shown.",
+    "thermal": "Fast bush healing (22 Sep), levels 05 and 06, tested in eight temperature variants of the core scenes (cool or neutral ambient, fire by the bush or away, with or without sensor noise matched to training).",
+    "injgrid": "Fast bush healing (22 Sep), tested in the injury-grid scene set (no chasing rabbit). Only injuries 0 and 70 are shown.",
     "july": "July runs (levels 03 and 04: network sizes, level-04 variants, GAE return, an early modulator design), tested in the July scene set in which animals could enter the bush.",
 }
 
@@ -145,6 +146,64 @@ def level_table():
             + "".join(rows) + "</tbody></table></div>")
 
 
+AVOID = os.path.join(ROOT, "results/eval/avoidance")
+
+
+def late_diff(leaf, plus, minus):
+    """Newest-20-checkpoint mean of (bush dwell in condition `plus` minus `minus`), formed per checkpoint, in pp."""
+    import probes as PR
+    def ser(c):
+        d = pd.read_csv(os.path.join(AVOID, leaf, f"avoid_{c}.csv"))
+        col = "bush_hiding" if "bush_hiding" in d.columns else "bush_dwell"
+        return d[["step", col]].rename(columns={col: c})
+    m = ser(plus).merge(ser(minus), on="step").sort_values("step")
+    v = PR.summarise(((m[plus] - m[minus]) * 100.0).to_numpy())
+    return v["mean"]
+
+
+def bush_tables():
+    """Three comparisons for 'Did the blocking bush matter?'."""
+    meas = [("animal dep., predator", "pred_inj00", "none_inj00"),
+            ("animal dep., chasing rabbit", "rabbit_inj00", "none_inj00"),
+            ("state dep.", "none_inj70", "none_inj00")]
+    rows = []
+    for agent, lab in (("lvl04_control", "ordinary"), ("lvl04_modulated", "modulated")):
+        r = {"agent": lab}
+        for name, a, b in meas:
+            v0 = late_diff(f"metrics_history_rppo_basicq2_wave2/{agent}", a, b)
+            v1 = late_diff(f"metrics_history_rppo_basicq2_wave2_blocking_bush/{agent}", a, b)
+            r[name] = f"{v0:+.1f} \u2192 {v1:+.1f}"
+        rows.append(r)
+    t1 = table(pd.DataFrame(rows), ["agent"] + [m[0] for m in meas],
+               ["level-04 agent (22 Sep)"] + [m[0] + ": test bush lets animals in \u2192 blocks them" for m in meas],
+               nowrap=tuple(m[0] for m in meas), min_width=820)
+    rows = []
+    for lvl, a, b in (("01", "dp1/rppo/b01_mc", "bushrefuge/rppo/b01_slowpred_5x5"),
+                      ("02", "dp1/rppo/b02_mc", "bushrefuge/rppo/b02_predrabbit_10x10"),
+                      ("03", "dp1/rppo/b03_mc", "bushrefuge/rppo/b03_randinit_10x10"),
+                      ("04", "dp1/rppo/b04_mc", "bushrefuge/rppo/b04_jump_10x10")):
+        r = {"level": lvl}
+        for name, x, y in meas:
+            r[name] = f"{late_diff(a, x, y):+.1f} \u2192 {late_diff(b, x, y):+.1f}"
+        rows.append(r)
+    t2 = table(pd.DataFrame(rows), ["level"] + [m[0] for m in meas],
+               ["level (ordinary agent)"] + [m[0] + ": July re-train \u2192 August bush refuge" for m in meas],
+               nowrap=tuple(m[0] for m in meas), min_width=820)
+    rows = []
+    for lvl in ("02", "03", "04"):
+        for agent, lab in (("control", "ordinary"), ("modulated", "modulated")):
+            r = {"run": f"level {lvl} \u00b7 {lab}"}
+            for name, x, y in (meas[0], meas[2]):
+                v0 = late_diff(f"metrics_history_rppo_basicq2_wave1/lvl{lvl}_{agent}", x, y)
+                v1 = late_diff(f"metrics_history_rppo_injurygrid_core/lvl{lvl}_{agent}", x, y)
+                r[name] = f"{v0:+.1f} \u2192 {v1:+.1f}"
+            rows.append(r)
+    t3 = table(pd.DataFrame(rows), ["run", meas[0][0], meas[2][0]],
+               ["run", meas[0][0] + ": wave 1 (21 Sep) \u2192 fast bush healing (22 Sep)",
+                meas[2][0] + ": wave 1 \u2192 fast bush healing"], nowrap=(meas[0][0], meas[2][0]), min_width=760)
+    return t1, t2, t3
+
+
 def table(df, cols, heads, num=(), nowrap=(), min_width=720):
     out = ['<p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>'
            f'<div class="scroll"><table class="wide" style="min-width:{min_width}px"><thead><tr>']
@@ -152,7 +211,8 @@ def table(df, cols, heads, num=(), nowrap=(), min_width=720):
     out += [f"<th{cls(c)}>{h}</th>" for c, h in zip(cols, heads)]
     out.append("</tr></thead><tbody>")
     for _, r in df.iterrows():
-        cell = lambda c: (f'<td class="nw">{html.escape(num_text(r[c]))}</td>' if c in nowrap else
+        cell = lambda c: (f'<td class="n nw">{html.escape(num_text(r[c]))}</td>' if c in nowrap and c not in ("id", "run", "when") else
+                          f'<td class="nw">{html.escape(num_text(r[c]))}</td>' if c in nowrap else
                           f"<td{cls(c)}>{BB.wrap_cell(num_text(r[c]) if c in num else r[c])}</td>")
         out.append("<tr>" + "".join(cell(c) for c in cols) + "</tr>")
     out.append("</tbody></table></div>")
@@ -244,6 +304,7 @@ def main(argv=None):
 
     # ---- tables
     tok["{{TABLE:levels}}"] = level_table()
+    tok["{{TABLE:bush_test}}"], tok["{{TABLE:bush_train}}"], tok["{{TABLE:bush_heal}}"] = bush_tables()
     pl = []
     R["start"] = R.run_dir.map(FX.start_date)
     for f in sorted(R.family.unique(), key=lambda f: R[R.family == f].start.min()):
@@ -292,9 +353,36 @@ def main(argv=None):
                                          "animal dep., predator", "animal dep., chasing rabbit",
                                          "animal dep., wandering rabbit", "state dep."],
                                         num=("n", "ap", "ar", "aw", "st"), min_width=900)
+    tok["{{FIG:factors}}"] = figure(
+        "f7b_factors", "Two panels, one row per factor. Left: healing 25 times faster on a bush raises injured bush "
+        "dwell with a wandering rabbit by about 16 points in every pair; every other factor stays within a few points. "
+        "Right: the same factor lowers the wandering rabbit's extra threat value by about 5 points; the largest rises "
+        "come from a jumping predator (level 04) and are small and mixed.",
+        "Horizontal: the change, in percentage points of bush dwell, when the factor is switched on, within matched "
+        "pairs of runs (or of tests of the same run) that differ in that factor and as little else as the existing "
+        "runs allow. Left (A): bush dwell with a wandering rabbit at injury 70 minus at injury 0. Right (B): bush "
+        "dwell with a wandering rabbit minus with no animal, both at injury 70. Vertical: factor (no unit), with the "
+        "number of pairs in brackets, sorted by the size of the effect in A. Both panels share one horizontal scale. One dot per pair; hollow = the agent "
+        "died early in a scene the value uses; black bar = mean over pairs.",
+        "Only one factor moves A much: fast healing on a bush. It also lowers B, because the injured agent then "
+        "hides with no animal too. Nothing in the existing runs raises B by more than a few points on average.",
+        "scripts/analysis/studies/f7b_across_runs/figures.py --figure factors (data: factors.py)",
+        title="Figure F &mdash; which factor moves the two targets")
+    Fc = pd.read_csv(os.path.join(a.data, "factors.csv"))
+    Fc["rng1"] = [f"{x:+.1f} to {y:+.1f}" for x, y in zip(Fc.dT1_lo, Fc.dT1_hi)]
+    Fc["rng2"] = [f"{x:+.1f} to {y:+.1f}" for x, y in zip(Fc.dT2_lo, Fc.dT2_hi)]
+    for c in ("dT1", "dT2", "dS"):
+        Fc[c] = Fc[c].map(lambda v: f"{v:+.1f}")
+    Fc["key"] = [(-round(abs(float(v)), 1), f) for v, f in zip(Fc.dT1, Fc.factor)]   # same key as Figure F
+    Fc = Fc.sort_values("key")
+    Fc["pairs"] = [f"{p}" + (f" ({h} hollow)" if h else "") for p, h in zip(Fc.pairs, Fc.hollow)]
+    tok["{{TABLE:factors}}"] = table(Fc, ["factor", "pairs", "dT1", "rng1", "dT2", "rng2", "dS"],
+                                     ["factor switched on", "pairs", "A: mean", "A: range",
+                                      "B: mean", "B: range", "state dep.: mean"],
+                                     num=("dT1", "dT2", "dS"), nowrap=("pairs", "rng1", "rng2"), min_width=820)
     tok["{{FIG:timeline}}"] = figure(
         "f7b_timeline", "Timeline of when each group of runs was trained: seven July groups (including the Dreamer runs), three "
-        "August groups, then curriculum wave 1 on 21 September, blocking-bush training on 22 September, the body "
+        "August groups, then curriculum wave 1 on 21 September, fast-bush-healing training on 22 September, the body "
         "rules and the first smell-study pair on 27 September, the rest of the smell study on 1 October and the "
         "thirst task on 2 October; dashed lines mark four changes to the worlds or tests.",
         "Horizontal: the date each training run started in 2026, read from the run's folder name (one axis from "
@@ -388,7 +476,7 @@ def main(argv=None):
         f4.append(figure(stem, f"Bush dwell per scene for each run of the group {title}, at injury 0 and 70.",
                          "Horizontal, in each panel: bush dwell over the newest 20 checkpoints, the share of the "
                          "scene's 100 steps spent on the bush (%, 0&ndash;100). Vertical: one row per run (setting "
-                         "&middot; agent; no unit). One panel per scene. Hollow grey ring = start injury 0, filled dark marker = "
+                         "&middot; agent; no unit). One panel per scene. Light grey marker = start injury 0, dark marker = "
                          "start injury 70; circle = ordinary agent, triangle = modulated agent, square = Dreamer agent; "
                          "* = died early in a "
                          "predator-free scene.",
