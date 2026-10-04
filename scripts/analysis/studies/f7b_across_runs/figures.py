@@ -408,9 +408,10 @@ def fig_map(R, L, E, X):
     U["start"] = U.run_dir.map(start_date)
     keys = sorted({(f, k) for f, k in zip(R.family, R.scene_set)},
                   key=lambda fk: (U[(U.family == fk[0]) & (U.scene_set == fk[1])].start.min(), SET_ORDER.index(fk[1])))
-    fig, axs = plt.subplots(1, 2, figsize=(12.0, 7.0), sharey=True, sharex=True)
+    fig, axs = plt.subplots(1, 3, figsize=(12.0, 6.6), sharey=True, sharex=True)
     rows = []
-    for ax, (q, name) in zip(axs, (("pred-vs-none@00", "hunting predator"), ("rabbit-vs-none@00", "chasing rabbit"))):
+    for ax, (q, name) in zip(axs, (("pred-vs-none@00", "hunting predator"), ("rabbit-vs-none@00", "chasing rabbit"),
+                                   ("rabbitwander-vs-none@00", "wandering rabbit"))):
         e = E[E.scene == q].merge(R, on="id")
         e = e[e.id.isin(st.index)]
         e["y"] = e.id.map(st)
@@ -419,8 +420,7 @@ def fig_map(R, L, E, X):
             ax.plot(r["mean"], r["y"], ls="", marker=AG_MK[r["agent"]], ms=5.5, color=c, alpha=0.75)
         ax.axhline(0, color=H.RULE, lw=1.1, zorder=0)
         ax.axvline(0, color=H.RULE, lw=1.1, zorder=0)
-        ax.set_xlabel(f"animal dependence: bush dwell with a {name} minus with no animal,\nboth unhurt (percentage points)",
-                      fontsize=H.FS_LABEL)
+        ax.set_xlabel(f"with a {name}\nminus with no animal (pp)", fontsize=H.FS_LABEL)
         ax.set_title(f"animal = {name}", loc="left", fontsize=H.FS_BODY)
         rows.append({"what": f"{name} panel: rows with both values", "used": len(e), "total": len(R),
                      "note": "rows whose scene set has this scene and a no-animal scene at both injuries"})
@@ -434,7 +434,11 @@ def fig_map(R, L, E, X):
                handlelength=1.4)
     for ax in axs:
         ax.set_ylim(-20, 33)
-    fig.subplots_adjust(left=0.09, right=0.98, top=0.95, bottom=0.31, wspace=0.06)
+        ax.set_xlim(-15, 95)
+        ax.set_xticks([0, 20, 40, 60, 80])
+    fig.supxlabel("animal dependence: bush dwell with the animal minus with no animal, both unhurt "
+                  "(percentage points)", fontsize=H.FS_BODY, y=0.205)
+    fig.subplots_adjust(left=0.09, right=0.98, top=0.95, bottom=0.37, wspace=0.08)
     return fig, ckpt_rows(R, "all rows") + rows
 
 

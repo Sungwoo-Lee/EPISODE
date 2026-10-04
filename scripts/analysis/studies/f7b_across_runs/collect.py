@@ -248,7 +248,7 @@ def main(argv=None):
                 if v:
                     effects.append({"id": rid, "scene": s, **v})
         # Animal dependence: a scene minus the no-animal scene, both at injury 0, per checkpoint.
-        for s_ in ("pred", "rabbit"):
+        for s_ in ("pred", "rabbit", "rabbitwander"):
             if (s_, "00") in have and ("none", "00") in have:
                 m = have[(s_, "00")][["step", "bush_hiding"]].merge(
                     have[("none", "00")][["step", "bush_hiding"]], on="step", suffixes=("_a", "_n"))

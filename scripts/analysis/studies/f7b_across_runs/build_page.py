@@ -222,6 +222,9 @@ def main(argv=None):
         "{{ANIM_SLOW_MAX}}": f"{eff('rabbit-vs-none@00', R[R.bush_heal == '1x'].id, interp=False)['mean'].max():.0f}",
         "{{ANIM_FAST_MED}}": f"{eff('rabbit-vs-none@00', R[R.bush_heal == '25x'].id, interp=False)['mean'].median():.0f}",
         "{{ANIM_FAST_MAX}}": f"{eff('rabbit-vs-none@00', R[R.bush_heal == '25x'].id, interp=False)['mean'].max():.0f}",
+        "{{ANIM_WANDER_MED}}": f"{eff('rabbitwander-vs-none@00', R.id, interp=False)['mean'].median():.0f}",
+        "{{ANIM_WANDER_P90}}": f"{eff('rabbitwander-vs-none@00', R.id, interp=False)['mean'].quantile(0.9):.0f}",
+        "{{N_WANDER_ALL}}": str(len(eff('rabbitwander-vs-none@00', R.id, interp=False))),
         "{{N_SETS}}": ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"][R.scene_set.nunique()],
         "{{N_SLOW}}": str(R[R.bush_heal == "1x"].run_dir.nunique()),
         "{{WANDER_MINUS}}": fmt(eff("rabbitwander-minus-none")["mean"].median()),
@@ -258,14 +261,14 @@ def main(argv=None):
                                        "agent type", "healing on a bush"], num=("runs",), nowrap=("when",),
                                       min_width=860)
     tok["{{FIG:map}}"] = figure(
-        "f7b_map", "Scatter of every run: horizontal, how much an animal raises bush dwell; vertical, how much injury "
+        "f7b_map", "Three scatter panels (hunting predator, chasing rabbit, wandering rabbit) of every run: horizontal, how much the animal raises bush dwell; vertical, how much injury "
         "raises bush dwell with no animal. Runs trained before 22 September lie along the zero line, spread from 0 "
         "to 75 points across; recent runs sit about 10 points higher with 15 to 45 points across. The top right is "
         "empty.",
         "Horizontal: animal dependence, bush dwell with the animal minus bush dwell with no animal, both with the "
-        "agent unhurt, in percentage points (left panel: hunting predator; right panel: chasing rabbit). Vertical: "
+        "agent unhurt, in percentage points (left: hunting predator; middle: chasing rabbit; right: wandering rabbit). Vertical: "
         "state dependence, bush dwell with no animal at injury 70 minus at injury 0, in percentage points. Each "
-        "value is the average over the newest 20 checkpoints, formed checkpoint by checkpoint. Both panels share one "
+        "value is the average over the newest 20 checkpoints, formed checkpoint by checkpoint. All three panels share one "
         "horizontal scale. Colour = scene set; shape = agent type (circle ordinary, triangle modulated, square "
         "Dreamer). Group means are in the table under the figure.",
         "Two separate kinds of behaviour: older runs react to animals but not to their own injury; recent runs "
@@ -279,14 +282,16 @@ def main(argv=None):
                 continue
             row = {"group": f, "set": FX.SET_TAG[k], "n": len(ids),
                    "heal": ", ".join(sorted(R[R.id.isin(ids)].bush_heal.unique()))}
-            for q, c in (("pred-vs-none@00", "ap"), ("rabbit-vs-none@00", "ar"), ("none", "st")):
+            for q, c in (("pred-vs-none@00", "ap"), ("rabbit-vs-none@00", "ar"), ("rabbitwander-vs-none@00", "aw"),
+                         ("none", "st")):
                 e = eff(q, ids, interp=False)
                 row[c] = f"{e['mean'].mean():+.1f}" if len(e) else "n/a"
             mg.append(row)
-    tok["{{TABLE:map_groups}}"] = table(pd.DataFrame(mg), ["group", "set", "n", "heal", "ap", "ar", "st"],
+    tok["{{TABLE:map_groups}}"] = table(pd.DataFrame(mg), ["group", "set", "n", "heal", "ap", "ar", "aw", "st"],
                                         ["group (oldest first)", "scene set", "rows", "healing on a bush",
-                                         "animal dep., predator", "animal dep., chasing rabbit", "state dep."],
-                                        num=("n", "ap", "ar", "st"), min_width=820)
+                                         "animal dep., predator", "animal dep., chasing rabbit",
+                                         "animal dep., wandering rabbit", "state dep."],
+                                        num=("n", "ap", "ar", "aw", "st"), min_width=900)
     tok["{{FIG:timeline}}"] = figure(
         "f7b_timeline", "Timeline of when each group of runs was trained: seven July groups (including the Dreamer runs), three "
         "August groups, then curriculum wave 1 on 21 September, blocking-bush training on 22 September, the body "
