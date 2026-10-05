@@ -6,8 +6,8 @@
 > To improve a row, set a `headline:` field on the entry itself.
 
 **Folder definition**: Behavior-measure platform & probes
-**Insights**: 22
-**Last updated**: 2026-10-03
+**Insights**: 23
+**Last updated**: 2026-10-06
 
 ---
 
@@ -15,6 +15,7 @@
 
 | Date | Time | ID | Summary |
 |---|---|---|---|
+| 2026-10-06 | 07:58 | [20261006_0758_test_scene_confound_level05_modulator_gap](20261006_0758_test_scene_confound_level05_modulator_gap.md) | The 22-Sep level-05 'modulated agent beats ordinary' result on the cross-run page came mostly from its test scenes: it was the only level-0… |
 | 2026-10-03 | 07:56 | [20261003_0756_probe_pond_visit_drop_rule_empties_figure](20261003_0756_probe_pond_visit_drop_rule_empties_figure.md) | For water worlds, dropping probe scene cells where agents visit the pond would have discarded nearly every trained cell (about 60% of episo… |
 | 2026-09-09 | 15:05 | [20260909_1505_one_python_figure_pipeline_not_split](20260909_1505_one_python_figure_pipeline_not_split.md) | User rejected splitting figure work into a Python script that computes numbers and JavaScript that draws them: it makes each figure two art… |
 | 2026-08-19 | 19:46 | [20260819_1946_probe_snapshot_staleness_verdict_on_partial_training](20260819_1946_probe_snapshot_staleness_verdict_on_partial_training.md) | A watermark-incremental probe only covers checkpoints that existed WHEN IT LAST RAN. |

@@ -4,9 +4,9 @@
 >
 > Read this file before classifying a new insight. Folder definitions here are the matching surface — if a new insight does not match any definition verbatim, the new-folder justification protocol applies (see CLAUDE.md, "Fragmentation safeguards").
 
-**Last updated**: 2026-10-03
+**Last updated**: 2026-10-06
 **Active folders**: 11
-**Total insights**: 232
+**Total insights**: 233
 **Last audit**: (none)
 
 ---
@@ -24,7 +24,7 @@
 | `env_entities` | Env entity architecture decisions | 22 | 2026-09-09 | [design, decision, learned_lesson, meta, config, hypervigilance, dreamer, refutation, testing] |
 | `config_system` | Config loader/layering/schema | 12 | 2026-10-03 | [config, design, decision, meta, learned_lesson] |
 | `curriculum_learning` | Curriculum/continual training | 3 | 2026-06-24 | [learned_lesson, decision, refutation] |
-| `behavior_measures` | Behavior-measure platform & probes | 22 | 2026-10-03 | [design, decision, meta, learned_lesson, hypervigilance, refutation, noise, dreamer] |
+| `behavior_measures` | Behavior-measure platform & probes | 23 | 2026-10-06 | [design, decision, meta, learned_lesson, hypervigilance, refutation, noise, dreamer, nmn, testing] |
 | `episode_renderer` | Episode video renderer | 6 | 2026-09-22 | [learned_lesson, design, decision, testing, meta, wandb, tradeoff] |
 
 ---
@@ -56,6 +56,8 @@ Surface a merge proposal to the user when:
 ---
 
 ## Change history
+
+- 2026-10-06: Captured 1 insight into `behavior_measures`: `20261006_0758_test_scene_confound_level05_modulator_gap` (the 22-Sep level-05 modulator gap came mostly from the thermal neutral test scenes; compare runs only within one scene set). No new folders or tags.
 
 - 2026-10-03: Captured 6 insights from the thirst-task overnight analysis loop: `subagent_engineering/20261003_0750_plumbing_commit_partial_index_deletes_tree` (a temporary-index commit recorded 5,437 files deleted and was pushed; fixed by a02b2a0d), `cluster_ops/20261003_0752_nas_slow_commit_breaks_stale_lock_rule` (25-min NAS commits make the 10-min stale-lock rule misfire), `cluster_ops/20261003_0754_nas_read_throughput_full_store_validation_infeasible` (700 GB at 5–10 MB/s; sweeps scale ~3x with 8 readers), `behavior_measures/20261003_0756_probe_pond_visit_drop_rule_empties_figure` (truncate at first pond step instead of dropping cells), `config_system/20261003_0758_water_capacity_check_overconservative_fixed_cells` (capacity check rejects single-cell spawn areas), `cluster_ops/20261003_0800_collection_failed_cells_counted_as_claimed` (node 114 lacks pyarrow; launcher counts failed cells as claimed). No new folders or tags.
 - 2026-09-22: Captured 3 insights into `episode_renderer` from the renderer-display + retirement-step-1 session: `20260922_1558_shadowed_guards_one_constant` (removing the painter's 10 px legibility floor changed nothing measurable, because the layout registry declared panel width from the SAME constant and refused at identical sensor ranges — two guards computed from one number shadow each other, and the refusal only went when the declaration stopped depending on the range), `20260922_1559_six_more_checks_that_cannot_fail` (six checks that could not report what they were built to report, each broken differently — a grep killed by its own timeout, a lexicographic `tail`, a namespace-blind `ps`, an invented stop condition, a filter that deleted its own success line, and an AST walk that both invented and missed rules; extends the four recorded on 2026-09-19), and `20260922_1600_vision_slots_legibility_over_anchor` (vision's panel slots lowered 6 → 3 so its map squares double, deliberately breaking the rule that a panel's slot count equals what a reference world draws; both rejected alternatives and the cost — three of six maps drawn past the edge at eight channels — are named). One new tag: **`tradeoff`**, promoted from starter-candidate. No new folders.
