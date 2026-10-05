@@ -1,0 +1,13 @@
+# EXPERIMENTAL, NOT MAINTAINED (CLAUDE.md "Config maintenance scope"): part of the fast-bush-healing
+# replication, docs/experiments/active/hypervigilance/FAST_HEAL_REPLICATION.md.
+#
+# Level 05 exactly as basic/05, except that every episode starts at the comfortable body temperature
+# (the setpoint, 0.0) instead of a random one in [-10, +5]. That is how level 05 was trained on 22 Sep
+# 2026, before random start body temperature became part of basic/05 (2026-09-26, CONFIG_CRITICAL_SETTINGS
+# change log). The 22-Sep level-05 runs are the only level-05 runs where the modulated and ordinary agents
+# clearly differ; this config tests whether the random start temperature is what removes the difference,
+# against the replication's own level-05 runs (basic/05, random start) trained with the same seeds.
+extends: environment/experiment/basic/05-campfire_thermal_10x10
+
+thermal:
+  random_start_body_temp: false

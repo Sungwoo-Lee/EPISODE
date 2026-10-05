@@ -104,3 +104,48 @@ Relaunched on node 102 (both RTX 4090 GPUs idle, pre-checked), same command and 
 | rppo_healrep_l06_t16quad_s42 | 102:1 | 20261005-170314_rppo_healrep_l06_t16quad_s42 |
 
 The dead runs' folders (20261005-160128_…t1none_s42, 20261005-160249_…t16quad_s42) are not used.
+
+## Added arm: level 05 with fixed start temperature (2026-10-06)
+
+**Why.** Every level-05 run trained after 26 Sep starts each episode at a random body temperature in
+[-10, +5]; the 22-Sep level-05 runs started at the comfortable setpoint (0.0). Those 22-Sep runs are
+the only level-05 runs where the modulated and ordinary agents clearly differ (cross-run page, Figure
+B1); the smell-study control (22-Sep level 05 + random start temperature, seeds 42-44) shows no
+difference. So this arm repeats level 05 with the start temperature fixed, against the replication's
+own level-05 arm (random start) at the same seeds: a difference that appears here and not there points
+at the random start temperature; one that appears in neither points at the 22-Sep result being one seed.
+
+**Config.** `configs/environment/experiment/hypervigilance/fixed_start_temp_l05.yaml` = `basic/05` with
+`thermal.random_start_body_temp: false` only (CONFIG_CRITICAL_SETTINGS change log, 2026-10-06; resolved
+config checked against the 22-Sep level-05 saved config: world keys identical). Agents, episodes,
+log interval, WandB group as above. User chose nodes 104, 105, 112 (2026-10-06 07:3x).
+
+| tag | node:GPU |
+|---|---|
+| rppo_healrep_l05fix_t1none_s42 | 104:0 |
+| rppo_healrep_l05fix_t16quad_s42 | 104:1 |
+| rppo_healrep_l05fix_t1none_s43 | 105:0 |
+| rppo_healrep_l05fix_t16quad_s43 | 105:1 |
+| rppo_healrep_l05fix_t1none_s44 | 112:0 |
+| rppo_healrep_l05fix_t16quad_s44 | 112:1 |
+
+**Reading.** Test in the same scenes as the level-05 arm (`behavior_probes/hvsmell` two-channel /
+thermal neutral clean) so the two arms differ only in training.
+
+
+**Launch record (2026-10-06 07:41, training-runner).** All six running (one process per tag, both GPUs
+busy on each node). Each run's saved config (`models/config.yaml`) has `random_start_body_temp: false` and
+`recovery_in_bush_multiplier: 25.0`, so the `extends:` chain resolved as intended.
+
+| tag | node:GPU | status | WandB run ID | results folder | log |
+|---|---|---|---|---|---|
+| rppo_healrep_l05fix_t1none_s42 | 104:0 | running | t9eqkmfi | results/JAX_RecurrentPPO/20261006-074127_rppo_healrep_l05fix_t1none_s42 | logs/20261006_074122.log (shared, see note) |
+| rppo_healrep_l05fix_t16quad_s42 | 104:1 | running | m0v23m4g | results/JAX_RecurrentPPO/20261006-074133_rppo_healrep_l05fix_t16quad_s42 | logs/20261006_0742_rppo_healrep_l05fix_t16quad_s42.launch.log |
+| rppo_healrep_l05fix_t1none_s43 | 105:0 | running | feklh807 | results/JAX_RecurrentPPO/20261006-074127_rppo_healrep_l05fix_t1none_s43 | logs/20261006_074122.log (shared, see note) |
+| rppo_healrep_l05fix_t16quad_s43 | 105:1 | running | z9qx3zlp | results/JAX_RecurrentPPO/20261006-074134_rppo_healrep_l05fix_t16quad_s43 | logs/20261006_0742_rppo_healrep_l05fix_t16quad_s43.launch.log |
+| rppo_healrep_l05fix_t1none_s44 | 112:0 | running | ht2sa8k5 | results/JAX_RecurrentPPO/20261006-074127_rppo_healrep_l05fix_t1none_s44 | logs/20261006_074122.log (shared, see note) |
+| rppo_healrep_l05fix_t16quad_s44 | 112:1 | running | 90f9y0uo | results/JAX_RecurrentPPO/20261006-074134_rppo_healrep_l05fix_t16quad_s44 | logs/20261006_0742_rppo_healrep_l05fix_t16quad_s44.launch.log |
+
+Note: the three GPU-0 runs were launched within the same second without `--log`, so they share the
+launcher's default timestamped log file; its contents are interleaved/partly overwritten. Training is
+unaffected; use WandB for those runs.
