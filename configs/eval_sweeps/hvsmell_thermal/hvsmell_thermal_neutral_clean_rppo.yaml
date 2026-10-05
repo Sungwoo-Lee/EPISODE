@@ -1,0 +1,24 @@
+# Smell-study CONTROL runs (level-05 world = basic/05 with random start body temperature, seeds 42-44,
+# ordinary + modulated) tested in the THERMAL NEUTRAL scenes (air 0 C everywhere, no campfire, start body
+# temperature fixed at 0) -- the scene set behind the 22-Sep level-05 numbers on the cross-run page.
+# Why: the 22-Sep level-05 pair was the only level-05 pair ever tested in these scenes, and it is the scene
+# set where its ordinary agent's injury effect nearly vanishes (+4 vs +7..+12 in the other three thermal
+# variants); the smell-study runs had only been tested in their own cold + campfire scenes. Same scenes,
+# episodes and settings as configs/eval_sweeps/thermal_probes/thermalprobe_neutral_clean_rppo.yaml, so
+# these runs and the 22-Sep pair become comparable. Fresh output_dir (load-bearing: incremental driver).
+name: hvsmell_thermal_neutral_clean
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_hvsmell_thermal_neutral_clean
+probe: configs/environment/experiment/behavior_probes/thermal/neutral_clean
+conditions: all
+episodes: 30
+nodes: [113]
+x_axis: steps
+plot_measures: [bush_hiding, survival_steps]
+runs:
+  - {label: hv2ch_ordinary_s42, path: results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42}
+  - {label: hv2ch_modulated_s42, path: results/JAX_RecurrentPPO/20260927-053059_rppo_l05body_w0000_t16quad_s42}
+  - {label: hv2ch_ordinary_s43, path: results/JAX_RecurrentPPO/20261001-002435_rppo_hv2ch_t1none_s43}
+  - {label: hv2ch_modulated_s43, path: results/JAX_RecurrentPPO/20261001-002439_rppo_hv2ch_t16quad_s43}
+  - {label: hv2ch_ordinary_s44, path: results/JAX_RecurrentPPO/20261001-002444_rppo_hv2ch_t1none_s44}
+  - {label: hv2ch_modulated_s44, path: results/JAX_RecurrentPPO/20261001-002449_rppo_hv2ch_t16quad_s44}

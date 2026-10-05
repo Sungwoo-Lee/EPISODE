@@ -1,0 +1,21 @@
+# Thermal-neutral re-test of configs/eval_sweeps/l05body/l05body_w1111_rppo.yaml (same runs, episodes and scenes except temperature:
+# air 0 C, no campfire, start body temperature 0 -- generate_neutral_variants.py). Why: later studies
+# were never tested in the neutral scenes the 22-Sep level-05 numbers came from
+# (docs/llm_wiki/entries/behavior_measures/20261006_0758_test_scene_confound_level05_modulator_gap.md).
+name: neutral_l05body_w1111
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_neutral/l05body_w1111
+probe: configs/environment/experiment/behavior_probes/neutral_variants/l05body__w1111
+conditions: all
+episodes: 30
+nodes:
+- 113
+x_axis: steps
+plot_measures:
+- bush_hiding
+- survival_steps
+runs:
+- label: w1111_ordinary_s42
+  path: results/JAX_RecurrentPPO/20260927-053442_rppo_l05body_w1111_t1none_s42
+- label: w1111_modulated_s42
+  path: results/JAX_RecurrentPPO/20260927-053530_rppo_l05body_w1111_t16quad_s42

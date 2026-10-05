@@ -1,0 +1,29 @@
+# Thermal-neutral re-test of configs/eval_sweeps/hvsmell/hvsmell_single_channel_rppo.yaml (same runs, episodes and scenes except temperature:
+# air 0 C, no campfire, start body temperature 0 -- generate_neutral_variants.py). Why: later studies
+# were never tested in the neutral scenes the 22-Sep level-05 numbers came from
+# (docs/llm_wiki/entries/behavior_measures/20261006_0758_test_scene_confound_level05_modulator_gap.md).
+name: neutral_hvsmell_single_channel
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_neutral/hvsmell_single_channel
+probe: configs/environment/experiment/behavior_probes/neutral_variants/hvsmell__single_channel
+conditions: all
+episodes: 30
+nodes:
+- 113
+x_axis: steps
+plot_measures:
+- bush_hiding
+- survival_steps
+runs:
+- label: hv1ch_ordinary_s42
+  path: results/JAX_RecurrentPPO/20261001-002402_rppo_hv1ch_t1none_s42
+- label: hv1ch_modulated_s42
+  path: results/JAX_RecurrentPPO/20261001-002407_rppo_hv1ch_t16quad_s42
+- label: hv1ch_ordinary_s43
+  path: results/JAX_RecurrentPPO/20261001-002412_rppo_hv1ch_t1none_s43
+- label: hv1ch_modulated_s43
+  path: results/JAX_RecurrentPPO/20261001-002418_rppo_hv1ch_t16quad_s43
+- label: hv1ch_ordinary_s44
+  path: results/JAX_RecurrentPPO/20261001-002423_rppo_hv1ch_t1none_s44
+- label: hv1ch_modulated_s44
+  path: results/JAX_RecurrentPPO/20261001-002429_rppo_hv1ch_t16quad_s44
