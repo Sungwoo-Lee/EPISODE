@@ -16,13 +16,21 @@ set to the level (the start is drawn uniformly between the two, so both must be 
 file is that core file passed through the thermal generator's own `build()`, so a thermal arm here
 is byte-for-byte the recipe the existing thermal battery uses.
 
-THE CHASING RABBIT IS NOT INCLUDED. Once it catches up it stays on the agent's cell (Known Bugs,
-glued rabbit, open), so its within-reach measure is time out of cover read backwards.
+THE CHASING RABBIT IS NOT INCLUDED in those folders. Once it catches up it stays on the agent's cell
+(Known Bugs, glued rabbit, open), so its within-reach measure is time out of cover read backwards.
+
+--chasing-rabbit (added 2026-10-06) writes the chasing-rabbit scene at the same ten injuries into two
+SEPARATE folders, chase_core/ (observation 52) and chase_neutral_clean/ (58, thermal arm neutral,
+clean battery), for the cross-run page's most-effective-conditions figures, which read bush dwell
+only (not the within-reach measure the bug distorts). Separate folders, because the existing sweeps
+point at core/ and <arm>_<battery>/ with `conditions: all`: a file added there would silently join
+their next run.
 
 Run from anywhere:
   /home/vncuser/miniconda3/envs/grid_world_pain/bin/python \
       configs/environment/experiment/behavior_probes/injury_grid/generate_injury_grid.py
   ... --check-only   # load + assert the files on disk, write nothing
+  ... --chasing-rabbit [--check-only]   # only the chase_core/ and chase_neutral_clean/ folders
 """
 import argparse
 import importlib.util
@@ -104,11 +112,48 @@ def check(path, level, want_obs):
     return m, fails
 
 
+def chasing_rabbit(check_only, noise_block):
+    """avoid_rabbit at ten injuries: chase_core/ (thermal off) and chase_neutral_clean/ (neutral, clean)."""
+    scene, n_fail, n_files = 'avoid_rabbit', 0, 0
+    src = os.path.join(SRC_DIR, f'{scene}_inj00.yaml')
+    core_dir, th_dir = os.path.join(OUT_ROOT, 'chase_core'), os.path.join(OUT_ROOT, 'chase_neutral_clean')
+    os.makedirs(core_dir, exist_ok=True)
+    os.makedirs(th_dir, exist_ok=True)
+    for level in LEVELS:
+        name = f'{scene}_inj{level:02d}'
+        path = os.path.join(core_dir, f'{name}.yaml')
+        if not check_only:
+            write(path, core_dict(src, level), HEADER.format(
+                scene=scene, level=level, variant='core (thermal off), chasing rabbit', gen=GEN, src=src,
+                thermal='', obs=52, plan=PLAN, scene_desc=T.scene_description(src)))
+        _, fails = check(path, level, 52)
+        tpath = os.path.join(th_dir, f'{name}.yaml')
+        if not check_only:
+            d = T.build(path, 'neutral', 'clean', noise_block)
+            write(tpath, d, '')
+            m0 = T.measure(tpath)
+            write(tpath, d, HEADER.format(
+                scene=scene, level=level, variant='thermal neutral, clean, chasing rabbit', gen=GEN, src=src,
+                obs=m0['obs'], plan=PLAN, scene_desc=T.scene_description(src),
+                thermal=", then the thermal battery's build() for arm 'neutral', battery 'clean'"))
+        m, tfails = check(tpath, level, 58)
+        tfails += T.verify(tpath, 'neutral', m)
+        n_fail += len(fails) + len(tfails); n_files += 2
+        print(f"  {name:<22} core {'ok' if not fails else 'FAIL: ' + '; '.join(fails)}   "
+              f"neutral_clean {'ok' if not tfails else 'FAIL: ' + '; '.join(tfails)}")
+    print(f"\n{n_files} files; {'ALL CHECKS PASSED' if not n_fail else f'{n_fail} CHECK(S) FAILED'}")
+    return 1 if n_fail else 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--check-only', action='store_true')
+    ap.add_argument('--chasing-rabbit', action='store_true',
+                    help='write/check only chase_core/ and chase_neutral_clean/ (see the module docstring)')
     args = ap.parse_args()
     noise_block = T.read_noise_block()
+    if args.chasing_rabbit:
+        return chasing_rabbit(args.check_only, noise_block)
     n_fail = n_files = 0
 
     core_dir = os.path.join(OUT_ROOT, 'core')

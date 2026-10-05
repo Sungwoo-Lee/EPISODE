@@ -26,6 +26,7 @@ td.nw { white-space:nowrap; }
   <h4>On this page</h4>
   <ol>
     <li><a href="#best">The most effective conditions &mdash; Figures B1&ndash;B4</a></li>
+    <li><a href="#inj10">The two strongest pairs at ten injury levels &mdash; Figures B5&ndash;B8</a></li>
     <li><a href="#data">The data, in plain words</a></li>
     <li><a href="#f0">Figure 0 &mdash; when each group was trained</a></li>
     <li><a href="#two">Figure M &mdash; animal dependence against state dependence</a></li>
@@ -91,6 +92,43 @@ td.nw { white-space:nowrap; }
   predator adds {{D2_OP}} points for the ordinary agent when unhurt, a weaker animal response than at levels
   04 and 05.</p>
   {{FIG:hl_dose}}
+  <h3 class="fh" id="inj10"><span class="n">B5&ndash;B8</span>The two strongest pairs at ten injury levels</h3>
+  <p>Figures B2 and B3 compare only two starting injuries, 0 and 70. To see whether hiding rises step by step
+  with injury, both pairs were replayed at every saved checkpoint at starting injuries 0, 10, 20, &hellip;, 90,
+  in the same four scenes. With no animal, the level 05 modulated agent's bush dwell climbs from
+  {{IG_lvl05_MN00}}% unhurt to {{IG_lvl05_MN90}}% at injury 90, the ordinary agent's from {{IG_lvl05_ON00}}% to
+  {{IG_lvl05_ON90}}%; with the wandering rabbit, modulated {{IG_lvl05_MW00}}% &rarr; {{IG_lvl05_MW90}}%, ordinary
+  {{IG_lvl05_OW00}}% &rarr; {{IG_lvl05_OW90}}%. With the chasing rabbit (modulated {{IG_lvl05_MC00}}% &rarr;
+  {{IG_lvl05_MC90}}%) and the predator (modulated {{IG_lvl05_MP00}}% &rarr; {{IG_lvl05_MP90}}%) injury changes
+  little. At level 04, no animal: modulated {{IG_lvl04_MN00}}% &rarr; {{IG_lvl04_MN90}}%, ordinary
+  {{IG_lvl04_ON00}}% &rarr; {{IG_lvl04_ON90}}%.</p>
+  <p>The chasing-rabbit tests at the eight new injury levels were added for this section (6 Oct 2026). A
+  known bug keeps a chasing rabbit on the agent's cell once it reaches it; that distorts measures of how
+  close the rabbit gets, not the time on the bush shown here. At injuries 0 and 70 the new scenes are
+  identical to the ones behind B2 and B3.</p>
+  <h4 class="fh"><span class="n">Figure B5</span>Level 05 pair across training, ten injury levels</h4>
+  {{FIG:ig_train_lvl05}}
+  <h4 class="fh"><span class="n">Figure B6</span>Level 05 pair, bush dwell against starting injury</h4>
+  {{FIG:ig_dose_lvl05}}
+  <h4 class="fh"><span class="n">Figure B7</span>Level 04 pair across training, ten injury levels</h4>
+  {{FIG:ig_train_lvl04}}
+  <h4 class="fh"><span class="n">Figure B8</span>Level 04 pair, bush dwell against starting injury</h4>
+  {{FIG:ig_dose_lvl04}}
+  <details class="more">
+    <summary>How Figures B4&ndash;B8 are computed</summary>
+    <p>Each agent of a pair was replayed at every saved checkpoint in the same four test scenes, with the
+    starting injury set to exactly 0, 10, 20, &hellip;, 90 (the scenes are otherwise identical to the ones behind
+    B2 and B3; at injury 0 and 70 they give the same numbers checkpoint by checkpoint), 30 episodes per
+    checkpoint, scene and injury. Bush dwell is the share of the 100 steps spent on the bush. In B5 and B7
+    each line is the running average of 5 neighbouring checkpoints, drawn only to make ten overlapping lines
+    readable; the numbers printed above each panel do not use it. Those numbers, and every point in B4, B6
+    and B8, are the plain mean over the checkpoints from 2 to 10 M training steps, one every 0.2 M steps. The
+    95 % interval around each point allows for neighbouring checkpoints being alike: it uses an effective
+    number of checkpoints, reduced by the correlation between each checkpoint and the next (the lag-1
+    autocorrelation). Level 02 was tested without the chasing rabbit, so B4 has three panels. These are two
+    trained runs per figure, one per agent type; they show how one agent's hiding depends on its injury, not
+    how much that differs between training seeds.</p>
+  </details>
   <details class="more">
     <summary>How it is computed</summary>
     <p>Each trained agent was replayed in fixed test scenes at every saved checkpoint, 30 episodes per

@@ -2500,3 +2500,17 @@ data are computed from the data, and the figure script fails if any counted poin
 area. Never filter a figure script's output in a batch redraw; check each exit status. **Check:** open each
 redrawn PNG after a batch redraw (on the NAS, comparing PNG and `.samples.json` modification times is not
 reliable — client-side attribute caching reported a fresh PNG as older than its data file).
+
+### F81 — the light end of a sequential ramp is fainter than the plot's own gridlines
+
+**What a reader saw** (F7b across runs, Figures B5/B7, 2026-10-06 draft): ten lines coloured by starting
+injury on a ramp drawn from near-white. The injury-0 line — the baseline every other line is read against —
+was `#d4e3f6`, 1.26:1 against the page and 1.12:1 inside the shaded "not used" band, while the gridlines
+were 1.31:1. The most important series was the least visible ink on the plot. **Why both reviews miss it:**
+geometry checks see a line where a line should be; a glance at the full-size PNG on a bright monitor sees it
+too. Only the page-width view, or a contrast number, shows it. **Rule.** Every series colour is darker than
+the gridline colour and at least about 2:1 against the axes background, including inside any shaded band;
+start a sequential ramp no lighter than about `#86b4e7`. If one level has a fixed meaning elsewhere on the
+page (unhurt = grey, injured 70 = house blue in B2/B3), anchor the ramp to it. **Check:** compute the
+contrast of the lightest series colour against the page ground and each band fill, and compare it with the
+gridline's.

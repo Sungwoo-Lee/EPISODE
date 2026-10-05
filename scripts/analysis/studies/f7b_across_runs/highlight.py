@@ -13,6 +13,10 @@ agent's injury, not for average trends. These figures present the selected runs 
                 unhurt vs injured in four scenes (no animal, wandering rabbit, chasing rabbit, predator)
   dose          the 22-Sep level-02 pair, tested at ten starting injuries: bush dwell against
                 starting injury, per scene
+  injtrain --key K   the B2 view at all ten starting injuries (0, 10, ..., 90): one line per injury
+                across training, four scenes x two agents, for the level-04 or level-05 pair
+  injdose  --key K   the same pair: bush dwell (mean over 2-10 M steps) against starting injury,
+                four scenes, ordinary and modulated in one panel per scene
 
 Numbers come from checkpoint_stats.py (ckpt_summary.csv, matched window 2-10 M steps, checkpoints
 every 0.2 M) and from the dwell-sweep CSVs themselves. A temperature-set run was tested in eight
@@ -53,6 +57,19 @@ PAIRS = {  # key -> (title, ordinary leaf, modulated leaf, scene set)
               f"{AV}/metrics_history_rppo_basicq2_wave2_blocking_bush/lvl04_control",
               f"{AV}/metrics_history_rppo_basicq2_wave2_blocking_bush/lvl04_modulated"),
 }
+INJ_GRID = {  # key -> (title, {agent: leaf for none / pred / rabbitwander}, {agent: leaf for the chasing rabbit})
+    "lvl04": ("level 04 pair, core scenes",
+              {"ordinary": f"{AV}/metrics_history_rppo_injurygrid_core/lvl04_control",
+               "modulated": f"{AV}/metrics_history_rppo_injurygrid_core/lvl04_modulated"},
+              {"ordinary": f"{AV}/metrics_history_rppo_injurygrid_chase_core/lvl04_control",
+               "modulated": f"{AV}/metrics_history_rppo_injurygrid_chase_core/lvl04_modulated"}),
+    "lvl05": ("level 05 pair, neutral temperature scenes",
+              {"ordinary": f"{AV}/metrics_history_rppo_injurygrid_neutral_clean/lvl05_control",
+               "modulated": f"{AV}/metrics_history_rppo_injurygrid_neutral_clean/lvl05_modulated"},
+              {"ordinary": f"{AV}/metrics_history_rppo_injurygrid_chase_neutral_clean/lvl05_control",
+               "modulated": f"{AV}/metrics_history_rppo_injurygrid_chase_neutral_clean/lvl05_modulated"}),
+}
+INJURIES = [f"{i:02d}" for i in range(0, 100, 10)]
 DOSE = (f"{AV}/metrics_history_rppo_injurygrid_core/lvl02_control",
         f"{AV}/metrics_history_rppo_injurygrid_core/lvl02_modulated")
 SCENE_ROWS = [("none", "no animal"), ("rabbitwander", "wandering rabbit"), ("rabbit", "chasing rabbit"),
@@ -65,7 +82,8 @@ def series(leaf, scene, inj):
 
 
 def episodes(leaf):
-    d = pd.read_csv(os.path.join(C.ROOT, leaf, "avoid_none_inj00.csv"))
+    import glob
+    d = pd.read_csv(sorted(glob.glob(os.path.join(C.ROOT, leaf, "avoid_*_inj00.csv")))[0])   # any scene of this folder
     return int(d["n_episodes"].iloc[0]) if "n_episodes" in d.columns else 30
 
 
@@ -237,44 +255,125 @@ def fig_pair(key):
 
 # ---------------------------------------------------------------- injury dose response
 def fig_dose():
+    """Figure B4: the level-02 pair at ten starting injuries, in the B6 / B8 layout (no chasing-rabbit test)."""
+    leaves = dict(zip(("ordinary", "modulated"), DOSE))
+    return dose_figure(lambda agent, sc: leaves[agent], [r for r in SCENE_ROWS if r[0] != "rabbit"])
+
+
+# ---------------------------------------------------------------- B2 at ten injuries
+def grid_leaf(key, agent, scene):
+    _, base, chase = INJ_GRID[key]
+    return (chase if scene == "rabbit" else base)[agent]
+
+
+def inj_colours():
+    """Injury 0 in the B2/B3 'unhurt' grey; 10-90 on a blue ramp no lighter than #86b4e7 (about 2:1 on the page,
+    darker than the gridlines -- register F81), anchored so injury 70 is the house blue B2/B3 use for 'injured'."""
+    from matplotlib.colors import LinearSegmentedColormap
+    ramp = LinearSegmentedColormap.from_list("inj", [(0.0, "#86b4e7"), (0.75, H.BLUE), (1.0, "#123f77")])
+    out = {"00": UNHURT}
+    for k, i in enumerate(INJURIES[1:]):
+        out[i] = ramp(k / (len(INJURIES) - 2))
+    return out
+
+
+def fig_injtrain(key):
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
-    injs = [f"{i:02d}" for i in range(0, 100, 10)]
-    cols = {"none": ("no animal", H.INK), "rabbitwander": ("wandering rabbit", H.SERIES[1]),
-            "pred": ("hunting predator", H.SERIES[3])}
-    fig, axs = plt.subplots(1, 2, figsize=(12.0, 5.2), sharey=True)
+    title = INJ_GRID[key][0]
+    col = inj_colours()
+    fig, axs = plt.subplots(4, 2, figsize=(12.0, 11.0), sharex=True, sharey=True)
     rows = []
-    for ax, (agent, leaf) in zip(axs, (("ordinary", DOSE[0]), ("modulated", DOSE[1]))):
-        for sc, (name, c) in cols.items():
+    for c, agent in enumerate(("ordinary", "modulated")):
+        for r, (sc, name) in enumerate(SCENE_ROWS):
+            ax = axs[r, c]
+            leaf = grid_leaf(key, agent, sc)
+            ends = {}
+            n_ck = []
+            for i in INJURIES:
+                v = series(leaf, sc, i)
+                if v is None:
+                    raise SystemExit(f"missing {leaf}/avoid_{sc}_inj{i}.csv -- run the injury-grid sweep first")
+                ax.plot(v.index / 1e6, v.rolling(5, center=True, min_periods=3).mean().values, color=col[i],
+                        lw=2.0 if i in ("00", "90") else 1.3, zorder=3 if i in ("00", "90") else 2)
+                ends[i] = K.on_grid(v, LO_M, HI_M, SPACING_M).mean()
+                n_ck.append(len(v))
+            ax.axvspan(0, LO_M, color=H.RULE, alpha=0.25, lw=0, zorder=0)
+            ax.axhline(100, color=H.RULE, lw=0.8, zorder=0)
+            ax.text(0.01, 0.97, f"mean over 2\u201310 M steps: injury 0 \u2192 {ends['00']:.0f}%, "
+                                f"injury 50 \u2192 {ends['50']:.0f}%, injury 90 \u2192 {ends['90']:.0f}%",
+                    transform=ax.transAxes, va="top", fontsize=H.FS_LABEL - 1, color=H.INK,
+                    path_effects=H.halo(width=3))
+            if c == 0:
+                ax.set_ylabel(f"{name}\nbush dwell (%)", fontsize=H.FS_LABEL)
+            if r == 0:
+                ax.set_title(f"{agent} agent", loc="left", fontsize=H.FS_BODY)
+            rows.append({"what": f"{agent}, {name}: checkpoints per starting injury (10 injuries)",
+                         "used": int(min(n_ck)), "total": int(max(n_ck)),
+                         "note": f"every tested checkpoint drawn (5-checkpoint average); the printed means use the "
+                                 f"0.2 M grid from {LO_M:g} to {HI_M:g} M steps; {episodes(leaf)} episodes per checkpoint"})
+    for ax in axs[-1]:
+        ax.set_xlabel("training (million steps)", fontsize=H.FS_LABEL)
+    axs[0, 0].set_ylim(0, 118)
+    axs[0, 0].set_yticks([0, 25, 50, 75, 100])
+    axs[0, 0].set_xlim(0, 10)
+    hs = [Line2D([], [], color=col[i], lw=2.0 if i in ("00", "90") else 1.3, label=f"injury {int(i)}") for i in INJURIES]
+    hs.append(Line2D([], [], color=H.RULE, lw=8, alpha=0.5, label="first 2 M steps: not in the means"))
+    fig.legend(handles=hs, loc="lower center", ncol=6, frameon=False, fontsize=H.FS_LABEL - 1, bbox_to_anchor=(0.5, -0.01),
+               title="starting injury of the test (grey = unhurt, light to dark blue = injury 10 to 90); each line averages 5 checkpoints",
+               title_fontsize=H.FS_LABEL - 1)
+    fig.subplots_adjust(left=0.10, right=0.98, top=0.96, bottom=0.115, hspace=0.12, wspace=0.05)
+    return fig, rows
+
+
+def dose_figure(leaf_of, scenes):
+    """Panels = scenes; open grey circle = ordinary, filled black square = modulated; 0-100 % in every panel.
+    The layout shared by Figures B4, B6 and B8, so the three read the same way."""
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    fig, axs = plt.subplots(1, len(scenes), figsize=(2.35 * len(scenes) + 0.9, 3.9), sharey=True)
+    rows = []
+    x = [int(i) for i in INJURIES]
+    for ax, (sc, name) in zip(axs, scenes):
+        for agent in ("ordinary", "modulated"):
+            leaf = leaf_of(agent, sc)
             m, lo, hi = [], [], []
-            for i in injs:
+            for i in INJURIES:
                 v = K.on_grid(series(leaf, sc, i), LO_M, HI_M, SPACING_M)
                 p = C.P.W.window_profile(v.to_numpy(), windows=[len(v)]).iloc[0]
                 m.append(p["mean"]); lo.append(p["lo"]); hi.append(p["hi"])
-            x = [int(i) for i in injs]
-            ax.fill_between(x, lo, hi, color=c, alpha=0.15, lw=0)
-            ax.plot(x, m, color=c, lw=2.2, marker="o", ms=5, label=name)
+            c = AGENT_COL[agent]
+            ax.fill_between(x, lo, hi, color=c, alpha=0.10 if agent == "ordinary" else 0.16, lw=0)
+            for edge in (lo, hi):
+                ax.plot(x, edge, color=c, lw=0.7, ls=(0, (3, 2)))
+            ax.plot(x, m, color=c, lw=2.2, marker=AGENT_MK[agent], ms=5.5,
+                    mfc=c if agent == "modulated" else H.PAPER, mew=1.4, zorder=3)
             rows.append({"what": f"{agent}, {name}: checkpoints per starting injury", "used": len(v), "total": len(v),
-                         "note": f"0.2 M grid from {LO_M:g} M to this run's last tested checkpoint "
-                                 f"({v.index.max() / 1e6:.1f} M, at most {HI_M:g} M); {episodes(leaf)} episodes per checkpoint"})
-        ax.set_title(f"{agent} agent", loc="left", fontsize=H.FS_BODY)
-        ax.set_xlabel("starting injury (0 = unhurt, 100 = maximum)", fontsize=H.FS_LABEL)
-        ax.set_xticks(range(0, 100, 10))
-        ax.set_xlim(-3, 93)
-    axs[0].set_ylabel("bush dwell (% of the 100-step episode),\nmean over 2-10 M training steps", fontsize=H.FS_LABEL)
-    axs[0].set_ylim(0, 60)
-    hs = [Line2D([], [], color=c, lw=2.2, marker="o", label=n) for n, c in cols.values()]
-    hs.append(Line2D([], [], color=H.INK_2, lw=8, alpha=0.2, label="shading: 95 % interval, in each line's colour"))
-    fig.legend(handles=hs, loc="lower center", ncol=4, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.01))
-    fig.subplots_adjust(left=0.09, right=0.98, top=0.92, bottom=0.21, wspace=0.06)
+                         "note": f"0.2 M grid from {LO_M:g} M to the last tested checkpoint ({v.index.max() / 1e6:.1f} M); "
+                                 f"{episodes(leaf)} episodes per checkpoint"})
+        ax.set_title(name, loc="left", fontsize=H.FS_BODY)
+        ax.set_xticks([0, 30, 60, 90])
+        ax.set_xlim(-4, 94)
+        ax.set_xlabel("starting injury", fontsize=H.FS_LABEL)
+    axs[0].set_ylabel("bush dwell (%),\nmean over 2\u201310 M steps", fontsize=H.FS_LABEL)
+    axs[0].set_ylim(0, 100)
+    hs = [Line2D([], [], color=AGENT_COL[a], marker=AGENT_MK[a], mfc=AGENT_COL[a] if a == "modulated" else H.PAPER,
+                 mew=1.4, lw=2.2, label=f"{a} agent") for a in AGENT_COL]
+    hs.append(Line2D([], [], color=H.INK_2, lw=0.7, ls=(0, (3, 2)), label="dashed edges: 95 % interval, in the line's tone"))
+    fig.legend(handles=hs, loc="lower center", ncol=3, frameon=False, fontsize=H.FS_LABEL - 1, bbox_to_anchor=(0.5, -0.01))
+    fig.subplots_adjust(left=0.10 if len(scenes) == 4 else 0.12, right=0.99, top=0.89, bottom=0.30, wspace=0.08)
     return fig, rows
+
+
+def fig_injdose(key):
+    return dose_figure(lambda agent, sc: grid_leaf(key, agent, sc), SCENE_ROWS)
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
     ap.add_argument("--fig-dir", required=True)
-    ap.add_argument("--figure", required=True, choices=["rank", "pair", "dose"])
+    ap.add_argument("--figure", required=True, choices=["rank", "pair", "dose", "injtrain", "injdose"])
     ap.add_argument("--key", choices=list(PAIRS))
     a = ap.parse_args(argv)
     H.apply()
@@ -286,6 +385,11 @@ def main(argv=None):
             raise SystemExit("--figure pair needs --key")
         fig, rows = fig_pair(a.key)
         stem = f"f7b_hl_pair__{a.key}"
+    elif a.figure in ("injtrain", "injdose"):
+        if not a.key:
+            raise SystemExit(f"--figure {a.figure} needs --key")
+        fig, rows = (fig_injtrain if a.figure == "injtrain" else fig_injdose)(a.key)
+        stem = f"f7b_hl_{a.figure}__{a.key}"
     else:
         fig, rows = fig_dose()
         stem = "f7b_hl_dose"

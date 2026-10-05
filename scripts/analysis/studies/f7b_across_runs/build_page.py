@@ -503,6 +503,52 @@ def main(argv=None):
     tok["{{D2_O0}}"], tok["{{D2_O90}}"] = f"{grid_mean(o2, 'none', '00'):.0f}", f"{grid_mean(o2, 'none', '90'):.0f}"
     tok["{{D2_M0}}"], tok["{{D2_M90}}"] = f"{grid_mean(m2, 'none', '00'):.0f}", f"{grid_mean(m2, 'none', '90'):.0f}"
     tok["{{D2_OP}}"] = num_text(f"{grid_mean(o2, 'pred', '00') - grid_mean(o2, 'none', '00'):+.0f}")
+    # ---- B2 at ten starting injuries (injury-grid sweeps; highlight.py --figure injtrain / injdose)
+    for key in ("lvl05", "lvl04"):
+        for ag, A in (("ordinary", "O"), ("modulated", "M")):
+            for sc, S_ in (("none", "N"), ("rabbitwander", "W"), ("rabbit", "C"), ("pred", "P")):
+                leaf = HL.grid_leaf(key, ag, sc)
+                for inj in ("00", "90"):
+                    tok[f"{{{{IG_{key}_{A}{S_}{inj}}}}}"] = f"{grid_mean(leaf, sc, inj):.0f}"
+    ig_axes = ("Horizontal: training, in million steps (0&ndash;10). Vertical: bush dwell, the share of the scene's "
+               "100 steps spent on the bush (%, 0&ndash;100), the same scale in every panel. Rows: four scenes (no "
+               "animal, wandering rabbit, chasing rabbit, hunting predator); columns: the ordinary and the modulated "
+               "agent. Ten lines per panel, one per starting injury of the test: grey = 0 (unhurt, as in B2 and B3), "
+               "light to dark blue = 10 to 90 in steps of 10 (injury 70 has B2's blue); each line averages 5 "
+               "neighbouring checkpoints. Text above each panel: bush dwell at injury 0, 50 "
+               "and 90, mean over 2&ndash;10 M steps. The shaded first 2 M steps are not used in those means.")
+    dose_axes = ("Horizontal: starting injury of the test, 0 (unhurt) to 90 in steps of 10 (0&ndash;100 scale). "
+                 "Vertical: bush dwell, the share of the scene's 100 steps spent on the bush (%), mean over the "
+                 "checkpoints from 2 to 10 M training steps, the same scale in all four panels; shading is the 95 % "
+                 "interval (shading, with dashed edges in the line's tone). Open grey circles: ordinary agent; filled "
+                 "black squares: modulated agent. Same layout and scale as Figure B4.")
+    for key, lab_t, lab_d, ttl in (("lvl05", "B5", "B6", "level 05 pair"), ("lvl04", "B7", "B8", "level 04 pair")):
+        tok[f"{{{{FIG:ig_train_{key}}}}}"] = figure(
+            f"f7b_hl_injtrain__{key}", f"Eight panels, four scenes by two agents: bush dwell across training, ten lines per "
+            f"panel for starting injuries 0 to 90, {ttl}.", ig_axes,
+            {"lvl05": "In the modulated agent's calm scenes (no animal, wandering rabbit) the ten lines are stacked in "
+                      "injury order, evenly spaced, from early in training to the end: more injury, more time in the "
+                      "bush, by a steady step. The ordinary agent's lines are also in injury order for much of training, "
+                      "but packed closer (a smaller injury effect) and they come apart late: after about 8.5 M steps its "
+                      "less injured lines rise above the more injured ones with the wandering rabbit. With the chasing "
+                      "rabbit and the predator the lines of both agents lie on top of each other: the animal, not the "
+                      "injury, sets how much they hide.",
+             "lvl04": "The same comparison at level 04: the modulated agent's calm-scene lines stack in injury order; the "
+                      "ordinary agent's swing together from checkpoint to checkpoint, all injuries alike."}[key],
+            f"scripts/analysis/studies/f7b_across_runs/highlight.py --figure injtrain --key {key}",
+            title=f"Figure {lab_t} &mdash; {ttl} across training, at ten starting injuries")
+        tok[f"{{{{FIG:ig_dose_{key}}}}}"] = figure(
+            f"f7b_hl_injdose__{key}", f"Four panels, one per scene: bush dwell against starting injury, ordinary and "
+            f"modulated agent, {ttl}.", dose_axes,
+            {"lvl05": "The same data as the figure above, reduced to one number per injury: a straight rise with injury in "
+                      "the modulated agent's calm scenes, a flatter line for the ordinary agent, and little change with "
+                      "injury in the animal scenes.",
+             "lvl04": "The modulated agent's calm-scene lines rise straight with injury from a low start. The ordinary "
+                      "agent sits far higher at every injury, with wide intervals, and does not rise steadily: it dips in "
+                      "the middle injuries with no animal. In the animal scenes injury changes little for either agent."}[key],
+            f"scripts/analysis/studies/f7b_across_runs/highlight.py --figure injdose --key {key}",
+            title=f"Figure {lab_d} &mdash; {ttl}, bush dwell against starting injury")
+
     hp = "scripts/analysis/studies/f7b_across_runs/highlight.py"
     pair_axes = ("Horizontal: training, in million steps (0&ndash;10). Vertical: bush dwell, the share of the "
                  "scene's 100 steps spent on the bush (%, 0&ndash;100), the same scale in every panel. Rows: four "
@@ -539,13 +585,14 @@ def main(argv=None):
             f"{hp} --figure pair --key {key}", title=f"Figure {lab} &mdash; {ttl}")
     tok["{{FIG:hl_dose}}"] = figure(
         "f7b_hl_dose", "Two panels, ordinary and modulated: bush dwell rising with starting injury, three scenes.",
-        "Horizontal: starting injury of the test episode, 0 (unhurt) to 90, in steps of 10 (0&ndash;100 scale). "
-        "Vertical: bush dwell, the share of the scene's 100 steps spent on the bush (%), mean over the checkpoints "
-        "from 2 to 10 M training steps; shading is the 95 % interval. Lines: no animal, wandering rabbit, hunting "
-        "predator. The two panels share the vertical scale.",
+        "Horizontal: starting injury of the test, 0 (unhurt) to 90 in steps of 10 (0&ndash;100 scale). Vertical: bush "
+        "dwell, the share of the scene's 100 steps spent on the bush (%), mean over the checkpoints from 2 to 10 M "
+        "training steps, 0&ndash;100 in all three panels (one per scene: no animal, wandering rabbit, hunting "
+        "predator). Open grey circles: ordinary agent; filled black squares: modulated agent; dashed edges and "
+        "shading: 95 % interval. Same layout and scale as Figures B6 and B8.",
         "Bush dwell climbs steadily with injury in both agents, steeply in the ordinary one. The wandering-rabbit "
-        "line lies on the no-animal line: the agent does not treat it as a threat at any injury. The predator line "
-        "sits above both.",
+        "panel looks like the no-animal panel: neither agent treats the wandering rabbit as a threat at any injury. "
+        "The predator raises bush dwell above both.",
         f"{hp} --figure dose", title="Figure B4 &mdash; level 02 pair, bush dwell against starting injury")
 
     # ---- figures
