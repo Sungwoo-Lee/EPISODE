@@ -25,6 +25,7 @@ td.nw { white-space:nowrap; }
 <section class="col toc">
   <h4>On this page</h4>
   <ol>
+    <li><a href="#best">The most effective conditions &mdash; Figures B1&ndash;B4</a></li>
     <li><a href="#data">The data, in plain words</a></li>
     <li><a href="#f0">Figure 0 &mdash; when each group was trained</a></li>
     <li><a href="#two">Figure M &mdash; animal dependence against state dependence</a></li>
@@ -39,6 +40,75 @@ td.nw { white-space:nowrap; }
     <li><a href="#runs">Runs selected and dropped</a></li>
     <li><a href="#issues">Issues found while building this page</a></li>
   </ol>
+</section>
+
+<section class="col" id="best">
+  <h2><span class="num">FIRST</span> The most effective conditions</h2>
+  <p>This page looks for the training conditions where hiding in the bush depends most clearly on two
+  things: <strong>the animal</strong> (the agent hides more with a hunting predator than with no animal) and
+  <strong>the agent's own injury</strong> (an agent that starts the test injured hides more than one that
+  starts unhurt). The search is for the strongest cases, not for averages across groups. Each condition is
+  shown with both agent types trained in it: the <em>ordinary</em> agent and the <em>modulated</em> agent,
+  whose network has an extra module that rescales its internal signals according to its inputs.</p>
+  <p>Every agent was replayed in the same short test scenes (100 steps, a bush to hide in, and either no
+  animal, a harmless wandering rabbit, a rabbit that chases the agent, or a hunting predator), at every
+  saved checkpoint of its training, unhurt and injured. The numbers below use every checkpoint from 2 to
+  10 million training steps, not only the last few. The data and the tests are described in full in the
+  next section.</p>
+  <div class="callout">
+    <p><strong>The strongest case: fast bush healing at level 05, modulated agent.</strong> With no animal,
+    starting injured raises bush dwell by {{HL1M_INJ}} percentage points, at {{HL1M_POS}}% of checkpoints;
+    with the wandering rabbit by {{HL1M_INJW}}. A hunting predator raises it by {{HL1M_PRED}} over the empty
+    scene, while the wandering rabbit adds only {{HL1M_WAND}}. The ordinary agent trained in the same
+    condition shows injury effects of {{HL1O_INJ}} and {{HL1O_INJW}}, and a predator response of
+    {{HL1O_PRED}}. Level 04, the next condition, repeats the pattern: modulated {{HL2M_INJ}} / {{HL2M_INJW}}
+    / {{HL2M_PRED}}, ordinary {{HL2O_INJ}} / {{HL2O_INJW}} / {{HL2O_PRED}}.</p>
+  </div>
+  <p>What this does and does not show:</p>
+  <ul>
+    <li>In these two conditions the modulated agent depends on both the animal and its injury, steadily
+    across training (its no-animal line moves {{HL1M_JUMP}}&ndash;{{HL2M_JUMP}} points between neighbouring
+    checkpoints, against {{HL1O_JUMP}}&ndash;{{HL2O_JUMP}} for the ordinary agent). In the other top
+    conditions the two agent types look alike.</li>
+    <li>Injury raises hiding by about as much with the wandering rabbit as with no animal. So the injured
+    agent hides more in general; it does not treat the harmless rabbit as a predator when injured.</li>
+    <li>Each condition is one training run per agent type (seed 42). A replication with three seeds per
+    agent at levels 04, 05 and 06 is training now (started 5 Oct 2026).</li>
+  </ul>
+  <h4 class="fh" id="fb1"><span class="n">Figure B1</span>The ten conditions where both effects are largest</h4>
+  {{FIG:hl_rank}}
+  {{TABLE:hl_top}}
+  <p>{{HL_NR}} of the {{HL_N}} ranked conditions were trained with both agent types; the table and Figure B1
+  rank those. The level 02 condition is shown separately in Figure B4, because it was tested at ten
+  injury levels rather than two.</p>
+  <h4 class="fh" id="fb2"><span class="n">Figure B2</span>Level 05 pair, across training</h4>
+  {{FIG:hl_lvl05}}
+  <h4 class="fh" id="fb3"><span class="n">Figure B3</span>Level 04 pair, across training</h4>
+  {{FIG:hl_lvl04}}
+  <h4 class="fh" id="fb4"><span class="n">Figure B4</span>Level 02 pair: bush dwell against starting injury</h4>
+  <p>The clearest dose response on disk. With no animal, the ordinary agent's bush dwell climbs from
+  {{D2_O0}}% unhurt to {{D2_O90}}% at injury 90, the modulated agent's from {{D2_M0}}% to {{D2_M90}}%. The
+  predator adds {{D2_OP}} points for the ordinary agent when unhurt, a weaker animal response than at levels
+  04 and 05.</p>
+  {{FIG:hl_dose}}
+  <details class="more">
+    <summary>How it is computed</summary>
+    <p>Each trained agent was replayed in fixed test scenes at every saved checkpoint, 30 episodes per
+    checkpoint, scene and starting injury; bush dwell is the share of the 100 steps the agent spent on the
+    bush. For each checkpoint we form three differences: injured (starting injury 70) minus unhurt (0)
+    with no animal; the same with the wandering rabbit; and predator minus no animal, both unhurt. Only
+    checkpoints from 2 to 10 million training steps are used, one every 0.2 million steps, so a run that
+    saved checkpoints twice as often does not count twice as much. Each difference is then averaged over
+    those 41 checkpoints. The 95 % interval allows for neighbouring checkpoints being alike: it uses an
+    effective number of checkpoints reduced by the correlation between each checkpoint and the next
+    (the lag-1 autocorrelation). "Checkpoints where injury raised it" counts how often the no-animal
+    difference is above zero; it describes consistency and is not a test, since neighbouring checkpoints
+    are not independent. A run is left out of the ranking if, in a scene a measure uses, it survives fewer
+    than 95 of the 100 steps on average over its newest 20 checkpoints. A condition is one world, setting,
+    seed and test-scene set; agents tested in eight temperature variants use the neutral variant only. The
+    ranking score is the lower of an agent's two percentile ranks (injury dependence, the mean of the two
+    injury effects; animal dependence, the predator effect), and a condition is placed by its better agent.</p>
+  </details>
 </section>
 
 <section class="col" id="data">
@@ -372,7 +442,7 @@ td.nw { white-space:nowrap; }
     curriculum runs at levels 03 to 05 were trained to 80&ndash;100 million steps, so their newest 20 checkpoints
     cover only the last 2 million. Their response to the wandering rabbit fades late in training: for level 04
     it is about 6 points over the newest 20 checkpoints but about 11 over the whole run. The full-training
-    figures for these runs (results/eval/avoidance/metrics_history/) show the stronger response.</li>
+    figures for these runs (results/<wbr>eval/<wbr>avoidance/<wbr>metrics_history/) show the stronger response.</li>
     <li><strong>Bush healing speed is read from each run's saved settings.</strong> Wave 1 states it
     (no bonus); the July runs predate the setting, so "same as elsewhere" is assumed for them, not read.</li>
     <li><strong>The injury-grid scene set has no chasing rabbit.</strong> Its 30 rows appear only in the

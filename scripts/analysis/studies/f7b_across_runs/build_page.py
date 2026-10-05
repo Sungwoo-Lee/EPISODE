@@ -32,6 +32,7 @@ BB = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(BB)
 sys.path.insert(0, HERE)
 import figures as FX      # noqa: E402
+import highlight as HL    # noqa: E402
 
 PAGE_DIR = os.path.join(ROOT, "docs/experiments/active/hypervigilance/f7b_across_runs")
 FIG_DIR = os.path.join(PAGE_DIR, "figures")
@@ -465,6 +466,87 @@ def main(argv=None):
                                   ["group", "scene set", "setting", "agent", "healing on a bush", "training run",
                                    "checkpoints"], num=("n_ckpt",),
                                   nowrap=("run",), min_width=1300)
+
+
+    # ---- most effective conditions (highlight.py; checkpoint_stats.py over 2-10 M steps)
+    T, n_rank = HL.ranking(a.data)
+    CND = HL.conditions(T, 10)
+    rows_ = []
+    for k, (cond, ro, rm) in enumerate(CND, 1):
+        for agent, r in (("ordinary", ro), ("modulated", rm)):
+            rows_.append({"rank": k if agent == "ordinary" else "", "cond": HL.label(r, agent=False) if agent == "ordinary" else "",
+                          "agent": agent, "inj": num_text(f"{r.inj:+.0f}"), "inj_pos": f"{100 * r.inj_pos:.0f}%",
+                          "injw": num_text(f"{r.injw:+.0f}"), "pred": num_text(f"{r.pred:+.0f}"),
+                          "wand": num_text(f"{r.wand:+.0f}"), "jump": f"{r.jump:.0f}"})
+    tok["{{TABLE:hl_top}}"] = table(pd.DataFrame(rows_), ["rank", "cond", "agent", "inj", "inj_pos", "injw", "pred", "wand", "jump"],
+                                    ["#", "condition", "agent", "injury, no animal", "% ckpts up", "injury, rabbit",
+                                     "predator", "rabbit", "jump"],
+                                    num=("rank", "inj", "inj_pos", "injw", "pred", "wand", "jump"), min_width=820)
+    tok["{{TABLE:hl_top}}"] += ("<p>Columns, all in percentage points of bush dwell over 2&ndash;10 M training "
+        "steps: <b>injury, no animal</b> = injured (70) minus unhurt (0) with no animal; <b>% ckpts up</b> = share of "
+        "checkpoints where that difference is above zero; <b>injury, rabbit</b> = the same with the wandering rabbit; "
+        "<b>predator</b> / <b>rabbit</b> = hunting predator / wandering rabbit minus no animal, unhurt; <b>jump</b> = "
+        "average change of the unhurt no-animal value between neighbouring checkpoints.</p>")
+    tok["{{HL_N}}"] = str(T.cond.nunique())
+    tok["{{HL_NR}}"] = str(T[T.paired].cond.nunique())
+    for k, (cond, ro, rm) in (("1", CND[0]), ("2", CND[1])):
+        for ag, r in (("M", rm), ("O", ro)):
+            tok[f"{{{{HL{k}{ag}_INJ}}}}"] = num_text(f"{r.inj:+.0f}")
+            tok[f"{{{{HL{k}{ag}_POS}}}}"] = f"{100 * r.inj_pos:.0f}"
+            tok[f"{{{{HL{k}{ag}_INJW}}}}"] = num_text(f"{r.injw:+.0f}")
+            tok[f"{{{{HL{k}{ag}_PRED}}}}"] = num_text(f"{r.pred:+.0f}")
+            tok[f"{{{{HL{k}{ag}_WAND}}}}"] = num_text(f"{r.wand:+.0f}")
+            tok[f"{{{{HL{k}{ag}_JUMP}}}}"] = f"{r.jump:.0f}"
+    def grid_mean(leaf, sc, inj):
+        return HL.K.on_grid(HL.series(leaf, sc, inj), HL.LO_M, HL.HI_M, HL.SPACING_M).mean()
+    o2, m2 = HL.DOSE
+    tok["{{D2_O0}}"], tok["{{D2_O90}}"] = f"{grid_mean(o2, 'none', '00'):.0f}", f"{grid_mean(o2, 'none', '90'):.0f}"
+    tok["{{D2_M0}}"], tok["{{D2_M90}}"] = f"{grid_mean(m2, 'none', '00'):.0f}", f"{grid_mean(m2, 'none', '90'):.0f}"
+    tok["{{D2_OP}}"] = num_text(f"{grid_mean(o2, 'pred', '00') - grid_mean(o2, 'none', '00'):+.0f}")
+    hp = "scripts/analysis/studies/f7b_across_runs/highlight.py"
+    pair_axes = ("Horizontal: training, in million steps (0&ndash;10). Vertical: bush dwell, the share of the "
+                 "scene's 100 steps spent on the bush (%, 0&ndash;100), the same scale in every panel. Rows: four "
+                 "scenes (no animal, wandering rabbit, chasing rabbit, hunting predator); columns: the ordinary and "
+                 "the modulated agent. Grey line = unhurt (starting injury 0), blue line = injured (starting injury "
+                 "70); thin = each checkpoint, thick = average of 5 neighbouring checkpoints. The shaded first 2 M "
+                 "steps are drawn but not used in the printed numbers. Text above each panel's 100 % line: the injury effect and, for the animal scenes, the animal's effect, over 2&ndash;10 M steps.")
+    tok["{{FIG:hl_rank}}"] = figure(
+        "f7b_hl_rank", f"{len(CND)} training conditions, ranked, each with an ordinary and a modulated agent "
+        f"({2 * len(CND)} runs), each run with three dot-and-interval marks: the injury effect with no animal, "
+        "the injury effect with a wandering rabbit, and the predator response.",
+        "Vertical: the ten top-ranked training conditions (no unit), best at the top; in each row the upper mark "
+        "is the ordinary agent (open grey circle) and the lower mark the modulated agent (filled black square) trained in the same condition. Horizontal, left panel: injury 70 minus "
+        "injury 0 with no animal; middle panel: the same with a wandering rabbit; right panel: bush dwell with a "
+        "hunting predator minus with no animal, both unhurt. All three in percentage points of bush dwell, mean "
+        "over the checkpoints from 2 to 10 M training steps, with a 95 % interval. Blue = modulated agent, grey = "
+        "ordinary agent.",
+        "The two conditions at the top, fast bush healing at levels 05 and 04, are also the only ones where the two "
+        "agent types clearly differ: the modulated agent's injury effect is about 12&ndash;13 points in both calm "
+        "scenes, the ordinary agent's 2&ndash;4 with wide intervals, and the modulated agent's predator response is "
+        "the larger. Further down, the two agents of a condition look alike.",
+        f"{hp} --figure rank", title="Figure B1 &mdash; the ten conditions where both effects are largest, ordinary and modulated side by side")
+    for key, lab, ttl in (("lvl05", "B2", "level 05 pair, across training"), ("lvl04", "B3", "level 04 pair, across training")):
+        tok[f"{{{{FIG:hl_{key}}}}}"] = figure(
+            f"f7b_hl_pair__{key}", f"Eight panels: four scenes by two agents, bush dwell across training, unhurt and injured.",
+            pair_axes,
+            {"lvl05": "In the modulated agent the injured line sits steadily above the unhurt line with no animal and with "
+                      "the wandering rabbit, at nearly every checkpoint, while both lines rise together for the chasing "
+                      "rabbit and the predator. In the ordinary agent the two lines overlap and drift upward late in "
+                      "training, including for the harmless wandering rabbit.",
+             "lvl04": "The same picture at level 04: the modulated agent's calm-scene lines are flat and ordered by injury; "
+                      "the ordinary agent's swing between about 0 and 90 % from one checkpoint to the next, in every "
+                      "calm scene at once."}[key],
+            f"{hp} --figure pair --key {key}", title=f"Figure {lab} &mdash; {ttl}")
+    tok["{{FIG:hl_dose}}"] = figure(
+        "f7b_hl_dose", "Two panels, ordinary and modulated: bush dwell rising with starting injury, three scenes.",
+        "Horizontal: starting injury of the test episode, 0 (unhurt) to 90, in steps of 10 (0&ndash;100 scale). "
+        "Vertical: bush dwell, the share of the scene's 100 steps spent on the bush (%), mean over the checkpoints "
+        "from 2 to 10 M training steps; shading is the 95 % interval. Lines: no animal, wandering rabbit, hunting "
+        "predator. The two panels share the vertical scale.",
+        "Bush dwell climbs steadily with injury in both agents, steeply in the ordinary one. The wandering-rabbit "
+        "line lies on the no-animal line: the agent does not treat it as a threat at any injury. The predator line "
+        "sits above both.",
+        f"{hp} --figure dose", title="Figure B4 &mdash; level 02 pair, bush dwell against starting injury")
 
     # ---- figures
     for stem in ("f7b_rank", "f7b_family", "f7b_within"):

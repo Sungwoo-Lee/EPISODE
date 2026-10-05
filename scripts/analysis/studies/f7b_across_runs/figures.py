@@ -542,11 +542,131 @@ def fig_levels(R, L, E, X, group):
                                                 "scene and injury; read that run's values with care"}]
 
 
+AGENT_COL = {"ordinary": "#8a8f98", "modulated": H.SERIES[0]}   # grey vs blue: the agent type is the comparison
+
+
+def load_ckpt():
+    S = pd.read_csv(os.path.join(DATA_DIR, "ckpt_summary.csv"))
+    D = pd.read_csv(os.path.join(DATA_DIR, "ckpt_dropped.csv"))
+    return S[S.window == "all"], D
+
+
+def ckpt_table(S):
+    """One row per run (matched 2-10 M window): the per-checkpoint measures the two figures use."""
+    W = S.pivot_table(index=["id", "agent", "family", "setting", "seed", "scene_set"], columns="quantity",
+                      values=["mean", "share_pos", "mean_abs_step", "n_ckpt"], aggfunc="first")
+    W.columns = [f"{a}|{b}" for a, b in W.columns]
+    return W.reset_index()
+
+
+def ckpt_data_rows(T, D, R, what):
+    n_all = len(R[R.scene_set != "injgrid"])
+    return [{"what": f"{what}: runs in the matched 2-10 M step window", "used": len(T), "total": len(R),
+             "note": f"{len(D)} left out with a reason (ckpt_dropped.csv): injury-grid rows of runs also tested "
+                     f"in another set (they repeat those tests); runs whose tested checkpoints end before 8 M steps (Dreamer, July network size)"},
+            {"what": "checkpoints per run in the window", "used": int(T["n_ckpt|level none@00"].sum()),
+             "total": int(R[R.id.isin(T.id)].n_ckpt.sum()),
+             "note": "the measured checkpoint nearest each 0.2 M step from 2 to 10 M (0.1 M-spaced runs: every second one); "
+                     "earlier, later and in-between checkpoints are not used"},
+            {"what": "episodes behind each checkpoint value", "used": 30, "total": 30,
+             "note": "30 evaluation episodes per checkpoint, scene and start injury"}]
+
+
+def fig_ckptmap(R, L, E, X):
+    """One dot per run: injury-effect consistency (x) against the animal response (y), size = stability."""
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    S, D = load_ckpt()
+    T = ckpt_table(S)
+    T = T[T.agent.isin(AGENT_COL)]
+    bad = set(flagged(L, "none")) | set(flagged(L, "pred")) | set(flagged(L, "rabbitwander"))
+    fig, axs = plt.subplots(1, 2, figsize=(12.0, 6.4), sharex=True, sharey=True)
+    rows = ckpt_data_rows(T, D, R, "all runs")
+    jump = T["mean_abs_step|level none@00"]
+    for ax, (q, name) in zip(axs, (("animal pred", "hunting predator"), ("animal rabbitwander", "wandering rabbit"))):
+        u = T.dropna(subset=["share_pos|injury none", f"mean|{q}"])
+        for a, g in u.groupby("agent"):
+            for _, r in g.iterrows():
+                sz = 900.0 / max(r["mean_abs_step|level none@00"], 2.0)
+                ax.scatter(100 * r["share_pos|injury none"], r[f"mean|{q}"], s=sz, marker="o",
+                           color=H.PAPER if r.id in bad else AGENT_COL[a], edgecolor=AGENT_COL[a], lw=1.3,
+                           alpha=0.8, zorder=3 if a == "modulated" else 2)
+        ax.axvline(50, color=H.RULE, lw=1.1, zorder=0)
+        ax.axhline(0, color=H.RULE, lw=1.1, zorder=0)
+        ax.set_title(f"animal = {name}", loc="left", fontsize=H.FS_BODY)
+        ax.set_xlabel("checkpoints where injury raised bush dwell\nwith no animal (% of checkpoints)", fontsize=H.FS_LABEL)
+        rows.append({"what": f"{name} panel: runs with both values", "used": len(u), "total": len(T),
+                     "note": "runs whose scene set has this scene and a no-animal scene at both injuries"})
+    axs[0].set_ylabel("bush dwell with the animal minus with no animal,\nunhurt, mean over 2-10 M steps (percentage points)",
+                      fontsize=H.FS_LABEL)
+    axs[0].set_xlim(0, 100)
+    axs[0].set_xticks([0, 25, 50, 75, 100])
+    hs = [Line2D([], [], ls="", marker="o", ms=9, color=AGENT_COL[a], label=f"{a} agent") for a in AGENT_COL]
+    hs += [Line2D([], [], ls="", marker="o", ms=ms, color=H.INK_2, label=lab)
+           for ms, lab in ((13, "large dot: steady (no-animal line moves ~5 points per checkpoint)"),
+                           (5, "small dot: swinging (~30 points per checkpoint)"))]
+    hs.append(hollow_handle())
+    fig.legend(handles=hs, loc="lower center", ncol=2, frameon=False, fontsize=H.FS_LABEL - 1, bbox_to_anchor=(0.5, -0.01))
+    fig.subplots_adjust(left=0.09, right=0.98, top=0.95, bottom=0.30, wspace=0.08)
+    return fig, rows
+
+
+PAIR_MEASURES = [("share_pos|injury none", 100.0, "injury raised bush dwell, no animal\n(% of checkpoints)"),
+                 ("mean|injury none", 1.0, "injury effect, no animal\n(injury 70 minus 0, pp)"),
+                 ("mean_abs_step|level none@00", 1.0, "jump between neighbouring checkpoints,\nno animal, unhurt (pp)"),
+                 ("mean|animal pred", 1.0, "predator minus no animal,\nunhurt (pp)"),
+                 ("mean|pred-vs-rabbit", 1.0, "predator minus chasing rabbit,\nunhurt (pp)"),
+                 ("mean|animal rabbitwander", 1.0, "wandering rabbit minus no animal,\nunhurt (pp)")]
+
+
+def fig_ckptpairs(R, L, E, X):
+    """Matched ordinary / modulated pairs (same world, seed and scene set), one line per pair per measure."""
+    import matplotlib.pyplot as plt
+    S, D = load_ckpt()
+    T = ckpt_table(S)
+    T["pair"] = T.setting.str.replace(r"; scene variant.*", "", regex=True)
+    key = ["family", "pair", "seed"]
+    cols = [m for m, _, _ in PAIR_MEASURES]
+    G = T[T.agent.isin(AGENT_COL)].groupby(key + ["agent"])[cols].mean().reset_index()   # average a pair's scene variants
+    P_ = G.pivot_table(index=key, columns="agent", values=cols)
+    P_ = P_[[c for c in P_.columns]].dropna(how="all")
+    P_ = P_[P_.xs("ordinary", axis=1, level=1).notna().any(axis=1) & P_.xs("modulated", axis=1, level=1).notna().any(axis=1)]
+    fams = list(dict.fromkeys(f for f in FAMILY_ORDER if f in P_.index.get_level_values(0)))
+    fcol = dict(zip(fams, [H.SERIES[1], H.SERIES[2], H.SERIES[3], "#8a6fb3", "#a3782f", "#4a3520"]))
+    fig, axs = plt.subplots(2, 3, figsize=(12.0, 8.6))
+    rows = ckpt_data_rows(T, D, R, "matched pairs")
+    for ax, (m, k, lab) in zip(axs.flat, PAIR_MEASURES):
+        n_up = n = 0
+        for idx, r in P_.iterrows():
+            o, md = r[(m, "ordinary")] * k, r[(m, "modulated")] * k
+            if np.isnan(o) or np.isnan(md):
+                continue
+            n += 1
+            n_up += md > o
+            ax.plot([0, 1], [o, md], color=fcol[idx[0]], lw=1.1, alpha=0.7, marker="o", ms=3.5)
+        med = [np.nanmedian(P_[(m, a)] * k) for a in ("ordinary", "modulated")]
+        ax.plot([0, 1], med, color=H.INK, lw=2.6, marker="D", ms=7, zorder=5)
+        ax.set_xticks([0, 1])
+        ax.set_xticklabels(["ordinary", "modulated"])
+        ax.set_xlim(-0.25, 1.25)
+        ax.set_title(lab, loc="left", fontsize=H.FS_LABEL)
+        ax.text(0.98, 0.02, f"modulated higher\nin {n_up} of {n} pairs", transform=ax.transAxes, ha="right", va="bottom",
+                fontsize=H.FS_LABEL - 1, color=H.INK_2)
+    from matplotlib.lines import Line2D
+    hs = [Line2D([], [], color=fcol[f], lw=2, label=f) for f in fams]
+    hs.append(Line2D([], [], color=H.INK, lw=2.6, marker="D", label="median of the pairs"))
+    fig.legend(handles=hs, loc="lower center", ncol=3, frameon=False, fontsize=H.FS_LABEL - 1, bbox_to_anchor=(0.5, -0.01))
+    fig.subplots_adjust(left=0.07, right=0.98, top=0.95, bottom=0.17, hspace=0.45, wspace=0.28)
+    rows.append({"what": "matched ordinary / modulated pairs", "used": len(P_), "total": len(P_),
+                 "note": "same family, world and seed; a pair tested in several temperature scene variants is averaged over them"})
+    return fig, rows
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
     ap.add_argument("--fig-dir", required=True)
-    ap.add_argument("--figure", required=True, choices=["rank", "family", "within", "timeline", "map", "factors", "levels"])
+    ap.add_argument("--figure", required=True, choices=["rank", "family", "within", "timeline", "map", "factors", "levels", "ckptmap", "ckptpairs"])
     ap.add_argument("--group", choices=list(GROUPS))
     a = ap.parse_args(argv)
     H.apply()
@@ -559,7 +679,7 @@ def main(argv=None):
         fig, rows = fig_levels(*D, a.group)
         stem = f"f7b_levels__{a.group}"
     else:
-        fig, rows = {"rank": fig_rank, "family": fig_family, "within": fig_within, "timeline": fig_timeline, "map": fig_map, "factors": fig_factors}[a.figure](*D)
+        fig, rows = {"rank": fig_rank, "family": fig_family, "within": fig_within, "timeline": fig_timeline, "map": fig_map, "factors": fig_factors, "ckptmap": fig_ckptmap, "ckptpairs": fig_ckptpairs}[a.figure](*D)
         stem = f"f7b_{a.figure}"
     FG.record_samples(os.path.abspath(a.fig_dir), stem, rows)
     FG.save(fig, os.path.abspath(a.fig_dir), stem)
