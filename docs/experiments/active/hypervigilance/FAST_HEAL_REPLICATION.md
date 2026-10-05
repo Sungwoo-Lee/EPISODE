@@ -92,3 +92,15 @@ run; 42 is also the config default, so the seed-42 runs use the same seed as the
 | rppo_healrep_l06_t16quad_s42 | 113:1 | stopped: node 113 rebooted at 16:05, about 3 min after launch; not relaunched (awaiting user) | c1f98br1 | results/JAX_RecurrentPPO/20261005-160249_rppo_healrep_l06_t16quad_s42 | logs/20261005_160246_rppo_healrep_l06_t16quad_s42.log |
 | rppo_healrep_l06_t16quad_s43 | 101:1 | running | hsc6npjv | results/JAX_RecurrentPPO/20261005-160255_rppo_healrep_l06_t16quad_s43 | logs/20261005_160249_rppo_healrep_l06_t16quad_s43.log |
 | rppo_healrep_l06_t16quad_s44 | 103:1 | running | fce74f2p | results/JAX_RecurrentPPO/20261005-160258_rppo_healrep_l06_t16quad_s44 | logs/20261005_160252_rppo_healrep_l06_t16quad_s44.log |
+
+### Relaunch, 2026-10-05 17:02
+
+The two level-06 seed-42 runs died when node 113 rebooted (~16:05, cause unknown; logs show no error).
+Relaunched on node 102 (both RTX 4090 GPUs idle, pre-checked), same command and seed, user-approved:
+
+| tag | node:GPU | run folder (`results/JAX_RecurrentPPO/`) |
+|---|---|---|
+| rppo_healrep_l06_t1none_s42 | 102:0 | 20261005-170252_rppo_healrep_l06_t1none_s42 |
+| rppo_healrep_l06_t16quad_s42 | 102:1 | 20261005-170314_rppo_healrep_l06_t16quad_s42 |
+
+The dead runs' folders (20261005-160128_…t1none_s42, 20261005-160249_…t16quad_s42) are not used.
