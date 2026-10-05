@@ -325,15 +325,19 @@ td.nw { white-space:nowrap; }
   no animal at all.</p>
   <ul>
     <li><strong>The 87 runs trained before fast bush healing</strong> lie on the zero line: injury does
-    nothing to them (median &minus;0.1 points). How much an animal matters varies enormously from run to
-    run: a chasing rabbit adds a median 8 points, from about nothing (most Dreamer runs) up to
-    73 (the strongest July and August runs).</li>
+    nothing to them (median &minus;0.1 points). How much an animal matters varies a lot from run to
+    run. Among the runs trained with the ordinary learning method, a chasing rabbit adds a median
+    16 points and up to 73 (the strongest July and August runs); the
+    22 Dreamer runs, a different learning method, barely react to any animal.</li>
     <li><strong>The 76 runs trained with it</strong> sit about 9 points up, and react to the
     chasing rabbit more evenly: a median 19 points, at most 37.</li>
-    <li><strong>A wandering rabbit is mostly ignored, old runs and new alike.</strong> Across all
-    210 rows it raises bush dwell by a median 2 points, and nine rows in ten by
-    8 or less. This suggests the agents react to an animal coming at them rather than to an
-    animal merely being there.</li>
+    <li><strong>The wandering rabbit: small for every run, but larger before fast bush healing.</strong>
+    For an unhurt agent, the older runs trained with the ordinary learning method sit in the bush a median
+    0.8% of the time with no animal, and a wandering rabbit adds a median 4.6 points: from
+    almost nothing to a clear response. The recent runs already sit there 6.1% with no animal, and the
+    wandering rabbit adds a median 2.3. The Dreamer runs do not react at all. (An earlier version of
+    this page pooled all rows into one median and said the rabbit was ignored &ldquo;old and new alike&rdquo;;
+    that hid the difference.)</li>
     <li><strong>One older study shows injury working the other way.</strong> In the August rest-premium runs
     (injury heals faster the longer the agent rests), starting injured often <em>lowers</em> bush dwell when a
     predator or a wandering rabbit is near (Figure 4h): the injured agent stays out rather than heading for
@@ -571,6 +575,11 @@ td.nw { white-space:nowrap; }
     training worlds never allowed, and were fixed. Wave 1 was never re-tested, so it sits in its own scene
     set. The two "wave 2" test results are the same two runs as the fast-bush-healing level-04 rows, measured
     before the fix; their re-test after the fix is used instead, and the old one is in the dropped table.</li>
+    <li><strong>&ldquo;Newest 20 checkpoints&rdquo; is a short window for the long July runs.</strong> The July
+    curriculum runs at levels 03 to 05 were trained to 80&ndash;100 million steps, so their newest 20 checkpoints
+    cover only the last 2 million. Their response to the wandering rabbit fades late in training: for level 04
+    it is about 6 points over the newest 20 checkpoints but about 11 over the whole run. The full-training
+    figures for these runs (results/eval/avoidance/metrics_history/) show the stronger response.</li>
     <li><strong>Bush healing speed is read from each run's saved settings.</strong> Wave 1 states it
     (no bonus); the July runs predate the setting, so "same as elsewhere" is assumed for them, not read.</li>
     <li><strong>The injury-grid scene set has no chasing rabbit.</strong> Its 30 rows appear only in the
@@ -593,7 +602,7 @@ td.nw { white-space:nowrap; }
   <code>configs/environment/experiment/behavior_probes/l05body/generate_l05body_probes.py</code>, sweep
   specs <code>configs/eval_sweeps/l05body/</code>, run with <code>scripts/eval/dwell_sweep/run_sweep.py</code>
   and collated with <code>scripts/analysis/studies/f7b_across_runs/aggregate_only.py</code>. Figures:
-  <code>figures.py</code>; page: <code>build_page.py</code>, both in the same folder. Built 2026-10-04.</p>
+  <code>figures.py</code>; page: <code>build_page.py</code>, both in the same folder. Built 2026-10-05.</p>
 </section>
 
 </div>
