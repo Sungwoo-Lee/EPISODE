@@ -165,11 +165,23 @@ results/eval/avoidance/<name>/
 │   ├── ...
 │   ├── FIG_bush_hiding.png
 │   └── FIG_spatial_spread.png
+├── _provenance/<YYYYMMDD_HHMMSS>/   # one per launch, KEEP (added 2026-10-06): what was tested
+│   ├── spec.yaml                  # the sweep spec as given
+│   ├── provenance.json            # git commit, branch, uncommitted files, host, argv, nodes,
+│   │                              # npar, episodes, checkpoint steps evaluated per run
+│   └── scenes/<cond>.yaml, <cond>.resolved.yaml   # each scene as written + after `extends:`
 └── _scratch/                       # transient; safe to delete after a run completes
     ├── _worklists/worklist_<node>.txt
     ├── _run_markers/{npar,prog,done,fail}_<node>
     └── <run_label>/<cond>/<step>/...recordings.../episode_*.rec.gz
 ```
+
+**Provenance.** Like a training run's `models/config.yaml` + `provenance.json`, each launch
+records exactly what it tested. The resolved scene files matter most: a scene usually `extends:` a
+training world, so an edit to that world later changes what the same scene file means (level 05
+gained random start body temperature on 2026-09-26). A CSV row is matched to its snapshot by its
+`step` (listed under `runs[].steps_evaluated`). A scene that fails to resolve stops the sweep before
+any node is launched.
 
 **Marker lifecycle.** `poll_done()` treats `_run_markers/done_<node>` as "this node's
 worker has finished." Because `output_dir` (and therefore `_scratch/`) persists across

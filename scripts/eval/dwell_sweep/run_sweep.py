@@ -23,6 +23,21 @@ End-to-end, given a YAML spec (see README.md "Spec schema"), this script:
      recordings one directory level deeper than plain per-checkpoint output),
   7. renders the requested measures via plot_summary.py.
 
+Every launch (not --dry-run) first writes a provenance snapshot, the test-side counterpart of the
+`models/config.yaml` + `provenance.json` a training run saves:
+  <output_dir>/_provenance/<YYYYMMDD_HHMMSS>/
+      spec.yaml                  the sweep spec exactly as given
+      provenance.json            git commit / branch / uncommitted changes under configs/ src/ scripts/,
+                                 start time, host, command line, nodes, npar, episodes, and which
+                                 checkpoint steps of which runs this launch evaluates
+      scenes/<cond>.yaml         each scene file as written
+      scenes/<cond>.resolved.yaml  the same scene after its `extends:` chain (load_env_config, the
+                                 loader eval_rollout.py uses), so a later edit to a parent world
+                                 cannot silently change what an existing result meant
+A scene that does not resolve stops the sweep before anything is launched. Why: on 2026-10-06 a
+cross-run comparison mixed two test-scene sets and the settings had to be re-derived from today's
+files (docs/llm_wiki/entries/behavior_measures/20261006_0758_test_scene_confound_level05_modulator_gap.md).
+
 Usage:
   /home/vncuser/miniconda3/envs/grid_world_pain/bin/python \\
       scripts/eval/dwell_sweep/run_sweep.py configs/eval_sweeps/basic04_variants_rppo.yaml
@@ -412,6 +427,48 @@ def plot(spec, output_dir):
     return figs
 
 
+def _git(*a):
+    r = subprocess.run(["git", *a], cwd=REPO_ROOT, capture_output=True, text=True, timeout=300)
+    if r.returncode != 0:
+        raise RuntimeError(f"git {' '.join(a)} failed: {r.stderr.strip()}")
+    return r.stdout.strip()
+
+
+def write_provenance(spec_path, spec, output_dir, checkpoint_groups, nodes, npar, episodes):
+    """Snapshot the spec, the code version and every scene's resolved settings for THIS launch."""
+    import datetime
+    import json
+    import shutil
+    import socket
+    from src.environment.config_loader import load_env_config
+    from src.utils.config import dump_config_yaml
+
+    stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    snap = output_dir / "_provenance" / stamp
+    (snap / "scenes").mkdir(parents=True, exist_ok=False)
+    shutil.copy2(spec_path, snap / "spec.yaml")
+    pdir = probe_dir(spec.get("probe", "clean"))
+    conds = sorted({c["cond"] for g in checkpoint_groups for c in g["conds"]})
+    for cond in conds:
+        src = pdir / f"{cond}.yaml"
+        shutil.copy2(src, snap / "scenes" / f"{cond}.yaml")
+        with open(snap / "scenes" / f"{cond}.resolved.yaml", "w") as fh:
+            dump_config_yaml(load_env_config(str(src)).to_dict(), fh)
+    steps = defaultdict(list)
+    for g in checkpoint_groups:
+        steps[g["run_label"]].append(int(g["step"]))
+    runs = [{"label": r["label"], "path": r["path"], "steps_evaluated": sorted(steps.get(r["label"], []))}
+            for r in spec["runs"]]
+    dirty = _git("status", "--porcelain", "--", "configs", "src", "scripts")
+    prov = {"started": datetime.datetime.now().isoformat(timespec="seconds"), "host": socket.gethostname(),
+            "argv": sys.argv, "git_sha": _git("rev-parse", "HEAD"), "branch": _git("rev-parse", "--abbrev-ref", "HEAD"),
+            "uncommitted_changes": dirty.splitlines(), "spec": str(spec_path), "probe_dir": str(pdir.relative_to(REPO_ROOT)),
+            "conditions": conds, "nodes": nodes, "npar": npar, "episodes": episodes, "runs": runs}
+    with open(snap / "provenance.json", "w") as fh:
+        json.dump(prov, fh, indent=1)
+    return snap
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("spec", help="Path to a sweep spec YAML (see README.md).")
@@ -464,6 +521,9 @@ def main():
             print(f"  {PY} {RUN_COMMAND} {n} \"bash {WORKER} {wl} {n} {npar} {episodes}\" --no-tail")
         print("\n[DRY RUN] complete -- nothing launched.")
         return
+
+    snap = write_provenance(Path(args.spec), spec, output_dir, checkpoint_groups, nodes, npar, episodes)
+    print(f"provenance: {snap}")
 
     t0 = time.time()
     # Clear stale `done_<node>` markers from a PRIOR run before launching -- without this,
