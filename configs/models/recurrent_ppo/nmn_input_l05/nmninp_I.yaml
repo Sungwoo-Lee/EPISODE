@@ -1,0 +1,64 @@
+# GENERATED FILE -- DO NOT EDIT BY HAND.
+# Regenerate with:
+#   python configs/models/recurrent_ppo/nmn_input_l05/generate_input_arms.py
+# Drift check (writes nothing):  ... generate_input_arms.py --check
+# Full check (one-key diff, saved-config diff, model build, input isolation):  ... --verify
+#
+# Modulator-input grid, level 05 -- cell I
+# Study: docs/experiments/active/hypervigilance/NMN_INPUT_L05.md
+#
+# Identical to configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml
+# (the replication's level-05 modulated agent: FiLM at encoder, GRU, actor and critic;
+# 16-unit modulator, grouping 1; temperature channel off; GAE_NORM returns) in every key
+# except one:
+#   modulation.input_sensors -- what the MODULATOR reads (reference: "all", 58 numbers
+#   at level 05). Here: the body's fullness and felt injury (the September 'body-only' slice)
+#   = 2 of the 58 numbers. The main network still reads all 58.
+#
+# Seed is passed per run on the command line (--seed 42|43|44), as in the replication.
+
+agent:
+  algorithm: RecurrentPPO
+  lr_actor: 0.0005
+  lr_critic: 0.0005
+  gamma: 0.95
+  K_epochs: 4
+  eps_clip: 0.1
+  sequence_length: 128
+  frame_stack: 1
+  fc_layers: [128, 128]
+  actor_fc_layers: [128, 128]
+  critic_fc_layers: [128, 128]
+  hidden_size: 128
+  entropy_coef: 0.01
+  gae_lambda: 0.95
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  use_layer_norm: true
+  rnn_type: GRU
+  activation: relu
+  return_mode: GAE_NORM
+  encoding_mode: hierarchical
+  hierarchical_params:
+    default_mlp: [128, 128]
+    unimodal_overrides:
+      visual: [128, 128]
+      olfaction: [128, 128]
+    multimodal_hub: [128, 128]
+  modulation:
+    type: FiLM
+    mod_hidden_size: 16
+    grouping_size: 1
+    percept_bias_init: 3.0
+    percept_add_bias_init: 0.0
+    memory_bias_init: 0.0
+    memory_clip: [-2.0, 2.0]
+    input_sensors: ["Satiation", "Interoceptive Nociception"]
+    sites:
+      encoder: true
+      rnn: true
+      actor: true
+      critic: true
+    rnn_mechanism: activation
+    temperature:
+      enabled: false

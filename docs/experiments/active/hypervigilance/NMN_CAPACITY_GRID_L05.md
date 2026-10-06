@@ -3,7 +3,7 @@ title: "Modulator capacity grid at level 05 — does a larger or coarser-grained
 topic: hypervigilance
 status: active
 created: 2026-10-06
-last_updated: 2026-10-06
+last_updated: 2026-10-07
 wandb_tag: "rppo_nmncap_l05_h*g*_s*"
 ---
 
@@ -439,6 +439,14 @@ None blocks the launch. Findings:
 7. **Stale comment in the reference file.** Its header says "Seed is config-owned … no --seed is passed at
    launch", but the replication did pass `--seed`. The new files state the real mechanism. The reference
    file is generated and is not edited here.
+
+## 7a. Sister study (added 2026-10-07)
+
+[[NMN_INPUT_L05]] varies what the modulator reads (felt injury only / body only / body + temperature /
+outside world only) at level 05, with the same references, readout and staging. Its §5.0 records the
+training-survival threshold this study's §5.1 rule 4 left unwritten (review F3): the six references'
+2–10 M `Episode/Steps` means are 242.1–247.8, so 10 % below the lowest is **217.9 steps**. Its stage-1
+table shows this grid's nine seed-42 runs as context.
 
 ## 8. Results
 

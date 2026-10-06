@@ -1,0 +1,31 @@
+# GENERATED FILE -- DO NOT EDIT BY HAND (generator:
+#   configs/models/recurrent_ppo/nmn_input_l05/generate_input_arms.py).
+# Modulator-input grid, level 05 -- stage 1 runs (4) -- test scenes 'own' (configs/environment/experiment/behavior_probes/hvsmell/two_channel).
+# Design: docs/experiments/active/hypervigilance/NMN_INPUT_L05.md (Section 5, readout).
+# Same probe folder, conditions, episodes, x axis and measures as
+# configs/eval_sweeps/healrep/healrep_l05_own_rppo.yaml, whose output holds the reference runs.
+# Run paths are globs on the planned tag; each must resolve to exactly ONE run folder
+# (run_sweep.py refuses 0 or 2+ matches -- after a relaunch, pin the live folder by hand).
+# Nodes are a placeholder: confirm free nodes (gpu-status + diary) before launching the sweep.
+name: nmninp_l05_own_stage1
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_nmninp/l05_own
+probe: configs/environment/experiment/behavior_probes/hvsmell/two_channel
+conditions: all
+episodes: 30
+nodes:
+- 109
+- 113
+x_axis: steps
+plot_measures:
+- bush_hiding
+- survival_steps
+runs:
+- label: l05_N_s42
+  path: results/JAX_RecurrentPPO/*_rppo_nmninp_l05_N_s42
+- label: l05_I_s42
+  path: results/JAX_RecurrentPPO/*_rppo_nmninp_l05_I_s42
+- label: l05_IT_s42
+  path: results/JAX_RecurrentPPO/*_rppo_nmninp_l05_IT_s42
+- label: l05_X_s42
+  path: results/JAX_RecurrentPPO/*_rppo_nmninp_l05_X_s42

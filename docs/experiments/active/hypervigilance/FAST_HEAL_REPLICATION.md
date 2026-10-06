@@ -1,7 +1,7 @@
 ---
 title: Fast-bush-healing replication — level 04, + temperature, + temperature and thirst
 created: 2026-10-05
-last_updated: 2026-10-06
+last_updated: 2026-10-07
 status: active
 ---
 
@@ -157,3 +157,11 @@ tests whether a larger modulator, or one whose gains are shared across groups of
 It trains a 3 × 3 grid of modulator settings at level 05, in stages: one seed first, then more seeds only
 for settings that stand out. This replication's level-05 runs (both agents, seeds 42–44) are its
 references and are not retrained. Design, decision rule and run table: [[NMN_CAPACITY_GRID_L05]].
+
+## Follow-up: modulator input at level 05 (designed 2026-10-07)
+
+The second follow-up keeps the level-05 modulated agent and changes only what the modulator reads: felt
+injury alone, fullness and felt injury, those two plus body temperature, or the outside world only. The
+main network still reads everything. One seed first; more seeds by the user's judgement. This
+replication's level-05 runs (both agents, seeds 42–44) are its references and are not retrained. Design,
+readout and run table: [[NMN_INPUT_L05]].
