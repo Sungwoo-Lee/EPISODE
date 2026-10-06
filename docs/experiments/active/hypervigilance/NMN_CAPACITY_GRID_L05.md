@@ -9,7 +9,7 @@ wandb_tag: "rppo_nmncap_l05_h*g*_s*"
 
 # Modulator capacity grid at level 05
 
-> **Status**: DESIGNED — stage 1 ready to launch; stage 2 conditional on the stage-1 rule (§5.1). Nothing launched.
+> **Status**: STAGE 1 RUNNING — 9 runs launched 2026-10-06 20:05–20:07 (launch record in §3); stage 2 conditional on the stage-1 rule (§5.1).
 > **Date**: 2026-10-06
 > **Author**: `experiment-designer`
 > **Related**: [[FAST_HEAL_REPLICATION]] (the reference runs and the readout this design copies; results
@@ -146,15 +146,15 @@ network. The h128 cells may run a few percent slower.
 
 | Run | Stage | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 1 | planned | h32g8 | rppo_nmncap_l05_h32g8_s42 | nmn_capacity_l05 | ablation | 42 | 101 | 0 | — | — | — |
-| 2 | 1 | planned | h32g16 | rppo_nmncap_l05_h32g16_s42 | nmn_capacity_l05 | ablation | 42 | 101 | 1 | — | — | — |
-| 3 | 1 | planned | h32g32 | rppo_nmncap_l05_h32g32_s42 | nmn_capacity_l05 | ablation | 42 | 103 | 0 | — | — | — |
-| 4 | 1 | planned | h64g8 | rppo_nmncap_l05_h64g8_s42 | nmn_capacity_l05 | ablation | 42 | 103 | 1 | — | — | — |
-| 5 | 1 | planned | h64g16 | rppo_nmncap_l05_h64g16_s42 | nmn_capacity_l05 | ablation | 42 | 106 | 0 | — | — | — |
-| 6 | 1 | planned | h64g32 | rppo_nmncap_l05_h64g32_s42 | nmn_capacity_l05 | ablation | 42 | 106 | 1 | — | — | — |
-| 7 | 1 | planned | h128g8 | rppo_nmncap_l05_h128g8_s42 | nmn_capacity_l05 | ablation | 42 | 107 | 0 | — | — | — |
-| 8 | 1 | planned | h128g16 | rppo_nmncap_l05_h128g16_s42 | nmn_capacity_l05 | ablation | 42 | 107 | 1 | — | — | — |
-| 9 | 1 | planned | h128g32 | rppo_nmncap_l05_h128g32_s42 | nmn_capacity_l05 | ablation | 42 | 108 | 0 | — | — | — |
+| 1 | 1 | running | h32g8 | rppo_nmncap_l05_h32g8_s42 | nmn_capacity_l05 | ablation | 42 | 101 | cuda:0 | 2026-10-06T20:05:38 | whuzipze | logs/20261006_200537_rppo_nmncap_l05_h32g8_s42.log |
+| 2 | 1 | running | h32g16 | rppo_nmncap_l05_h32g16_s42 | nmn_capacity_l05 | ablation | 42 | 101 | cuda:1 | 2026-10-06T20:05:50 | skh725p5 | logs/20261006_200550_rppo_nmncap_l05_h32g16_s42.log |
+| 3 | 1 | running | h32g32 | rppo_nmncap_l05_h32g32_s42 | nmn_capacity_l05 | ablation | 42 | 103 | cuda:0 | 2026-10-06T20:06:03 | i7t686qy | logs/20261006_200603_rppo_nmncap_l05_h32g32_s42.log |
+| 4 | 1 | running | h64g8 | rppo_nmncap_l05_h64g8_s42 | nmn_capacity_l05 | ablation | 42 | 103 | cuda:1 | 2026-10-06T20:06:16 | 77ghsr0f | logs/20261006_200616_rppo_nmncap_l05_h64g8_s42.log |
+| 5 | 1 | running | h64g16 | rppo_nmncap_l05_h64g16_s42 | nmn_capacity_l05 | ablation | 42 | 106 | cuda:0 | 2026-10-06T20:06:29 | h5napmps | logs/20261006_200628_rppo_nmncap_l05_h64g16_s42.log |
+| 6 | 1 | running | h64g32 | rppo_nmncap_l05_h64g32_s42 | nmn_capacity_l05 | ablation | 42 | 106 | cuda:1 | 2026-10-06T20:06:41 | fu4lz29p | logs/20261006_200641_rppo_nmncap_l05_h64g32_s42.log |
+| 7 | 1 | running | h128g8 | rppo_nmncap_l05_h128g8_s42 | nmn_capacity_l05 | ablation | 42 | 107 | cuda:0 | 2026-10-06T20:06:54 | prk1uu4c | logs/20261006_200653_rppo_nmncap_l05_h128g8_s42.log |
+| 8 | 1 | running | h128g16 | rppo_nmncap_l05_h128g16_s42 | nmn_capacity_l05 | ablation | 42 | 107 | cuda:1 | 2026-10-06T20:07:06 | j98mf4h2 | logs/20261006_200706_rppo_nmncap_l05_h128g16_s42.log |
+| 9 | 1 | running | h128g32 | rppo_nmncap_l05_h128g32_s42 | nmn_capacity_l05 | ablation | 42 | 108 | cuda:0 | 2026-10-06T20:07:19 | lbbkj8n3 | logs/20261006_200719_rppo_nmncap_l05_h128g32_s42.log |
 | 10 | 2 | conditional | h32g8 | rppo_nmncap_l05_h32g8_s43 | nmn_capacity_l05 | ablation | 43 | — | — | — | — | — |
 | 11 | 2 | conditional | h32g8 | rppo_nmncap_l05_h32g8_s44 | nmn_capacity_l05 | ablation | 44 | — | — | — | — | — |
 | 12 | 2 | conditional | h32g16 | rppo_nmncap_l05_h32g16_s43 | nmn_capacity_l05 | ablation | 43 | — | — | — | — | — |
@@ -175,6 +175,27 @@ network. The h128 cells may run a few percent slower.
 | 27 | 2 | conditional | h128g32 | rppo_nmncap_l05_h128g32_s44 | nmn_capacity_l05 | ablation | 44 | — | — | — | — | — |
 
 Stage-2 rows run **only** for cells that pass the stage-1 rule (§5.1). The rest become `cancelled`.
+
+**Stage-1 launch record (training-runner, 2026-10-06).** All nine runs launched 20:05:38–20:07:19 with
+`run_command.py --no-tail`, one per-run `/tmp` script, a per-run `--log` file and ~12 s between launches
+(no shared logs). Checked after the wait: exactly one training process per tag, one results folder per tag,
+and each run's saved `models/config.yaml` shows its own `mod_hidden_size` / `grouping_size`, top-level
+`seed: 42`, `recovery_in_bush_multiplier: 25.0`, `random_start_body_temp: true`, and WandB group/job type
+`nmn_capacity_l05` / `ablation`. All nine were past 13k–80k training steps a few minutes after launch, with
+no errors in the logs. Pre-flight: all ten GPUs on 101/103/106/107/108 idle, the NAS mounted on every node
+(including 107), and the JAX GPU-compile check passed on every GPU (jax 0.9.0.1).
+
+| tag | node:GPU | WandB run ID | results folder | log |
+|---|---|---|---|---|
+| rppo_nmncap_l05_h32g8_s42 | 101:0 | whuzipze | results/JAX_RecurrentPPO/20261006-200543_rppo_nmncap_l05_h32g8_s42 | logs/20261006_200537_rppo_nmncap_l05_h32g8_s42.log |
+| rppo_nmncap_l05_h32g16_s42 | 101:1 | skh725p5 | results/JAX_RecurrentPPO/20261006-200557_rppo_nmncap_l05_h32g16_s42 | logs/20261006_200550_rppo_nmncap_l05_h32g16_s42.log |
+| rppo_nmncap_l05_h32g32_s42 | 103:0 | i7t686qy | results/JAX_RecurrentPPO/20261006-200609_rppo_nmncap_l05_h32g32_s42 | logs/20261006_200603_rppo_nmncap_l05_h32g32_s42.log |
+| rppo_nmncap_l05_h64g8_s42 | 103:1 | 77ghsr0f | results/JAX_RecurrentPPO/20261006-200622_rppo_nmncap_l05_h64g8_s42 | logs/20261006_200616_rppo_nmncap_l05_h64g8_s42.log |
+| rppo_nmncap_l05_h64g16_s42 | 106:0 | h5napmps | results/JAX_RecurrentPPO/20261006-200633_rppo_nmncap_l05_h64g16_s42 | logs/20261006_200628_rppo_nmncap_l05_h64g16_s42.log |
+| rppo_nmncap_l05_h64g32_s42 | 106:1 | fu4lz29p | results/JAX_RecurrentPPO/20261006-200647_rppo_nmncap_l05_h64g32_s42 | logs/20261006_200641_rppo_nmncap_l05_h64g32_s42.log |
+| rppo_nmncap_l05_h128g8_s42 | 107:0 | prk1uu4c | results/JAX_RecurrentPPO/20261006-200659_rppo_nmncap_l05_h128g8_s42 | logs/20261006_200653_rppo_nmncap_l05_h128g8_s42.log |
+| rppo_nmncap_l05_h128g16_s42 | 107:1 | j98mf4h2 | results/JAX_RecurrentPPO/20261006-200711_rppo_nmncap_l05_h128g16_s42 | logs/20261006_200706_rppo_nmncap_l05_h128g16_s42.log |
+| rppo_nmncap_l05_h128g32_s42 | 108:0 | lbbkj8n3 | results/JAX_RecurrentPPO/20261006-200724_rppo_nmncap_l05_h128g32_s42 | logs/20261006_200719_rppo_nmncap_l05_h128g32_s42.log |
 
 **Launch command** (one per row; `<CELL_FILE>` from §3.1, `<D>` = GPU index):
 
