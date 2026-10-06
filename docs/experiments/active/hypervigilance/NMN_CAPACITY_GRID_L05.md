@@ -415,3 +415,18 @@ None blocks the launch. Findings:
 ## 9. Conclusions
 
 *(empty)*
+
+---
+
+## Feedback from plan-reviewer (2026-10-06)
+
+**Verdict: NOT READY. The decision rule needs revising; the stage-1 training launch is not blocked.** Full review: `docs/reviews/plan_nmn_capacity_grid.md`.
+
+- **Critical: the stage-1 rule (§5.1) is much stricter than stated.** On the six reference values, a setting that truly adds 3 pp passes only about 10 % of the time, and one that adds 5 pp passes about 23 % of the time. A null cell passes about 1.5 % of the time, not about 5 %. So the null caveat "effects under ~3 pp were not detectable" (§2.3 C6, §6) understates the miss rate by about 2×. Effects under about 7 pp are more likely to be missed than caught. The strictness comes from three places. The +3 pp margin is one. Rule 2 adds a within-run checkpoint interval on top of the seed envelope. Rule 3 asks for superiority over one run when it means non-inferiority. The ordinary agents inflate the envelope by only 0.2–0.8 pp. The two injury measures correlate at r = 0.87, so requiring both adds little. **Fix:** loosen the rule (option A in the review), or keep it and correct the caveat. Either way, commit the change before any stage-1 test result is read.
+- **Moderate:** the stage-2 size criterion (§5.2 rule 2) includes the selected seed 42. Compute it on seeds 43–44.
+- **Moderate:** the survival guard's training threshold (§5.1 rule 4) has no number written down.
+- **Moderate:** the rule-applying script should be built and checked against the §5 reference table before stage-1 results exist.
+- **Open:** the shared initialisation is minor, because the FiLM head kernels start random and the cells diverge from step 1. Even so, treat the seed-42 paired comparisons as descriptive, and note that the nine stage-1 cells are not independent draws.
+- **Open:** grouping. The state-dependent gain has dimension at most min(H, 128/G), which is ≤ the reference's 16 in every cell. The grid enlarges the modulator's memory, not its state-dependent output. Keeping the baseline per-neuron is the right choice. State the bound in §2.
+
+Reviewed by: plan-reviewer
