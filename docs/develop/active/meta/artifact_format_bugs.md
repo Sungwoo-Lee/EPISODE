@@ -2527,3 +2527,9 @@ fine on its own and geometry checks see nothing; only reading prose and legends 
 the figure scripts' legend and row-label text in the same change, and make the label true for everything
 it now covers. **Check:** grep every figure script's legend / label strings for the subset names the prose
 now uses, and read one figure's legend against the paragraph that introduces it.
+
+**F82 amendment (2026-10-06, Figures B9–B12):** the same failure inside one shared method block. "How
+Figures B4–B8 are computed" was extended to B4–B12 by adding a sentence, and its old closing sentence
+("two trained runs per figure … not how much that differs between seeds") stayed — false for the new B9,
+which exists to compare seeds. **Rule:** when a shared "How it is computed" block is extended to new
+figures, re-read every existing sentence for claims that no longer hold for all of them.

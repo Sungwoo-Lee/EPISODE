@@ -71,6 +71,13 @@ INJ_GRID = {  # key -> (title, {agent: leaf for none / pred / rabbitwander}, {ag
               {"ordinary": f"{AV}/metrics_history_rppo_injurygrid_chase_neutral_clean/lvl05_control",
                "modulated": f"{AV}/metrics_history_rppo_injurygrid_chase_neutral_clean/lvl05_modulated"}),
 }
+# The smell-study CONTROL runs (level 05 + random start body temperature only -- the runs most like the
+# 22-Sep level-05 pair), seeds 42-44, in the same neutral injury-grid scenes (2026-10-06).
+for _s in (42, 43, 44):
+    INJ_GRID[f"hv2ch_s{_s}"] = (
+        f"smell-study control, seed {_s}, neutral temperature scenes",
+        {a: f"{AV}/metrics_history_rppo_injurygrid_neutral_clean_hv2ch/hv2ch_{a}_s{_s}" for a in ("ordinary", "modulated")},
+        {a: f"{AV}/metrics_history_rppo_injurygrid_chase_neutral_clean_hv2ch/hv2ch_{a}_s{_s}" for a in ("ordinary", "modulated")})
 INJURIES = [f"{i:02d}" for i in range(0, 100, 10)]
 DOSE = (f"{AV}/metrics_history_rppo_injurygrid_core/lvl02_control",
         f"{AV}/metrics_history_rppo_injurygrid_core/lvl02_modulated")
@@ -385,12 +392,56 @@ def fig_injdose(key):
     return dose_figure(lambda agent, sc: grid_leaf(key, agent, sc), SCENE_ROWS)
 
 
+def fig_injdose_seeds(keys):
+    """Bush dwell against starting injury for several runs of one condition: rows = runs (seeds),
+    columns = the four scenes, ordinary vs modulated in each panel; the B6 layout stacked."""
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    fig, axs = plt.subplots(len(keys), 4, figsize=(10.4, 2.8 * len(keys) + 1.0), sharex=True, sharey=True)
+    rows = []
+    x = [int(i) for i in INJURIES]
+    for r_, key in enumerate(keys):
+        for c_, (sc, name) in enumerate(SCENE_ROWS):
+            ax = axs[r_, c_]
+            for agent in ("ordinary", "modulated"):
+                leaf = grid_leaf(key, agent, sc)
+                m, lo, hi = [], [], []
+                for i in INJURIES:
+                    v = K.on_grid(series(leaf, sc, i), LO_M, HI_M, SPACING_M)
+                    p = C.P.W.window_profile(v.to_numpy(), windows=[len(v)]).iloc[0]
+                    m.append(p["mean"]); lo.append(p["lo"]); hi.append(p["hi"])
+                col = AGENT_COL[agent]
+                ax.fill_between(x, lo, hi, color=col, alpha=0.10 if agent == "ordinary" else 0.16, lw=0)
+                for edge in (lo, hi):
+                    ax.plot(x, edge, color=col, lw=0.7, ls=(0, (3, 2)))
+                ax.plot(x, m, color=col, lw=2.0, marker=AGENT_MK[agent], ms=4.5,
+                        mfc=col if agent == "modulated" else H.PAPER, mew=1.3, zorder=3)
+                rows.append({"what": f"seed {key.rsplit('_s', 1)[1]}, {agent}, {name}: checkpoints per starting injury", "used": len(v),
+                             "total": len(v), "note": f"0.2 M grid {LO_M:g}-{HI_M:g} M steps; {episodes(leaf)} episodes per checkpoint"})
+            if r_ == 0:
+                ax.set_title(name, loc="left", fontsize=H.FS_BODY)
+            if c_ == 0:
+                ax.set_ylabel(f"seed {key.rsplit('_s', 1)[1]}\nbush dwell (%)", fontsize=H.FS_LABEL)
+            if r_ == len(keys) - 1:
+                ax.set_xlabel("starting injury", fontsize=H.FS_LABEL)
+    axs[0, 0].set_ylim(0, 100)
+    axs[0, 0].set_xticks([0, 30, 60, 90])
+    axs[0, 0].set_xlim(-4, 94)
+    hs = [Line2D([], [], color=AGENT_COL[a], marker=AGENT_MK[a], mfc=AGENT_COL[a] if a == "modulated" else H.PAPER,
+                 mew=1.3, lw=2.0, label=f"{a} agent") for a in AGENT_COL]
+    hs.append(Line2D([], [], color=H.INK_2, lw=0.7, ls=(0, (3, 2)), label="dashed edges: 95 % interval, in the line's tone"))
+    fig.legend(handles=hs, loc="lower center", ncol=3, frameon=False, fontsize=H.FS_LABEL - 1, bbox_to_anchor=(0.5, -0.005))
+    fig.subplots_adjust(left=0.09, right=0.99, top=0.95, bottom=0.11, hspace=0.30, wspace=0.08)
+    return fig, rows
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
     ap.add_argument("--fig-dir", required=True)
-    ap.add_argument("--figure", required=True, choices=["rank", "pair", "dose", "injtrain", "injdose"])
-    ap.add_argument("--key", choices=list(PAIRS))
+    ap.add_argument("--figure", required=True, choices=["rank", "pair", "dose", "injtrain", "injdose", "injdose_seeds"])
+    ap.add_argument("--key", choices=sorted(set(PAIRS) | set(INJ_GRID)))
+    ap.add_argument("--keys", nargs="+", help="for injdose_seeds: INJ_GRID keys, one row each")
     a = ap.parse_args(argv)
     H.apply()
     if a.figure == "rank":
@@ -401,6 +452,9 @@ def main(argv=None):
             raise SystemExit("--figure pair needs --key")
         fig, rows = fig_pair(a.key)
         stem = f"f7b_hl_pair__{a.key}"
+    elif a.figure == "injdose_seeds":
+        fig, rows = fig_injdose_seeds(a.keys)
+        stem = "f7b_hl_injdose_seeds__" + "_".join(k.split("_s")[0] for k in a.keys[:1]) + "_" + "".join(k.rsplit("_s", 1)[1] for k in a.keys)
     elif a.figure in ("injtrain", "injdose"):
         if not a.key:
             raise SystemExit(f"--figure {a.figure} needs --key")

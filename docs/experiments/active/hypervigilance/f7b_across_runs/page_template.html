@@ -27,6 +27,7 @@ td.nw { white-space:nowrap; }
   <ol>
     <li><a href="#best">The most effective conditions &mdash; Figures B1&ndash;B4</a></li>
     <li><a href="#inj10">The two strongest pairs at ten injury levels &mdash; Figures B5&ndash;B8</a></li>
+    <li><a href="#inj10b">The closest later runs at ten injury levels &mdash; Figures B9&ndash;B12</a></li>
     <li><a href="#data">The data, in plain words</a></li>
     <li><a href="#f0">Figure 0 &mdash; when each group was trained</a></li>
     <li><a href="#two">Figure M &mdash; animal dependence against state dependence</a></li>
@@ -131,20 +132,50 @@ td.nw { white-space:nowrap; }
   {{FIG:ig_train_lvl04}}
   <h4 class="fh"><span class="n">Figure B8</span>Level 04 pair, bush dwell against starting injury</h4>
   {{FIG:ig_dose_lvl04}}
+  <h3 class="fh" id="inj10b"><span class="n">B9&ndash;B12</span>The closest later runs at ten injury levels</h3>
+  <p>Of all runs trained after 22 Sep, the smell study's control runs are the most like the 22-Sep level-05
+  pair: the same world and the same training, except that each episode starts at a random body temperature
+  (&minus;10 to +5&nbsp;°C) instead of the comfortable 0. They have three seeds per agent type. They were
+  replayed in the same neutral scenes as Figures B5&ndash;B8 at starting injuries 0 to 90 (at injury 0 and 70
+  the numbers match their earlier neutral test checkpoint by checkpoint). With no animal, unhurt &rarr;
+  injury 90:</p>
+  <ul>
+    <li><strong>Seed 42:</strong> modulated {{SC42_MN00}}% &rarr; {{SC42_MN90}}%, ordinary {{SC42_ON00}}% &rarr;
+    {{SC42_ON90}}%; wandering rabbit modulated {{SC42_MW00}}% &rarr; {{SC42_MW90}}%, ordinary {{SC42_OW00}}%
+    &rarr; {{SC42_OW90}}%.</li>
+    <li><strong>Seed 43:</strong> modulated {{SC43_MN00}}% &rarr; {{SC43_MN90}}%, ordinary {{SC43_ON00}}% &rarr;
+    {{SC43_ON90}}%; wandering rabbit modulated {{SC43_MW00}}% &rarr; {{SC43_MW90}}%, ordinary {{SC43_OW00}}%
+    &rarr; {{SC43_OW90}}%.</li>
+    <li><strong>Seed 44:</strong> modulated {{SC44_MN00}}% &rarr; {{SC44_MN90}}%, ordinary {{SC44_ON00}}% &rarr;
+    {{SC44_ON90}}%; with the wandering rabbit modulated {{SC44_MW00}}% &rarr; {{SC44_MW90}}%, ordinary
+    {{SC44_OW00}}% &rarr; {{SC44_OW90}}%.</li>
+  </ul>
+  <p>So two of the three seeds repeat the 22-Sep picture of a modulated agent whose calm-scene hiding starts
+  low and rises steadily with injury, and which ignores the harmless rabbit; the third does not.</p>
+  <h4 class="fh"><span class="n">Figure B9</span>Three seeds, bush dwell against starting injury</h4>
+  {{FIG:hv2ch_dose}}
+  <h4 class="fh"><span class="n">Figure B10</span>Seed 42 across training, ten injury levels</h4>
+  {{FIG:hv2ch_train_42}}
+  <h4 class="fh"><span class="n">Figure B11</span>Seed 43 across training, ten injury levels</h4>
+  {{FIG:hv2ch_train_43}}
+  <h4 class="fh"><span class="n">Figure B12</span>Seed 44 across training, ten injury levels</h4>
+  {{FIG:hv2ch_train_44}}
   <details class="more">
-    <summary>How Figures B4&ndash;B8 are computed</summary>
+    <summary>How Figures B4&ndash;B12 are computed</summary>
     <p>Each agent of a pair was replayed at every saved checkpoint in the same four test scenes, with the
     starting injury set to exactly 0, 10, 20, &hellip;, 90 (the scenes are otherwise identical to the ones behind
     B2 and B3; at injury 0 and 70 they give the same numbers checkpoint by checkpoint), 30 episodes per
-    checkpoint, scene and injury. Bush dwell is the share of the 100 steps spent on the bush. In B5 and B7
-    each line is the running average of 5 neighbouring checkpoints, drawn only to make ten overlapping lines
-    readable; the numbers printed above each panel do not use it. Those numbers, and every point in B4, B6
-    and B8, are the plain mean over the checkpoints from 2 to 10 M training steps, one every 0.2 M steps. The
+    checkpoint, scene and injury. Bush dwell is the share of the 100 steps spent on the bush. In B5, B7
+    and B10&ndash;B12 each line is the running average of 5 neighbouring checkpoints, drawn only to make ten
+    overlapping lines readable; the numbers printed above each panel do not use it. Those numbers, and every
+    point in B4, B6, B8 and B9, are the plain mean over the checkpoints from 2 to 10 M training steps, one every 0.2 M steps. The
     95 % interval around each point allows for neighbouring checkpoints being alike: it uses an effective
     number of checkpoints, reduced by the correlation between each checkpoint and the next (the lag-1
-    autocorrelation). Level 02 was tested without the chasing rabbit, so B4 has three panels. These are two
-    trained runs per figure, one per agent type; they show how one agent's hiding depends on its injury, not
-    how much that differs between training seeds.</p>
+    autocorrelation). Level 02 was tested without the chasing rabbit, so B4 has three panels. Figures
+    B9&ndash;B12 use the same scenes and method for the smell-study control runs (three seeds per agent type). Figures
+    B4&ndash;B8 and B10&ndash;B12 each show two trained runs, one per agent type, so they show how one agent's
+    hiding depends on its injury, not how much that differs between training seeds; B9 puts three seeds of one
+    condition side by side for exactly that comparison.</p>
   </details>
   <details class="more">
     <summary>How it is computed</summary>

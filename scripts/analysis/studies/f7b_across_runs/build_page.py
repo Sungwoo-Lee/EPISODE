@@ -591,6 +591,44 @@ def main(argv=None):
             f"scripts/analysis/studies/f7b_across_runs/highlight.py --figure injdose --key {key}",
             title=f"Figure {lab_d} &mdash; {ttl}, bush dwell against starting injury")
 
+    # ---- the smell-study control runs (22-Sep level 05 + random start temperature only) at ten injuries
+    hp = "scripts/analysis/studies/f7b_across_runs/highlight.py"
+    for sd in (42, 43, 44):
+        key = f"hv2ch_s{sd}"
+        for ag, A in (("ordinary", "O"), ("modulated", "M")):
+            for sc, S_ in (("none", "N"), ("rabbitwander", "W")):
+                for inj in ("00", "90"):
+                    tok[f"{{{{SC{sd}_{A}{S_}{inj}}}}}"] = f"{grid_mean(HL.grid_leaf(key, ag, sc), sc, inj):.0f}"
+    tok["{{FIG:hv2ch_dose}}"] = figure(
+        "f7b_hl_injdose_seeds__hv2ch_424344", "Twelve panels, three seeds by four scenes: bush dwell against starting "
+        "injury, ordinary and modulated agent, smell-study control runs in the neutral scenes.",
+        "Horizontal: starting injury of the test, 0 (unhurt) to 90 in steps of 10 (0&ndash;100 scale). Vertical: bush "
+        "dwell, the share of the scene's 100 steps spent on the bush (%), mean over the checkpoints from 2 to 10 M "
+        "training steps, 0&ndash;100 in every panel. Rows: seeds 42, 43, 44; columns: no animal, wandering rabbit, "
+        "chasing rabbit, hunting predator. Open grey circles: ordinary agent; filled black squares: modulated agent; "
+        "dashed edges and shading: 95 % interval. Same layout and scale as Figures B4, B6 and B8, neutral scenes.",
+        "Seeds 43 and 44 repeat the 22-Sep picture (Figure B6): the modulated agent's calm-scene lines start low and "
+        "rise straight with injury, the ordinary agent's sit higher and flatter, and with the wandering rabbit the "
+        "seed-44 ordinary agent hides about half the episode at every injury. Seed 42 goes the other way: there the "
+        "ordinary agent has the cleaner rise. In the chasing-rabbit and predator scenes injury changes little in any "
+        "seed.",
+        f"{hp} --figure injdose_seeds --keys hv2ch_s42 hv2ch_s43 hv2ch_s44",
+        title="Figure B9 &mdash; the three closest later pairs, bush dwell against starting injury")
+    for sd, lab in ((42, "B10"), (43, "B11"), (44, "B12")):
+        tok[f"{{{{FIG:hv2ch_train_{sd}}}}}"] = figure(
+            f"f7b_hl_injtrain__hv2ch_s{sd}", f"Eight panels, four scenes by two agents: bush dwell across training, ten "
+            f"lines per panel for starting injuries 0 to 90, smell-study control seed {sd}.", ig_axes,
+            {42: "The ordinary agent's calm-scene lines stack in injury order for most of training; the modulated "
+                 "agent's start higher, are packed closer, and jump together to about 70 % for a stretch around "
+                 "7&ndash;8 M steps: an unstable period in this seed's training.",
+             43: "As in the 22-Sep pair, the modulated agent's calm-scene lines are evenly stacked in injury order from "
+                 "a low unhurt line, across most of training; the ordinary agent's lines are tangled close together and climb from near 0 to about 35 % over training.",
+             44: "The clearest repeat of the 22-Sep modulated agent: with no animal and with the wandering rabbit its ten "
+                 "lines are stacked in injury order from about 2 M steps to the end. The ordinary agent hides about "
+                 "half of every wandering-rabbit episode whatever its injury, treating the harmless rabbit as a threat."}[sd],
+            f"{hp} --figure injtrain --key hv2ch_s{sd}",
+            title=f"Figure {lab} &mdash; smell-study control, seed {sd}, across training at ten injury levels")
+
     hp = "scripts/analysis/studies/f7b_across_runs/highlight.py"
     pair_axes = ("Horizontal: training, in million steps (0&ndash;10). Vertical: bush dwell, the share of the "
                  "scene's 100 steps spent on the bush (%, 0&ndash;100), the same scale in every panel. Rows: four "

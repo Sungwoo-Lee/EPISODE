@@ -1,0 +1,21 @@
+# INJURY-GRID dwell sweep -- smell-study CONTROL runs (level 05 + random start body temperature only; the
+# runs most like the 22-Sep level-05 pair), seeds 42-44, ordinary + modulated, in the thermal NEUTRAL
+# injury-grid scenes (air 0 C, no campfire, start body temperature 0) at starting injuries 0..90.
+# Same scenes as injurygrid_neutral_clean_rppo.yaml (the 22-Sep level-05 pair), so Figures B5/B6 can be drawn for
+# these runs. Fresh output_dir (load-bearing).
+name: injurygrid_neutral_clean_hv2ch
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_injurygrid_neutral_clean_hv2ch
+probe: configs/environment/experiment/behavior_probes/injury_grid/neutral_clean
+conditions: all
+episodes: 30
+nodes: [113]
+x_axis: steps
+plot_measures: [bush_hiding, survival_steps]
+runs:
+  - {label: hv2ch_ordinary_s42, path: results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42}
+  - {label: hv2ch_modulated_s42, path: results/JAX_RecurrentPPO/20260927-053059_rppo_l05body_w0000_t16quad_s42}
+  - {label: hv2ch_ordinary_s43, path: results/JAX_RecurrentPPO/20261001-002435_rppo_hv2ch_t1none_s43}
+  - {label: hv2ch_modulated_s43, path: results/JAX_RecurrentPPO/20261001-002439_rppo_hv2ch_t16quad_s43}
+  - {label: hv2ch_ordinary_s44, path: results/JAX_RecurrentPPO/20261001-002444_rppo_hv2ch_t1none_s44}
+  - {label: hv2ch_modulated_s44, path: results/JAX_RecurrentPPO/20261001-002449_rppo_hv2ch_t16quad_s44}
