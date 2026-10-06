@@ -310,6 +310,17 @@ All six references are at the 101-step ceiling in the four no-predator scenes.
 
 ### 5.1 Stage-1 → stage-2 decision rule (seed 42 only, one value per cell)
 
+> **Superseded by the user's decision (2026-10-06, before any stage-1 result existed).** After the
+> plan-reviewer showed the rule below passes a true +3 pp effect only ~10 % of the time (+5 pp ~23 %;
+> no effect ~1.5 %), the user chose to decide stage 2 **by judgement** after seeing the seed-42 results,
+> rather than by this rule or the reviewer's looser option A (true +3 pp ~47 %, +5 pp ~67 %, no effect
+> ~17 %, top 3 at most). The stage-1 readout must therefore present, for every cell, both injury effects
+> and the predator effect in neutral and own scenes beside all six reference runs, with this rule's and
+> option A's pass/fail shown as reference columns only. A null in stage 1 is to be recorded with the
+> reviewer's detection numbers, not as "no effect ≥ 3 pp". Stage-2 effect sizes use the fresh seeds
+> 43–44 only (review F2). Full review: [[plan_nmn_capacity_grid]].
+
+
 At one seed, the only defensible yardstick for "clearly separates" is the variation already observed
 between runs that differ only by seed or by agent. A cell **advances to stage 2** only if **all** of the
 following hold:
