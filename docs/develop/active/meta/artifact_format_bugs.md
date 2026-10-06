@@ -2514,3 +2514,16 @@ start a sequential ramp no lighter than about `#86b4e7`. If one level has a fixe
 page (unhurt = grey, injured 70 = house blue in B2/B3), anchor the ramp to it. **Check:** compute the
 contrast of the lightest series colour against the page ground and each band fill, and compare it with the
 gridline's.
+
+### F82 — a data subset renamed in the prose but not in the figure legends
+
+**What a reader saw** (F7b across runs, 2026-10-06 test-scene correction): the correction text and its
+table called the re-tests "neutral scenes" and the studies' originals "own scenes"; the redrawn figures
+still labelled the same rows "temperature set (8 fire/ambient variants)" and "training-world set". A reader
+who had just read about the neutral re-test could not tell that the orange markers were that re-test, and
+"temperature set" no longer meant only what its legend said. **Why both reviews miss it:** each text is
+fine on its own and geometry checks see nothing; only reading prose and legends side by side shows it.
+**Rule.** When a correction or new analysis renames a data subset (or widens what a label covers), update
+the figure scripts' legend and row-label text in the same change, and make the label true for everything
+it now covers. **Check:** grep every figure script's legend / label strings for the subset names the prose
+now uses, and read one figure's legend against the paragraph that introduces it.

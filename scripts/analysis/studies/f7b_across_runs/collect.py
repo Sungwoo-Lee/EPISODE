@@ -96,6 +96,16 @@ REGISTRY = [
     ("configs/eval_sweeps/hvsmell/hvsmell_*_rppo.yaml", "Smell study (level 05)", "world",
      lambda l: {"hv2ch": "two-channel smell (control)", "hv1ch": "single-channel smell",
                 "hv1chm": "matched-strength smell"}[l.split("_")[0]]),
+    # 2026-10-06: the smell-study control runs re-tested in the thermal scene variants the 22-Sep level-05
+    # pair was tested in (they had only been tested in their own cold + campfire scenes).
+    ("configs/eval_sweeps/hvsmell_thermal/hvsmell_thermal_*_rppo.yaml", "Smell study (level 05)", "thermal", None),
+    # 2026-10-06: every later study re-tested in thermal-neutral copies of its own scenes
+    # (behavior_probes/neutral_variants/generate_neutral_variants.py); setting = the study's own + variant.
+    ("configs/eval_sweeps/neutral_variants/neutral_hvsmell_*_rppo.yaml", "Smell study (level 05)", "thermal",
+     lambda l: {"hv2ch": "two-channel smell (control)", "hv1ch": "single-channel smell",
+                "hv1chm": "matched-strength smell"}[l.split("_")[0]] + "; scene variant neutral clean"),
+    ("configs/eval_sweeps/neutral_variants/neutral_l05body_w*_rppo.yaml", "Body rules (level 05)", "thermal", None),
+    ("configs/eval_sweeps/neutral_variants/neutral_thirst_*_rppo.yaml", "Thirst task", "thermal", None),
     ("configs/eval_sweeps/l05body/l05body_w*_rppo.yaml", "Body rules (level 05)", "world", None),
     ("configs/eval_sweeps/thirst/thirst_*_rppo.yaml", "Thirst task", "world", None),
 ]
@@ -141,6 +151,13 @@ def candidates():
                 elif name.startswith("injurygrid_") or name.startswith("thermalprobe_"):
                     variant = name.split("_", 1)[1]
                     setting = f"level 0{lab[4]}; scene variant {variant.replace('_', ' ')}"
+                elif name.startswith("hvsmell_thermal_"):
+                    variant = name.split("_", 2)[2]
+                    setting = f"two-channel smell (control); scene variant {variant.replace('_', ' ')}"
+                elif name.startswith("neutral_l05body_"):
+                    setting = body_setting(name.split("_")[2]) + "; scene variant neutral clean"
+                elif name.startswith("neutral_thirst_"):
+                    setting = thirst_setting(name.split("_")[2]) + "; scene variant neutral clean"
                 elif name.startswith("l05body_"):
                     setting = body_setting(name.split("_")[1])
                 else:

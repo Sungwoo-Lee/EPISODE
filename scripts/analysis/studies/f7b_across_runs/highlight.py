@@ -4,7 +4,9 @@
 The cross-run page looks for the conditions where hiding depends most on the animal and on the
 agent's injury, not for average trends. These figures present the selected runs only:
 
-  rank          top training conditions (same world, setting, seed and test scenes) with BOTH agent types,
+  rank          (temperature-world runs ranked in the thermal-neutral scenes; own-study scene rows dropped
+                where a neutral re-test exists)
+                top training conditions (same world, setting, seed and test scenes) with BOTH agent types,
                 ranked by the better agent's "both" score (the lower of its two percentile ranks: injury
                 dependence -- the mean of the injury effect with no animal and with a wandering rabbit --
                 and animal dependence -- the predator response); each row shows the ordinary and the
@@ -116,6 +118,11 @@ def ranking(data):
     T = T.join(R.set_index("id")[["family", "setting", "agent", "seed", "scene_set", "run_dir"]], how="inner")
     T = T[T.agent.isin(AGENT_COL)]
     T = T[(T.scene_set != "thermal") | T.setting.str.endswith("neutral clean")]
+    # One test-scene set per run (2026-10-06 test-scene confound): a temperature-world run that has a
+    # thermal-neutral re-test is ranked on it, and its own-study scene rows are dropped, so every
+    # temperature-world run is measured in the same scenes as the 22-Sep pair.
+    has_neutral = set(T.loc[T.scene_set == "thermal", "run_dir"])
+    T = T[~((T.scene_set == "world") & T.run_dir.isin(has_neutral))]
     n_all = len(T)
     T = T[~T.index.isin(bad_state | bad_anim)].dropna(subset=["inj", "injw", "pred"]).copy()
     T["state"] = (T.inj + T.injw) / 2
@@ -140,10 +147,15 @@ def conditions(T, top):
 
 
 def label(r, agent=True):
-    s = r["setting"].replace("; scene variant neutral clean", " (neutral temperature scenes)")
-    s = s.replace("; scene variant core", " (injury-grid core scenes)")
+    """Plain run label; the test-scene set is stated in the captions, not repeated per row."""
+    import re
+    s = r["setting"].replace("; scene variant neutral clean", "")
+    s = s.replace("; scene variant core", " (injury-grid scenes)")
+    m = re.match(r"^(w[01]{4}): (.*)$", s)
+    if m:
+        s = f"{m.group(2)} ({m.group(1)})"
     fam = r["family"].replace(" (level 05)", "").replace(" (22 Sep)", "")
-    return f"{fam}: {s}, " + (f"{r['agent']}, " if agent else "") + f"seed {int(r['seed'])}"
+    return f"{fam}, {s}, " + (f"{r['agent']}, " if agent else "") + f"seed {int(r['seed'])}"
 
 
 def fig_rank(data, top=10):
@@ -173,13 +185,17 @@ def fig_rank(data, top=10):
         ax.axvline(0, color=H.RULE, lw=1.1, zorder=0)
         ax.set_xlabel(xl, fontsize=H.FS_LABEL)
         ax.grid(axis="y", visible=False)
-        los = [r[lo] for _, ro, rm in C_ for r in (ro, rm)]
+        if m in ("inj", "injw"):        # the two injury panels share one scale (register F10): compared in the text
+            los = [r[c] for _, ro, rm in C_ for r in (ro, rm) for c in ("inj_lo", "injw_lo")]
+            his = [r[c] for _, ro, rm in C_ for r in (ro, rm) for c in ("inj_hi", "injw_hi")]
+        else:
+            los = [r[lo] for _, ro, rm in C_ for r in (ro, rm)]
         x0, x1 = min(-2, min(los) - 2), max(his) * 1.25 + 4      # room for the printed value
         ax.set_xlim(x0, x1)
         gap = 0.02 * (x1 - x0)                                    # one offset, the same in every panel
         for yi, (_, ro, rm) in zip(y, C_):
             for agent, r in (("ordinary", ro), ("modulated", rm)):
-                ax.text(r[hi] + gap, yi + off[agent], f"{r[m]:+.0f}", va="center", fontsize=H.FS_LABEL - 1,
+                ax.text(r[hi] + gap, yi + off[agent], f"{r[m]:+.0f}".replace("-", "\u2212"), va="center", fontsize=H.FS_LABEL - 1,
                         color=H.INK_2)
     axs[0].set_yticks(y)
     axs[0].set_yticklabels([label(ro, agent=False) for _, ro, _ in C_], fontsize=H.FS_LABEL - 1)
@@ -191,7 +207,7 @@ def fig_rank(data, top=10):
     fig.subplots_adjust(left=0.36, right=0.98, top=0.93, bottom=0.16 * 10 / len(C_), wspace=0.12)
     n_cond = T.cond.nunique()
     n_pair = T[T.paired].cond.nunique()
-    rows = [{"what": "runs ranked (one per trained agent; temperature-set agents: neutral clean scenes only)",
+    rows = [{"what": "runs ranked (one per trained agent; agents trained with temperature: neutral-scene test only)",
              "used": len(T), "total": n_all,
              "note": "left out: the agent's average survival over the newest 20 checkpoints is under 95 of 100 steps "
                      "in a scene the measures use (no animal and wandering rabbit at injury 0 / 70, predator at injury 0)"},

@@ -73,9 +73,9 @@ PLAIN = {   # group -> what the agents were trained in, in plain words
                    "that carry across the whole map or only 5 or 3 squares.",
 }
 LEVEL_CAP = {
-    "smell": "Smell study, level 05: three smell worlds × two agents × three seeds, tested in scenes built on each smell world.",
-    "body": "Body rules, level 05: fifteen worlds × two agents, one seed each. Rules on: H hunger slows healing, C healing costs food, W warmth costs food, F scarcer food.",
-    "thirst": "Thirst task: nine worlds (map 10, 15 or 20 squares; smell across the map, or range 5 or 3) × two agents, one seed each.",
+    "smell": "Smell study, level 05: three smell worlds × two agents × three seeds, tested in scenes built on each smell world. Tested in the study's own scenes (cold air, campfire beside the bush), not the neutral re-test used in Figures B1&ndash;B8.",
+    "body": "Body rules, level 05: fifteen worlds × two agents, one seed each. Rules on: H hunger slows healing, C healing costs food, W warmth costs food, F scarcer food. Tested in the study's own scenes (cold air, campfire beside the bush), not the neutral re-test used in Figures B1&ndash;B8.",
+    "thirst": "Thirst task: nine worlds (map 10, 15 or 20 squares; smell across the map, or range 5 or 3) × two agents, one seed each. Tested in the study's own scenes (cold air, campfire beside the bush), not the neutral re-test used in Figures B1&ndash;B8.",
     "core": "Fast bush healing (22 Sep), level 04, tested in the core scene set (bush blocks animals, no campfire).",
     "core_old": "Curriculum wave 1, levels 02-04, tested in the core scene set before the 2026-09-23 fix, so animals could walk into the test bush.",
     "refuge": "August bush-refuge and rest-premium runs, tested in scenes whose bush blocks animals, matching their training.",
@@ -487,6 +487,48 @@ def main(argv=None):
         "checkpoints where that difference is above zero; <b>injury, rabbit</b> = the same with the wandering rabbit; "
         "<b>predator</b> / <b>rabbit</b> = hunting predator / wandering rabbit minus no animal, unhurt; <b>jump</b> = "
         "average change of the unhurt no-animal value between neighbouring checkpoints.</p>")
+    tok["{{HL1_COND}}"] = html.escape(HL.label(CND[0][1], agent=False))
+    tok["{{HL2_COND}}"] = html.escape(HL.label(CND[1][1], agent=False))
+    # ---- test-scene check (2026-10-06): later studies, own scenes vs neutral re-test, matched pairs
+    Rr = R[R.family.isin(["Smell study (level 05)", "Body rules (level 05)", "Thirst task"])].copy()
+    Rr = Rr[(Rr.scene_set == "world") | Rr.setting.str.endswith("neutral clean")]
+    Rr["set"] = np.where(Rr.scene_set == "world", "own", "neutral")
+    Rr["cond"] = Rr.setting.str.replace("; scene variant neutral clean", "", regex=False)
+    Sa = pd.read_csv(os.path.join(a.data, "ckpt_summary.csv"))
+    Sa = Sa[Sa.window == "all"]
+    for q, c in (("injury none", "inj"), ("injury rabbitwander", "injw")):
+        Rr[c] = Rr.id.map(Sa[Sa.quantity == q].set_index("id")["mean"])
+    Pv = Rr.pivot_table(index=["family", "cond", "seed", "set"], columns="agent", values=["inj", "injw"]).dropna()
+    rows_sc = []
+    for (fam, st), x in Pv.groupby(level=[0, 3]):
+        dw = x["injw"]["modulated"] - x["injw"]["ordinary"]
+        di = x["inj"]["modulated"] - x["inj"]["ordinary"]
+        rows_sc.append({"family": fam.replace(" (level 05)", ", level 05").replace("Thirst task", "Thirst task, level 06"),
+                        "set": st, "pairs": len(x),
+                        "inj": f"{int((di > 0).sum())} of {len(x)}", "di": num_text(f"{di.median():+.1f}"),
+                        "injw": f"{int((dw > 0).sum())} of {len(x)}", "dw": num_text(f"{dw.median():+.1f}"),
+                        "_up": int((dw > 0).sum()), "_n": len(x), "_neut": st == "neutral",
+                        "_l05": "level 05" in fam})
+    SC = pd.DataFrame(rows_sc).sort_values(["family", "set"], ascending=[True, True])
+    SC["family"] = [f if i == 0 or f != prev else "" for i, (f, prev) in
+                    enumerate(zip(SC.family, [None] + list(SC.family[:-1])))]   # study named once per pair of rows
+    tok["{{TABLE:scene_check}}"] = table(SC, ["family", "set", "pairs", "inj", "di", "injw", "dw"],
+                                         ["study", "scenes", "pairs", "modulated larger, no animal",
+                                          "median diff., no animal (pp)", "modulated larger, rabbit",
+                                          "median diff., rabbit (pp)"],
+                                         num=("pairs", "inj", "di", "injw", "dw"), min_width=640) + (
+        "<p><b>Scenes:</b> <b>neutral</b> = air at 0&nbsp;°C, no campfire, body temperature starting at 0; "
+        "<b>own</b> = the study's own scenes, cold air with a campfire beside the bush and a random starting body "
+        "temperature. A pair is the ordinary and the modulated agent trained in the same world with the same seed; "
+        "<b>modulated larger</b> counts the pairs where the modulated agent's injury effect (injury 70 minus 0) is the "
+        "larger one, with no animal or with the wandering rabbit; the difference is modulated minus ordinary, in "
+        "percentage points (pp) of bush dwell, mean over 2&ndash;10 M training steps.</p>")
+    l05 = SC[SC._l05]
+    tok["{{CORR_NEUT_UP}}"] = str(int(l05[l05._neut]._up.sum()))
+    tok["{{CORR_NEUT_N}}"] = str(int(l05[l05._neut]._n.sum()))
+    tok["{{CORR_OWN_UP}}"] = str(int(l05[~l05._neut]._up.sum()))
+    tok["{{CORR_OWN_N}}"] = str(int(l05[~l05._neut]._n.sum()))
+    tok["{{CORR_NRUNS}}"] = str(int(Rr[Rr.scene_set == "thermal"].run_dir.nunique()))
     tok["{{HL_N}}"] = str(T.cond.nunique())
     tok["{{HL_NR}}"] = str(T[T.paired].cond.nunique())
     for k, (cond, ro, rm) in (("1", CND[0]), ("2", CND[1])):
@@ -564,12 +606,12 @@ def main(argv=None):
         "is the ordinary agent (open grey circle) and the lower mark the modulated agent (filled black square) trained in the same condition. Horizontal, left panel: injury 70 minus "
         "injury 0 with no animal; middle panel: the same with a wandering rabbit; right panel: bush dwell with a "
         "hunting predator minus with no animal, both unhurt. All three in percentage points of bush dwell, mean "
-        "over the checkpoints from 2 to 10 M training steps, with a 95 % interval. Blue = modulated agent, grey = "
-        "ordinary agent.",
-        "The two conditions at the top, fast bush healing at levels 05 and 04, are also the only ones where the two "
-        "agent types clearly differ: the modulated agent's injury effect is about 12&ndash;13 points in both calm "
-        "scenes, the ordinary agent's 2&ndash;4 with wide intervals, and the modulated agent's predator response is "
-        "the larger. Further down, the two agents of a condition look alike.",
+        "over the checkpoints from 2 to 10 M training steps, with a 95 % interval. Agents trained with the "
+        "temperature system are measured in neutral scenes (0 &deg;C air, no campfire).",
+        f"In {sum(int(m.injw > o.injw) for _, o, m in CND)} of the {len(CND)} conditions shown, the modulated agent's "
+        "injury effect with the wandering rabbit is the larger one, and in most of them its predator response too. "
+        "Where the gap is large, the ordinary agent's injury effect is small or uncertain (wide interval), while "
+        "the modulated agent's stays near 10&ndash;18 points.",
         f"{hp} --figure rank", title="Figure B1 &mdash; the ten conditions where both effects are largest, ordinary and modulated side by side")
     for key, lab, ttl in (("lvl05", "B2", "level 05 pair, across training"), ("lvl04", "B3", "level 04 pair, across training")):
         tok[f"{{{{FIG:hl_{key}}}}}"] = figure(

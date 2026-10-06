@@ -57,24 +57,41 @@ td.nw { white-space:nowrap; }
   10 million training steps, not only the last few. The data and the tests are described in full in the
   next section.</p>
   <div class="callout">
-    <p><strong>The strongest case: fast bush healing at level 05, modulated agent.</strong> With no animal,
-    starting injured raises bush dwell by {{HL1M_INJ}} percentage points, at {{HL1M_POS}}% of checkpoints;
-    with the wandering rabbit by {{HL1M_INJW}}. A hunting predator raises it by {{HL1M_PRED}} over the empty
-    scene, while the wandering rabbit adds only {{HL1M_WAND}}. The ordinary agent trained in the same
-    condition shows injury effects of {{HL1O_INJ}} and {{HL1O_INJW}}, and a predator response of
-    {{HL1O_PRED}}. Level 04, the next condition, repeats the pattern: modulated {{HL2M_INJ}} / {{HL2M_INJW}}
-    / {{HL2M_PRED}}, ordinary {{HL2O_INJ}} / {{HL2O_INJW}} / {{HL2O_PRED}}.</p>
+    <p><strong>Correction, 6 Oct 2026: which test scenes.</strong> The previous version of this page compared
+    runs tested in two different sets of scenes. Agents trained in the temperature worlds (levels 05 and 06)
+    need temperature in their test scenes. The 22-Sep runs were measured in <em>neutral</em> scenes (air at
+    0&nbsp;&deg;C everywhere, no campfire, body temperature starting at 0); every later study (smell, body
+    rules, thirst) only in its own scenes (the training world's cold air, a campfire right beside the bush,
+    a random starting body temperature). In those cold scenes the bush is one of the few warm cells, so
+    every agent has a reason to sit in it whether or not it is hurt, and the difference between agent types
+    disappears. All {{CORR_NRUNS}} later runs have now been re-tested in neutral versions of their own scenes
+    (only the temperature parts changed), and every temperature-world run below is ranked on that
+    re-test. The table counts, for each study and scene set, the matched ordinary/modulated pairs in which
+    the modulated agent's injury effect is the larger one, with no animal and with the wandering rabbit.</p>
+  </div>
+  {{TABLE:scene_check}}
+  <div class="callout">
+    <p><strong>The strongest case: {{HL1_COND}}.</strong> With no animal, the modulated agent starting
+    injured hides {{HL1M_INJ}} percentage points more than unhurt, at {{HL1M_POS}}% of checkpoints; with the
+    wandering rabbit {{HL1M_INJW}}. A hunting predator raises its hiding by {{HL1M_PRED}} over the empty scene,
+    the wandering rabbit by only {{HL1M_WAND}}. The ordinary agent trained in the same condition: injury effects
+    {{HL1O_INJ}} and {{HL1O_INJW}}, predator {{HL1O_PRED}}. Next, {{HL2_COND}}: modulated {{HL2M_INJ}} /
+    {{HL2M_INJW}} / {{HL2M_PRED}}, ordinary {{HL2O_INJ}} / {{HL2O_INJW}} / {{HL2O_PRED}}.</p>
   </div>
   <p>What this does and does not show:</p>
   <ul>
-    <li>In these two conditions the modulated agent depends on both the animal and its injury, steadily
-    across training (its no-animal line moves {{HL1M_JUMP}}&ndash;{{HL2M_JUMP}} points between neighbouring
-    checkpoints, against {{HL1O_JUMP}}&ndash;{{HL2O_JUMP}} for the ordinary agent). In the other top
-    conditions the two agent types look alike.</li>
+    <li>In the neutral scenes the modulated agent's injury effect with the wandering rabbit is the larger
+    one in {{CORR_NEUT_UP}} of {{CORR_NEUT_N}} matched pairs of the later level-05 studies, against
+    {{CORR_OWN_UP}} of {{CORR_OWN_N}} in their own scenes. The ordinary agent loses much of its injury effect when
+    warmth stops being a reason to sit in the bush; the modulated agent keeps it.</li>
     <li>Injury raises hiding by about as much with the wandering rabbit as with no animal. So the injured
     agent hides more in general; it does not treat the harmless rabbit as a predator when injured.</li>
-    <li>Each condition is one training run per agent type (seed 42). A replication with three seeds per
-    agent at levels 04, 05 and 06 is training now (started 5 Oct 2026).</li>
+    <li>The neutral scenes are warmer than anything these agents trained in. A difference that shows only
+    there is a difference in how the two agent types carry their injury response into an unfamiliar
+    world; it is not yet a statement about the training world itself.</li>
+    <li>Most conditions are one training run per agent type. The smell study has three seeds; a replication
+    with three seeds per agent at levels 04, 05 and 06, and a level-05 arm with a fixed start temperature,
+    are training now (started 5 and 6 Oct 2026).</li>
   </ul>
   <h4 class="fh" id="fb1"><span class="n">Figure B1</span>The ten conditions where both effects are largest</h4>
   {{FIG:hl_rank}}
@@ -143,7 +160,9 @@ td.nw { white-space:nowrap; }
     difference is above zero; it describes consistency and is not a test, since neighbouring checkpoints
     are not independent. A run is left out of the ranking if, in a scene a measure uses, it survives fewer
     than 95 of the 100 steps on average over its newest 20 checkpoints. A condition is one world, setting,
-    seed and test-scene set; agents tested in eight temperature variants use the neutral variant only. The
+    seed and test-scene set; every agent trained with the temperature system is ranked on its neutral-scene
+    test only (the 22-Sep runs on the thermal battery's neutral arm, later runs on neutral copies of their
+    own scenes), so all of them are measured in the same conditions. The
     ranking score is the lower of an agent's two percentile ranks (injury dependence, the mean of the two
     injury effects; animal dependence, the predator effect), and a condition is placed by its better agent.</p>
   </details>

@@ -36,10 +36,10 @@ SET_SHORT = {"july": "July set (animals can enter the bush)",
              "refuge": "August bush-refuge set (bush blocks animals)",
              "core_old": "core set, before the fix (animals can enter the bush)",
              "core": "core set (bush blocks animals)",
-             "thermal": "temperature set (8 fire/ambient variants)", "injgrid": "injury-grid set (3 scenes)",
-             "world": "training-world set (campfire by the bush)"}
-SET_TAG = {"july": "July set", "july_noise": "July set, noisy senses", "refuge": "August refuge set", "core_old": "core set, before fix", "core": "core set", "thermal": "temperature set", "injgrid": "injury-grid set",
-           "world": "own-world set"}
+             "thermal": "temperature scenes (22-Sep fire/ambient variants; neutral re-tests of later runs)", "injgrid": "injury-grid set (3 scenes)",
+             "world": "own scenes (cold air, campfire by the bush)"}
+SET_TAG = {"july": "July set", "july_noise": "July set, noisy senses", "refuge": "August refuge set", "core_old": "core set, before fix", "core": "core set", "thermal": "temperature scenes", "injgrid": "injury-grid set",
+           "world": "own scenes"}
 AG_MK = {"ordinary": "o", "modulated": "^", "Dreamer": "s"}
 SHORT_SCENE = {"none": "no animal", "pred": "hunting predator", "rabbit": "chasing rabbit",
                "rabbit_olfzero": "chasing rabbit,\nno smell", "rabbitwander": "wandering rabbit",
