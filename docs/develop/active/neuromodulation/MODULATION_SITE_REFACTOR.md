@@ -3,14 +3,14 @@ title: "Modulation Site Refactor — uniform FiLM at selectable sites (Recurrent
 topic: neuromodulation
 status: active
 created: 2026-08-31
-last_updated: 2026-09-07
+last_updated: 2026-10-07
 ---
 
 # Modulation Site Refactor — uniform FiLM at selectable sites (RecurrentPPO)
 
 > **Status**: IMPLEMENTED — **Part A** (uniform FiLM at selectable sites) landed 2026-09-07 in `83b8140b`; **Part B** (the configurable modulator input slice) was **approved by the user on 2026-09-07** and landed the same day. Both await `senior-developer` verification. The plan-review record is unchanged (all five `plan-reviewer` findings addressed, incl. the 🔴 Critical; see [Response to plan-reviewer](#response-to-plan-reviewer-2026-08-31)).
 > **Opened**: 2026-08-31 · **Revised**: 2026-08-31 (post-review) · **Part B approved**: 2026-09-07
-> **Related**: [[NEUROMODULATION_ALGORITHM]] · [[NMN_METRICS_REFERENCE]] · [[NMN_ARCHITECTURE_REVIEW]] · [[FILM_MODULATION_PLAN]] · [`docs/project/ideas/20260805_film_rl_context_dependent_policy_discussion.md`](../../../project/ideas/20260805_film_rl_context_dependent_policy_discussion.md) §6 · [`modulation_in_rl_lit_review.md`](../../../project/references/modulation_in_rl/modulation_in_rl_lit_review.md) §8, §12
+> **Related**: [[NEUROMODULATION_ALGORITHM]] · [[NMN_METRICS_REFERENCE]] · [[NMN_ARCHITECTURE_REVIEW]] · [[FILM_MODULATION_PLAN]] · [`docs/project/ideas/20260805_film_rl_context_dependent_policy_discussion.md`](../../../project/ideas/20260805_film_rl_context_dependent_policy_discussion.md) §6 · [`modulation_in_rl_lit_review.md`](../../../project/references/modulation_in_rl/modulation_in_rl_lit_review.md) §8, §12 · Follow-up: [[EXCLUSIVE_MODULATOR_INPUT]] (hide named sensors from the main network so only the modulator reads them)
 
 ---
 
