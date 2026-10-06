@@ -49,6 +49,16 @@ UNHURT, INJURED = "#8a8f98", H.SERIES[0]
 AGENT_COL = {"ordinary": "#8a8f98", "modulated": H.INK}   # B1: agent type in neutral inks (blue = injured, B2-B4)
 AGENT_MK = {"ordinary": "o", "modulated": "s"}
 LO_M, HI_M, SPACING_M = 2.0, 10.0, 0.2
+GRID_N = int(round((HI_M - LO_M) / SPACING_M)) + 1      # planned checkpoints per run on the matched grid (41)
+
+
+def grid_row(what, v, leaf):
+    """Data-accounting row for one on-grid series: 'available' is the planned grid, never what was found
+    (register F83), and a short run says where its tests stop."""
+    last = v.index.max() / 1e6
+    why = (f"0.2 M grid {LO_M:g}-{HI_M:g} M steps" if len(v) >= GRID_N else
+           f"0.2 M grid {LO_M:g}-{HI_M:g} M steps; no tested checkpoint after {last:.1f} M (testing stopped there)")
+    return {"what": what, "used": len(v), "total": GRID_N, "note": f"{why}; {episodes(leaf)} episodes per checkpoint"}
 SURVIVAL_FLOOR = 95.0
 AV = "results/eval/avoidance"
 PAIRS = {  # key -> (title, ordinary leaf, modulated leaf, scene set)
@@ -332,9 +342,15 @@ def fig_injtrain(key):
             if r == 0:
                 ax.set_title(f"{agent} agent", loc="left", fontsize=H.FS_BODY)
             rows.append({"what": f"{agent}, {name}: checkpoints per starting injury (10 injuries)",
-                         "used": int(min(n_ck)), "total": int(max(n_ck)),
+                         "used": int(min(n_ck)), "last": float(v.index.max() / 1e6),
                          "note": f"every tested checkpoint drawn (5-checkpoint average); the printed means use the "
                                  f"0.2 M grid from {LO_M:g} to {HI_M:g} M steps; {episodes(leaf)} episodes per checkpoint"})
+    planned = max(r["used"] for r in rows)       # the checkpoints a complete run of this figure has (register F83)
+    for r in rows:
+        last = r.pop("last")
+        r["total"] = planned
+        if r["used"] < planned:
+            r["note"] = f"no tested checkpoint after {last:.1f} M (testing stopped there); " + r["note"]
     for ax in axs[-1]:
         ax.set_xlabel("training (million steps)", fontsize=H.FS_LABEL)
     axs[0, 0].set_ylim(0, 118)
@@ -371,9 +387,7 @@ def dose_figure(leaf_of, scenes):
                 ax.plot(x, edge, color=c, lw=0.7, ls=(0, (3, 2)))
             ax.plot(x, m, color=c, lw=2.2, marker=AGENT_MK[agent], ms=5.5,
                     mfc=c if agent == "modulated" else H.PAPER, mew=1.4, zorder=3)
-            rows.append({"what": f"{agent}, {name}: checkpoints per starting injury", "used": len(v), "total": len(v),
-                         "note": f"0.2 M grid from {LO_M:g} M to the last tested checkpoint ({v.index.max() / 1e6:.1f} M); "
-                                 f"{episodes(leaf)} episodes per checkpoint"})
+            rows.append(grid_row(f"{agent}, {name}: checkpoints per starting injury", v, leaf))
         ax.set_title(name, loc="left", fontsize=H.FS_BODY)
         ax.set_xticks([0, 30, 60, 90])
         ax.set_xlim(-4, 94)
@@ -416,8 +430,7 @@ def fig_injdose_seeds(keys):
                     ax.plot(x, edge, color=col, lw=0.7, ls=(0, (3, 2)))
                 ax.plot(x, m, color=col, lw=2.0, marker=AGENT_MK[agent], ms=4.5,
                         mfc=col if agent == "modulated" else H.PAPER, mew=1.3, zorder=3)
-                rows.append({"what": f"seed {key.rsplit('_s', 1)[1]}, {agent}, {name}: checkpoints per starting injury", "used": len(v),
-                             "total": len(v), "note": f"0.2 M grid {LO_M:g}-{HI_M:g} M steps; {episodes(leaf)} episodes per checkpoint"})
+                rows.append(grid_row(f"seed {key.rsplit('_s', 1)[1]}, {agent}, {name}: checkpoints per starting injury", v, leaf))
             if r_ == 0:
                 ax.set_title(name, loc="left", fontsize=H.FS_BODY)
             if c_ == 0:

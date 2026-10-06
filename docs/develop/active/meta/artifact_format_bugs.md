@@ -2533,3 +2533,17 @@ Figures B4–B8 are computed" was extended to B4–B12 by adding a sentence, and
 ("two trained runs per figure … not how much that differs between seeds") stayed — false for the new B9,
 which exists to compare seeds. **Rule:** when a shared "How it is computed" block is extended to new
 figures, re-read every existing sentence for claims that no longer hold for all of them.
+
+### F83 — a data breakdown whose "available" is what was found, not what was planned
+
+**What a reader saw** (Fast Bush Healing Replication, first build, 2026-10-06): one modulated run was
+tested only up to 9.6 M steps, and its lines visibly stop short of 10 M. Figure R1's data panel said
+"39 of 41" with the same reason text as the complete rows; Figure R2's said "39 of 39 (100 %)" and the
+run's training figure "48 of 48 (100 %)", because "available" was set to the number of checkpoints the
+script found. **Why both reviews miss it:** the counts are internally consistent and nothing overlaps; only
+reading the data panel against a figure whose lines end early shows it. Distinct from F72 (a label stating
+the complement of its count). **Rule.** "Available" is the planned grid (or the most a complete run in the
+same figure has), never the length of the series found; any row below 100 % carries its own reason
+(e.g. "no tested checkpoint after 9.6 M"). Shared helper: `grid_row()` in
+`scripts/analysis/studies/f7b_across_runs/highlight.py`. **Check:** grep every `samples.json` for rows
+whose `used` equals `total` while the run's last checkpoint is before the grid end.

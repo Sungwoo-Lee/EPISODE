@@ -1,0 +1,6 @@
+# Level-06 thermal-neutral injury-grid scene: configs/environment/experiment/behavior_probes/neutral_variants/thirst__g10sW/avoid_none_inj00.yaml with the start injury set to 10.
+# Written for the fast-heal replication page (2026-10-06). Only body.start_injury_low/high change.
+extends: environment/experiment/behavior_probes/neutral_variants/thirst__g10sW/avoid_none_inj00
+body:
+  start_injury_low: 10.0
+  start_injury_high: 10.0

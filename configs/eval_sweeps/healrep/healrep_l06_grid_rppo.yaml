@@ -1,0 +1,27 @@
+# Fast-heal replication (l06, seeds 42-44, ordinary + modulated) -- test scenes 'grid' (configs/environment/experiment/behavior_probes/neutral_variants/injury_grid_thirst__g10sW).
+# Experiment-test sweeps for the replication results page (docs/experiments/active/hypervigilance/FAST_HEAL_REPLICATION.md).
+name: healrep_l06_grid
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_healrep/l06_grid
+probe: configs/environment/experiment/behavior_probes/neutral_variants/injury_grid_thirst__g10sW
+conditions: all
+episodes: 30
+nodes:
+- 111
+x_axis: steps
+plot_measures:
+- bush_hiding
+- survival_steps
+runs:
+- label: l06_modulated_s42
+  path: results/JAX_RecurrentPPO/20261005-170314_rppo_healrep_l06_t16quad_s42
+- label: l06_ordinary_s42
+  path: results/JAX_RecurrentPPO/20261005-170252_rppo_healrep_l06_t1none_s42
+- label: l06_modulated_s43
+  path: results/JAX_RecurrentPPO/20261005-160255_rppo_healrep_l06_t16quad_s43
+- label: l06_ordinary_s43
+  path: results/JAX_RecurrentPPO/20261005-160131_rppo_healrep_l06_t1none_s43
+- label: l06_modulated_s44
+  path: results/JAX_RecurrentPPO/20261005-160258_rppo_healrep_l06_t16quad_s44
+- label: l06_ordinary_s44
+  path: results/JAX_RecurrentPPO/20261005-160134_rppo_healrep_l06_t1none_s44

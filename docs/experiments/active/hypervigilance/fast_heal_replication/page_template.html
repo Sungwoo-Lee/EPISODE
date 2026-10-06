@@ -1,0 +1,172 @@
+<title>Fast Bush Healing Replication</title>
+{{HOUSE_STYLE}}
+<style>
+/* hue is spent on data (injury levels); chrome goes to ink (register F11 amendment) */
+:root { --accent:var(--ink); --accent-text:var(--ink); --warn:var(--ink-2); }
+.wrap > .col { max-width:880px; }
+.fh { margin:0 0 2px; }
+.fh .n { font-family:var(--f-head); font-weight:600; color:var(--ink-3); margin-right:8px; }
+.toc ul { margin:0; padding-left:22px; display:flex; flex-direction:column; gap:6px; }
+details.bb-data > summary, details.more > summary { cursor:pointer; color:var(--ink-2); font-size:14.5px; }
+details.bb-data[open] > summary, details.more[open] > summary { margin-bottom:8px; }
+td.nw { white-space:nowrap; }
+</style>
+<div class="wrap">
+
+<header class="col">
+  <p class="eyebrow">grid_world_pain &middot; hypervigilance &middot; fast-bush-healing replication &middot; experiment tests</p>
+  <h1>Does the modulated agent's injury-driven hiding repeat across seeds?</h1>
+  <p class="lede">On 22 September one modulated agent, trained with fast healing on a bush, hid more when it
+  started a test injured, steadily across training, and responded to dangerous animals but not to a harmless
+  one; its ordinary partner did not. This page repeats that test on eighteen new agents: both agent types,
+  three training seeds, at three world levels.</p>
+</header>
+
+<section class="col toc">
+  <h4>On this page</h4>
+  <ul>
+    <li><a href="#answer">The answer, in plain words</a></li>
+    <li><a href="#setup">What was trained and how it was tested</a></li>
+    <li><a href="#r1">Figure R1 &mdash; every pair, three effects</a></li>
+    <li><a href="#scenes">Which test scenes, and why it matters</a></li>
+    <li><a href="#r2">Figures R2&ndash;R4 &mdash; bush dwell against starting injury, per level</a></li>
+    <li><a href="#train">Each run across training, ten injury levels</a></li>
+    <li><a href="#how">How it is computed</a></li>
+    <li><a href="#prov">Data, scenes and provenance</a></li>
+  </ul>
+</section>
+
+<section class="col" id="answer">
+  <h2><span class="num">ANSWER</span></h2>
+  {{ANSWER}}
+</section>
+
+<section class="col" id="setup">
+  <h2><span class="num">01</span> What was trained and how it was tested</h2>
+  <p><strong>Training.</strong> Eighteen agents, trained on 5&ndash;6 October 2026 for 10 million steps each: the
+  <em>ordinary</em> agent and the <em>modulated</em> agent (whose network has an extra module that rescales its
+  internal signals according to its inputs), each with training seeds 42, 43 and 44, at three world levels. All
+  worlds heal injury 25 times faster while the agent rests on a bush.</p>
+  <ul>
+    <li><strong>Level 04:</strong> a predator that can jump, a chasing rabbit, bushes to hide in; no temperature.
+    Seed 42 repeats the 22-Sep level-04 training exactly.</li>
+    <li><strong>Level 05:</strong> level 04 plus cold air and campfires; each episode starts at a random body
+    temperature between &minus;10 and +5&nbsp;°C (the 22-Sep level-05 runs started at 0).</li>
+    <li><strong>Level 06:</strong> level 05 plus a pond and thirst.</li>
+  </ul>
+  <p><strong>Tests.</strong> Every agent was replayed at every saved checkpoint in short fixed test scenes:
+  100 steps, the agent in the middle of a 10&times;10 map, a bush three cells to its left, and either no animal,
+  a harmless wandering rabbit, a rabbit that chases it, or a hunting predator. Each scene was run with the agent
+  starting unhurt (injury 0) and injured (injury 70), 30 episodes per checkpoint, and again at starting injuries
+  0, 10, &hellip;, 90 for the four scenes of the injury figures. <strong>Bush dwell</strong> is the share of the
+  100 steps the agent spent on the bush.</p>
+  <p>Level 04 has no temperature system and is tested in the core scenes (no temperature parts). Levels 05 and 06 are tested in
+  <strong>neutral</strong> scenes: air at 0&nbsp;°C, no campfire, body temperature starting at 0, so that warmth
+  is no reason to sit in the bush (see <a href="#scenes">which test scenes</a>).</p>
+</section>
+
+<section class="col" id="r1">
+  <h2><span class="num">02</span> Every pair, three effects</h2>
+  <p>For each trained pair: how much more an injured agent hides with no animal and with the wandering rabbit,
+  and how much a hunting predator raises hiding. Modulated agent above ordinary agent, in seeds out of three:
+  level 04 &mdash; injury, no animal {{N_l04_inj}}; injury, wandering rabbit {{N_l04_injw}}; predator
+  {{N_l04_pred}}. Level 05 &mdash; {{N_l05_inj}}, {{N_l05_injw}}, {{N_l05_pred}}. Level 06 &mdash;
+  {{N_l06_inj}}, {{N_l06_injw}}, {{N_l06_pred}}.</p>
+  <h4 class="fh"><span class="n">Figure R1</span>Every pair, three effects</h4>
+  {{FIG:summary}}
+  {{TABLE:summary}}
+</section>
+
+<section class="col" id="scenes">
+  <h2><span class="num">03</span> Which test scenes, and why it matters</h2>
+  <p>Agents trained with temperature can be tested in two kinds of scenes. In their <strong>own</strong>
+  scenes the air is as cold as in training and a campfire stands right beside the bush, so the bush is one of
+  the few warm places and every agent has a reason to sit in it whether or not it is hurt. In
+  <strong>neutral</strong> scenes the air is 0&nbsp;°C and there is no campfire. On the cross-run page this
+  mattered: in later studies the modulated agent's larger injury effect showed in neutral scenes and was hidden
+  in their own scenes. The table repeats that check here.</p>
+  {{TABLE:scenes}}
+  <p>Here the check does not repeat the cross-run page's result: the modulated agent's injury effect with the
+  wandering rabbit is the larger one in {{SC_l05_neutral}} level-05 seeds in neutral scenes against
+  {{SC_l05_own}} in the own scenes, and in {{SC_l06_neutral}} against {{SC_l06_own}} at level 06. In these
+  replication agents the neutral scenes do not reveal a hidden modulator advantage; the differences between seeds
+  are as large as the differences between agent types.</p>
+  <p>A seed counts when the modulated agent's injury effect with the wandering rabbit (injury 70 minus 0) is
+  the larger one; the difference is modulated minus ordinary, in percentage points (pp) of bush dwell, mean over
+  2&ndash;10 M training steps.</p>
+</section>
+
+<section class="col" id="r2">
+  <h2><span class="num">04</span> Bush dwell against starting injury, per level</h2>
+  <p>With no animal, bush dwell at injury 0 and at injury 90 (seeds 42 / 43 / 44): level 04 modulated
+  {{D_l04_M00}} &rarr; {{D_l04_M90}} %, ordinary {{D_l04_O00}} &rarr; {{D_l04_O90}} %; level 05 modulated
+  {{D_l05_M00}} &rarr; {{D_l05_M90}} %, ordinary {{D_l05_O00}} &rarr; {{D_l05_O90}} %; level 06 modulated
+  {{D_l06_M00}} &rarr; {{D_l06_M90}} %, ordinary {{D_l06_O00}} &rarr; {{D_l06_O90}} %.</p>
+  <h4 class="fh"><span class="n">Figure R2</span>Level 04</h4>
+  {{FIG:dose_l04}}
+  <h4 class="fh"><span class="n">Figure R3</span>Level 05</h4>
+  {{FIG:dose_l05}}
+  <h4 class="fh"><span class="n">Figure R4</span>Level 06</h4>
+  {{FIG:dose_l06}}
+</section>
+
+<section class="col" id="train">
+  <h2><span class="num">05</span> Each run across training, ten injury levels</h2>
+  <p>The same tests drawn across training, one figure per level and seed, as Figures B5 and B10&ndash;B12 of the
+  cross-run page: are the ten injury lines stacked in order for most of training, or tangled?</p>
+  <details class="more" open><summary>Level 04 (three seeds)</summary>
+  <h4 class="fh"><span class="n">Figure R5a</span>Level 04, seed 42</h4>
+  {{FIG:train_l04_42}}
+  <h4 class="fh"><span class="n">Figure R5b</span>Level 04, seed 43</h4>
+  {{FIG:train_l04_43}}
+  <h4 class="fh"><span class="n">Figure R5c</span>Level 04, seed 44</h4>
+  {{FIG:train_l04_44}}
+  </details>
+  <details class="more"><summary>Level 05 (three seeds)</summary>
+  <h4 class="fh"><span class="n">Figure R6a</span>Level 05, seed 42</h4>
+  {{FIG:train_l05_42}}
+  <h4 class="fh"><span class="n">Figure R6b</span>Level 05, seed 43</h4>
+  {{FIG:train_l05_43}}
+  <h4 class="fh"><span class="n">Figure R6c</span>Level 05, seed 44</h4>
+  {{FIG:train_l05_44}}
+  </details>
+  <details class="more"><summary>Level 06 (three seeds)</summary>
+  <h4 class="fh"><span class="n">Figure R7a</span>Level 06, seed 42</h4>
+  {{FIG:train_l06_42}}
+  <h4 class="fh"><span class="n">Figure R7b</span>Level 06, seed 43</h4>
+  {{FIG:train_l06_43}}
+  <h4 class="fh"><span class="n">Figure R7c</span>Level 06, seed 44</h4>
+  {{FIG:train_l06_44}}
+  </details>
+</section>
+
+<section class="col" id="how">
+  <h2><span class="num">06</span> How it is computed</h2>
+  <p>Each agent's saved checkpoints were replayed in fixed test scenes, 30 episodes per checkpoint, scene and
+  starting injury, and bush dwell recorded as the share of the 100 steps spent on the bush. For each checkpoint
+  we form three differences: injured (starting injury 70) minus unhurt (0) with no animal; the same with the
+  wandering rabbit; and the hunting predator minus no animal, both unhurt. Only checkpoints from 2 to 10 million
+  training steps are used, one every 0.2 million steps (41 per run), and each difference is averaged over them.
+  The 95 % interval allows for neighbouring checkpoints being alike: it uses an effective number of
+  checkpoints, reduced by the correlation between each checkpoint and the next (the lag-1 autocorrelation). In
+  the per-run training figures each line is the running average of 5 neighbouring checkpoints, only to make ten
+  overlapping lines readable. A "seed counts" statement compares the two agents trained with the same seed; with
+  three seeds per level it describes how often a difference repeats, not a statistical test. The 22-Sep
+  originals of levels 04 and 05 (one seed each) are drawn in Figure R1 as reference rows, in the matching
+  scenes; the 22-Sep level 06 was a different world (noisy senses) and has no reference row.</p>
+</section>
+
+<section class="col" id="prov">
+  <h2><span class="num">07</span> Data, scenes and provenance</h2>
+  <p>Test specifications: <code>configs/eval_sweeps/healrep/</code> (ten specs: level 04 core and injury
+  grids; level 05 neutral, own and injury grids; level 06 neutral, own and injury grid). Results:
+  <code>results/eval/avoidance/metrics_history_rppo_healrep/</code>; each test launch saved its spec, code version
+  and fully resolved scenes under <code>_provenance/</code>. Level-06 neutral scenes:
+  <code>configs/environment/experiment/behavior_probes/neutral_variants/</code>. Training record and design:
+  <code>docs/experiments/active/hypervigilance/FAST_HEAL_REPLICATION.md</code>. Figures:
+  <code>scripts/analysis/studies/fast_heal_replication/figures.py</code>; page: <code>build_page.py</code> in the
+  same folder. Built {{BUILT}}.</p>
+</section>
+
+</div>
+{{LIGHTBOX}}

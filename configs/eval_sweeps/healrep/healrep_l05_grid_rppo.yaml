@@ -1,0 +1,28 @@
+# Fast-heal replication (l05, seeds 42-44, ordinary + modulated) -- test scenes 'grid' (configs/environment/experiment/behavior_probes/injury_grid/neutral_clean).
+# Experiment-test sweeps for the replication results page (docs/experiments/active/hypervigilance/FAST_HEAL_REPLICATION.md).
+name: healrep_l05_grid
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_healrep/l05_grid
+probe: configs/environment/experiment/behavior_probes/injury_grid/neutral_clean
+conditions: all
+episodes: 30
+nodes:
+- 106
+- 107
+x_axis: steps
+plot_measures:
+- bush_hiding
+- survival_steps
+runs:
+- label: l05_modulated_s42
+  path: results/JAX_RecurrentPPO/20261005-160241_rppo_healrep_l05_t16quad_s42
+- label: l05_ordinary_s42
+  path: results/JAX_RecurrentPPO/20261005-160124_rppo_healrep_l05_t1none_s42
+- label: l05_modulated_s43
+  path: results/JAX_RecurrentPPO/20261005-160244_rppo_healrep_l05_t16quad_s43
+- label: l05_ordinary_s43
+  path: results/JAX_RecurrentPPO/20261005-160125_rppo_healrep_l05_t1none_s43
+- label: l05_modulated_s44
+  path: results/JAX_RecurrentPPO/20261005-160248_rppo_healrep_l05_t16quad_s44
+- label: l05_ordinary_s44
+  path: results/JAX_RecurrentPPO/20261005-160126_rppo_healrep_l05_t1none_s44
