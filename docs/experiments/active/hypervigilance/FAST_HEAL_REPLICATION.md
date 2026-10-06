@@ -1,7 +1,7 @@
 ---
 title: Fast-bush-healing replication — level 04, + temperature, + temperature and thirst
 created: 2026-10-05
-last_updated: 2026-10-05
+last_updated: 2026-10-06
 status: active
 ---
 
@@ -149,3 +149,11 @@ busy on each node). Each run's saved config (`models/config.yaml`) has `random_s
 Note: the three GPU-0 runs were launched within the same second without `--log`, so they share the
 launcher's default timestamped log file; its contents are interleaved/partly overwritten. Training is
 unaffected; use WandB for those runs.
+
+## Follow-up: modulator capacity grid (designed 2026-10-06)
+
+The replication found that the modulator does not reliably enlarge injury-driven hiding. The follow-up
+tests whether a larger modulator, or one whose gains are shared across groups of neurons, changes that.
+It trains a 3 × 3 grid of modulator settings at level 05, in stages: one seed first, then more seeds only
+for settings that stand out. This replication's level-05 runs (both agents, seeds 42–44) are its
+references and are not retrained. Design, decision rule and run table: [[NMN_CAPACITY_GRID_L05]].

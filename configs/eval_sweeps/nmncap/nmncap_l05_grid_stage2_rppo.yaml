@@ -1,0 +1,58 @@
+# Modulator-capacity grid, level 05 -- stage 2 runs -- test scenes 'grid' (configs/environment/experiment/behavior_probes/injury_grid/neutral_clean).
+# Design: docs/experiments/active/hypervigilance/NMN_CAPACITY_GRID_L05.md (Section 5, readout).
+# Same probe folder, conditions, episodes, x axis and measures as
+# configs/eval_sweeps/healrep/healrep_l05_grid_rppo.yaml, whose output holds the reference runs.
+# Run paths are globs on the planned tag; each must resolve to exactly ONE run folder
+# (run_sweep.py refuses 0 or 2+ matches -- after a relaunch, pin the live folder by hand).
+# Nodes are a placeholder: confirm free nodes (gpu-status + diary) before launching the sweep.
+# Stage 2: DELETE the rows of every cell that did not pass the stage-1 rule before running.
+name: nmncap_l05_grid_stage2
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_nmncap/l05_grid
+probe: configs/environment/experiment/behavior_probes/injury_grid/neutral_clean
+conditions: all
+episodes: 30
+nodes:
+- 109
+- 110
+x_axis: steps
+plot_measures:
+- bush_hiding
+- survival_steps
+runs:
+- label: l05_h32g8_s43
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h32g8_s43
+- label: l05_h32g16_s43
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h32g16_s43
+- label: l05_h32g32_s43
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h32g32_s43
+- label: l05_h64g8_s43
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h64g8_s43
+- label: l05_h64g16_s43
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h64g16_s43
+- label: l05_h64g32_s43
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h64g32_s43
+- label: l05_h128g8_s43
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h128g8_s43
+- label: l05_h128g16_s43
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h128g16_s43
+- label: l05_h128g32_s43
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h128g32_s43
+- label: l05_h32g8_s44
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h32g8_s44
+- label: l05_h32g16_s44
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h32g16_s44
+- label: l05_h32g32_s44
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h32g32_s44
+- label: l05_h64g8_s44
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h64g8_s44
+- label: l05_h64g16_s44
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h64g16_s44
+- label: l05_h64g32_s44
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h64g32_s44
+- label: l05_h128g8_s44
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h128g8_s44
+- label: l05_h128g16_s44
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h128g16_s44
+- label: l05_h128g32_s44
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h128g32_s44

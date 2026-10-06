@@ -1,0 +1,39 @@
+# Modulator-capacity grid, level 05 -- stage 1 runs -- test scenes 'own' (configs/environment/experiment/behavior_probes/hvsmell/two_channel).
+# Design: docs/experiments/active/hypervigilance/NMN_CAPACITY_GRID_L05.md (Section 5, readout).
+# Same probe folder, conditions, episodes, x axis and measures as
+# configs/eval_sweeps/healrep/healrep_l05_own_rppo.yaml, whose output holds the reference runs.
+# Run paths are globs on the planned tag; each must resolve to exactly ONE run folder
+# (run_sweep.py refuses 0 or 2+ matches -- after a relaunch, pin the live folder by hand).
+# Nodes are a placeholder: confirm free nodes (gpu-status + diary) before launching the sweep.
+name: nmncap_l05_own_stage1
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_nmncap/l05_own
+probe: configs/environment/experiment/behavior_probes/hvsmell/two_channel
+conditions: all
+episodes: 30
+nodes:
+- 109
+- 110
+x_axis: steps
+plot_measures:
+- bush_hiding
+- survival_steps
+runs:
+- label: l05_h32g8_s42
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h32g8_s42
+- label: l05_h32g16_s42
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h32g16_s42
+- label: l05_h32g32_s42
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h32g32_s42
+- label: l05_h64g8_s42
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h64g8_s42
+- label: l05_h64g16_s42
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h64g16_s42
+- label: l05_h64g32_s42
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h64g32_s42
+- label: l05_h128g8_s42
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h128g8_s42
+- label: l05_h128g16_s42
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h128g16_s42
+- label: l05_h128g32_s42
+  path: results/JAX_RecurrentPPO/*_rppo_nmncap_l05_h128g32_s42

@@ -1,0 +1,64 @@
+# GENERATED FILE -- DO NOT EDIT BY HAND.
+# Regenerate with:
+#   python configs/models/recurrent_ppo/nmn_capacity_grid/generate_capacity_arms.py
+# Drift check (writes nothing):  ... generate_capacity_arms.py --check
+# Full check (two-key diff, saved-config diff, model build):  ... --verify
+#
+# Modulator-capacity grid, level 05 -- cell h128 g8
+# Study: docs/experiments/active/hypervigilance/NMN_CAPACITY_GRID_L05.md
+#
+# Identical to configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml
+# (the replication's level-05 modulated agent: FiLM at encoder, GRU, actor and critic;
+# reads all 27 sensed numbers; temperature channel off; GAE_NORM returns) in every key
+# except two:
+#   modulation.mod_hidden_size  128   (reference 16)  -- units in the modulator's own GRU
+#   modulation.grouping_size      8   (reference 1)   -- neurons sharing one state-dependent gain/offset;
+#                                     16 gains per modulated 128-wide layer (reference 128)
+#
+# Seed is passed per run on the command line (--seed 42|43|44), as in the replication.
+
+agent:
+  algorithm: RecurrentPPO
+  lr_actor: 0.0005
+  lr_critic: 0.0005
+  gamma: 0.95
+  K_epochs: 4
+  eps_clip: 0.1
+  sequence_length: 128
+  frame_stack: 1
+  fc_layers: [128, 128]
+  actor_fc_layers: [128, 128]
+  critic_fc_layers: [128, 128]
+  hidden_size: 128
+  entropy_coef: 0.01
+  gae_lambda: 0.95
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  use_layer_norm: true
+  rnn_type: GRU
+  activation: relu
+  return_mode: GAE_NORM
+  encoding_mode: hierarchical
+  hierarchical_params:
+    default_mlp: [128, 128]
+    unimodal_overrides:
+      visual: [128, 128]
+      olfaction: [128, 128]
+    multimodal_hub: [128, 128]
+  modulation:
+    type: FiLM
+    mod_hidden_size: 128
+    grouping_size: 8
+    percept_bias_init: 3.0
+    percept_add_bias_init: 0.0
+    memory_bias_init: 0.0
+    memory_clip: [-2.0, 2.0]
+    input_sensors: "all"
+    sites:
+      encoder: true
+      rnn: true
+      actor: true
+      critic: true
+    rnn_mechanism: activation
+    temperature:
+      enabled: false
