@@ -778,3 +778,37 @@ How to read the secondary rows:
 - E4's per-checkpoint scores use 30 episodes per scene. Most per-pair intervals span ±5–25 pp. A
   pre-registered rerun of the gain freeze with more episodes, on the main 9 pairs, would show whether
   the pooled 47 % holds pair by pair.
+
+## Feedback from plan-reviewer (verdict gate on Results)
+
+*Reviewed 2026-10-07. Verdict: **SUPPORTED WITH CAVEATS**; one claim **NOT SUPPORTED by the evidence shown**.
+Full table and allowed wording: [[plan_modulator_engagement_verdict]] (`docs/reviews/plan_modulator_engagement_verdict.md`).*
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+- 🔴 **"The modulator does carry part of the injury effect" (E4, about 47 %) is not supported.**
+  - The CI on the reduction crosses zero ([−0.3, 6.4] pp), and the 7-of-9 sign count is p of about 0.09.
+  - Unreported: freezing the gain roughly doubles *unhurt* bush dwell, from 23.8 % to 46.8 % (mean over
+    the 9 main pairs). Some pairs sit near ceiling.
+  - So general disruption or ceiling compression explains the smaller difference equally well.
+  - Downgrade to "consistent with, not established", and report the frozen dwell levels.
+- 🟡 **"Counts against" is the pre-registered label and may stand, but it means "no support".**
+  - A ρ ≤ 0 bar fires about half the time under no relation. The negative sign comes from the ordinary
+    partner.
+  - The ordinary agent's within-level SD is 3.6 pp, against the modulated agent's 1.9.
+  - The modulated agent's own relation (−0.43, lower-tail p 0.12) is indistinguishable from zero. Lead
+    with that, not with "the most responsive modulators have the smallest lead".
+- 🟡 **"No idle modulators" holds only as "none is blind and there are no two groups".**
+  - The 0.70 probe is above the natural peak, which is 0.53 in all 14 runs.
+  - The natural-trace response is about 8× smaller, about 8 % of the across-unit gain spread.
+  - E2 shows 79–88 % of gain variance is a fixed per-unit constant in every run.
+- 🟡 **The E4 null is underpowered.** Write "unrelated to E1γ" as "no relation detected".
+- 🟡 **Robustness rows overstate independence.** The same-sign rows share one gap and near-identical E1
+  rankings.
+- 🟢 Drop the mechanism sentences attached to the E3 (+0.83) and baseline (+0.67) secondaries.
+
+**Exit condition:** reword item 3 of "What was found" and the P-cause pooled bullet as in the review's
+allowed wording, adding the frozen injured/unhurt dwell levels. Then the verdict becomes SUPPORTED WITH
+CAVEATS throughout. Owner: experiment-analyzer.
+
+*Reviewed by: plan-reviewer*
