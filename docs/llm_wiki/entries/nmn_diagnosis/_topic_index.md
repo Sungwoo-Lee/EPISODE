@@ -6,8 +6,8 @@
 > To improve a row, set a `headline:` field on the entry itself.
 
 **Folder definition**: NMN performance diagnosis findings
-**Insights**: 21
-**Last updated**: 2026-09-01
+**Insights**: 23
+**Last updated**: 2026-10-07
 
 ---
 
@@ -15,6 +15,8 @@
 
 | Date | Time | ID | Summary |
 |---|---|---|---|
+| 2026-10-07 | 11:43 | [20261007_1143_modulation_type_only_changes_encoder_site](20261007_1143_modulation_type_only_changes_encoder_site.md) | modulation.type (FiLM / PreActivation / Multiplicative) only changes the ENCODER site; the GRU, actor and critic sites always apply unbound… |
+| 2026-10-07 | 11:42 | [20261007_1142_fast_heal_replication_modulator_effect_not_replicated](20261007_1142_fast_heal_replication_modulator_effect_not_replicated.md) | The 22-Sep pattern (modulated agent with a larger, steadier injury-driven bush hiding than its ordinary partner) did not replicate across 9… |
 | 2026-09-01 | 15:30 | [20260901_1528_film_literature_verdict_grouping_and_self_conditioning](20260901_1528_film_literature_verdict_grouping_and_self_conditioning.md) | Full-text review of 10 FiLM-in-RL papers: grouped modulation has no refereed support and loses in the one controlled RL test, and self-cond… |
 | 2026-09-01 | 15:29 | [20260901_1528_lr_critic_dead_across_all_rppo_per_file_migration](20260901_1528_lr_critic_dead_across_all_rppo_per_file_migration.md) | lr_critic has zero code consumers and affects ALL recurrent PPO, not just NMN. |
 | 2026-09-01 | 15:28 | [20260901_1528_mc_bootstrap_units_measured_sigma_25](20260901_1528_mc_bootstrap_units_measured_sigma_25.md) | Measured the open MC-return bootstrap units bug: raw return sigma is 23-25, so the H4 window-edge fix delivers about 4% of its intended cor… |

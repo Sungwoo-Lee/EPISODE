@@ -4,9 +4,9 @@
 >
 > Read this file before classifying a new insight. Folder definitions here are the matching surface — if a new insight does not match any definition verbatim, the new-folder justification protocol applies (see CLAUDE.md, "Fragmentation safeguards").
 
-**Last updated**: 2026-10-06
+**Last updated**: 2026-10-07
 **Active folders**: 11
-**Total insights**: 233
+**Total insights**: 235
 **Last audit**: (none)
 
 ---
@@ -17,7 +17,7 @@
 |---|---|---|---|---|
 | `wiki_system_design` | Claude LLM Wiki's own design decisions | 15 | 2026-09-09 | [wiki, design, decision, skill, meta, learned_lesson] |
 | `subagent_engineering` | Subagent + worktree usage gotchas | 24 | 2026-10-03 | [meta, learned_lesson, worktree, subagent, decision, design, refutation] |
-| `nmn_diagnosis` | NMN performance diagnosis findings | 21 | 2026-09-01 | [nmn, hypervigilance, film, learned_lesson, design, meta, training_runner, refutation, decision, config] |
+| `nmn_diagnosis` | NMN performance diagnosis findings | 23 | 2026-10-07 | [nmn, hypervigilance, film, learned_lesson, design, meta, training_runner, refutation, decision, config] |
 | `dreamer_diagnosis` | DreamerV3 failure investigation | 30 | 2026-08-06 | [dreamer, decision, learned_lesson, refutation, meta, design, rl] |
 | `cluster_ops` | Lab cluster ops and env mgmt | 49 | 2026-10-03 | [meta, training_runner, learned_lesson, decision, design, dreamer, wandb, testing, tradeoff] |
 | `hypervigilance` | Hypervigilance experiments | 28 | 2026-07-27 | [hypervigilance, dreamer, design, learned_lesson, decision, refutation, meta, noise, rl] |
@@ -57,6 +57,7 @@ Surface a merge proposal to the user when:
 
 ## Change history
 
+- 2026-10-07: Captured 2 insights into `nmn_diagnosis`: `20261007_1142_fast_heal_replication_modulator_effect_not_replicated` (modulator's larger injury effect not replicated, 4 of 9 pairs), `20261007_1143_modulation_type_only_changes_encoder_site` (type switch starts GRU/actor/critic at 3x gain).
 - 2026-10-06: Captured 1 insight into `behavior_measures`: `20261006_0758_test_scene_confound_level05_modulator_gap` (the 22-Sep level-05 modulator gap came mostly from the thermal neutral test scenes; compare runs only within one scene set). No new folders or tags.
 
 - 2026-10-03: Captured 6 insights from the thirst-task overnight analysis loop: `subagent_engineering/20261003_0750_plumbing_commit_partial_index_deletes_tree` (a temporary-index commit recorded 5,437 files deleted and was pushed; fixed by a02b2a0d), `cluster_ops/20261003_0752_nas_slow_commit_breaks_stale_lock_rule` (25-min NAS commits make the 10-min stale-lock rule misfire), `cluster_ops/20261003_0754_nas_read_throughput_full_store_validation_infeasible` (700 GB at 5–10 MB/s; sweeps scale ~3x with 8 readers), `behavior_measures/20261003_0756_probe_pond_visit_drop_rule_empties_figure` (truncate at first pond step instead of dropping cells), `config_system/20261003_0758_water_capacity_check_overconservative_fixed_cells` (capacity check rejects single-cell spawn areas), `cluster_ops/20261003_0800_collection_failed_cells_counted_as_claimed` (node 114 lacks pyarrow; launcher counts failed cells as claimed). No new folders or tags.

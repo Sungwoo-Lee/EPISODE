@@ -58,6 +58,7 @@ These are not yet active — they become active when first used in an insight. R
 ---
 
 ## Change history
+- 2026-10-07: 2 insights (`20261007_1142_fast_heal_replication_modulator_effect_not_replicated`, `20261007_1143_modulation_type_only_changes_encoder_site`) into nmn_diagnosis reused existing tags `nmn`, `film`, `hypervigilance`, `refutation`, `learned_lesson`, `config` — no new tags promoted.
 - 2026-09-22: 3 insights into `episode_renderer` (`20260922_1558_shadowed_guards_one_constant`, `20260922_1559_six_more_checks_that_cannot_fail`, `20260922_1600_vision_slots_legibility_over_anchor`) reused existing tags `learned_lesson`, `design`, `decision`, `testing`, `meta` and **promoted `tradeoff`** from starter-candidate to active (first use: the vision slot-count trade, where the rejected alternative and its cost are both named). Added `tradeoff` to episode_renderer top-tags.
 - 2026-08-20: 1 insight into `env_entities` (`20260820_1606_reset_ulp_divergence_is_compiler_fusion`) reused existing tags `learned_lesson`, `refutation`, `meta` — no new tags promoted. Added `refutation` to env_entities top-tags.
 - 2026-08-06: 3 insights from the dreamer-integration Gate-2 session (2 dreamer_diagnosis: 0304/0305; 1 cluster_ops: 0306) reused existing tags `dreamer`, `learned_lesson`, `decision`, `meta`, `design`, `training_runner` — no new tags promoted.
