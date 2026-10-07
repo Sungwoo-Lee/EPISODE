@@ -9,7 +9,7 @@ wandb_tag: "rppo_nmninp_l05_*_s*"
 
 # Modulator input at level 05
 
-> **Status**: DESIGNED, NOT LAUNCHED. Stage 1 = 4 runs (seed 42). Stage 2 (seeds 43, 44) by the user's
+> **Status**: STAGE 1 RUNNING (4 runs, seed 42, launched 2026-10-07 11:18–11:19; run table §3). Stage 2 (seeds 43, 44) by the user's
 > judgement after the stage-1 readout (§5.1).
 > **Date**: 2026-10-07
 > **Author**: `experiment-designer`
@@ -162,10 +162,10 @@ change cost; the 640k-parameter task network dominates.
 
 | Run | Stage | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 1 | planned | N | rppo_nmninp_l05_N_s42 | nmn_input_l05 | ablation | 42 | 109 | cuda:0 | — | — | — |
-| 2 | 1 | planned | I | rppo_nmninp_l05_I_s42 | nmn_input_l05 | ablation | 42 | 109 | cuda:1 | — | — | — |
-| 3 | 1 | planned | IT | rppo_nmninp_l05_IT_s42 | nmn_input_l05 | ablation | 42 | 113 | cuda:0 | — | — | — |
-| 4 | 1 | planned | X | rppo_nmninp_l05_X_s42 | nmn_input_l05 | ablation | 42 | 113 | cuda:1 | — | — | — |
+| 1 | 1 | running | N | rppo_nmninp_l05_N_s42 | nmn_input_l05 | ablation | 42 | 109 | cuda:0 | 2026-10-07T11:18:47 | 21hxaehr | logs/20261007_111847_rppo_nmninp_l05_N_s42.log |
+| 2 | 1 | running | I | rppo_nmninp_l05_I_s42 | nmn_input_l05 | ablation | 42 | 109 | cuda:1 | 2026-10-07T11:19:03 | wt9en628 | logs/20261007_111903_rppo_nmninp_l05_I_s42.log |
+| 3 | 1 | running | IT | rppo_nmninp_l05_IT_s42 | nmn_input_l05 | ablation | 42 | 113 | cuda:0 | 2026-10-07T11:19:18 | whifh73e | logs/20261007_111918_rppo_nmninp_l05_IT_s42.log |
+| 4 | 1 | running | X | rppo_nmninp_l05_X_s42 | nmn_input_l05 | ablation | 42 | 113 | cuda:1 | 2026-10-07T11:19:34 | ivt5vlxk | logs/20261007_111934_rppo_nmninp_l05_X_s42.log |
 | 5 | 2 | conditional | N | rppo_nmninp_l05_N_s43 | nmn_input_l05 | ablation | 43 | — | — | — | — | — |
 | 6 | 2 | conditional | N | rppo_nmninp_l05_N_s44 | nmn_input_l05 | ablation | 44 | — | — | — | — | — |
 | 7 | 2 | conditional | I | rppo_nmninp_l05_I_s43 | nmn_input_l05 | ablation | 43 | — | — | — | — | — |
