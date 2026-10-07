@@ -348,7 +348,7 @@ Each phase ends with its own commit(s) (explicit pathspec, pushed). No phase sta
 ## Checkpoints
 
 - [ ] P0.1–P0.4 results recorded (live sweeps, node numpy versions + import check, reader re-grep, 11:42 death finding).
-- [ ] Phase 1 committed alone; nothing else imports `episode_bundle` at that commit.
+- [x] Phase 1 committed alone; nothing else imports `episode_bundle` at that commit. (2026-10-07, developer: library + 38 tests; only the test file imports it.)
 - [ ] Neuromodulation session's explicit go recorded (date, source) before Phase 2's edits to its files; `git diff` checked on each; no foreign hunk committed.
 - [ ] `SESSION_HOLDS` (E4) implemented as listed; no archive written into, and no file deleted from, a held cell (inventory before/after); any hold lift recorded with its source.
 - [ ] Phase 2: ported parity tools report `exact` on an archive-only cell and on the folder-form cell; outputs pasted.
@@ -376,8 +376,45 @@ Each phase ends with its own commit(s) (explicit pathspec, pushed). No phase sta
 
 ## Implementation Report
 
-> **Implemented by**:
-> **Date**:
+> **Implemented by**: developer (Phase 1 only)
+> **Date**: 2026-10-07
+
+### Phase 1 — archive library
+
+**Scope kept.** Only Phase 1 was implemented. `sweep_worker.sh`, `run_sweep.py`, every reader (R1–R14) and the neuromodulation session's four files were not touched (sweeps are live on 104/105 and 106/107; that session has not given its go). Nothing was packed, verified-deleted or deleted under `results/`; all tests use pytest temporary directories. Phase 0 (P0.1–P0.4) was not run in this pass — it is read-only preflight for Phase 2/3 and was outside the task given.
+
+**Files.**
+- NEW `src/utils/episode_bundle.py` — `cell_path`, `members`, `read_member`/`open_member`, `load_recording`, `load_npz`, `pack`, `verify`, `delete_verified`, `extract`, `read_comment`; exceptions `BundleMismatch`, `CellConflict`, `DeleteRefused`. Pure Python + numpy, no JAX.
+- NEW `tests/scripts/test_episode_bundle.py` — 38 tests (parametrised), synthetic cells from the real `EpisodeRecorder.write` + `np.savez_compressed`, both layouts (rPPO 0-based with `.npz`/parquet/json; Dreamer 1-based recordings only).
+- `docs/environment/SCRIPTS_DEPENDENCY_MAP.md`: **not changed** — Phase 1 adds no file under `scripts/` and no script imports the library yet. The map rows for `episode_bundle.py`'s script callers belong with Phase 2/3.
+
+**Plan-reviewer re-review fixes that belong to Phase 1.**
+- **N1 (repo root).** `delete_verified(cell_dir, zip_path, wal_path, *, repo_root)` — `repo_root` is a required keyword argument with no default; omitting it is a `TypeError`. The library never reads `__file__` (a test asserts this). N1's main part (the copied worker and `finish_cells.py` must receive the repo root as a mandatory argument) is Phase 3 code and is not done here.
+- **N7 (`NON_READERS`).** Not applicable to Phase 1: the reader re-grep (E2) lives in `bundle_scratch.py` (F7, Phase 3). To be done there: a `NON_READERS` constant with a one-line reason per entry, separate from `SWITCHED_READERS`; candidates seen today are `src/utils/episode_bundle.py` itself, `src/utils/eval_recording.py` (writer + `load_episode` definition), `scripts/eval/eval_rollout.py` (writer), `scripts/eval/dwell_sweep/README.md`.
+- **Addendum (a), class D dropped.** The path guard in `delete_verified` accepts class S only: `<repo_root>/results/eval/**/_scratch/<label>/<cond>/<digits>`, label/cond not starting with `_`, archive must be the sibling `<digits>.zip`.
+- **N2 (defensive part).** A cell holding any `.csv/.png/.html/.mp4/.gif/.npy/.txt` file, or any path containing `_provenance/`, `videos/` or `motifs/`, is refused whole (fail closed) — a sweep cell never holds these.
+
+**Deviations from F1 (all stricter, none silent).**
+1. **Conflict rule uses filesystem times, not the host clock.** F1 says the archive wins if the folder's newest file mtime is ≤ the archive's *pack time*. Pack time comes from the packing host's clock while file mtimes come from the NAS, so clock skew could flip the answer. The zip comment stores `src_mtime_max_ns` (newest source-file mtime seen at pack) alongside `pack_time`, and `cell_path` compares against that. Only file mtimes are compared (directory mtimes change during a delete). A comment without these fields raises (fail closed).
+2. **`pack` refuses to overwrite an existing archive** (`FileExistsError`) rather than `os.replace`-ing over it. Resumability of `.partial-*` leftovers stays with `bundle_scratch.py`.
+3. **`delete_verified` re-checks each file's size + mtime after verification and before any unlink**, and refuses if the file list changed during verification — narrows the window between verify and unlink. Symlinks inside a cell are refused at pack/verify.
+4. **`extract` verifies the extracted tree against the archive** and refuses a non-empty destination.
+5. **`test_measure_cell_dir_equals_zip`** is in its Phase-1 form: `cell_measures.measure_cell` does not exist until Phase 3, so the test checks (a) every recording/`.npz` decodes identically from folder and archive in the same order, and (b) the current `run_sweep._measure_cell` gives the same row on the original folder and on a folder extracted from the archive. The direct `measure_cell(zip)` comparison is to be added in Phase 3.
+6. Extra tests beyond F10: `members` order equals `sorted(Path.glob(pattern))` for five patterns × two layouts (12 episodes so ordering is non-trivial); corrupt archive bytes detected; `repo_root` required; a file created after the unlink pre-check survives (rmdir, not rmtree).
+
+**Tests.**
+```
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python -m pytest tests/scripts/test_episode_bundle.py -q
+38 passed in 2.83s
+```
+NAS smoke (scratch dir under `tmp/`, a CIFS mount; not `results/`): a 30-episode rPPO cell (64 files) packed and verified in 0.18 s; `os.posix_fadvise(POSIX_FADV_DONTNEED)` raises no error on CIFS. Whether it actually drops the CIFS page cache is still untested (the re-review's open assumption) — the cross-host `independent-check` remains the real safeguard.
+
+**Speed check.** Skipped: nothing on the training or sweep hot path imports the new module at this commit (only the test file does).
+
+**Blockers / notes for Phase 2.**
+- Phase 2's ports of R9–R12 still need the neuromodulation session's explicit go (F9); R4–R7 can start now.
+- `members(cell, pattern)` reproduces `Path.glob` semantics for `*`, `?`, `[...]` and `**/`; patterns are matched against member names relative to the cell, so readers that today glob from a level above the cell (e.g. `<ck>/*/*/recordings/...` from the cond dir) must first resolve the cell with `cell_path(cond_dir, step)` and drop the leading step component from their pattern.
+- Plan-review N3–N6 are unaddressed by design (scope of senior-developer / Phase 3 / operations).
 
 ## Verification Report
 
