@@ -1,0 +1,27 @@
+# Fast-heal replication, level-05 FIXED-START-TEMPERATURE arm (seeds 42-44, ordinary + modulated) -- test scenes 'own'.
+# Mirrors healrep_l05_* (same scenes/episodes/conditions); own scenes use the fixed-start copies (behavior_probes/fixed_start/).
+name: healrep_l05fix_own
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_healrep/l05fix_own
+probe: configs/environment/experiment/behavior_probes/fixed_start/hvsmell__two_channel
+conditions: all
+episodes: 30
+nodes:
+- 105
+x_axis: steps
+plot_measures:
+- bush_hiding
+- survival_steps
+runs:
+- label: l05fix_modulated_s42
+  path: results/JAX_RecurrentPPO/20261006-074133_rppo_healrep_l05fix_t16quad_s42
+- label: l05fix_ordinary_s42
+  path: results/JAX_RecurrentPPO/20261006-074127_rppo_healrep_l05fix_t1none_s42
+- label: l05fix_modulated_s43
+  path: results/JAX_RecurrentPPO/20261006-074134_rppo_healrep_l05fix_t16quad_s43
+- label: l05fix_ordinary_s43
+  path: results/JAX_RecurrentPPO/20261006-074127_rppo_healrep_l05fix_t1none_s43
+- label: l05fix_modulated_s44
+  path: results/JAX_RecurrentPPO/20261006-074134_rppo_healrep_l05fix_t16quad_s44
+- label: l05fix_ordinary_s44
+  path: results/JAX_RecurrentPPO/20261006-074127_rppo_healrep_l05fix_t1none_s44
