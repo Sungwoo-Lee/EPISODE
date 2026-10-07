@@ -479,3 +479,302 @@ Level 05 seed 42, checkpoint 6000007 (6.0 M steps), unhurt no-animal neutral sce
   plan-reviewer).
 
 *Implemented by: developer*
+
+## Results
+
+*Written by experiment-analyzer, 2026-10-07, after the fixed rule above (Revision 1a) was applied
+unchanged. Numbers from `analyze.py` at commit `f234ba9f`; outcome code pinned at `10358a45`.*
+
+### What was found (plain language)
+
+**The idea that some modulated agents have an "engaged" modulator and hide more, while others have an
+"idle" one, is not supported. By the rule fixed before the computation, the main result counts
+against it.** Across the 9 replication pairs, and comparing pairs only within the same training level,
+the modulators that respond most to felt injury belong to the pairs where the modulated agent's lead
+in injury-driven bush hiding is *smallest*, not largest. The rank correlation is −0.75, against the
++0.6 that "supports" would have needed.
+
+Three further points matter as much as the verdict:
+
+1. **There is no idle mode to find.** Every one of the 14 modulated runs responds to felt injury, and
+   by similar amounts: the strongest response is only 1.5 times the weakest. A modulator that cannot
+   see felt injury scores practically zero on the same measure, below one millionth (the developer's control
+   test). So the runs differ in *how much* their modulator responds, never in *whether* it responds.
+   The plan's premise of two modes is not what the data show.
+2. **The negative result mostly comes from the ordinary partner.** The plan's negative control did not
+   come out near zero; it came out at +0.78. Within a level, the pair whose modulator responds most
+   tends to be the pair whose *ordinary* agent, which has no modulator, hides most when injured. The
+   modulated agent's own injury effect is only weakly related to the modulator's response, and in the
+   wrong direction (−0.43). A modulated-minus-ordinary gap then falls as the response rises. The plan
+   assumed the ordinary partner's behaviour would be unrelated to its partner's modulator. That
+   assumption is false here, and it is not explained by level, because level is removed before the
+   correlation is taken. The only thing a pair shares beyond its level is its seed. With 3 pairs per
+   level, this may also be chance (see Contradictions).
+3. **The modulator does carry part of the injury effect, but this does not depend on how strongly it
+   responds.** Freezing the modulator's gain at a fixed value removes on average about half of the
+   modulated agent's injury-driven hiding in the rabbit scene (47 %; 7 of 9 pairs lose some).
+   Freezing its offset removes none. The pairs that respond more strongly do not lose more when the
+   gain is frozen, so the causal prediction is not borne out either.
+
+The held-out pairs agree in part. The three level-05 fixed-start-temperature pairs show the same
+negative relation. The two 22-September originals, which were chosen because they showed the effect,
+both sit above their level on response and on gap, but two hand-picked pairs cannot set a direction.
+
+Bottom line: on these checkpoints, how strongly the modulator responds to felt injury does not explain
+which seeds show a modulated-agent advantage. The variation between seeds looks like ordinary
+behavioural variation, with the ordinary partner's variation as large a part of the gap as the
+modulated agent's.
+
+### Data, provenance and cross-checks
+
+- **Inputs:** `results/analysis/modulator_engagement/` (outcomes, `e1/`–`e3/` per-pair CSVs, `e4/e4_effects.csv`).
+  `analyze.py` wrote `pair_table.csv`, `permutation_null.csv` and `stats.json` there (git HEAD
+  `f234ba9f`). Working file: `tmp/20261007_142805_modulator_engagement_analyze.md`.
+- **Outcome pinning:** the 9 main pairs and both originals come from `figures.py` at `10358a45`. The
+  main pairs are asserted equal to the working copy (`main_pinned_equals_working: true`). The three
+  `l05fix` pairs come from the working copy and are labelled so, as Revision 1a allows.
+- **Independent cross-checks (analyzer):**
+  - The rabbit-scene injury effect was recomputed directly from the dwell-sweep CSVs: `bush_hiding`,
+    `avoid_rabbitwander_inj70` minus `inj00`, checkpoints 2–10 M. It matches `outcomes.json` exactly
+    for three pairs:
+
+    | Pair | Modulated (pp) | Ordinary (pp) | Gap (pp) |
+    |---|---|---|---|
+    | Level 05 seed 42 | 8.394 | 0.642 | 7.752 |
+    | Level 06 seed 43 | 6.220 | 2.097 | 4.123 |
+    | Level 04 seed 44 | 6.826 | −1.191 | 8.017 |
+
+  - E1γ for the same three pairs, recomputed from the per-checkpoint E1 CSVs over each pair's own
+    checkpoints, matches the pair table: 0.3331, 0.2606 and 0.2483 (39 checkpoints for the last).
+  - The level-demeaned Spearman correlations and the 216-arrangement nulls were re-implemented
+    separately with `scipy.stats.spearmanr`. P-main, P-own and the negative control are reproduced to
+    every digit.
+- **One small inconsistency in the outcome code:** for level 04 seed 44, the modulated agent's effect
+  is averaged over its 39 tested checkpoints, but the ordinary agent's over 41.
+  - On the matched 39, the ordinary effect is −1.87 rather than −1.19, and the gap is 8.69 rather
+    than 8.02.
+  - The pair stays the largest gap in level 04, so every within-level rank, and every correlation
+    below, is unchanged.
+
+### P-main: does the injury response predict the hiding gap? Counts against
+
+| Statistic (9 main pairs, values demeaned within level) | ρ | One-sided p (216 arrangements, P(null ≥ observed)) |
+|---|---|---|
+| **P-main**: E1γ against the rabbit-scene injury gap (modulated − ordinary) | **−0.75** | 0.995 |
+| **P-own**: E1γ against the modulated agent's own rabbit-scene injury effect | −0.43 | 0.903 |
+| **Negative control**: E1γ against the ordinary partner's rabbit-scene injury effect | **+0.78** | 0.009 |
+
+**Verdict under the fixed rule: counts against** (ρ ≤ 0).
+- "Supports" was out of reach on P-main alone. It would have failed on P-own as well (−0.43 < 0.6),
+  and it would have been withdrawn by the negative control (0.78 ≥ 0.6).
+- For reference, the opposite tail of the P-main null is P(null ≤ −0.75) = 0.009 (2 of 216
+  arrangements). The rule has no clause for a significantly negative relation, so this is reported, not
+  used. It is close to a mirror image of the negative control.
+- Pooled across levels, not demeaned (descriptive): P-main −0.42, P-own +0.28, control +0.63.
+
+### P-rank: the 9 pairs ranked by E1γ (not borne out)
+
+E1γ is the mean absolute change in the modulator's gain, per unit and per step, when felt injury is
+set to 0.70. It is averaged over the encoder (two heads), memory and actor, and over the pair's own
+checkpoints. Effects are rabbit-scene injury effects, injured 70 minus unhurt, in percentage points of
+bush dwell, averaged over 2–10 M steps. The last column flags the pairs P-rank made a prediction for.
+
+| E1γ rank | Pair | E1γ | E1γ − level mean | Gap (pp) | Modulated effect | Ordinary effect | P-rank prediction |
+|---|---|---|---|---|---|---|---|
+| 1 | Level 05 seed 44 | 0.356 | +0.012 | −1.73 | 7.10 | 8.82 | |
+| 2 | Level 05 seed 43 | 0.343 | −0.001 | −5.80 | 3.36 | 9.16 | predicted bottom 3: **missed** |
+| 3 | Level 05 seed 42 | 0.333 | −0.011 | +7.75 | 8.39 | 0.64 | predicted top 3: **hit** |
+| 4 | Level 04 seed 43 | 0.326 | +0.026 | −3.28 | 6.62 | 9.90 | predicted bottom 3: **missed** |
+| 5 | Level 04 seed 42 | 0.324 | +0.025 | +3.44 | 8.76 | 5.32 | |
+| 6 | Level 06 seed 42 | 0.307 | +0.028 | −4.53 | 0.95 | 5.49 | |
+| 7 | Level 06 seed 44 | 0.270 | −0.009 | −2.25 | 1.30 | 3.55 | |
+| 8 | Level 06 seed 43 | 0.261 | −0.018 | +4.12 | 6.22 | 2.10 | |
+| 9 | Level 04 seed 44 | 0.248 | −0.051 | +8.02 | 6.83 | −1.19 | predicted top 3: **missed (last)** |
+
+- One of the four placements is right. Level 04 seed 44, the pair with the largest gap, has the
+  *least* responsive modulator of all nine.
+- The ranking is mostly a level ranking: level 05 high, level 06 low. Within a level the differences
+  are small, 0.01–0.08.
+- The standard error of each pair's E1γ across its checkpoints is 0.003–0.009 (treating checkpoints as
+  independent, which flatters it). The level-04 and level-06 outliers (seeds 44 and 42, about 0.05
+  from the rest) are clearly resolved. Level 05's three values (0.333, 0.343, 0.356) are only about
+  two standard errors apart, and level 04 seeds 42 and 43 (0.324 against 0.326) are not resolved at
+  all. So within-level ranks rest on small differences.
+
+**Over training, E1γ rises in every pair** (mean over each third of the checkpoints, 2–4.6 M / 4.8–7.2 M / 7.4–10 M).
+- Level 05 seed 42: 0.30 / 0.35 / 0.36. Level 06 seed 43: 0.19 / 0.29 / 0.30. Level 04 seed 44: 0.20 / 0.27 / 0.29.
+- The gap does not follow it. In level 05 seed 42, the gap shrinks from +13.4 to +9.1 to +0.9 while
+  E1γ rises. In level 04 seed 44, it grows from +3.8 to +11.7 while E1γ stays the lowest of all.
+- A stronger response to felt injury is something every run acquires with training, independently of
+  whether it hides more than its partner.
+
+### Secondary rows (reported; none can rescue P-main)
+
+All are demeaned within level, 9 main pairs, with one-sided p from the same 216-arrangement null. The
+upper tail of that null is what a positive relation would need.
+
+| Row | ρ | p |
+|---|---|---|
+| E1γ against the no-animal injury gap (shares E1's scene) | −0.77 | 0.977 |
+| E1γ against the predator gap | −0.40 | 0.819 |
+| E1γ against the shared baseline gap (unhurt, no animal; modulated − ordinary) | +0.67 | 0.069 |
+| E1β (offset response) against the primary gap | −0.53 | 0.894 |
+| E1-natural γ (natural injured against unhurt episodes; confounded by a different view) against the primary gap | −0.53 | 0.894 |
+| Natural-trace sensitivity: E1γ with felt injury following the recorded injury-70 trace | −0.72 | 0.995 |
+| Level-05 own-scene sensitivity (level-05 gaps from the own-scene set) | −0.75 | 0.995 |
+| Same, levels 05 and 06 both from the own-scene set | −0.67 | 0.986 |
+| E2, the share of gain variance that changes over time, in the training world | +0.12 | 0.454 |
+| E3, the survival-step change from freezing the gain, in the training world | +0.83 | 0.014 |
+| E3, the survival-step change from freezing the offset (analyzer's computation, same method) | −0.37 | 0.787 |
+| Per-site E1γ against the primary gap: encoder-unimodal / encoder-multimodal / memory / actor (analyzer) | −0.47 / −0.57 / −0.80 / −0.65 | 0.88 / 0.89 / 0.99 / 0.99 |
+| Three-site E1γ (encoder heads averaged as one site; analyzer) | −0.75 | 0.995 |
+
+**Within-level ρ** (3 pairs each, descriptive; the only possible values are ±1 and ±0.5):
+
+| Level | E1γ against the gap | E1γ against the modulated agent's effect | E1γ against the ordinary agent's effect |
+|---|---|---|---|
+| 04 | −1.0 | −0.5 | +1.0 |
+| 05 | −0.5 | −0.5 | +0.5 |
+| 06 | −1.0 | −1.0 | +1.0 |
+
+How to read the secondary rows:
+- **Every other way of measuring E1, and every other behaviour gap except the baseline, gives the same
+  negative sign.** This includes the offset, the natural-trace version, every single site, the
+  own-scene sensitivity rows, and the injury and predator gaps. The result does not depend on one
+  choice of measure.
+- **The natural-trace E1γ is about 8 times smaller** than the constant-0.70 version: 0.03–0.05 per
+  unit per step, against 0.25–0.37. In the real injured episode, felt injury peaks at about 0.5 and
+  then falls as the agent heals. The constant 0.70 is the stronger, off-distribution probe the
+  re-review warned about. Both versions rank the pairs much the same.
+- **E1γ against the shared baseline gap is +0.67** (p 0.069). Pairs whose modulator responds more tend
+  to be pairs where the *unhurt* modulated agent dwells in the bush more than its partner, in the same
+  no-animal scene E1 is measured in. This is the scene-sharing link that the first plan review flagged,
+  and it is why the baseline was kept out of the primary outcome.
+- **E3 against the gap is +0.83** (p 0.014), but in a direction that does not help the mode idea.
+  - E3 is frozen minus live survival steps; every value is negative, from −15 to −49 steps on a live
+    survival of 255–315 steps.
+  - Pairs where freezing the gain costs the *fewest* survival steps have the *largest* injury gap. So
+    the agents that depend least on their gain's moment-to-moment variation in their own world hide
+    more.
+  - This is one of more than a dozen secondary correlations, with no correction for multiple comparisons. Treat it as a lead,
+    not a finding.
+- **Per-pair secondary values:**
+
+  | Pair | E1β | E2 (gain) | E3 gain freeze (survival steps) | E3 offset freeze (survival steps) | Live survival (steps) |
+  |---|---|---|---|---|---|
+  | Level 04 seed 42 | 0.309 | 0.205 | −20.5 | −47.6 | 314.9 |
+  | Level 04 seed 43 | 0.336 | 0.157 | −49.0 | −42.4 | 314.3 |
+  | Level 04 seed 44 | 0.251 | 0.150 | −24.2 | −38.8 | 313.6 |
+  | Level 05 seed 42 | 0.318 | 0.147 | −28.8 | −48.4 | 281.5 |
+  | Level 05 seed 43 | 0.322 | 0.153 | −37.6 | −26.7 | 285.9 |
+  | Level 05 seed 44 | 0.337 | 0.170 | −29.1 | −30.4 | 285.8 |
+  | Level 06 seed 42 | 0.266 | 0.120 | −25.4 | −32.8 | 257.0 |
+  | Level 06 seed 43 | 0.266 | 0.151 | −15.2 | −31.6 | 255.4 |
+  | Level 06 seed 44 | 0.241 | 0.186 | −19.0 | −32.8 | 259.9 |
+
+  (Level 04 seed 44's E3 values are over its 39 tested checkpoints; its live survival is over all 41.)
+
+### P-cause (E4): does freezing remove more of the effect where the response is stronger? Not borne out
+
+- **Method.** At 9 checkpoints per pair (2, 3, …, 10 M; 8 for level 04 seed 44), the modulated agent's
+  rabbit-scene injury effect was rescored in three versions:
+  - live;
+  - with the gain frozen at its pooled per-unit time-mean;
+  - with the offset frozen at its pooled per-unit time-mean.
+- "Share removed" is 1 − frozen/live, as `analyze.py` computes it. A share above 1 means the frozen
+  effect reversed sign. A negative share means freezing *increased* the effect.
+- Because several live effects are near zero, which makes the share unstable, the table also gives
+  the effect removed in percentage points, with a 95 % t-interval across that pair's checkpoints
+  (analyzer's computation).
+
+| Pair | E1γ | Live effect (pp) | Gain frozen: share removed | Gain frozen: pp removed [95 % CI] | Offset frozen: share removed | Offset frozen: pp removed [95 % CI] |
+|---|---|---|---|---|---|---|
+| Level 04 seed 42 | 0.324 | 11.81 | −0.26 | −3.1 [−9.5, 3.2] | −0.74 | −8.7 [−21.8, 4.4] |
+| Level 04 seed 43 | 0.326 | 9.59 | 0.30 | 2.9 [−5.7, 11.4] | 0.03 | 0.3 [−4.1, 4.8] |
+| Level 04 seed 44 | 0.248 | 6.49 | 0.13 | 0.8 [−5.1, 6.8] | −0.12 | −0.8 [−7.0, 5.4] |
+| Level 05 seed 42 | 0.333 | 8.22 | 1.05 | 8.6 [−3.9, 21.2] | 0.14 | 1.1 [−4.1, 6.3] |
+| Level 05 seed 43 | 0.343 | 3.48 | −0.35 | −1.2 [−24.3, 21.9] | −2.72 | −9.5 [−29.0, 10.1] |
+| Level 05 seed 44 | 0.356 | 10.51 | 1.01 | 10.6 [−3.4, 24.6] | 0.67 | 7.0 [−4.0, 18.0] |
+| Level 06 seed 42 | 0.307 | 1.55 | 2.19 | 3.4 [0.3, 6.4] | 1.19 | 1.8 [−0.9, 4.6] |
+| Level 06 seed 43 | 0.261 | 5.41 | 0.55 | 3.0 [−3.9, 9.8] | 0.34 | 1.8 [−2.5, 6.2] |
+| Level 06 seed 44 | 0.270 | 1.12 | 2.11 | 2.4 [−0.1, 4.8] | 0.26 | 0.3 [−9.9, 10.5] |
+| *Out of sample:* Level 05 fixed start, seed 42 | 0.327 | 5.02 | 2.39 | 12.0 [−1.5, 25.5] | 0.20 | 1.0 [−4.4, 6.4] |
+| *Out of sample:* Level 05 fixed start, seed 43 | 0.354 | −4.37 | 1.28 | −5.6 [−16.3, 5.1] | −0.18 | 0.8 [−10.2, 11.8] |
+| *Out of sample:* Level 05 fixed start, seed 44 | 0.346 | 11.84 | 1.23 | 14.6 [−1.3, 30.5] | −0.19 | −2.3 [−6.4, 1.9] |
+| *Out of sample:* 22-Sep original, level 04 | 0.303 | 15.44 | 0.46 | 7.1 [−0.7, 15.0] | 0.38 | 5.8 [−10.0, 21.6] |
+| *Out of sample:* 22-Sep original, level 05 | 0.372 | 12.73 | 0.68 | 8.7 [−3.4, 20.8] | 0.37 | 4.8 [−4.2, 13.7] |
+
+- **Main 9 pairs, pooled.** The mean live effect is 6.46 pp. With the gain frozen it is 3.43 pp, so
+  47 % is removed: 3.0 pp, 95 % CI across pairs [−0.3, 6.4]; 7 of 9 pairs are positive. With the
+  offset frozen it is 7.19 pp, so −11 % is removed: −0.7 pp [−4.7, 3.3].
+  - So the gain, not the offset, carries some of the injury effect. This is the closest thing to a
+    positive finding in this check.
+  - Per pair, though, only one interval excludes zero (level 06 seed 42, gain).
+  - At 30 episodes per scene, a single checkpoint's frozen score is noisy. For example, level 04
+    seed 42 at 2 M scores +67 pp with the offset frozen, against +16 pp live.
+- **Relation to E1γ (descriptive).**
+  - In the 4 main pairs above the median E1γ, freezing the gain removes a mean share of 0.50. In the
+    5 at or below the median, it removes 0.94. That is the opposite of the prediction.
+  - Rank correlation of E1γ with the share removed by the gain freeze: −0.12 (pooled). With the
+    percentage points removed: +0.30 pooled, +0.07 demeaned within level (analyzer).
+  - None of these is a relation. **P-cause is not borne out.**
+
+### P-out: do the held-out pairs repeat the sign? Partly
+
+- **Three level-05 fixed-start-temperature pairs** (outcomes from the working copy):
+
+  | Pair | E1γ | Gap (pp) | Modulated effect | Ordinary effect |
+  |---|---|---|---|---|
+  | Seed 42 | 0.327 | +5.17 | 6.86 | 1.69 |
+  | Seed 43 | 0.354 | −6.98 | 0.98 | 7.96 |
+  | Seed 44 | 0.346 | −2.04 | 10.57 | 12.61 |
+
+  - Raw ρ(E1γ, gap) = **−1.0**, the same sign as the main set. The same split repeats: E1γ against the
+    modulated agent's effect is −0.5, and against the ordinary agent's effect it is +0.5.
+  - With 3 pairs, ρ = −1 has a chance probability of 1/6.
+- **Two 22-September originals**, reported apart because they were selected for showing the effect.
+  Two points from two different levels cannot give a correlation, so each is placed against its level's
+  three main pairs:
+  - **Level 04 original:** E1γ 0.303, against a main level-04 mean of 0.299 (range 0.248–0.326). Its
+    gap is +8.57, against a level mean of +2.73.
+  - **Level 05 original:** E1γ 0.372, above all three main level-05 pairs (0.333–0.356). Its gap is
+    +10.18, against a level mean of +0.07.
+  - Both sit above their level on gap, which is guaranteed by how they were chosen. On E1γ, the level-05
+    original is high and the level-04 original is ordinary. Their direction is the opposite of the main
+    set's, but the selection makes this uninformative.
+- All five together (raw, mixing levels, descriptive): ρ = 0.0.
+
+### Contradictions with the plan's assumptions
+
+1. **"Idle" modulators do not exist in this set.**
+   - The plan's motivation pictured some runs with a modulator "close to a constant rescaling".
+   - Across all 14 runs, E1γ lies between 0.248 and 0.372 per unit per step. That is 53–72 % of the
+     gain's own spread across units (0.43–0.57). A modulator blind to felt injury gives below 1e-6.
+   - The question the plan could answer was therefore "do *more* responsive modulators go with larger
+     gaps?", not "do engaged ones differ from idle ones?". The answer to the first is no.
+2. **The ordinary partner is not independent of its modulated partner's engagement.**
+   - The negative control was "expected near 0", and the plan read a value ≥ 0.6 as "a level or scene
+     artefact".
+   - Level is removed by demeaning, and the ordinary agent's effect is measured in the rabbit scene,
+     which E1 does not use. So neither explanation the plan offered fits.
+   - The remaining candidates are:
+     - something tied to the shared seed, such as the same environment random stream during training;
+     - chance. With 3 pairs per level and 216 arrangements, two arrangements reach this value, and many
+       correlations are reported here.
+   - Either way, any modulated-minus-ordinary gap from these pairs carries as much of the ordinary
+     partner's seed-to-seed variation as the modulated agent's. This matters for reading the
+     replication's per-seed gaps generally, not just for this check.
+3. **Pair checkpoint sets differ slightly from what the plan describes.** The plan says level 04
+   seed 44's outcome uses its own tested checkpoint set, but the ordinary side is averaged over 41.
+   This is harmless here (see Data), but it is worth fixing in the outcome code.
+
+### Follow-ups for the user (not acted on)
+
+- A plan-reviewer verdict gate on this Results section, then the PI, per the project's analysis flow.
+- If the shared-seed link (Contradiction 2) matters for the modulator-input study's design, a direct test
+  is cheap and needs no training. Correlate the ordinary agents' injury effects with their *modulated
+  partners'* effects within level, across all 12 non-original pairs. This is a question for
+  experiment-designer.
+- E4's per-checkpoint scores use 30 episodes per scene. Most per-pair intervals span ±5–25 pp. A
+  pre-registered rerun of the gain freeze with more episodes, on the main 9 pairs, would show whether
+  the pooled 47 % holds pair by pair.
