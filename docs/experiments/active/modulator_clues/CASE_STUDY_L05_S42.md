@@ -293,3 +293,63 @@ Cost of being wrong: low. Without edit 1, C3 can be called a "candidate" on the 
 which is the selected and biased one. That is a wording risk, not a rerun.
 
 Reviewed by: plan-reviewer
+
+## Implementation Report (developer, 2026-10-07)
+
+Tooling and computation only. No interpretation here; the verdict is the analyst's.
+
+**Built** (commits `e62ccd86`, `d0c8f5b4`):
+- `scripts/analysis/obs_manipulation/run.py`: `--orientation act_manipulated|act_true` (default = the original behaviour); `run_checkpoint(capture=True)` keeps both passes' `forward_with_activations` tensors, observations and modulator outputs as a separate evaluation, so trajectories are unchanged; a traced per-step override plays a recorded felt-injury trace in one compiled program. With `act_true`, every condition must follow the identity route (asserted).
+- `scripts/analysis/case_l05_s42/case.py`, with subcommands `a12`, `a3-prepare`, `a3-collect` and `score`. `measures.py` uses numpy only, because the lab-node environments lack scikit-learn.
+- `tests/analysis/test_case_l05_s42.py` has 10 tests, all passing:
+  - readout labels exclude on-bush steps and the censored tail (also checked against a brute-force definition);
+  - identity reproduces live exactly, with the sweep recordings matching step for step;
+  - a nociception-blind network gives exactly zero shift at every layer;
+  - the critic freeze is a null control;
+  - the numpy fitters agree with scikit-learn.
+- The existing engagement tests still pass (8/8).
+- `SCRIPTS_DEPENDENCY_MAP.md` is updated.
+
+**Comparability precondition (fatal): passed.** Both 22-Sep case agents were checked at the 6 M checkpoint in the no-animal scenes at injury 0 and 70. In all four runs, 30 of 30 episodes were identical to the 23-Sep sweep recordings: agent position at every step, bush dwell and survival. The older saved configs needed 8 compatibility keys filled in:
+- `body.healing_nutrition_cost=0.0`, `body.healing_nutrition_dependence=False`
+- `thermal.bush_min_fire_distance=0`, `thermal.healing_cold_sensitivity=0.0`, `thermal.healing_warm_sensitivity=0.0`, `thermal.injury_heat_exchange_gain=0.0`, `thermal.random_start_body_temp=False`
+- `water.enabled=False`
+
+They affect only how the agent is rebuilt; the test worlds are the current probe files.
+
+**Computed** (node 108, CPU; claimed and released in the diary). Outputs are in `results/analysis/case_l05_s42/`:
+- `a1/`, `a2/`: 8 agents × 9 checkpoints.
+- `checks/`: per-checkpoint parity, chain and trace records.
+- `a3/a3_effects.csv`, `a3/a3_summary.csv`, plus the edited checkpoints.
+- Dwell sweeps under `results/eval/avoidance/metrics_history_rppo_case_l05_s42/`.
+- `scores/c_cells.csv`, `scores/reading_rule.json`.
+
+**Run checks:**
+- Exact sweep parity held in 288 of 288 scene-checkpoints for Analyses 1–2, and in 108 of 108 for Analysis 3's live passes.
+- Chain assertions: largest deviation 4.3e-7, against a tolerance of 1e-5.
+- The capture never changed a logit (difference 0).
+- The critic freeze was bit-identical in-tool at all 27 checkpoints, and equal to the live results at sweep level.
+- All 72 memory-output readouts were fitted: held-out AUC 0.93–0.996, and |cosine| with the felt-injury decoder at most 0.07.
+
+**Deviations and choices for the plan owner:**
+1. **Readout feature space.** The readout is fitted on centred activity with one global scale per layer, not on per-unit z-scores. In the smoke test, memory units with an unhurt SD of about 1e-5 are flipped by about 1 under the 0.70 probe. Per-unit scaling turns that into 10⁴-SD shifts and pushes of about 600 log-odds SDs.
+2. **Ridge strength.** It is chosen by single-level grouped 5-fold CV, and the held-out AUC and log-loss come from those same folds. Selecting among 5 values makes the scores negligibly optimistic. This was chosen over nested CV for speed.
+3. **Scene pooling.**
+   - C1 uses Analysis 1 pooled over both neutral scenes.
+   - C3 and the guard use the mean of the two scenes' injury effects; per-scene rows are also written.
+   - The natural trace for both scenes is the same seed's injured **no-animal** episode.
+4. **Dropped units.** Analysis 1 drops units with zero unhurt variance, as planned. The shift inside those units is reported as `numerator_dropped_units`. At `enc.uni.raw`, the whole felt-injury-carrying input group is silent when unhurt, so its entire shift falls in the dropped units.
+5. **Natural trace peaks.** The trace does not always peak at about 0.52. It reaches 0.70 at some checkpoints of agents that do not reach the bush, mostly the seed-43 ordinary agent (6 of 9 checkpoints).
+6. **`rnn.mod` and `rnn.out`** are identical, as Revision 1b says. **`rnn.state` equals `rnn.raw`** (the GRU emits its state).
+
+**Found, outside scope (owner: `bug-curator` → `senior-developer`).** Inside `nnx.jit`, `ObservationEncoder.breakdown` is iterated in sorted key order, but the flat observation is in config order (`src/models/recurrent_ppo_network.py:196-200, 255-259`). The hierarchical encoder's "unimodal" groups therefore receive scrambled slices: felt injury enters group slot 1, element 1, together with body temperature, extero-nociception and two thermoception values. Training and evaluation are both jitted, so behaviour is consistent, but per-sensor encoder groups are not per-sensor. This bears on C3's phrase "its input stage reads felt injury first". It is not in the Known Bugs registry.
+
+**Time:**
+- Capture: about 50 s per agent-checkpoint.
+- Analysis: 3–7 min per agent-checkpoint.
+- Analyses 1–2 in total: 58 min wall time with 8 parallel processes.
+- Analysis 3 prepare: 7 min with 3 processes.
+- Analysis 3 sweeps: 4.5 min, 540 checkpoint-evals.
+- Speed check: not applicable (analysis-only change; training's hot path untouched).
+
+Implemented by: developer
