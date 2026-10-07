@@ -131,6 +131,39 @@ P-main.
 `results/analysis/modulator_engagement/`: a table of the 14 pairs × (outcomes, own effects, E1γ, E1β,
 E1-natural, E2, E3, E4), the permutation null, and a manifest. A results section is appended below.
 
+## Revision 1a (2026-10-07, before any computation), settling the re-review's concerns
+
+These items override the sections above where they differ.
+
+- **E1 route: live mode with the shadow pass** (`scripts/analysis/obs_manipulation/run.py`).
+  - The acting network sees felt injury set to **0.70** from step 0. That is the settled value for a
+    constant injury of 70: the felt-injury kernel sums to 1 and perceptual noise is off in the saved
+    configs.
+  - The shadow network is fed the true observations of the *same* trajectory.
+  - E1 is the per-unit, per-step mean absolute difference in γ (and β) between the acting and shadow
+    networks. The comparison is teacher-forced along the manipulated path.
+  - The tool is extended to record per-unit absolute differences, and to keep the shadow's modulator
+    output.
+  - Replay mode is not used: it needs stored observation files, which none of these runs have.
+- **E1 sensitivity row:** felt injury follows the recorded trace of a natural injury-70 no-animal
+  episode, instead of the constant 0.70.
+- **E4 freeze target:** one target per checkpoint for both injury conditions, namely the per-unit
+  time-mean pooled over the injured and unhurt live passes in the rabbit scene. A separate mean per
+  condition would keep the steady shift that injury causes in gain, and so hide the effect being
+  measured.
+  - The weight-edited checkpoints are written to a separate directory, never over the originals, and
+    scored with the same eval sweep that produced the outcomes.
+  - E4 uses every fifth checkpoint of the 41-point grid, 9 checkpoints per run, to bound GPU time. The
+    budget is reported before launch.
+- **Outcome code pinning.**
+  - The 9 main pairs are scored from a `git worktree` at `10358a45`; extracting the file alone would break
+    its import of `highlight.py`. The result is checked against the working copy.
+  - The `l05fix` pairs are not in `10358a45`. They are scored from the working copy and labelled as such,
+    or from a commit by the owning session if one exists by then.
+- **Decision rule, stated in full:** P-main, P-own and the negative control are all computed on values
+  demeaned within each level, each with its own 216-arrangement null.
+- **Checkpoints:** E1 is averaged over each pair's own tested checkpoint set, where that has fewer than 41.
+
 ## Revision log
 
 - **Revision 1 (2026-10-07, before any computation)**, after the plan review (NOT READY;
@@ -172,5 +205,76 @@ Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = lik
 - 🟡 Commit this plan, and the `figures.py` state it reads through, before any engagement number exists.
 - Verified: the level-06 seed-42 identification is correct (170252 / 170314; the 16:01 folders have no
   checkpoints).
+
+*Reviewed by: plan-reviewer*
+
+## Feedback from plan-reviewer (re-review of Revision 1)
+
+*Reviewed 2026-10-07, before any computation. Verdict: **SOUND WITH CONCERNS**. Both critical findings
+from the first review are resolved: E1 is now teacher-forced, and the primary outcome (the rabbit-scene
+injury effect) shares no scene with E1. The decision rule, P-own threshold, negative control and the
+within-level null are all in place. Four edits remain. None changes the logic of the plan, but E1 and
+E4 cannot run as written.*
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+- 🟡 **E1 cannot run on the named tool path.** Replay mode needs a trajectory store, a parquet file of
+  recorded observations (`replay_mode.py:87-90`), and allows exactly one store, so one checkpoint, per
+  run. No store exists for any `healrep_*` run, and the sweep's `_scratch` holds environment snapshots,
+  not observations. Running E1 on 41 checkpoints means either (a) collecting 14 × 41 stores in the
+  unhurt no-animal scene and lifting the one-store-per-run limit, or (b) using **live mode**
+  (`run.py`, which already takes a test-scene `--world`, `--checkpoints all`, and a parity check against
+  the sweep's scratch) with `set` on felt injury. In (b), the shadow pass receives the true inputs of
+  the same trajectory, so acting-minus-shadow γ is still teacher-forced, only along the manipulated
+  trajectory. Pick one and write it in. Either way the developer change also needs: per-unit |Δγ|,
+  because live mode records only the acting pass's unit-mean gain (`run.py:134-137`) and replay records
+  a signed unit-mean difference (`replay_mode.py:63-64`); the shadow pass's modulator output (live mode
+  drops it at `run.py:115`); and a SCRIPTS_DEPENDENCY_MAP entry for any new driver script. Owner:
+  developer.
+- 🟡 **E4's freeze target as worded removes the wrong thing.** "Per-unit time-mean from the run's own
+  live pass *in that scene*" can be read as a separate mean for the injured scene and for the unhurt
+  scene. Freezing at those means would keep the tonic injury-driven shift in γ and remove only the
+  variation within each episode, so E4 would report "freezing removes little" even if the modulator
+  carries the whole effect. **Fix:** use one target for both injury conditions, the mean pooled over the
+  injury-0 and injury-70 passes (or the injury-0 mean), and state which. Implementation:
+  `run_freeze.py` rolls out only in the training world, so the practical route is to write the
+  weight-edited checkpoints to a **separate** directory (never over the originals) and score them with
+  the same dwell sweep that produced the outcomes. Then the outcome is measured by the same pipeline as
+  the outcome itself. State E4's checkpoint subset and budget: 41 checkpoints × 2 heads × 9+ runs is a
+  full re-sweep. Owner: experiment-designer / developer.
+- 🟡 **Pinning to `10358a45` excludes the out-of-sample pairs.** At that commit `LEVELS` has no `l05fix`
+  (`figures.py:42` at 10358a45). The level-05 fixed-start pairs exist only in the uncommitted working
+  copy, so P-out cannot be computed from the pinned code. The working-copy diff only adds `l05fix`
+  entries and a docstring paragraph; `leaf`, `effect` and `MEASURES` are unchanged, and the imported
+  `f7b_across_runs/highlight.py` has not changed since that commit. **Fix:** compute the main set from
+  the pinned commit, using a `git worktree` at 10358a45 (extracting the file alone breaks its
+  `HERE`-relative import of `highlight`). Assert that it matches the working copy on those 9 pairs, and
+  take `l05fix` from a commit that adds it (ask the owning session to commit) or label it as
+  working-copy-derived. Owner: experiment-analyzer.
+- 🟢 **Decision-rule basis is unstated.** Say whether ρ for P-main, P-own and the negative control is
+  computed on the within-level-demeaned values (it should be, all three the same way, with the 216-way
+  null as the p-value for each). As written, "demeaned" appears only in the permutation sentence.
+  (p ≤ 0.05 is attainable: the smallest possible p is 1/216.)
+- ❓ **"Settled value" is determinable, and it is 0.70.** Felt injury is injury history convolved with a
+  normalised kernel (length 12, kernel[0] = 0, `config_loader.py:2507`). Perceptual noise is off in the
+  saved run config. So a constant injury of 70 settles at 70 / max_injury 100 = **0.70**, and the plan
+  should write the number. As a counterfactual it is reasonable but stronger than anything the agent
+  meets: real felt injury starts at 0 at reset and climbs over about 12 steps, and in the real injured
+  episode it then falls as the agent heals, at 5 points per step in a bush. A constant 0.70 from step 0
+  is therefore off-distribution for the first few steps and longer-lasting than in reality. Suggested
+  sensitivity row: the same Δγ with the recorded felt-injury trace of the injury-70 no-animal episode,
+  indexed by step, in place of the constant.
+- 🟢 Some pairs have fewer than 41 tested checkpoints (`figures.py` notes "testing stopped before
+  10 M"). Use each pair's own checkpoint set for E1, so engagement and behaviour are averaged over the
+  same checkpoints.
+
+**Resolved from the first review:** circular E1 (now teacher-forced); predator guard (rabbit-scene
+injury effect primary, shared baseline reported); G dropped; P-own threshold and negative control
+added; within-level null; 41 checkpoints; raw E1; critic dropped; explicit run list; level-05
+own-scene row; plan committed before computation (6a50a4a9).
+
+**Cost of being wrong:** low. Nothing is trained. The worst case is a few GPU-hours of E4 re-sweeps
+spent on a freeze target that cannot detect the effect, and a misleading "the modulator does not carry
+the injury effect" caveat. E1 and P-main are sound once the tool route is chosen.
 
 *Reviewed by: plan-reviewer*
