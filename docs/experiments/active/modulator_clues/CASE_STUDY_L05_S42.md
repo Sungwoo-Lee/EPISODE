@@ -178,6 +178,22 @@ checks from `teacher_forced.py`, plus a flag for the shadow orientation. No `src
 modulator's own memory state is already recorded. File changes go into
 `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` in the same commit.
 
+## Revision 1b (2026-10-07, before any computation), after the re-review (SOUND WITH CONCERNS)
+
+- **C3 has its own rule.**
+  - In the case modulated agent, the encoder freeze lowers the injury effect at at least 7 of 9 checkpoints
+    with the guard passed.
+  - In the same-seed modulated agent, the same holds at at least 6 of 9.
+  - In the **seed-43 modulated agent**, added as the contrast with the same tooling, it does not hold (fewer
+    than 6 of 9, or reversed).
+- **Chance across cells.** Each cell passes by chance about 1 time in 8, so across the three primary cells the
+  chance that at least one passes by luck is about 1 in 3, which is 1 − (7/8)³.
+- **Comparability check.** "Reproduced" means an exact match: same seeds, greedy actions, identical bush
+  dwell per episode.
+- The sections of the original plan that Revision 1 overrides are **superseded**: Analysis 1's orientation and
+  scale, Analysis 2's readout and pooling, Analysis 3's target and guard, and the first reading rule. At the
+  memory layer, the "after the modulator" value is the layer's output, so `rnn.mod` is the same as `rnn.out`.
+
 ## TODO (after 1–3)
 
 4. **Similarity across the six agents.** CKA and linear predictivity, layer by layer. Do the two seed-42
@@ -226,5 +242,54 @@ Moderate edits:
 Verified: the case pair uses the same neutral probe folder and 30 episodes as the replication pairs,
 and E4 live passes reproduced its rabbit-scene dwell. Still open: the no-animal scene under current
 code, and how the saved config loads.
+
+Reviewed by: plan-reviewer
+
+## Feedback from plan-reviewer: re-review of Revision 1 (2026-10-07)
+
+**Verdict: SOUND WITH CONCERNS.** Both critical findings are resolved, and so are most of the moderate
+ones. Three small edits remain. None of them blocks the tooling work.
+
+Resolved:
+- **Readout.** It is fitted on unhurt episodes only, with arrival-only labels on off-bush steps. Censored
+  tails are dropped, and the bush cells match the bush-dwell measure. It is fitted per checkpoint and
+  scored with AUC and log-loss. The cosine to an injury decoder is reported for each layer. The
+  sensitivity row uses felt injury as a covariate.
+- **Orientation.** The acting agent follows the true observations, and the shadow is the one injured.
+  The reversed orientation is kept only as a labelled sensitivity row.
+- **Normalisation and probes.** The scale is the spread across states, with a fixed window and dead units
+  dropped. The natural trace is co-primary, and 0.70 is labelled a stress probe.
+- **Primary cells and evidence.** Three primary cells (C1 to C3) are named, and the pair is the unit of
+  evidence. The actor-layer push is a consistency check, and selection bias is stated.
+- **Analysis 3.** The guard is now absolute (under half the live effect). A failed guard reads
+  "undetermined (disruption)". A log-odds row and survival in steps are reported beside it. The freeze
+  target pools both scenes, and the replication modulated agent is included. The critic freeze is a
+  bit-identical null control that stops the analysis if it fails.
+- **Comparability.** The comparability check is fatal. The predator scene is excluded. The tooling scope
+  is correct, and the dependency map is paired.
+- **C1 framing.** I checked the code. At the memory site the modulator scales only the emitted output and
+  leaves the carry untouched (`src/models/recurrent_ppo_network.py:623-630`). So "the modulator does not
+  act on the memory state directly" is right. Note that the carry still receives the modulated encoder
+  output.
+
+Remaining edits (owner: experiment-designer):
+1. 🟡 **C3 has no reading rule it can satisfy.** The restated rule compares the modulated agent with its
+   ordinary partner, and requires the effect to be absent in the seed-43 pair. Analysis 3 runs on
+   modulated agents only, and not on seed 43. Write C3's own rule: in the case agent, the injury effect
+   is lower at 7 of 9 checkpoints *and* the guard passes; the same holds in the replication modulated
+   agent at 6 of 9. Either add the seed-43 modulated agent as the contrast (same E4 tooling, cheap), or
+   state that C3 has no negative pair.
+2. 🟡 **Chance across the three cells.** About 1 in 8 per cell means roughly a 1-in-3 chance
+   (1 − (7/8)³) that at least one of C1 to C3 passes by chance. Add this to the "1 time in 8" sentence.
+3. 🟢 **Cosmetic and stale text.**
+   - Say what "reproduced" means in the comparability check: an exact match is expected, given the
+     same seeds and greedy actions; otherwise give a tolerance.
+   - Lines 50–52 ("does not record [the modulator GRU] yet") and lines 103–105 (the old guard) are
+     overridden by Revision 1. A one-word "superseded" marker there would stop a reader from acting on
+     them.
+   - At the memory site, `.mod` has no activation after it, so it equals `.out`.
+
+Cost of being wrong: low. Without edit 1, C3 can be called a "candidate" on the case agent alone,
+which is the selected and biased one. That is a wording risk, not a rerun.
 
 Reviewed by: plan-reviewer
