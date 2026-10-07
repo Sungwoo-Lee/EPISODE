@@ -183,6 +183,22 @@ def test_cell_path_forms_and_conflict(tmp_path):
     assert EB.cell_path(cond, str(STEP)) == cond / f"{STEP}.zip"
 
 
+def test_step_names_lists_both_forms_once(tmp_path):
+    """Steps as folder, as archive, or both are each listed once; bookkeeping and partial archives
+    are ignored; order equals sorted(os.listdir) on the step strings."""
+    cond = tmp_path / "cond"
+    for s in (100, 2000):
+        _write_cell(cond / str(s), "dreamer", n_ep=2)
+    EB.pack(cond / "2000", cond / "2000.zip")                 # both forms
+    c3 = _write_cell(tmp_path / "x" / "30", "dreamer", n_ep=2)
+    EB.pack(c3, cond / "30.zip")                              # archive only
+    (cond / "_run_markers").mkdir()
+    (cond / "40.zip.partial-h-1").write_bytes(b"")
+    (cond / "50.zip").mkdir()                                  # a folder named like an archive
+    (cond / "7").write_bytes(b"")                              # a file named like a step
+    assert EB.step_names(cond) == ["100", "2000", "30"] == sorted(["100", "2000", "30"])
+
+
 def test_cell_path_raises_on_dir_newer_than_zip(tmp_path):
     cond = tmp_path / "cond"
     cell = _write_cell(cond / str(STEP), "rppo")

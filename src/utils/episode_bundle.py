@@ -13,6 +13,7 @@ Format
 
 API
     cell_path(cond_dir, step)       -> archive, legacy folder, or None (raises CellConflict)
+    step_names(cond_dir)            -> steps present as folder or archive (strings, sorted)
     members(cell, pattern)          -> relative member names, ordered like sorted(dir.glob(pattern))
     open_member / load_recording / load_npz
     pack(src_dir, zip_path)         -> manifest; atomic (partial file, verify, then rename)
@@ -180,6 +181,22 @@ def cell_path(cond_dir, step) -> Optional[Path]:
     if has_d:
         return d
     return None
+
+
+def step_names(cond_dir) -> List[str]:
+    """Checkpoint steps present in `cond_dir`, in either form (``<digits>/`` folder or
+    ``<digits>.zip`` archive), each once, as strings sorted like ``sorted(os.listdir(...))``.
+    Anything else (``*.zip.partial-*``, ``_run_markers``, ...) is ignored. Resolve each with
+    cell_path(cond_dir, step) before reading it. Plan F8: readers enumerate steps through this
+    so that archive-only cells are not silently skipped by an ``isdigit()`` filter."""
+    out = set()
+    for e in os.scandir(cond_dir):
+        if _DIGITS.fullmatch(e.name) and e.is_dir():
+            out.add(e.name)
+        elif (e.name.endswith(BUNDLE_SUFFIX) and _DIGITS.fullmatch(e.name[:-len(BUNDLE_SUFFIX)])
+              and e.is_file()):
+            out.add(e.name[:-len(BUNDLE_SUFFIX)])
+    return sorted(out)
 
 
 def members(cell, pattern: str = DEFAULT_EPISODE_PATTERN) -> List[str]:
