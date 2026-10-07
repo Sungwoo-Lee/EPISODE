@@ -1,0 +1,39 @@
+# NO-HEALING re-test (body.recovery_base_rate 0.0 in the test scene only) of the level-05 replication and fixed-start agents.
+# Scenes: behavior_probes/no_healing/ (copies of the healrep scenes changing only the healing rate). Same episodes/conditions as healrep.
+name: noheal_l05_neutral
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_healrep_noheal/neutral
+probe: configs/environment/experiment/behavior_probes/no_healing/thermal__neutral_clean
+conditions: all
+episodes: 30
+nodes:
+- 104
+x_axis: steps
+plot_measures:
+- bush_hiding
+- survival_steps
+runs:
+- label: l05_modulated_s42
+  path: results/JAX_RecurrentPPO/20261005-160241_rppo_healrep_l05_t16quad_s42
+- label: l05_ordinary_s42
+  path: results/JAX_RecurrentPPO/20261005-160124_rppo_healrep_l05_t1none_s42
+- label: l05_modulated_s43
+  path: results/JAX_RecurrentPPO/20261005-160244_rppo_healrep_l05_t16quad_s43
+- label: l05_ordinary_s43
+  path: results/JAX_RecurrentPPO/20261005-160125_rppo_healrep_l05_t1none_s43
+- label: l05_modulated_s44
+  path: results/JAX_RecurrentPPO/20261005-160248_rppo_healrep_l05_t16quad_s44
+- label: l05_ordinary_s44
+  path: results/JAX_RecurrentPPO/20261005-160126_rppo_healrep_l05_t1none_s44
+- label: l05fix_modulated_s42
+  path: results/JAX_RecurrentPPO/20261006-074133_rppo_healrep_l05fix_t16quad_s42
+- label: l05fix_ordinary_s42
+  path: results/JAX_RecurrentPPO/20261006-074127_rppo_healrep_l05fix_t1none_s42
+- label: l05fix_modulated_s43
+  path: results/JAX_RecurrentPPO/20261006-074134_rppo_healrep_l05fix_t16quad_s43
+- label: l05fix_ordinary_s43
+  path: results/JAX_RecurrentPPO/20261006-074127_rppo_healrep_l05fix_t1none_s43
+- label: l05fix_modulated_s44
+  path: results/JAX_RecurrentPPO/20261006-074134_rppo_healrep_l05fix_t16quad_s44
+- label: l05fix_ordinary_s44
+  path: results/JAX_RecurrentPPO/20261006-074127_rppo_healrep_l05fix_t1none_s44
