@@ -8,9 +8,9 @@ last_updated: 2026-10-07
 
 # Behaviour-test sweep: score on the node, bundle the raw episodes, migrate the old folders
 
-> **Status**: PLANNED (not implemented; awaiting plan review and user approval)
+> **Status**: PLANNED, revision 1 (answers the plan review's NOT READY verdict; user decisions D1–D5 taken 2026-10-07; not implemented)
 > **Opened**: 2026-10-07
-> **Related**: [scripts/eval/dwell_sweep/README.md](../../../../scripts/eval/dwell_sweep/README.md) (the pipeline this changes) · [[EVAL_ROLLOUT_BATCHING_PERF]] (the batched test path) · [[SCRIPTS_DEPENDENCY_MAP]] (maintenance contract) · [[EXPERIMENT_EVAL_DURING_TRAINING]] (a second caller of the same scoring function)
+> **Related**: [scripts/eval/dwell_sweep/README.md](../../../../scripts/eval/dwell_sweep/README.md) (the pipeline this changes) · [[EVAL_ROLLOUT_BATCHING_PERF]] (the batched test path) · [[SCRIPTS_DEPENDENCY_MAP]] (maintenance contract) · [[EXPERIMENT_EVAL_DURING_TRAINING]] (a second caller of the same scoring function) · plan review: [[plan_sweep_bundles]]
 
 ---
 
@@ -18,11 +18,15 @@ last_updated: 2026-10-07
 
 **What the pipeline does.** The behaviour-test sweep takes a set of trained agents and, for every saved checkpoint, plays 30 test episodes in each of 12–40 fixed test scenes ("a predator is present, agent starts injured", "no animal, agent unhurt", …). From every episode it computes 11 behaviour measures (time hiding in the bush, closest approach to the animal, survival time, …) and writes one row per checkpoint into a per-scene table. Those tables feed the results pages.
 
-**The problem (measured 2026-10-07).** The test machines write every episode to the shared NAS as separate small files — in fact about **64 files per checkpoint × scene** (30 episode recordings of ~8 KB, 30 compact episode arrays of ~2.5 KB, plus 4 metadata files). One sweep of 6 agents × 51 checkpoints × 12 scenes is ~3,700 checkpoint×scene cells, i.e. **~235,000 files**; this morning's four sweeps wrote ~680,000. Playing the episodes took only 13–20 minutes on one node per sweep, but the separate scoring step then re-read every file over the NAS from a single machine, taking 8–20 minutes per sweep. One scoring run died without leaving any trace and nobody noticed for three hours.
+**The problem (measured 2026-10-07).** The test machines write every episode to the shared NAS as separate small files — about **64 files per checkpoint × scene**. One sweep of 6 agents × 51 checkpoints × 12 scenes writes ~235,000 files; this morning's four sweeps wrote ~680,000. Playing the episodes took 13–20 minutes per sweep, but the separate scoring step then re-read every file over the NAS from one machine (8–20 minutes). One scoring run died without leaving any trace and nobody noticed for three hours.
 
-**What this plan does.** (1) Score each checkpoint on the test machine itself, right after it plays the episodes, and write one small results table per machine; the final step just merges those tables (seconds). (2) Keep every raw episode, but packed into **one archive file per checkpoint × scene** instead of 64 loose files — the archive holds the exact same files, byte for byte. (3) Prove on a finished sweep that the new path reproduces today's tables exactly. (4) Convert every existing test folder to the archive format, verifying each archive against the originals before any original is deleted. (5) Spread each sweep over all listed machines and make a dead worker or a dead scoring step visible within minutes instead of hours.
+**What this plan does.** (1) Each test machine packs a checkpoint's episodes into **one archive file per checkpoint × scene** (the same files, byte for byte), then scores them, and writes one small results table; the final step only merges tables (seconds). (2) Converts every existing test folder to archives, checking each archive against the originals — on a different machine from the one that packed it — before any original is deleted. (3) Makes a dead test machine or a dead scoring step visible within minutes.
 
-**What it does not change.** The episodes themselves (same test program, same seeds, same scenes), the 11 measures and their formulas, the per-scene tables the pages read, the provenance snapshot each launch saves, or the incremental "only test new checkpoints" rule.
+**Why the order matters (the review's two blocking findings).** Another session's case-study tools check results *exactly* against the raw episodes, but only when they find an episode *folder*; given an archive they silently fall back to a weaker check. So those tools are switched to read archives **first**, and verified, before the test machines start writing archives. And the worker script is not touched while any sweep is still running on it (three were running at 16:03 today), because a running shell script reads its own file as it goes.
+
+**Another session is mid-job on some of these folders.** The neuromodulation session's case study is computing now and will next run its own sweeps. Its folders are on hold — not packed, not deleted — until it says it is done (rule E4), its sweeps count as live sweeps for the "do not touch the worker" rule, and its tools are switched only after it gives the go.
+
+**What it does not change.** The test program, seeds and scenes; the 11 measures and their formulas; the per-scene tables the pages read; the incremental "only test new checkpoints" rule.
 
 ---
 
@@ -42,54 +46,68 @@ Measured on `results/eval/avoidance/metrics_history_rppo_healrep/l05fix_own/_scr
                                                            = 64 files, 5 directories, ~436 KB
 ```
 
-`<run_tag>` varies by vintage (`20261006-074133_rppo_healrep_l05fix_t16quad_s42`, or `models` in older sweeps such as `metrics_history_rppo_basic04_variants`). Dreamer cells have only `recordings/` + `metadata.json` (no `episodes/*.npz`, no `online_replay.json`), and episode numbers start at 1. Any bundling therefore has to be **layout-agnostic**: pack whatever is under the cell directory, keyed by its relative path.
-
-The user's brief named the `.npz` files; the scoring step actually reads the larger `.rec.gz` recordings (`run_sweep.py::_measure_cell` globs `**/episode_*.rec.gz`). Both are kept in the bundle.
+`<run_tag>` varies by vintage (`20261006-074133_rppo_healrep_l05fix_t16quad_s42`, or `models` in older sweeps). Dreamer cells have only `recordings/` + `metadata.json` and episode numbers start at 1. Bundling is therefore **layout-agnostic**: pack whatever is under the cell directory, keyed by relative path. The scoring step reads the `.rec.gz` recordings (`run_sweep.py::_measure_cell`); both those and the `.npz` arrays are kept.
 
 ### A2. Where the time goes
 
-- Workers: `sweep_worker.sh` → one `eval_rollout.py --batched --record --config-list` per checkpoint (all pending scenes in one process). 300 lines in 762–1172 s on one node each, this morning (`_run_markers/prog_*`).
-- Scoring: `run_sweep.py::aggregate()` runs on the launching container after `poll_done()`. For every (run, scene) group with pending work it **re-globs every step directory of that group, including all previously scored steps**, decompresses every recording and recomputes every row. That is 235k NAS file opens per collation of a full sweep, every time — the steady-state cost does not shrink with incremental launches.
+- Workers: `sweep_worker.sh` → one `eval_rollout.py --batched --record --config-list` per checkpoint. 300 lines in 762–1172 s on one node each, this morning.
+- Scoring: `run_sweep.py::aggregate()` runs on the launching container after `poll_done()` and **re-globs every step directory of each pending (run, scene) group, including previously scored steps** — 235k NAS file opens per collation of a full sweep, every time.
 - `scripts/analysis/studies/f7b_across_runs/aggregate_only.py` calls the same `aggregate()`.
 
 ### A3. Why a death goes unnoticed
 
-- `poll_done()` loops forever until `_run_markers/done_<node>` appears. A worker killed by OOM, a node reboot, or a lost SSH session never writes it, and nothing else is checked — the driver waits silently.
-- `aggregate()` writes no marker at all; if the driver process is killed during collation there is no record that collation started.
-- `sweep_worker.sh` sends each failed `eval_rollout.py` call to `fail_<node>`, but the driver never reads that file.
+- `poll_done()` loops forever until `_run_markers/done_<node>` appears; a killed worker never writes it.
+- `aggregate()` writes no marker; a killed collation leaves no record.
+- `sweep_worker.sh` records failed calls in `fail_<node>`, which the driver never reads.
+- The eval call's output goes to `/dev/null` and Python stdout to a file is block-buffered, so a node-side death leaves an empty log. **The cause of this morning's silent death** (`healrep/l05fix_grid`: workers done 11:42, no CSVs, empty `run_command` logs) **is not yet known**; Phase 0 step P0.4 makes one bounded attempt to find it (node `dmesg` / journal for an OOM kill of the 32-process pool, CIFS soft-mount I/O errors in the kernel log) and records the result. The new design does not depend on the answer: unbuffered logs, a collation heartbeat and the coverage check (F4) make any recurrence visible.
 
 ### A4. Every reader of the per-episode files (consumer inventory)
 
-Grep over `scripts/`, `src/`, `tests/` (worktrees excluded) for `_scratch`, `rec.gz`, `load_episode`, `episodes/*.npz`:
+Grep over `scripts/`, `src/`, `tests/` for `_scratch`, `rec.gz`, `load_episode`, `episodes/*.npz`. Re-run in Phase 0 (P0.3), including other worktrees, because the list is the input to the deletion rule (F7).
 
-| # | Reader | What it reads from a sweep cell | Planned action | Owner |
+**Class S — sweep cells** (`…/_scratch/<label>/<cond>/<step>/`):
+
+| # | Reader | What it reads | Action | Phase |
 |---|---|---|---|---|
-| R1 | `scripts/eval/dwell_sweep/run_sweep.py` `_measure_cell`, `aggregate` | `**/episode_*.rec.gz` | rewrite (this plan) | this plan |
-| R2 | `scripts/analysis/studies/f7b_across_runs/aggregate_only.py` | via R1 | rewrite to the new collation | this plan |
-| R3 | `scripts/eval/experiment_eval_checkpoint.py` (during-training eval, launched by `train.py`) | calls `_measure_cell(dir)` on its own output dirs | **no change**; `_measure_cell` keeps accepting a directory | this plan (regression test only) |
-| R4 | `scripts/analysis/basic_behaviour/probe_pond.py` `episodes_in` | `*/*/episodes/*.npz` + matching `.rec.gz` | port to bundle reader | this plan |
-| R5 | `scripts/analysis/studies/basicq2_waves/_traj.py` | `<ck>/*/*/recordings/*/episode_*.rec.gz` | port | this plan |
-| R6 | `scripts/analysis/studies/thermal_probes/t04_variance_budget.py` | `**/episode_*.rec.gz` | port | this plan |
-| R7 | `scripts/analysis/studies/injury_dependence/scene_steps.py` | `<ck>/*/<ck>/recordings/<ck>/episode_*.rec.gz` | port | this plan |
-| R8 | `scripts/analysis/studies/injury_dependence/run_manipulations.py` | passes a cond dir to `obs_manipulation/run.py --check-against-sweep` | no change once R9 is ported | — |
-| R9 | `scripts/analysis/obs_manipulation/run.py` `_parity` | `<step>/*/<step>/recordings/<step>/episode_*.rec.gz`; raises if count ≠ N | **port required — FLAGGED: owned by the "Training: neuromodulation" session, which has 95+/26− uncommitted lines in this file right now** | other session |
-| R10 | `scripts/analysis/case_l05_s42/case.py` `_parity` | `os.path.isdir(scratch/<step>)` → exact parity via R9, **else silently falls back to a weaker CSV-mean check** | **port required — FLAGGED: other session, file untracked** | other session |
-| R11 | `tests/analysis/test_case_l05_s42.py` | same `isdir` gate → parity block silently skipped | port — FLAGGED, other session, untracked | other session |
-| R12 | `tests/analysis/test_modulator_engagement.py:165` | same `isdir` gate | port — FLAGGED, most likely the same session (modulator engagement work) | other session (confirm) |
-| R13 | `scripts/eval/trajectory_story.py`, `render_recordings.py`, `render_recordings_v2.py`, `render_layout_audit.py` | a recordings **directory** (`run_meta.pkl` + `episode_*.rec.gz`) | no code change; use the new `extract` subcommand first; README + `trajectory-story` skill note | this plan (docs) |
-| R14 | `scripts/behavior_measures/avoidance_stats_heatmap.py` collect mode, `motif_cluster.py`, `parity_check_eval_rollout.py`, `continual_forgetting_matrix.py` | direct `eval_rollout.py` outputs under `results/eval/<name>/models/…`, not sweep cells | none — out of migration scope | — |
+| R1 | `scripts/eval/dwell_sweep/run_sweep.py` `_measure_cell`, `aggregate` | `**/episode_*.rec.gz` | rewrite | 3 |
+| R2 | `scripts/analysis/studies/f7b_across_runs/aggregate_only.py` | via R1 | rewrite to the new collation | 3 |
+| R3 | `scripts/eval/experiment_eval_checkpoint.py` (during-training eval, launched by `train.py`) | `_measure_cell(dir)` on its own output dirs | no change; `_measure_cell` keeps accepting a directory | 3 (regression test) |
+| R3b | `scripts/analysis/basic_behaviour/probes.py:136` | imports `list_checkpoints, resolve_run_dir` from `run_sweep` (no episode reads) | none; its import chain changes, so its test must still pass | 3 |
+| R4 | `scripts/analysis/basic_behaviour/probe_pond.py` `episodes_in` | `*/*/episodes/*.npz` + `.rec.gz` | port | 2 |
+| R5 | `scripts/analysis/studies/basicq2_waves/_traj.py` | `<ck>/*/*/recordings/*/episode_*.rec.gz` | port | 2 |
+| R6 | `scripts/analysis/studies/thermal_probes/t04_variance_budget.py` | `**/episode_*.rec.gz` | port | 2 |
+| R7 | `scripts/analysis/studies/injury_dependence/scene_steps.py` | `<ck>/*/<ck>/recordings/<ck>/episode_*.rec.gz` | port | 2 |
+| R8 | `scripts/analysis/studies/injury_dependence/run_manipulations.py` | passes a cond dir to R9 | none once R9 is ported | — |
+| R9 | `scripts/analysis/obs_manipulation/run.py` `_parity` (~L407–415) | `<step>/*/<step>/recordings/<step>/episode_*.rec.gz`; raises if count ≠ N | port — **neuromodulation session's file** | 2 |
+| R10 | `scripts/analysis/case_l05_s42/case.py` `_parity` (L147) | `os.path.isdir(scratch/<step>)` → exact parity via R9, **else silently a weaker CSV-mean check** | port — **neuromodulation session's file** | 2 |
+| R11 | `tests/analysis/test_case_l05_s42.py:166` | calls `om._parity` **unconditionally** — on an archive-only cell it fails loudly, not silently (corrected per review L2) | port so it passes on archives — **neuromodulation session's file** | 2 |
+| R12 | `tests/analysis/test_modulator_engagement.py:166` | `isdir` gate → exact-parity block **silently skipped** | port — **neuromodulation session's file** | 2 |
 
-**The hazard behind R10–R12.** Those readers test for the *directory* `…/<step>`. Once a cell becomes `<step>.zip` they do not fail — they quietly switch to a weaker check (R10) or skip a check (R11, R12). The pilot folder the user named (`healrep/l05fix_own`) is exactly the sweep those tools read. **Deleting its originals before R9–R12 read bundles would silently weaken another session's parity checks.** The plan therefore puts a hard hold on deletion for every root those tools read until the other session confirms the port (Phase M, step M1.4).
+**Class D — direct test-program outputs** (`results/eval/<name>/models/<ck>/{episodes,recordings}/…`, written by `eval_rollout.py` outside the sweep; 19 folders besides `avoidance/` under `results/eval/` today):
 
-### A5. Design choices and the alternatives rejected
+| # | Reader | Action | Phase |
+|---|---|---|---|
+| R13 | `scripts/eval/trajectory_story.py`, `render_recordings.py`, `render_recordings_v2.py`, `render_layout_audit.py` — read a recordings **directory** | accept a `.zip` path: extract to a temp dir through `EB.extract` and proceed (thin wrapper at argument parsing; no logic change) | 2b |
+| R14 | `scripts/behavior_measures/avoidance_stats_heatmap.py` collect mode, `motif_cluster.py`, `parity_check_eval_rollout.py`, `continual_forgetting_matrix.py` | port the glob to `EB.cell_path` / `EB.members` | 2b |
 
-| Choice | Picked | Rejected and why |
+**The hazard behind R10–R12 (review finding C1).** Those readers test for the *directory* `…/<step>`. If any archive-only cell appears in a folder they read — whether from migration *or from a new sweep run by the new worker* — they quietly weaken (R10) or skip (R12) the exact check. Hence the order: readers switched and verified (Phase 2) **before** the worker switch (Phase 3 lands) and before any deletion (Phase M).
+
+### A5. Live sweeps and the worker file (review finding C2)
+
+Bash reads a running script from disk in pieces. The three no-healing sweeps launched 16:03 on nodes 104/105/112 (`configs/eval_sweeps/healrep_noheal/*`) run the current `sweep_worker.sh`; its last lines (progress line + `touch done_$NODE`) are read only after the episodes finish. Editing the file in place in the meantime can leave those sweeps without a `done_` marker, with their drivers waiting forever, or run an arbitrary fragment. At 16:42 the `grid` sweep had `done_105` but not `done_112`, and `neutral` had `done_104`; the state must be re-checked at implementation time (P0.1, gate C2-gate). Python drivers (`run_sweep.py`) are safer — the module is read at start — but the user's rule is **no edit to either file while any sweep is live**. In addition, every launch from now on runs a **copy** of the worker stored in its provenance folder (F4.6), so no later edit can reach a running worker.
+
+### A6. Design choices (decisions D1–D5 resolved)
+
+| Choice | Picked (user decision 2026-10-07) | Rejected and why |
 |---|---|---|
-| Bundle unit | **one archive per checkpoint × scene cell** (`<cond>/<step>.zip`, replacing `<cond>/<step>/`) | per worklist line (one checkpoint, all scenes): 12× fewer files still, but a checkpoint can be pending on only some scenes, so re-tests would rewrite other scenes' data; every consumer would need cell lookups inside a larger archive. Per (run, scene) across all checkpoints: an append-only archive rewritten on every incremental launch — a write-amplification and corruption hazard. Per cell gives 64× fewer files and maps 1:1 onto today's directory, so every consumer change is "directory → archive of the same tree". |
-| Bundle format | **uncompressed ZIP (`ZIP_STORED`) whose members are the original files byte for byte**, named by their path relative to the cell directory | a re-encoded container (one big npz / parquet): migration could only be verified by re-parsing, not by checksum, and every reader would need a new decoder. The members are already compressed (gzip / npz), so storing them uncompressed costs nothing. Python's `zipfile` reads members as file objects, and `gzip.open` accepts a file object, so `load_episode` works unchanged. |
-| Where scoring happens | **on the node, in the same worker job, immediately after the test process, from a node-local staging copy (`/tmp`)** | inside `eval_rollout.py` from in-memory episodes (the brief's literal wording): Dreamer's batched path writes its recordings inside `src/algorithms/dreamer_srl/eval.py` and returns no recorder objects, so the two algorithms would need two scoring paths and an edit to the Dreamer source; it would also put the 11-measure function inside the generic test program that six other callers use. Scoring the staged files reuses the **identical function on identical bytes** as today's collation (exact by construction), touches neither `eval_rollout.py` nor the Dreamer source, and still never reads the NAS. Cost: one short Python start per checkpoint line (measured in the speed check). **Open decision D1.** |
-| Where bundles live | **unchanged location under `_scratch/`** (`_scratch/<label>/<cond>/<step>.zip`) | renaming to `_episodes/` is clearer (the files are now kept, not scratch) but breaks R4–R12 paths twice. **Open decision D2.** |
-| Results table | **one CSV per node per launch** at `_scratch/_rows/<launch_id>/rows_<node>.csv`, assembled from per-line pieces | one shared table appended by all nodes: concurrent appends over the NAS are not safe; file locks over SMB are unreliable. |
+| Bundle unit | one archive per checkpoint × scene cell (`<cond>/<step>.zip`, replacing `<cond>/<step>/`) | per checkpoint line (re-tests would rewrite other scenes' data); per (run, scene) append-only archive (write amplification, corruption hazard) |
+| Bundle format | uncompressed ZIP (`ZIP_STORED`), members = original files byte for byte, named by path relative to the cell | a re-encoded container: verifiable only by re-parsing, not by checksum |
+| **D1** where scoring happens | **on the node, in the same worker job, right after the test program, from a node-local staging copy — PACK FIRST, THEN SCORE** (review M3) | inside `eval_rollout.py`: a second scoring path for Dreamer and edits to two shared programs. Score-then-pack: a scoring error would delete the only copy of the episodes at worker exit |
+| **D2** where archives live | **keep `_scratch/`**; the README stops calling it "transient; safe to delete" | `_episodes/`: every reader's path changes twice |
+| **D3** migration scope | **all test folders under `results/eval/`** (class S and class D), no user approval list. Safeguards kept: M0 inventory runs and is reported (not a gate); automatic exclusion rules E1–E4 (F7) | an approval list (user declined) |
+| **D4** backup | one copy of all small irreplaceable files (per-scene CSVs, figures, `_provenance/`; MBs) before the first delete; the pilot additionally passes an independent cross-machine check (pack on one node; system `unzip` + `diff -r` on a different node) before its first deletion; every `delete` runs on a different machine from the `pack` of that archive | full copy of the pilot root (1.6 GB of the same slow I/O) |
+| **D5** who ports R9–R12 | **this plan's `developer`**, as Phase 2, before the worker switch; notifies the "Training: neuromodulation" session first and checks `git diff` for its uncommitted hunks; a reader class counts as switched only after an `exact` result on an archive-only cell | that session ports them (user chose otherwise) |
+| Results table | one CSV per node per launch at `_scratch/_rows/<launch_id>/rows_<node>.csv` | a shared table appended by all nodes (unsafe over SMB) |
 
 ---
 
@@ -100,243 +118,261 @@ Grep over `scripts/`, `src/`, `tests/` (worktrees excluded) for `_scratch`, `rec
 ```
 run_sweep.py SPEC [--nodes 101,103,…]
   build_groups (unchanged: incremental skip by CSV max step)
-  lpt_partition over ALL listed nodes (unchanged algorithm)
-  write_provenance (unchanged) ──► launch_id = provenance snapshot folder name (YYYYMMDD_HHMMSS)
-  launch sweep_worker.sh <worklist> <node> <npar> <episodes> <launch_id>      (one per node)
+  lpt_partition over listed nodes (unchanged algorithm)
+  write_provenance ──► launch_id = provenance folder name; ALSO copies sweep_worker.sh + finish_cells.py
+                       + cell_measures.py into _provenance/<launch_id>/worker/ and launches THAT copy
+  launch <copy>/sweep_worker.sh <worklist> <node> <npar> <episodes> <launch_id>      (one per node)
         per worklist line (one checkpoint, k pending scenes):
-          eval_rollout.py --config-list (outputs → node-local /tmp staging, one dir per scene)   [unchanged program]
-          finish_cells.py: for each scene → score staged recordings (cell_row)
-                                         → pack staging dir into <cell>.zip.partial on NAS, verify, rename to <cell>.zip
-                                         → append row to piece _rows/<launch_id>/<node>/<line>.csv (atomic)
-                                         → delete staging
-        heartbeat _run_markers/alive_<node> every 60 s; EXIT trap writes exit_<node>
-        end: concatenate pieces → _rows/<launch_id>/rows_<node>.csv ; touch done_<node>
-  poll_done: done / dead (exit without done) / stalled (heartbeat > 10 min old) / never started (5 min)
-  collate(launch_id): markers collate_<launch_id>.started → read rows_<node>.csv for this launch's nodes
-        → check every worklist cell has exactly one row with n_episodes == episodes
-        → merge into <out>/<label>/<cond>.csv (same columns, same string formatting) → .done / .failed
+          eval_rollout.py --config-list (outputs → node-local /tmp staging)      [unchanged program]
+          finish_cells.py, per scene:  pack staging → <cell>.zip (verify, then rename into place)
+                                       → score the ARCHIVE (cell_row)            [pack first: M3]
+                                       → row piece _rows/<launch_id>/<node>/<line>.csv (atomic)
+          worker deletes the line's staging only after finish_cells exits 0
+        heartbeat loop (dies with the worker) writes alive_<node> = "<epoch> <lines_done>"
+        EXIT trap writes exit_<node>; end: concatenate pieces → rows_<node>.csv ; touch done_<node>
+  poll_done: done / dead (exit, no done) / stalled (no line finished in 20 min, or heartbeat > 10 min old)
+             / never started (5 min)
+  collate(launch_id): collate_<id>.started + heartbeat thread collate_<id>.alive
+        → coverage: every worklist cell has exactly one row, n_episodes == episodes
+        → groups with ANY missing/short cell are NOT merged (listed; non-zero exit)          [M6]
+        → complete groups merged into <out>/<label>/<cond>.csv (same columns + formatting) → .done / .failed
   plot (unchanged)
-run_sweep.py SPEC --status          → node + collation liveness report (for humans and /wake polls)
+run_sweep.py SPEC --status          → per node: started / alive age / lines done / done / exit / fail count;
+                                      per launch: never collated | running | DEAD (stale .alive) | done | failed
 run_sweep.py SPEC --collate-only [--launch ID | --from-bundles]   → recovery paths
 ```
 
-Single source of truth for one CSV row: **`cell_row(step, recordings)`** — the body of today's `_measure_cell` moved into a small module and called by (a) the on-node finisher, (b) `_measure_cell` for directories (R3) and archives, (c) `--from-bundles` recovery and the exactness gates.
-
-Migration (Phase M) uses the **same pack + verify functions** as the live finisher, so the code that preserves bytes is exercised on every sweep, not only once.
+Single source of truth for one CSV row: **`cell_row(step, episodes)`**, called by the on-node finisher, by `_measure_cell` (dirs and archives), by `--from-bundles` recovery and by the gates. Migration uses the **same pack + verify functions** as the live finisher.
 
 ### File Changes
 
-New config keys: **none** (no YAML schema change; `CONFIG_GUIDE.md` / `CONFIG_CRITICAL_SETTINGS.md` unaffected). Spec loader gains no new keys; the only new inputs are CLI flags.
+New config keys: **none** (no YAML schema change; `CONFIG_GUIDE.md` / `CONFIG_CRITICAL_SETTINGS.md` unaffected). New inputs are CLI flags only.
 
-#### F1. NEW `src/utils/episode_bundle.py` (~150 lines) — the bundle format, reader, packer, verifier, guarded deleter
+#### F1. NEW `src/utils/episode_bundle.py` (~200 lines) — format, reader, packer, verifier, guarded deleter. Lands ALONE in Phase 1.
 
-Placed in `src/utils/` beside `eval_recording.py` because readers under `scripts/analysis/` already import `src.utils.eval_recording`, and both sweep code and analysis code need it. Pure Python (`zipfile`, `hashlib`, `gzip`, `pickle`, `pathlib`); no JAX import.
+Placed beside `eval_recording.py` (readers under `scripts/analysis/` already import `src.utils.eval_recording`). Pure Python (`zipfile`, `hashlib`, `gzip`, `pickle`, `os`, `socket`, `pathlib`); no JAX import.
 
 ```python
 BUNDLE_SUFFIX = ".zip"
 
 def cell_path(cond_dir, step) -> Path | None:
-    """The cell for (cond_dir, step): <cond_dir>/<step>.zip if it exists, else the legacy
-    directory <cond_dir>/<step>/ if it exists, else None. Both existing = mid-migration;
-    the archive wins (it was verified equal before it was renamed into place)."""
+    """<cond_dir>/<step>.zip if it exists, else legacy <cond_dir>/<step>/ if it exists, else None.
+    If BOTH exist: the archive wins only if the directory's newest file mtime is <= the archive's
+    pack time (stored in the zip comment). A directory written AFTER the archive (an old-code
+    re-test, review M7) raises CellConflict - never silently returns stale episodes."""
 
-def members(cell, pattern="**/episode_*.rec.gz") -> list[str]:
-    """Relative POSIX member names matching `pattern`, sorted as today's
-    sorted(step_dir.glob(pattern)) sorts them (PurePosixPath ordering).
-    Works on an archive or a legacy directory."""
-
+def members(cell, pattern="**/episode_*.rec.gz") -> list[str]   # sorted like sorted(dir.glob(pattern))
 def open_member(cell, name) -> BinaryIO
 def load_recording(cell, name) -> dict          # load_episode on the member's file object
 def load_npz(cell, name) -> dict                # np.load(BytesIO(...)), allow_pickle=False
 
 def pack(src_dir, zip_path) -> dict:
     """Write src_dir's tree into <zip_path>.partial-<host>-<pid> (ZIP_STORED, members sorted,
-    names relative POSIX, directory entries included so empty dirs survive), fsync, run
-    verify(src_dir, partial), and only then os.replace(partial, zip_path). On any mismatch:
-    delete the partial, raise BundleMismatch. Returns the manifest {name: (size, sha256)}."""
+    relative POSIX names, directory entries kept). Zip comment = JSON {pack_host, pack_time, n, bytes}.
+    fsync; posix_fadvise(POSIX_FADV_DONTNEED) on the partial so the re-read is not served from this
+    host's page cache (review M1); verify(src_dir, partial); only then os.replace -> zip_path.
+    On mismatch: delete the partial, raise BundleMismatch. Returns the manifest {name: (size, sha256)}."""
 
 def verify(src_dir, zip_path) -> dict:
-    """Exact equality or raise BundleMismatch: same set of file names, same sizes, same
-    sha256 of every member vs every source file, zipfile.testzip() is None."""
+    """Exact equality or raise: same names, same sizes, same sha256 per member, testzip() is None."""
 
-def delete_verified(cell_dir, zip_path, log_path) -> int:
-    """The ONLY function that deletes originals. In one call: path guard (cell_dir matches
-    .../_scratch/<label>/<cond>/<digits>, zip_path is its sibling <digits>.zip, both resolve
-    under <repo>/results/eval/), verify(cell_dir, zip_path) again, append the manifest
-    (cell, name, size, sha256) to log_path and fsync BEFORE unlinking, unlink exactly the
-    verified files, then os.rmdir bottom-up (never rmtree). A file that appeared after
-    verification makes rmdir fail -> raise, leaving it in place. No flag skips verification."""
+def delete_verified(cell_dir, zip_path, wal_path) -> int:
+    """The ONLY function that deletes originals. In one call:
+    - path guard: cell_dir matches <repo>/results/eval/**/<cond>/<digits> (class S: under _scratch/;
+      class D: under models/), zip_path is its sibling <digits>.zip; refuses anything else, and
+      refuses any path ending .csv/.png/.html or containing _provenance/.
+    - host guard: refuses if socket.gethostname() == the zip comment's pack_host (review M1/D4).
+      No flag skips it.
+    - posix_fadvise DONTNEED on the zip, then verify(cell_dir, zip_path) again.
+    - append (cell, name, size, sha256) for every file to wal_path and fsync BEFORE unlinking.
+    - unlink exactly the verified files, then os.rmdir bottom-up (never rmtree). A file that
+      appeared after verification makes rmdir fail -> raise, file left in place.
+    - RESUME (review L1): if cell_dir is a partial remnant, files already listed in the WAL for this
+      cell and absent on disk are accepted; files present are verified against the archive as usual."""
 
 def extract(zip_path, dest_dir)                  # for directory-based tools (R13)
 ```
 
-#### F2. NEW `scripts/eval/dwell_sweep/cell_measures.py` (~40 lines) — one CSV row
+#### F2. NEW `scripts/eval/dwell_sweep/cell_measures.py` (~45 lines) — one CSV row
 
-Moves today's `_measure_cell` body (`scripts/eval/dwell_sweep/run_sweep.py:288–309`) here **verbatim in its arithmetic** (same `np.nanmean` under `warnings.catch_warnings`, same `f"{step / 1e6:.4f}"`, same `"" if not finite else f"{x:.4f}"`), parameterised on an iterable of episode payloads:
+Moves today's `_measure_cell` body (`run_sweep.py:288–309`) here **verbatim in its arithmetic** (same `np.nanmean` under `warnings.catch_warnings`, same `f"{step / 1e6:.4f}"`, same `"" if not finite else f"{x:.4f}"`), parameterised on an iterable of episode payloads:
 
 ```python
 from avoidance_stats_heatmap import episode_measures, KEYS   # bare-name import, sys.path as run_sweep.py
 HEAD = ["step", "step_M"] + KEYS
-
-def cell_row(step: int, episodes) -> list | None:
-    rows = [episode_measures(ep) for ep in episodes]
-    if not rows:
-        return None
-    ...  # unchanged aggregation + formatting
-    return vals          # [step, step_M, 11 formatted strings]
-
+def cell_row(step: int, episodes) -> list | None: ...        # unchanged aggregation + formatting
 def measure_cell(cell) -> tuple[int, list] | None:
-    """cell = legacy dir OR .zip. step = int(name without .zip). Episodes in members() order."""
+    """cell = legacy dir OR .zip; step = int(name without .zip); episodes in members() order."""
 ```
 
-`avoidance_stats_heatmap` pulls in matplotlib/seaborn at import (~1–2 s). Acceptable once per checkpoint line; measured in the speed check. If it exceeds the 5 % budget, the follow-up is to move `episode_measures`/`KEYS` into a plotting-free module re-exported by `avoidance_stats_heatmap` (keeps the parity-harness rule "same function" intact) — not done pre-emptively.
+If importing `avoidance_stats_heatmap` (matplotlib/seaborn) breaks the speed budget, the follow-up is a plotting-free module re-exported by it — not done pre-emptively.
 
-#### F3. NEW `scripts/eval/dwell_sweep/finish_cells.py` (~80 lines) — the on-node finisher
+#### F3. NEW `scripts/eval/dwell_sweep/finish_cells.py` (~90 lines) — the on-node finisher
 
 ```
-finish_cells.py --pairs STAGE1=CELL1 STAGE2=CELL2 ... --rows-piece <path> --episodes N
+finish_cells.py --pairs STAGE1=CELL1 ... --rows-piece <path> --episodes N --log <per-node log>
 ```
-For each pair: locate the staged recordings (`members(STAGE)`), `cell_row(step, …)` with `step = int(Path(CELL).name)`, `pack(STAGE, CELL + ".zip")`, collect the row `[run_label, cond] + row + [n_episodes, bundle_relpath]` where `run_label, cond = Path(CELL).parts[-3:-1]`. Write all rows of the line to `<rows-piece>.tmp` then `os.replace` (atomic). Exit non-zero if any cell has `n_episodes != N` or no recordings (the row is still written with `n_episodes` so collation can report it). Staging deletion is done by the worker (F5) after this exits 0.
 
-Rows table columns: `run_label, cond, step, step_M, <11 measures>, n_episodes, bundle`.
+Per pair, **in this order** (review M3): (1) `EB.pack(STAGE, CELL + ".zip")` — on failure: log, exit non-zero, staging kept; (2) `measure_cell(CELL + ".zip")` — the score is computed from the archive just written, not from staging; (3) collect `[run_label, cond] + row + [n_episodes, numpy_version, bundle_relpath]`. A scoring exception is logged with traceback, the archive stays, the cell gets no row (the coverage check reports it; `--collate-only --from-bundles` recovers it). Rows of the line → `<rows-piece>.tmp` → `os.replace`. Exit non-zero if any cell failed or `n_episodes != N`. Rows table columns: `run_label, cond, step, step_M, <11 measures>, n_episodes, numpy_version, bundle` (review M8).
 
-#### F4. `scripts/eval/dwell_sweep/run_sweep.py` (563 lines; expected net +150 / −40)
+#### F4. `scripts/eval/dwell_sweep/run_sweep.py` (563 lines; expected net +190 / −40). **Edited on disk only after gate C2-gate (Phase 3).**
 
-1. **Imports (L47–52):** add `sys.path` entry is already there for `_HERE.parent`; import `cell_row, measure_cell, HEAD` from `cell_measures`; import `src.utils.episode_bundle as EB`.
-2. **`_measure_cell` (L288–309):** becomes `return measure_cell(step_dir)` — same name and signature, accepts dir or `.zip` (keeps R3 `experiment_eval_checkpoint.py` working; keeps the `SCRIPTS_DEPENDENCY_MAP` row true).
-3. **`aggregate()` (L312–365) → replaced by `collate(groups, scratch_root, launch_id, nodes, worklist_cells, episodes)`:** reads `_rows/<launch_id>/rows_<node>.csv` for this launch's nodes, builds `{(label, cond): {step: vals}}`, checks coverage — every `(label, cond, step)` in the worklists has exactly one row, `n_episodes == episodes` — and merges into the existing CSV with the unchanged read/merge/write logic (L327–330, L353–364 kept verbatim). Missing / short cells are **listed and the function raises after writing the complete groups** (never silently drops). Old `aggregate()` kept as `aggregate_from_bundles(groups, scratch_root, n_workers)` — today's code with the glob replaced by `EB.cell_path`/`measure_cell` over both `<step>/` dirs and `<step>.zip` files — used by `--collate-only --from-bundles` and the exactness gates.
-4. **Collation markers:** `collate()` and `aggregate_from_bundles()` are wrapped by `_with_collate_markers(scratch_root, launch_id, fn)`: writes `_run_markers/collate_<id>.started` (`host`, `pid`, start time, n groups) before; `.done` (CSVs written, rows merged, seconds) on success; `.failed` (traceback) in `except`, re-raising. A SIGKILL leaves `.started` alone → detectable by `--status`.
-5. **`write_worklist()` (L233–250):** unchanged line format.
-6. **`launch_node()` (L253–259):** pass `launch_id` as the 5th worker argument.
-7. **`poll_done()` (L262–274) → liveness-aware:** per node, each interval: `done_<n>` → done; `exit_<n>` present and no `done_<n>` → **dead**; `alive_<n>` older than `HEARTBEAT_STALE_S = 600` → **stalled**; no `alive_<n>` within `START_GRACE_S = 300` of launch → **never started**. On dead / stalled / never-started: print the node, its `prog_`/`fail_` tail, write `_run_markers/FAILED_<n>`, and `raise SystemExit(2)` after the healthy nodes finish (the partial rows of healthy nodes are still collated first; the exit code is non-zero). Module constants, not spec keys (operational thresholds, not experiment settings).
-8. **Stale-marker clearing (L541–545):** also clear `exit_`, `alive_`, `FAILED_` for the nodes being launched.
-9. **`fail_<node>` reporting:** after polling, print the count + first lines of every `fail_<node>`; non-zero exit if any.
-10. **New CLI:** `--nodes 101,103,…` (overrides `spec.nodes`; recorded in provenance through the existing `nodes` field), `--status` (prints per-node started/alive-age/done/exit/fail-count and per-launch collation state; for `.started` without `.done`/`.failed`: if same host and pid not alive → `DEAD`, else `RUNNING?`), `--collate-only [--launch ID | --from-bundles]` (the replacement for `aggregate_only.py`'s job; refuses if any node of that launch lacks `done_` unless `--from-bundles`).
-11. **Single-node warning:** if `len(nodes) == 1` and pending checkpoint lines > 50, print a warning recommending listing all free nodes (`gpu-status` skill) — does not block.
-12. **Lock against migration:** refuse to launch if `_scratch/_bundle.lock` exists (F7 holds it).
-13. **`write_provenance()` (L398–431): unchanged.** Its folder name is reused as `launch_id`.
+1. **Imports (L47–52):** import `cell_row, measure_cell, HEAD` from `cell_measures`; `import src.utils.episode_bundle as EB`. F2 and F4 land in **one commit** (review L3: `experiment_eval_checkpoint.py:52` imports `run_sweep` at module top, outside its failure wrapper, and is launched by live training runs).
+2. **`_measure_cell` (L288–309):** `return measure_cell(step_dir)` — same name/signature; dir or `.zip` (R3).
+3. **`aggregate()` (L312–365) → `collate(groups, scratch_root, launch_id, nodes, worklist_cells, episodes)`:** reads `_rows/<launch_id>/rows_<node>.csv`; coverage check — every worklist `(label, cond, step)` has exactly one row with `n_episodes == episodes`. **A (run, scene) group with any missing or short cell is not merged at all** (review M6; partial merging would let the max-step incremental rule skip the holes forever); listed, and the function exits non-zero after writing the complete groups. Merge/write logic of L327–330, L353–364 kept verbatim. The old function survives as `aggregate_from_bundles(groups, scratch_root, n_workers, seed_from_csv=True)` — glob replaced by `EB.cell_path`/`measure_cell`; `seed_from_csv=False` is what the gates use (review M2).
+4. **Collation markers + heartbeat (review M5):** `_with_collate_markers(scratch_root, launch_id, fn)` writes `collate_<id>.started` (host, pid, time, n groups); starts a daemon thread touching `collate_<id>.alive` every 60 s; `.done` on success, `.failed` (traceback) in `except`. `--status`: `.started` with `.alive` older than 5 min and no `.done`/`.failed` → **DEAD**, on any host; all `done_` present but no `.started` → **"workers done, never collated"**.
+5. **`write_worklist()` (L233–250):** unchanged.
+6. **`launch_node()` (L253–259) + `write_provenance()` (L398–431) — launch-time worker copy (C2):** `write_provenance` additionally copies `sweep_worker.sh`, `finish_cells.py`, `cell_measures.py` into `_provenance/<launch_id>/worker/` (plus their sha256 into the provenance JSON); `launch_node` runs the copied `sweep_worker.sh`, which calls the copied `finish_cells.py` (with `sys.path` still pointing at the repo for `src.utils.episode_bundle` and `avoidance_stats_heatmap` — a stated limitation: edits to those two library modules can still reach a running sweep; they are imported per line by fresh Python processes). `launch_id` is passed as the 5th worker argument. Every node-launched command sets `PYTHONUNBUFFERED=1`.
+7. **`poll_done()` (L262–274) → liveness-aware (review M4):** per node, each interval: `done_<n>` → done; `exit_<n>` and no `done_<n>` → **dead**; `alive_<n>` older than `HEARTBEAT_STALE_S = 600` → **stalled**; lines-done counter in `alive_<n>` unchanged for `PROGRESS_STALE_S = 1200` → **stalled**; no `started_<n>` within `START_GRACE_S = 300` → **never started**. Unhealthy node: print its `prog_`/`fail_`/log tail, write `FAILED_<n>`, finish waiting for healthy nodes, collate (complete groups only), `SystemExit(2)`. Module constants (operational thresholds, not experiment settings). `poll_done` takes an injectable clock + interval for tests.
+8. **Stale-marker clearing (L541–545):** also clear `exit_`, `alive_`, `started_`, `FAILED_` for launched nodes.
+9. **`fail_<node>` reporting:** after polling, print count + first lines of every `fail_<node>`; non-zero exit if any.
+10. **New CLI:** `--nodes 101,103,…` (overrides `spec.nodes`; recorded in provenance), `--status`, `--collate-only [--launch ID | --from-bundles]` (refuses if any node of the launch lacks `done_`, unless `--from-bundles`).
+11. **Node choice warning (review M10):** if one node and > 50 pending lines, print a warning to list more nodes, defining a usable node as: **no training process running (`pgrep -f train.py`), no other sweep's live markers on it, no diary claim for today** — not merely "GPU free" (the job is CPU-bound, 18 processes per node). Warning only.
+12. **Lock against migration:** refuse to launch into a root holding `_scratch/_bundle.lock` unless the lock is stale (F7 rule).
+13. **Old-code interlock (review M7):** the driver writes `_scratch/_format` = `bundles-1` on first new-code launch into a root. `bundle_scratch.py` treats a root as live while any old-code process exists (E1), and `cell_path` raises on a directory newer than its archive (F1), so an old checkout's re-test cannot be silently shadowed.
 
-#### F5. `scripts/eval/dwell_sweep/sweep_worker.sh` (84 lines; expected net +40)
+#### F5. `scripts/eval/dwell_sweep/sweep_worker.sh` (84 lines; expected net +55). **Edited on disk only after gate C2-gate.**
 
-- Signature: `sweep_worker.sh <worklist> <node> <npar> <n_episodes> <launch_id>` (5th arg mandatory; error if missing).
-- At start: `echo "host=$(hostname) pid=$$ $(date +%s)" > $MARK/started_$NODE`; heartbeat `( while sleep 60; do date +%s > "$MARK/alive_$NODE"; done ) & HB=$!`; write `alive_` once immediately; `trap 'rc=$?; kill $HB 2>/dev/null; echo "rc=$rc $(date +%s)" > "$MARK/exit_$NODE"; rm -rf "$STAGE_ROOT"' EXIT`.
-- `STAGE_ROOT=/tmp/dwellsweep_${LAUNCH_ID}_${NODE}_$$`.
-- `runeval()`: per line, make `stage=$(mktemp -d -p "$STAGE_ROOT")`; the `--config-list` file maps each scene to `$stage/<k>` instead of the final cell path (final paths are still read from the worklist line); after `eval_rollout.py` succeeds, run `finish_cells.py --pairs "$stage/<k>=<final_cell_k>" … --rows-piece "$ROWS/<node>/<line-hash>.csv" --episodes "$NEP"`; on success `rm -rf "$stage"`; on any failure append `FAIL <stage-of-failure> <line>` to `fail_$NODE` and keep going (as today).
-- End: concatenate `$ROWS/<node>/*.csv` (one header) into `$ROWS/rows_$NODE.csv` via tmp + `mv`, then `touch done_$NODE`. Pieces kept until concatenation succeeds, then removed.
+- Signature: `sweep_worker.sh <worklist> <node> <npar> <n_episodes> <launch_id>` (5th arg mandatory; error if missing). `set -o pipefail`. `export PYTHONUNBUFFERED=1`.
+- Start: `echo "host=$(hostname) pid=$$ $(date +%s)" > $MARK/started_$NODE`. Heartbeat **tied to the worker** (review M4a): `WPID=$$; ( while kill -0 $WPID 2>/dev/null; do echo "$(date +%s) $(wc -l < $MARK/lines_$NODE 2>/dev/null || echo 0)" > "$MARK/alive_$NODE.tmp" && mv "$MARK/alive_$NODE.tmp" "$MARK/alive_$NODE"; sleep 60; done ) &`. Each finished line appends one line to `lines_$NODE`.
+- `trap 'rc=$?; kill $HB 2>/dev/null; echo "rc=$rc $(date +%s)" > "$MARK/exit_$NODE"' EXIT`. The trap does **not** delete staging (review M3): staging dirs that still exist at exit are listed in `exit_$NODE` and left in `/tmp` for recovery; successful lines delete their own staging.
+- `STAGE_ROOT=/tmp/dwellsweep_${LAUNCH_ID}_${NODE}_$$`; per line `stage=$(mktemp -d -p "$STAGE_ROOT")`; the `--config-list` maps each scene to `$stage/<k>`; after `eval_rollout.py` succeeds, `finish_cells.py --pairs … --rows-piece "$ROWS/<node>/<line-hash>.csv" --episodes "$NEP" --log "$LOG/finish_$NODE.log"`; on success `rm -rf "$stage"`; on failure append `FAIL <stage> <line>` to `fail_$NODE`. `eval_rollout.py` stderr goes to `$LOG/eval_$NODE.log` instead of `/dev/null` (review M5).
+- End: record `xargs` exit status in `prog_$NODE`; concatenate pieces → `rows_$NODE.csv` (tmp + `mv`); `touch done_$NODE`. A killed `xargs` therefore still ends in `done_` — **its detection is the collation coverage check** (missing cells listed, non-zero exit), which is mandatory (review M4b).
 - Thread caps, compile cache, xargs `-P $NPAR` unchanged.
 
 #### F6. `scripts/analysis/studies/f7b_across_runs/aggregate_only.py` (43 lines)
 
-Becomes a thin wrapper over `run_sweep.py --collate-only` semantics: default reads the newest launch's rows tables; `--from-bundles` calls `aggregate_from_bundles` with its own `--workers` (keeps the container-load safeguard that motivated the file). Keeps the done-marker refusal.
+Thin wrapper over `--collate-only` semantics: default reads the newest launch's rows tables; `--from-bundles` calls `aggregate_from_bundles` with its own `--workers` (keeps the container-load safeguard). Keeps the done-marker refusal. Lands with F4.
 
-#### F7. NEW `scripts/eval/dwell_sweep/bundle_scratch.py` (~200 lines) — migration CLI
+#### F7. NEW `scripts/eval/dwell_sweep/bundle_scratch.py` (~260 lines) — migration CLI
 
-Subcommands (all take one or more scratch roots, or `--all` = every `_scratch` under `results/eval/avoidance/` found by `os.walk`, any depth):
+Roots: `--all` = every class-S `_scratch` and every class-D test folder under `results/eval/` (D3), found by `os.walk`; or explicit roots.
 
-- `inventory` — read-only. Per root: number of legacy cell dirs, already-bundled cells, files, bytes, whether a sweep is live (below). Writes `tmp/<stamp>_bundle_inventory.csv`. Also lists, **without touching**, per-episode eval folders outside `results/eval/avoidance/` (e.g. `results/eval/<name>/models/<ck>/episodes/`) for decision D3.
-- `pack [--dry-run]` — for each legacy cell `_scratch/<label>/<cond>/<digits>/` without a sibling `.zip`: `EB.pack(cell, cell.zip)`. Originals untouched. Resumable (skips cells with a valid `.zip`; a leftover `.partial-*` is deleted and redone).
-- `verify` — re-verifies every cell that has both a dir and a `.zip`; writes a per-root report `_scratch/_bundle_log/verify_<stamp>.csv` (cell, n files, bytes, status).
-- `gate` — runs Gate G1 (below) for a root: `aggregate_from_bundles` into a temp dir and byte-compares against `<out>/<label>/<cond>.csv`; per (run, scene, step) report.
-- `delete` — for each cell with both forms: `EB.delete_verified(...)`. Refuses a root unless (a) its latest `verify` report is all-OK, (b) its `gate` report is all-OK **or** the root is listed in `--accept-gate-exceptions <file>` written by the user, and (c) the root is not in `HOLD_ROOTS` (a constant listing the roots read by R9–R12 until the other session confirms; see M1.4).
+- `inventory` — read-only, always runs first, reported to the user (not a gate). Per root: class, legacy cells, archived cells, files, bytes, live-sweep state, **whether the source checkpoints still exist** (flag `ckpt_missing`; review D4), and which exclusion rule (E1–E4) currently applies. Writes `tmp/<stamp>_bundle_inventory.csv`.
+- `backup-tables` — one-time copy of every per-scene CSV, `FIG_*.png`, `*.html` and `_provenance/` under `results/eval/` to `results/_backup/eval_tables_<stamp>/` (same relative paths); verified by sha256 list; refuses to proceed if the copy and the list differ. Required before the first `delete` (`delete` checks the backup marker exists).
+- `pack [--dry-run] [--into <gate dir>]` — `EB.pack` for each legacy cell without a valid sibling `.zip` (skips E4-held cells unless `--into` writes outside the held root, which is read-only use). Originals untouched. Resumable (leftover `.partial-*` deleted and redone).
+- `verify` — re-verifies every cell with both forms; `_bundle_log/verify_<host>_<stamp>.csv`.
+- `gate` — Gate G1 for a class-S root (below): `aggregate_from_bundles(seed_from_csv=False)` into an **empty** temp dir, compared to `<out>/<label>/<cond>.csv`.
+- `delete` — for each cell with both forms: `EB.delete_verified(...)` (which refuses on the packing host). Refuses a root unless (a) its latest `verify` report, written **on this host**, is all-OK; (b) for class S, its `gate` report is all-OK, or the row differences are only those listed in the root's inventory as "CSV older than measure code" — those roots are skipped and listed, not deleted; (c) none of E1–E4 applies; (d) `ckpt_missing` roots additionally have an independent-check report (system `unzip` + `diff -r`, as in M1) — they cannot be regenerated.
+- `independent-check <root> [--sample N|--all]` — on the current host: system `unzip -q` each archive into `/tmp`, `diff -r` against the original cell; refuses if run on the packing host; writes `_bundle_log/indep_<host>_<stamp>.csv`.
 - `extract <zip> <dest>` — for R13 tools.
 
-Safety rails (all structural, not procedural): takes `_scratch/_bundle.lock` (`O_CREAT|O_EXCL`) per root for the duration; refuses a root whose `_run_markers` show a live sweep (any `npar_<n>`/`started_<n>` newer than its `done_<n>`, or `alive_<n>` < 10 min old); never opens anything outside `_scratch/<label>/<cond>/<digits>[/…]` for writing or deletion — the per-scene CSVs at `<out>/<label>/*.csv`, figures, and `_provenance/` are outside every path it can delete (asserted in `EB.delete_verified`'s path guard, and covered by a test).
+**Automatic exclusions (D3; replace the review's allow-list, fail closed):**
 
-#### F8. Reader ports (this plan's own files)
+- **E1 live or possibly live (review M7):** any `npar_`/`started_` marker newer than its `done_`; any `alive_` < 10 min old; any `collate_*.started` without `.done`/`.failed`; all `done_` present but no per-scene CSV newer than the newest `done_` ("possibly collating"); any `run_sweep.py`, `aggregate_only.py` or `sweep_worker.sh` process on the container (`ps`) or on any node (`ssh <node> pgrep -af`), whose spec or worklist names the root. The scan runs at the start of each `delete` for each root, not once.
+- **E2 unswitched reader:** the module constant `SWITCHED_READERS = {"S": [...], "D": [...]}` lists readers whose archive support has been verified `exact` (Phase 2 / 2b). At each run, `delete` re-greps `scripts/ src/ tests/` (and every worktree under the repo) for the reader patterns of A4; **any hit not in `SWITCHED_READERS` for that class blocks deletion for the whole class** and is printed. A new reader added tomorrow therefore blocks, rather than being missed (review M11). Pack and verify are allowed; only deletion is blocked.
+- **E4 session hold (requested by the "Training: neuromodulation" session, 2026-10-07):** module constant `SESSION_HOLDS` — **neither `pack` nor `delete`** touches a held cell. Held: every `_scratch/<label>/` whose label resolves (via the root's spec / provenance `run_dir`) to a training run named `*healrep_l05_*` (seeds s42, s43), `*healrep_l05fix_*s42*`, the 22-Sep `*bq2cover_lvl05_s42*` pair; and every cell under the roots `metrics_history_rppo_modeng_e4/` and `metrics_history_rppo_case_l05_s42/` (the case study's own sweeps). A label that cannot be resolved to a run is treated as held (fail closed). Holds are lifted only by that session's explicit "done" message (relayed via the session board, the coordinator, or the user), recorded in the Implementation Report with date and source, in the commit that edits `SESSION_HOLDS`. Inventory reports held cells separately. Consequence: the original pilot root `healrep/l05fix_own` (labels `l05fix_*_s42`) is held — G1 and the Phase 2 check only **read** it (packing into a separate gate folder), and the deletion pilot moves to another root (Phase M1).
+- **E3 lock:** `_scratch/_bundle.lock` (`O_CREAT|O_EXCL`, contents host/pid/start). Stale rule (review L1): stale if older than 6 h with no update, or same host and pid dead; a stale lock is reported and removed only by `bundle_scratch.py unlock <root>`, which prints the lock's contents first.
 
-Each replaces its glob with `EB.cell_path` + `EB.members` + `EB.load_recording` / `EB.load_npz`, keeping its own logic; each must accept both legacy dirs and archives:
+Safety rails (structural): nothing outside cell paths is ever opened for write/delete (path guard in `EB.delete_verified`, tested); the per-scene CSVs, figures and `_provenance/` are never deletable.
 
-| File | Lines | Change |
+#### F8. Reader ports (Phase 2 / 2b)
+
+Each replaces its glob with `EB.cell_path` + `EB.members` + `EB.load_recording` / `EB.load_npz`, keeping its own logic; each accepts legacy dirs **and** archives:
+
+| File | Lines | Phase |
 |---|---|---|
-| `scripts/analysis/basic_behaviour/probe_pond.py` | `episodes_in` L126–137, and its caller at L319 | yields `(run, cell, npz_member, rec_member)` and `measure_episodes` loads through EB |
-| `scripts/analysis/studies/basicq2_waves/_traj.py` | `_episodes` L33–45 | |
-| `scripts/analysis/studies/thermal_probes/t04_variance_budget.py` | L27–40 | |
-| `scripts/analysis/studies/injury_dependence/scene_steps.py` | L60–75 | |
+| `scripts/analysis/basic_behaviour/probe_pond.py` | `episodes_in` L126–137, caller L319 | 2 |
+| `scripts/analysis/studies/basicq2_waves/_traj.py` | `_episodes` L33–45 | 2 |
+| `scripts/analysis/studies/thermal_probes/t04_variance_budget.py` | L27–40 | 2 |
+| `scripts/analysis/studies/injury_dependence/scene_steps.py` | L60–75 | 2 |
+| `scripts/analysis/obs_manipulation/run.py` | `_parity` ~L407–415: `cell = EB.cell_path(sweep_dir, step)`; raise if `None`; `recs = EB.members(cell)`; `EB.load_recording(cell, name)` | 2 (neuromodulation session's file) |
+| `scripts/analysis/case_l05_s42/case.py` | `_parity` L147: `if EB.cell_path(scratch, step) is not None:` | 2 (same) |
+| `tests/analysis/test_case_l05_s42.py` | L166 (unconditional call; passes once R9 reads archives) — add an archive-only case | 2 (same) |
+| `tests/analysis/test_modulator_engagement.py` | L166: same one-line change as case.py | 2 (same) |
+| R13 tools (4 files) | `.zip` argument → `EB.extract` to a temp dir | 2b |
+| R14 readers (4 files) | glob → `EB` | 2b |
 
-#### F9. Flagged ports for the other session (NOT edited by this plan)
+Line numbers are as of commit `d0c8f5b4`; the developer re-reads each file before editing.
 
-Hand to the "Training: neuromodulation" session (or to `developer` once that session has committed and agrees):
+#### F9. Coordination with the "Training: neuromodulation" session (D5)
 
-- `scripts/analysis/obs_manipulation/run.py::_parity` L407–415: replace the glob with `cell = EB.cell_path(sweep_dir, step)`; `recs = EB.members(cell)`; `ep = EB.load_recording(cell, name)`; raise if `cell is None`.
-- `scripts/analysis/case_l05_s42/case.py::_parity` L146–147: `if EB.cell_path(scratch, step) is not None:` instead of `os.path.isdir(...)`.
-- `tests/analysis/test_case_l05_s42.py` L160–161 and `tests/analysis/test_modulator_engagement.py` L165–166: same one-line change.
+That session (session id prefix `96e71c7b`) said on 2026-10-07 that its readers had no uncommitted edits at that moment (latest commits `d0c8f5b4`, `e62ccd86`) but may change during its current case-study job (computing on node 108, followed by freeze-scoring sweeps through this pipeline). **Phase 2 does not start without that session's explicit go.** Before touching any of its four files (R9–R12), the developer:
 
-Until these land, `HOLD_ROOTS` (F7) blocks deletion for: every `metrics_history_rppo_healrep/*` root, every `metrics_history_rppo_modeng_e4/*` root, `metrics_history_rppo_basicq2_wave2_blocking_bush`, `metrics_history_rppo_thermalprobe_neutral_clean`, and every `metrics_history_rppo_injurygrid_*` root (R8 → R9). The developer re-derives this list from `scripts/analysis/modulator_engagement/runs.py`, `case_l05_s42/case.py` and `injury_dependence/run_manipulations.py` at implementation time and records it in the Implementation Report.
+1. messages the session: `python scripts/claude/session_board.py note "senior-dev plan SWEEP_EPISODE_BUNDLES: developer asks for your go to edit obs_manipulation/run.py _parity, case_l05_s42/case.py _parity, test_case_l05_s42.py, test_modulator_engagement.py (archive-aware episode reads; behaviour unchanged on folders). Please reply go / not yet."`, checks `session_board.py show` for its current task, and, if its pane is live in tmux, sends the same message through the `tmux-claude` skill. **Waits for an explicit "go"** (via the board, the coordinator or the user); no reply = no go. Records the go (date, source) in the Implementation Report;
+2. after the go, runs `git diff -- <file>` and `git diff --cached -- <file>` on each; **any hunk that is not ours → stop for that file**, ask the session, never commit another session's hunk;
+3. makes only the edits in F8; commits each with an explicit pathspec; posts a second board note naming the commit, so the session rebases its own work onto it.
 
 #### F10. Tests
 
-- **NEW `tests/scripts/test_episode_bundle.py`** (no checkpoints, no NAS; uses `tmp_path` and synthetic recordings written by the real `EpisodeRecorder.write` + `np.savez_compressed`):
-  - `test_pack_roundtrip_bytes_equal` — every member's bytes equal the source file's.
-  - `test_pack_preserves_empty_dirs_and_nested_layout` — `models/<ck>/…` and `<run_tag>/<ck>/…` layouts, an empty `windows/`.
-  - `test_measure_cell_dir_equals_zip` — `measure_cell(dir) == measure_cell(zip)` element-for-element, rPPO layout (0-based) and Dreamer layout (1-based, no npz).
-  - `test_verify_detects_changed_byte`, `…_missing_member`, `…_extra_source_file`.
-  - `test_delete_refuses_after_source_changed` — modify one original after pack → `delete_verified` raises, nothing deleted.
-  - `test_delete_leaves_file_created_after_verify` — new file appears → it survives, dir survives, raises.
-  - `test_delete_path_guard` — a cell outside `_scratch/<label>/<cond>/<digits>` or a sibling CSV → raises; the per-scene CSV next to `_scratch` is never touched.
-  - `test_pack_is_atomic` — simulated failure mid-pack leaves no `<step>.zip`.
-- **NEW `tests/scripts/test_dwell_sweep_collate.py`**:
-  - `test_collate_matches_aggregate_from_bundles` — synthetic rows tables vs `aggregate_from_bundles` on the same synthetic cells → byte-identical CSVs.
-  - `test_collate_merges_without_dropping_old_rows` (the existing invariant).
-  - `test_collate_raises_on_missing_cell` and `…_on_short_episode_count`.
-  - `test_poll_detects_dead_worker` (exit marker, no done), `…_stalled_heartbeat`, `…_never_started` — `poll_done` with injectable clock/interval.
-  - `test_status_reports_dead_collation` — `.started` with a dead pid on this host → `DEAD`.
-  - **Regression test for the silent-death bug:** `test_poll_done_does_not_wait_forever_on_dead_worker` — must **fail on the current `poll_done`** (it would loop; the test runs it with a 5 s timeout) and pass after.
-- **Existing tests that must still pass:** everything importing `run_sweep` / `_measure_cell` (`experiment_eval_checkpoint` tests if present: `grep -rl experiment_eval_checkpoint tests/`), `tests/analysis/test_basic_behaviour.py` (probe_pond), `tests/scripts/test_eval_rollout_online_replay.py`, `tests/algorithms/dreamer_srl/test_eval_rollout_batched.py`.
+- **NEW `tests/scripts/test_episode_bundle.py`** (no checkpoints, no NAS; synthetic recordings via the real `EpisodeRecorder.write` + `np.savez_compressed`): `test_pack_roundtrip_bytes_equal`; `test_pack_preserves_empty_dirs_and_nested_layout`; `test_measure_cell_dir_equals_zip` (rPPO 0-based and Dreamer 1-based layouts); `test_verify_detects_changed_byte` / `…_missing_member` / `…_extra_source_file`; `test_delete_refuses_after_source_changed`; `test_delete_leaves_file_created_after_verify`; `test_delete_path_guard` (CSV, PNG, `_provenance/` never deletable); `test_delete_refuses_on_packing_host` (monkeypatched hostname); `test_delete_resumes_from_wal`; `test_pack_is_atomic`; `test_cell_path_raises_on_dir_newer_than_zip`.
+- **NEW `tests/scripts/test_dwell_sweep_collate.py`**: `test_collate_matches_aggregate_from_bundles` (byte-identical CSVs); `test_collate_merges_without_dropping_old_rows`; `test_collate_raises_on_missing_cell` / `…_on_short_episode_count`; `test_incomplete_group_not_merged_and_retested` (after a dead node, `build_groups` on the next launch lists the missing lower steps — review M6); `test_poll_detects_dead_worker` / `…_stalled_heartbeat` / `…_no_progress` / `…_never_started`; `test_status_reports_dead_collation_any_host` (stale `.alive`); `test_status_workers_done_never_collated`; `test_gate_fails_on_empty_archives` (archives with no recordings → G1 fails, not vacuous pass — review M2).
+- **Regression test for the silent-death bug:** `test_poll_done_does_not_wait_forever_on_dead_worker` — must **fail (5 s timeout) on the current `poll_done`** and pass after; output pasted into the Implementation Report.
+- **NEW `tests/scripts/test_bundle_scratch_exclusions.py`**: E1 (live markers, possibly-collating), E2 (an unregistered reader file in a temp tree blocks deletion), E3 (stale lock rule).
+- **Existing tests that must still pass:** all `run_sweep` / `_measure_cell` importers (`grep -rl "run_sweep\|experiment_eval_checkpoint" tests/`), `tests/analysis/test_basic_behaviour.py`, `tests/scripts/test_eval_rollout_online_replay.py`, `tests/algorithms/dreamer_srl/test_eval_rollout_batched.py`, `tests/analysis/test_case_l05_s42.py`, `tests/analysis/test_modulator_engagement.py`.
 
-#### F11. Docs (same change)
+#### F11. Docs (same commit as the code they describe)
 
-- `scripts/eval/dwell_sweep/README.md`: Files table (+`cell_measures.py`, `finish_cells.py`, `bundle_scratch.py`); "Recursive-glob aggregation" tuning note replaced by "On-node scoring + rows tables"; Output layout (`<step>.zip` cells, `_rows/<launch_id>/`, new markers); **`_scratch/` is no longer "safe to delete" — it holds the kept episode archives; only `_worklists/`, `_run_markers/`, `_rows/` are transient**; Node safety section: recommend listing all free nodes and `--nodes`; new "Liveness and `--status`" and "Reading raw episodes" (EB API + `extract`) sections; "Migrating old folders" section.
-- `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` (maintenance contract): rows for the three new scripts and `src/utils/episode_bundle.py`'s script callers; update the `run_sweep.py` row (new `cell_measures` import; `_measure_cell` still exported for `experiment_eval_checkpoint.py`); `sweep_worker.sh` row (5th arg, `finish_cells.py` subprocess); `aggregate_only.py` (f7b row); `probe_pond.py` (basic_behaviour row: "The dwell sweep's `_scratch/` must survive" → reads archives); R5–R7 rows if present.
-- `.claude/skills/trajectory-story/SKILL.md`: one line — sweep recordings are archives now; `bundle_scratch.py extract` first.
+- `scripts/eval/dwell_sweep/README.md`: Files table (+`cell_measures.py`, `finish_cells.py`, `bundle_scratch.py`); "On-node packing, scoring and rows tables" replaces "Recursive-glob aggregation"; Output layout (`<step>.zip` cells, `_rows/<launch_id>/`, new markers, `_provenance/<id>/worker/`); **`_scratch/` no longer described as safe to delete — it holds the kept episode archives; only `_worklists/`, `_run_markers/`, `_rows/` are transient** (D2); Node safety (usable-node definition of F4.11); "Liveness and `--status`"; "Reading raw episodes" (EB API + `extract`); "Migrating old folders" (exclusions E1–E4, cross-host rule).
+- `docs/environment/SCRIPTS_DEPENDENCY_MAP.md`: rows for the three new scripts and `src/utils/episode_bundle.py`'s script callers; `run_sweep.py` row (new import; `_measure_cell` still exported; worker launched from the provenance copy); `sweep_worker.sh` (5th arg, `finish_cells.py` subprocess); `aggregate_only.py`; `probe_pond.py` and **`probes.py` → `run_sweep` edge** (review L3); R5–R7, R9–R14 rows if present. **This file had uncommitted edits from another session on 2026-10-07: `git diff` it before staging; if a hunk is not ours, coordinate, do not commit it.**
+- `.claude/skills/trajectory-story/SKILL.md`: one line — sweep and test recordings may be archives; tools accept a `.zip`.
+- Hand-off to `bug-curator` (not edited by us): append "scoring now runs on nodes; `numpy` version is in every rows table" to the node-env-drift row (review M8).
 
 ### Phase order, gates, and stop points
 
-**Phase A — code (F1–F6, F8, F10, F11).** Unit tests green before Phase B.
+Each phase ends with its own commit(s) (explicit pathspec, pushed). No phase starts before the previous one's checks pass.
 
-**Gate G1 — scoring from archives reproduces today's tables exactly (existing data, no new tests run).**
-On `metrics_history_rppo_healrep/l05fix_own` (all rows from one launch this morning at commit `b2ba9cf`): `bundle_scratch.py pack` (originals kept) → `verify` → `gate`. **Pass criterion, stated in advance: zero tolerance — for every run × scene × step present in the current CSV, the recomputed row's 13 strings are identical to the CSV's; all 72 CSVs (6 runs × 12 scenes) byte-identical.** Any CSV row with no matching archive is listed and counts as a failure for this folder.
+**Phase 0 — read-only preflight.**
+- P0.1 Live sweeps: list every `_run_markers` under `results/eval/` with `npar_`/`started_` newer than `done_`; `ps -ef | grep -E "run_sweep|aggregate_only|sweep_worker"` on the container; `ssh <node> pgrep -af "sweep_worker|eval_rollout|run_sweep"` on 101–114. Record in the Implementation Report.
+- P0.2 Node env (review M8): on every node 101–114, with the project interpreter: print `numpy` version, `import avoidance_stats_heatmap`, `which unzip`. A node that fails the import is not used for sweeps until fixed (report, do not fix envs in this plan).
+- P0.3 Reader re-grep (A4) incl. worktrees; any new reader is added to F8 before Phase 2.
+- P0.4 One bounded attempt (≤ 30 min) at the cause of the 11:42 silent collation death (A3); record the finding or "not determined".
 
-**Gate G2 — the new on-node path reproduces today's tables exactly (fresh test runs).**
-A spec copy of the `l05fix_own` sweep written to `tmp/` with a fresh `output_dir` (e.g. `results/eval/avoidance/_bundle_gate/l05fix_own`), `--max-checkpoints 2`, all 6 runs, `--nodes` = ≥2 free nodes. Pass criteria, stated in advance: (a) every new row (6 × 2 × 12 = 144) string-identical to the current CSV's row for the same run/scene/step; (b) for every one of the 144 cells, every recording in the new archive decodes to a payload equal to the old archive's (G1) member — `snapshots` dict-by-dict with `np.array_equal`, `obs`, `true_obs`, `actions`, `rewards` with `np.array_equal`, scalars `==`; `episodes/*.npz` arrays equal; (c) collation wall time recorded (expect seconds). The episodes are deterministic (greedy policy, `--seed 0`, CPU, batched — the property `obs_manipulation` already relies on for exact parity), so any difference is a bug, not noise.
+**Phase 1 — `src/utils/episode_bundle.py` alone + `tests/scripts/test_episode_bundle.py`.** Nothing imports it yet; safe while sweeps run. Commit.
 
-**Gate G3 — Dreamer keeps working.** `configs/eval_sweeps/basic04_rr_dreamer.yaml` copy in `tmp/` with fresh `output_dir`, `--max-checkpoints 1`, one run: (a) worker completes, archive written, row present; (b) row string-identical to the existing Dreamer CSV row at that step if one exists, else `rows table == measure_cell(archive)` and the batched-Dreamer determinism question is reported, not forced.
+**Phase 2 — switch class-S readers (C1, D5). Starts only after the neuromodulation session's explicit go (F9 step 1).** Then the F8 class-S ports (R4–R7, R9–R12). R4–R7 (this plan's own files) may be ported before the go.
+- **Verification — archive-only cell, positive `exact`.** Build a throwaway class-S root `results/eval/avoidance/_bundle_gate/readers/` by **copying** (never moving) one (label, scene) group of `healrep/l05fix_own` (the case study's sweep) and packing its cells there with `EB.pack`, then removing the copied directories so only archives remain. Point the ported `obs_manipulation/run.py --check-against-sweep`, `case.py`'s parity path and both tests at it. Pass criterion, pre-stated: each reports `exact` (not the CSV-mean fallback, not a skip), and the same call on the original folder-form cell also reports `exact`. R4–R7: their outputs on the archive-only copy equal their outputs on the folder copy (string-equal printouts / files).
+- Then add the class-S readers to `SWITCHED_READERS["S"]` (in the Phase 3 code). Commit per file.
 
-**Speed check.** Same node, same spec, same seed: old vs new worker wall time for the same 2 checkpoints × 6 runs (the G2 workload). Report: test wall time (budget: ≤ 5 % slower; the finisher's Python start is the expected cost), collation wall time old (re-measure `aggregate()` on the G2 output from legacy-format cells) vs new, files written per cell (64 → 1). **Stop and report if > 5 %.**
+**Phase 2b — switch class-D readers (R13, R14).** Same pattern: copy one class-D test folder to `_bundle_gate/direct/`, pack, run each reader on both forms, outputs equal. Until this passes, class-D folders are excluded from deletion by E2 automatically (they may still be packed). Phase 2b may run after Phase 3 without blocking it.
 
-**Phase M — migration.**
-- **M0 inventory** (read-only, all roots). Report counts/bytes; the user sees it.
-- **M1 pilot on `metrics_history_rppo_healrep/l05fix_own`:**
-  1. pack + verify (done in G1);
-  2. G1 passed;
-  3. smoke-read through the ported readers (R4–R7 on any root they normally read, from archives);
-  4. **HOLD:** this root is in `HOLD_ROOTS` (R10–R12 read it). Deletion needs the other session's ports (F9) merged **and** the user's go. Ask the user; do not proceed silently;
-  5. `delete` → re-run `gate` from archives alone (must still pass) → report files and bytes before/after.
-- **M2 all roots:** `pack` + `verify` + `gate` over `--all`. Roots with an all-OK verify and gate and not in `HOLD_ROOTS` → `delete`. Roots whose gate differs (older CSVs written by older measure code, e.g. before the 2026-09-07 `bush_dwell → bush_hiding` rename, or rows whose cells were already removed) are **listed for the user, not deleted** until the user writes the exceptions file. The archive check (byte equality) is mandatory for every deletion regardless.
-- **M3 (decision D3):** per-episode eval folders outside `results/eval/avoidance/` — inventory only in this plan.
+**Gate C2-gate — before ANY edit to `sweep_worker.sh` or `run_sweep.py` in the shared folder.** Development of F2–F6 happens in a git worktree; the shared folder's copies change only when **all** of these hold, checked at that moment: (a) P0.1's checks show no live sweep anywhere (every launch's `done_` for all its nodes, no driver process on the container, no `sweep_worker`/`eval_rollout` on any node) — **this covers every session's sweeps, not just ours**, in particular the neuromodulation session's freeze-scoring sweeps; (b) today's diary (`docs/diary/YYYY-MM-DD.md`) and `session_board.py show` list no running or announced sweep; (c) the neuromodulation session has confirmed it has no sweep running or about to start (its next sweeps would otherwise switch format mid-job). Today (a) means the three no-healing sweeps of 16:03 (nodes 104/105/112) have finished and their drivers exited. If any check fails, wait; do not edit. From this commit onward every launch runs its provenance copy (F4.6), so this gate is needed only once.
 
-Snapshot rule (CLAUDE.md git-safety): the migration is not a git operation, and a full copy of 1.7 GB / 235k files per root would itself be the slow NAS operation being removed. The protection is structural instead: originals are deleted only by `delete_verified`, which re-hashes every file against its archive member in the same call, writes a write-ahead log of what it deletes with sha256, and cannot be told to skip verification. **Plan-reviewer: please challenge whether this is sufficient for the pilot, or whether the pilot root should additionally be copied once (e.g. `tar` to `results/_backup/`) before M1.5.**
+**Phase 3 — new pipeline (F2–F6, F7, F10, F11) merged into the shared folder after C2-gate.** F2 + F4 + F6 in one commit. Unit tests green.
+
+**Gate G1 — scoring from archives reproduces today's tables exactly (existing data).** Benchmark: `metrics_history_rppo_healrep/l05fix_own` (one launch, commit `b2ba9cf`, node 105). That root is under the E4 hold, so it is **only read**: `bundle_scratch.py pack --into results/eval/avoidance/_bundle_gate/g1/` writes the archives into a separate gate folder mirroring its layout (nothing is written into the held root) → `verify` → `gate` against the held root's CSVs. **Pass criterion, pre-stated, zero tolerance (review M2):** computed into an empty dict, no CSV seeding; every archive yields exactly 30 recordings; the set of computed (run, scene, step) keys equals the set of CSV rows exactly; every row's 13 strings identical; all 72 CSVs byte-identical.
+
+**Gate G2 — the new on-node path reproduces today's tables exactly (fresh tests).** Spec copy in `tmp/` with `output_dir` `results/eval/avoidance/_bundle_gate/l05fix_own`, `--max-checkpoints 2`, all 6 runs, `--nodes` = **105 (the original node) plus at least one node of a different card/CPU generation** (review M9), all usable per F4.11. Pass criteria, pre-stated: (a) all 144 new rows string-identical to the current CSV; (b) every recording in each new archive decodes equal to the G1 archive's member (`snapshots` dict-by-dict `np.array_equal`; `obs`, `true_obs`, `actions`, `rewards` `np.array_equal`; scalars `==`; `.npz` arrays equal); (c) `numpy_version` column recorded per node; (d) collation wall time recorded. **A mismatch only on cells scored/tested on a node other than 105 is reported as a cross-node determinism finding** (it would also matter to `obs_manipulation`'s exact parity) — escalate to the user, not counted as a pipeline bug; a mismatch on 105 is a bug.
+
+**Gate G3 — Dreamer keeps working.** `configs/eval_sweeps/basic04_rr_dreamer.yaml` copy in `tmp/`, fresh `output_dir`, `--max-checkpoints 1`, one run: (a) worker completes, archive written, row present; (b) row string-identical to the existing Dreamer CSV row at that step if one exists, else `rows table == measure_cell(archive)` and batched-Dreamer determinism is reported, not forced.
+
+**Speed check.** Same node (105), same spec, same seed: old vs new worker wall time for G2's workload (old worker run from the commit before Phase 3, in a worktree, into a separate throwaway output dir). Budget ≤ 5 % slower; collation wall time old (`aggregate()` on legacy cells) vs new; files per cell (64 → 1). **Stop and report if > 5 %.**
+
+**Phase M — migration (all of `results/eval/`, D3).**
+- **M0 inventory** (read-only, `--all`). Reported to the user with counts, bytes, `ckpt_missing` flags and which exclusion applies. Not a gate.
+- **M0.5 `backup-tables`** (D4). Must succeed before any `delete`.
+- **M1 pilot root — chosen from the M0 inventory**, not `healrep/l05fix_own` (held, E4): the first class-S root that is not held, not live, has all source checkpoints present, was written by one launch with current measure code, and is read by at least one switched parity reader if any such root exists (else by R4–R7). The choice and reason go into the Implementation Report. (1) pack + verify (host A); (2) G1-style `gate` on this root passes; (3) **independent cross-machine check (D4, review M1):** on host B ≠ A, `bundle_scratch.py independent-check --all` (system `unzip` + `diff -r`) — all cells identical; (4) Phase 2 verification passed; (5) E1–E4 clear; (6) `delete` on host B → re-run `gate` from archives alone (must pass) → re-run one switched reader on the archive-only pilot (a parity reader if it reads this root: must report `exact`; else R4–R7: output equal to its pre-delete output) → report files and bytes before/after and the mtimes of `<out>/<label>/*.csv`, `FIG_*.png`, `_provenance/` before/after (must be unchanged).
+- **M2 all class-S roots:** `pack` (host A) → `verify` + `gate` (host B) → `delete` (host B) where E1–E4 clear and gate all-OK. Roots whose gate differs (CSV written by older measure code, rows whose cells were already removed) are listed, not deleted. `ckpt_missing` roots need an `independent-check` report first.
+- **M3 class-D folders:** after Phase 2b, same procedure (no `gate` — there is no per-scene CSV; byte verification + `independent-check` sample of 5 % per folder, all for `ckpt_missing`).
 
 ## Checkpoints
 
-- [ ] `cell_row` is the only place the row arithmetic exists (grep `nanmean` in `scripts/eval/dwell_sweep/` → one hit).
-- [ ] `experiment_eval_checkpoint.py` still imports `_measure_cell, HEAD, KEYS` from `run_sweep` and works on a directory (run its test or a one-checkpoint dry call).
-- [ ] New unit tests pass; the regression test `test_poll_done_does_not_wait_forever_on_dead_worker` was shown to fail (timeout) on the pre-change `poll_done` — paste that output into the Implementation Report.
-- [ ] `--dry-run` on the `l05fix_own` spec prints the 5-argument worker command and unchanged LPT loads.
-- [ ] A killed worker (`kill -9` the xargs parent on one node during G2's first minute, in a throwaway output dir) is reported as dead by `poll_done` within `HEARTBEAT_STALE_S` + one interval, and `--status` shows it.
-- [ ] A killed collation (`kill -9` during `--collate-only --from-bundles`) shows `DEAD` in `--status`.
-- [ ] G1, G2, G3 pass with the pre-stated criteria; numbers pasted into the Implementation Report.
+- [ ] P0.1–P0.4 results recorded (live sweeps, node numpy versions + import check, reader re-grep, 11:42 death finding).
+- [ ] Phase 1 committed alone; nothing else imports `episode_bundle` at that commit.
+- [ ] Neuromodulation session's explicit go recorded (date, source) before Phase 2's edits to its files; `git diff` checked on each; no foreign hunk committed.
+- [ ] `SESSION_HOLDS` (E4) implemented as listed; no archive written into, and no file deleted from, a held cell (inventory before/after); any hold lift recorded with its source.
+- [ ] Phase 2: ported parity tools report `exact` on an archive-only cell and on the folder-form cell; outputs pasted.
+- [ ] C2-gate evidence (markers + `ps` + node `pgrep`) pasted, timestamped, immediately before the shared-folder worker/driver edit.
+- [ ] Every launch after Phase 3 has `_provenance/<id>/worker/` and the driver ran that copy (`ps` on a node shows the provenance path).
+- [ ] `cell_row` is the only place the row arithmetic exists (`grep nanmean scripts/eval/dwell_sweep/` → one hit).
+- [ ] `experiment_eval_checkpoint.py` still imports `_measure_cell, HEAD, KEYS` from `run_sweep` and works on a directory; `probes.py` test passes.
+- [ ] Regression test `test_poll_done_does_not_wait_forever_on_dead_worker` shown failing on the pre-change `poll_done`.
+- [ ] `--dry-run` on the `l05fix_own` spec prints the 5-argument command against the provenance copy and unchanged LPT loads.
+- [ ] Throwaway output dir: `kill -9` the worker bash on one node → `alive_` stops (heartbeat loop exits), `poll_done` reports stalled/dead within 11 min; `kill -9` its `xargs` → `done_` is written but collation lists the missing cells and exits non-zero; `--status` shows both.
+- [ ] `kill -9` during `--collate-only --from-bundles` launched on a node → `--status` on the container shows `DEAD` within 6 min.
+- [ ] G1, G2, G3 pass with the pre-stated criteria; numbers pasted.
 - [ ] Speed check within budget.
-- [ ] No file under `<out>/<label>/*.csv`, `FIG_*.png`, or `_provenance/` changed mtime during migration (list mtimes before/after for the pilot root).
-- [ ] `HOLD_ROOTS` re-derived from the three source files and recorded.
-- [ ] README, SCRIPTS_DEPENDENCY_MAP, trajectory-story skill updated in the same commit as the code they describe.
+- [ ] M0.5 backup sha256 list matches; M1 independent-check report all-identical, run on a host different from the packing host; deletes ran on host B.
+- [ ] No per-scene CSV, figure or `_provenance/` file changed mtime during migration (pilot list before/after).
+- [ ] README, SCRIPTS_DEPENDENCY_MAP (diffed for foreign hunks), trajectory-story skill updated in the same commit as the code; `bug-curator` handed the env-drift note.
 
-## Open decisions (for the user)
+## Decisions (resolved by the user, 2026-10-07)
 
-- **D1 — where scoring runs.** Plan: on the node, in the same worker job right after the test program, from a node-local copy (no NAS reads; identical scoring function on identical bytes; no edit to the test program or the Dreamer source). Alternative: inside `eval_rollout.py` from in-memory episodes (literal reading of decision 1) — needs a second scoring path for Dreamer and edits to two shared programs.
-- **D2 — folder name.** Keep archives under `_scratch/` (plan) or rename to `_episodes/` (clearer, but every reader's path changes again).
-- **D3 — scope of "any similar".** Plan migrates every `_scratch` under `results/eval/avoidance/` (119 roots found at depth ≤ 4). Per-episode folders elsewhere under `results/eval/` (one-off tests read directly by the video/story tools) are inventoried only. Include them?
-- **D4 — pilot backup.** Rely on verified-before-delete (plan) or also take one full copy of the pilot root before deleting.
-- **D5 — coordination with the neuromodulation session.** Who ports R9–R12 (that session, or `developer` after it commits), and when the hold on the healrep / modulator-engagement / injury-grid roots may be lifted.
+- **D1** — score on the node right after the test program; pack before scoring.
+- **D2** — keep `_scratch/`; README no longer calls it safe to delete.
+- **D3** — migrate all test folders under `results/eval/`, no approval list; inventory reported; automatic exclusions E1–E4; `ckpt_missing` flagged.
+- **D4** — small backup of tables/figures/provenance before the first delete; independent cross-machine check on the pilot; deletes on a different machine from packing.
+- **D5** — our developer ports R9–R12 in Phase 2, after the neuromodulation session's explicit go (added at that session's request, 2026-10-07) and checking its uncommitted hunks; verified `exact` on an archive-only cell before the worker switch.
 
 ## Implementation Report
 
@@ -364,3 +400,25 @@ Snapshot rule (CLAUDE.md git-safety): the migration is not a git operation, and 
 - 🔴 **C2 — editing `sweep_worker.sh` while the three no-healing sweeps run.** Bash reads the script's tail (the `done_` marker line) from disk after the episodes finish; an in-place edit most likely leaves those sweeps hanging silently. Fix: no edit until every live sweep's `done_` markers exist and drivers have exited; ideally launch a per-launch copy of the worker stored with the provenance.
 - 🟡 Moderate (details in the report): verification reads the same host's CIFS page cache (verify/delete from a different host; independent `unzip` + `diff -r` on the pilot); G1 can pass vacuously if it seeds from the existing CSV; score-before-pack plus the EXIT-trap cleanup loses episodes on a scoring error; the heartbeat loop outlives a killed worker and a killed `xargs` still writes `done_`; a node-side collation death is still unclassifiable (`RUNNING?` on another host) — add a collation heartbeat and unbuffered logs; partial collation + the max-step incremental rule can leave permanent holes; old-code collation has no marker and can race the migration; node Python env drift (known bug) and cross-node determinism threaten G2's "exact"; "free node" must mean no training and no other sweep, not GPU-free; `HOLD_ROOTS` should be an allow-list.
 - **D1** on-node after eval — agree (pack before scoring). **D2** keep `_scratch/` — agree. **D3** inventory only — agree. **D4** no full copy needed if the pilot passes an independent cross-host check; do back up all per-scene CSVs/figures/provenance (MBs) once, and flag roots whose checkpoints are gone. **D5** the neuromodulation session ports R9–R12, before the worker switch; lift the hold per root only after a ported parity run reports `exact` on an archive-only cell.
+
+### Response from senior-developer (revision 1, 2026-10-07)
+
+| Finding | Where answered |
+|---|---|
+| C1 | Phase order: 1 (`episode_bundle.py` alone) → 2 (reader switch, verified `exact` on an archive-only cell) → Phase 3 worker switch. Ports by our developer per user D5, after F9 coordination. |
+| C2 | Gate C2-gate (no edit to `sweep_worker.sh`/`run_sweep.py` while any sweep is live; development in a worktree); F4.6 launch-time worker copy in `_provenance/<id>/worker/`. |
+| M1 | F1 `posix_fadvise` before re-read; `delete_verified` refuses on the packing host; M1 step 3 independent `unzip` + `diff -r` on another host. |
+| M2 | `aggregate_from_bundles(seed_from_csv=False)`; G1 criterion: 30 recordings per archive, key sets equal; `test_gate_fails_on_empty_archives`. |
+| M3 | Pack first, score the archive (F3); EXIT trap no longer deletes staging (F5). |
+| M4 | Heartbeat exits with the worker and carries a lines-done counter; progress-stall rule; checkpoint rewritten (killed `xargs` → caught by coverage check). |
+| M5 | Collation heartbeat + host-independent DEAD; `PYTHONUNBUFFERED`; eval/finisher logs; "never collated" status; P0.4 bounded root-cause attempt. |
+| M6 | Incomplete groups never merged; `test_incomplete_group_not_merged_and_retested`. |
+| M7 | E1 process scan + "possibly collating" rule; `cell_path` raises on a directory newer than its archive; `_format` marker. |
+| M8 | P0.2 node env preflight; `numpy_version` column; bug-curator hand-off. |
+| M9 | G2 includes node 105; off-node mismatch pre-declared as a determinism finding. |
+| M10 | Usable-node definition in F4.11 and README. |
+| M11 | User declined an allow-list (D3); replaced by fail-closed E2 (any unregistered reader blocks deletion for its class) plus E1/E3, and E4 — the explicit hold requested by the neuromodulation session (its runs and the `modeng_e4` / `case_l05_s42` roots), lifted only on its word. |
+| Neuromodulation session request (2026-10-07) | E4 hold on its folders (no pack, no delete); C2-gate covers its sweeps (markers, diary, board, its confirmation); Phase 2 waits for its explicit go; G1 reads the held pilot root only (archives in a gate folder); deletion pilot moved to a non-held root chosen from M0. |
+| L1 | WAL resume in `delete_verified`; lock carries host/pid/time, stale rule, `unlock` command. |
+| L2 | R11 row corrected. |
+| L3 | Map diffed before staging; `probes.py` edge; F2 + F4 + F6 in one commit. |
