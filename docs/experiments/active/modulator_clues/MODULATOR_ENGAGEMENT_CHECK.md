@@ -283,9 +283,9 @@ the injury effect" caveat. E1 and P-main are sound once the tool route is chosen
 
 **In short.** The tooling for this plan (Revision 1a) is built, tested and committed (`0b9c1c67`, fix `3f4a8457`, branch `v5.0`).
 After the coordinator's go, E1, E1-natural, E2 and E3 were computed for all 14 pairs on the 41-point
-checkpoint grid. E4 is built and smoke-tested on one checkpoint only. Its budget is below and it
-**waits for a go**. No statistics or verdict have been computed on the real data: `analyze.py` has
-been run only on synthetic inputs. Running it, and interpreting the result, is the analysis step
+checkpoint grid. After a second go, E4 was computed for all 14 pairs at 9 checkpoints (see "E4 run").
+No statistics or verdict have been computed on the real data: `analyze.py` has been run only on
+synthetic inputs. Running it, and interpreting the result, is the analysis step
 (experiment-analyzer, then plan-reviewer's verdict gate).
 
 ### What was built (file by file)
@@ -338,7 +338,10 @@ been run only on synthetic inputs. Running it, and interpreting the result, is t
   (new row, a test-suite row, and caller updates for `nmn/{replay,ckpt_io,mod_distribution,freeze}`,
   `obs_manipulation` and `fast_heal_replication`).
 
-### Choices the plan left open (flag for senior-developer / experiment-analyzer)
+### Choices the plan left open
+
+The coordinator confirmed choices 1 and 2 below, and the `git archive` pin (see `outcomes.py` above),
+on 2026-10-07 with the E4 go: "keep everything else as you chose".
 
 1. **E1 site average.** `e1g_mean4` is the mean of the four non-critic FiLM heads (encoder unimodal,
    encoder multimodal, task GRU, actor), weighted equally. This is the same as pooling every
@@ -417,7 +420,36 @@ Level 05 seed 42, checkpoint 6000007 (6.0 M steps), unhurt no-animal neutral sce
   freeze-by-weight-edit equivalence check gave a worst deviation of exactly 0.0 on all 14 runs.
 - **Not computed:** correlations, the permutation null or the verdict (`analyze.py`), and E4.
 
-### E4 budget (waiting for a go)
+### E4 run (2026-10-07, after the coordinator's go)
+
+- **Preparation** (local CPU, 7 workers, 13:59–14:09 KST): `engagement.py e4-prepare --pairs all
+  --checkpoints every5`. This is 126 checkpoints, grid points 0, 5, …, 40 (2.0, 3.0, …, 10.0 M) for
+  each pair.
+  - The edited copies are under `results/analysis/modulator_engagement/e4/ckpts/JAX_RecurrentPPO/`:
+    28 run folders, 598 MB. The originals were not touched; the writer refuses any path inside a
+    source run.
+  - The pooled freeze targets are saved as `targets_<pair>_<step>.npz`.
+  - Every saved copy was read back bit for bit, and its frozen signal was checked constant at the
+    target.
+  - Live passes reproduced the original sweep's rabbit-scene bush dwell at 125 of 126 checkpoints.
+    The exception is level 04 seed 44 at 10.0 M, which that sweep never tested.
+- **Scoring:** the six generated specs in `e4/sweeps/` (same probe battery and 30 episodes as each
+  outcome sweep; the two rabbit-wander scenes only) were run with `scripts/eval/dwell_sweep/run_sweep.py`.
+  - Node: 104 (CPU, NPAR 18), 14:09–14:23 KST. It was chosen after `gpu_status`: 36 cores, load 0.3,
+    NAS mounted, no diary claim today.
+  - The node was claimed and released in the diary (`modeng_e4_sweep`).
+  - Results: 56 CSVs under `results/eval/avoidance/metrics_history_rppo_modeng_e4/`, 9 checkpoints
+    each, 0 failures.
+- **Collected:** `engagement.py e4-collect` wrote `e4/e4_effects.csv`, 126 rows. Each row holds the
+  modulated agent's rabbit-scene injury effect live, gain-frozen and offset-frozen.
+  - The live column comes from the original outcome sweep CSVs.
+  - Cross-check: the full sweep reproduces the earlier hand-scored smoke checkpoint exactly (level 05
+    seed 42 at 6.0 M: live +8.25 pp, gain frozen −3.00 pp, offset frozen +7.63 pp).
+  - Level 04 seed 44 at 10.0 M has no live value. `analyze.py`'s P-cause now drops any checkpoint
+    lacking live or frozen values, so all three means use the same checkpoints: 8 for that pair, 9
+    for the others.
+
+### E4 budget (as estimated before the go)
 
 - **`e4-prepare`** (local CPU): about 28 s per checkpoint, measured. Steps per checkpoint: two live
   rabbit passes, the pooled target, two edited checkpoints written and read back bit for bit, and a
@@ -442,8 +474,8 @@ Level 05 seed 42, checkpoint 6000007 (6.0 M steps), unhurt no-animal neutral sce
 
 ### Follow-ups
 
-- Run `analyze.py --data results/analysis/modulator_engagement` once E3 is complete (and again
-  after E4). It belongs to the analysis step.
-- `P-cause` and `e4-collect` have only been exercised in the smoke test, not on full E4 data.
+- All inputs to `analyze.py --data results/analysis/modulator_engagement` now exist (outcomes,
+  E1–E4). Running it, and the verdict, belong to the analysis step (experiment-analyzer, then
+  plan-reviewer).
 
 *Implemented by: developer*

@@ -233,7 +233,13 @@ def p_cause(data_dir, T):
     f = os.path.join(data_dir, "e4", "e4_effects.csv")
     if not os.path.exists(f):
         return None
-    D = pd.read_csv(f).groupby("pair")[["injw_live", "injw_freeze_gain", "injw_freeze_offset"]].mean()
+    cols = ["injw_live", "injw_freeze_gain", "injw_freeze_offset"]
+    R = pd.read_csv(f)
+    # a checkpoint counts only if live AND both frozen effects exist (e.g. level 04 seed 44 at 10.0 M
+    # has frozen scores but was never tested live), so all three means use the same checkpoints
+    R = R.dropna(subset=cols)
+    D = R.groupby("pair")[cols].mean()
+    D["e4_checkpoints"] = R.groupby("pair").size()
     D["removed_share_gain"] = 1 - D["injw_freeze_gain"] / D["injw_live"]
     D["removed_share_offset"] = 1 - D["injw_freeze_offset"] / D["injw_live"]
     D = D.join(T.set_index("pair")[["e1g_mean4", "group", "level"]])
