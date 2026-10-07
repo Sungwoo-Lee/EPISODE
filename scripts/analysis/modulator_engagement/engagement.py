@@ -360,6 +360,9 @@ def e3_checkpoint(pair, step, seeds, verify):
     row = {"pair": pair.key, "group": pair.group, "level": pair.level, "seed": pair.seed,
            "run": pair.modulated, "step": int(step), "n_episodes": len(seeds),
            "live_mean_survival": float(live["lengths"].mean())}
+    # the weight-edit equivalence is proven once per run, on its first checkpoint; the column is
+    # present on every row (empty when not run) so the per-checkpoint CSV keeps one schema
+    row["equivalence_worst_deviation"] = ""
     if verify:
         rep = freeze.verify_freeze_equivalence(lambda: replay.load_agent(models, step), means, sorted(means))
         row["equivalence_worst_deviation"] = rep["worst_deviation"]
