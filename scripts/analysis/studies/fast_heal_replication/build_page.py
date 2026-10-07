@@ -109,7 +109,7 @@ def main():
     train_axes = ("Horizontal: training, in million steps (0&ndash;10). Vertical: bush dwell (%, 0&ndash;100), the same "
                   "scale in every panel. Rows: four scenes; columns: the ordinary and the modulated agent. Ten lines "
                   "per panel, one per starting injury of the test: grey = 0 (unhurt), light to dark blue = 10 to 90; "
-                  "each line averages 5 neighbouring checkpoints. Grey here means unhurt, not the ordinary agent as in Figures R1&ndash;R4. Text above each panel: bush dwell at injury 0, 50 "
+                  "each line averages 5 neighbouring checkpoints. Grey here means unhurt, not the ordinary agent as in Figures R1&ndash;R4 and R8. Text above each panel: bush dwell at injury 0, 50 "
                   "and 90, mean over 2&ndash;10 M steps. The shaded first 2 M steps are not used in those means.")
     FIGNO = {"l04": (2, 5), "l05": (3, 6), "l06": (4, 7), "l05fix": (8, 9)}   # (dose, training) figure numbers
     for lv in RF.LEVELS:
@@ -143,7 +143,10 @@ def main():
         f"<p><strong>The same seed does not give the same agent.</strong> Level 04, seed 42, repeats the 22-Sep training "
         f"with the same settings and seed, yet its ordinary agent's injury effect with no animal is {pp(s42['ordinary']['inj'][0])} "
         f"points against {pp(ref04['ordinary']['inj'][0])} on 22 September. Training is not reproducible run for run, so a "
-        "pattern seen in one run needs several seeds before it is believed.</p></div>")
+        "pattern seen in one run needs several seeds before it is believed.</p>"
+        f"<p><strong>Starting every episode at the same body temperature does not change this.</strong> Six more level-05 "
+        f"agents trained that way, as on 22 September: the modulated agent's injury effect with the wandering rabbit is the "
+        f"larger one in {cnt['l05fix']['injw']} of {cnt['l05fix']['n']} pairs (<a href=\"#fix\">section 06</a>).</p></div>")
     fx, r5 = cnt["l05fix"], cnt["l05"]
     tok["{{FIX_TEXT}}"] = (
         f"<p>In the neutral scenes the modulated agent's injury effect with the wandering rabbit is the larger one in "

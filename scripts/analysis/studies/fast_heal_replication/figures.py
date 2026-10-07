@@ -129,7 +129,8 @@ def fig_summary():
         ax.set_xlabel(xl, fontsize=H.FS_LABEL)
         ax.grid(axis="y", visible=False)
     axs[0].set_yticks(y)
-    axs[0].set_yticklabels([lab for lab, _, _ in R], fontsize=H.FS_LABEL - 1)
+    axs[0].set_yticklabels([lab.replace(", fixed start temperature,", ",\nfixed start temperature,") for lab, _, _ in R],
+                           fontsize=H.FS_LABEL - 1)
     for t, (_, _, ref) in zip(axs[0].get_yticklabels(), R):
         if ref:
             t.set_color(H.INK_2)
