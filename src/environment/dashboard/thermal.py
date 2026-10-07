@@ -67,9 +67,9 @@ class TemperatureScale:
             )
         vmin, vmax = float(f.min()), float(f.max())
         if vmax <= vmin:
-            raise ValueError(
-                f"the episode's thermal field is constant ({vmin}); there is no colour range"
-            )
+            # A uniform field (e.g. the thermal-neutral test scenes: air 0 C everywhere, no
+            # campfire) is valid; give the scale a 1-degree margin either side so it still draws.
+            vmin, vmax = vmin - 1.0, vmax + 1.0
         self.vmin, self.vmax = vmin, vmax
         self.low, self.high, self.sp = float(low), float(high), float(setpoint)
 
