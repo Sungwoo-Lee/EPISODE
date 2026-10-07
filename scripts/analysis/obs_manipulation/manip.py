@@ -71,7 +71,15 @@ def sensor_offsets(breakdown: dict) -> dict:
 
 
 def load(path: str, breakdown: dict, max_steps: int) -> Manipulation:
-    spec = yaml.safe_load(open(path))
+    return from_spec(yaml.safe_load(open(path)), breakdown, max_steps, source=path)
+
+
+def from_spec(spec, breakdown: dict, max_steps: int, source: str = "<in-memory spec>") -> Manipulation:
+    """Compile an already-parsed manipulation spec (same schema and checks as a YAML file).
+
+    For drivers that build a manipulation per checkpoint (e.g. a recorded felt-injury trace)
+    instead of writing a file; `source` names it in error messages."""
+    path = source
     if not isinstance(spec, dict) or "manipulations" not in spec:
         raise ValueError(f"{path}: top-level key `manipulations` is mandatory")
     entries = spec["manipulations"]

@@ -12,6 +12,11 @@ Outputs in --out:
                  measures (`episode_measures`, so numbers are directly comparable with every sweep
                  CSV), plus memory disturbance (mean/max over the episode) and the share of memory
                  units outside the range they take in the natural (identity) episodes.
+                 For a modulated agent also, per FiLM site, the episode means of the unit-mean
+                 |acting - shadow| gain and offset (`absdgain_<site>_mean`, `absdoffset_<site>_mean`;
+                 exactly 0 in the identity condition) and of the shadow's across-unit gain SD
+                 (`gainsd_<site>_mean`) -- the teacher-forced injury responsiveness of the
+                 modulator engagement check (scripts/analysis/modulator_engagement/).
   steps_<ckpt>.npz   with --record steps: per-step arrays (see `_scan`).
   manifest.json  run, checkpoints, world, seeds, device, memory mode, the manipulation file as
                  read, and the git SHA.
@@ -93,8 +98,16 @@ def _set_device(device):
         os.environ["JAX_PLATFORMS"] = "cuda"
 
 
-def _scan(model, params, states0, h0, cond_rows, *, max_steps, M, memory, modulated):
-    """Greedy rollout with manipulation. MUST be entered through nnx.jit (see replay.py)."""
+def _scan(model, params, states0, h0, cond_rows, *, max_steps, M, memory, modulated, per_unit=False):
+    """Greedy rollout with manipulation. MUST be entered through nnx.jit (see replay.py).
+
+    For a modulated agent the shadow's modulator output is kept too, so every step also gives,
+    per FiLM site, the unit-mean ABSOLUTE difference between the acting and the shadow network's
+    gain (`absdgain_<site>`) and offset (`absdoffset_<site>`), and the shadow's across-unit SD of
+    the gain (`gainsd_<site>`). The shadow sees the true inputs of the same trajectory, so the
+    difference is caused by the manipulated input alone (teacher-forced along the acting path).
+    `per_unit=True` also returns the shadow's full per-unit gain/offset (`ugain_<site>`,
+    `uoffset_<site>`, shape (T, B, units)) -- callers that need per-unit time-means."""
     import jax
     import jax.numpy as jnp
     from src.environment.core import jax_step
@@ -111,7 +124,7 @@ def _scan(model, params, states0, h0, cond_rows, *, max_steps, M, memory, modula
         state, h_act, h_sh = carry
         obs = v_obs(state, params)
         obs_m = MP.apply(obs, t, M.index, op, val, M.t0, M.t1)
-        lg_s, _, h_sh_new, _ = model(obs, h_sh)
+        lg_s, _, h_sh_new, mod_s = model(obs, h_sh)
         if memory == "sustained":
             lg_a, v_a, h_act_new, mod = model(obs_m, h_act)
         else:
@@ -134,8 +147,16 @@ def _scan(model, params, states0, h0, cond_rows, *, max_steps, M, memory, modula
             from scripts.analysis.nmn.replay import SITE_FIELDS
             for site, (g, b) in SITE_FIELDS.items():
                 if getattr(mod, g, None) is not None:       # mean over units of gain and offset
-                    out[f"gain_{site}"] = getattr(mod, g).mean(-1)
-                    out[f"offset_{site}"] = getattr(mod, b).mean(-1)
+                    ga, ba = getattr(mod, g), getattr(mod, b)
+                    gs, bs = getattr(mod_s, g), getattr(mod_s, b)
+                    out[f"gain_{site}"] = ga.mean(-1)
+                    out[f"offset_{site}"] = ba.mean(-1)
+                    out[f"absdgain_{site}"] = jnp.abs(ga - gs).mean(-1)
+                    out[f"absdoffset_{site}"] = jnp.abs(ba - bs).mean(-1)
+                    out[f"gainsd_{site}"] = gs.std(-1)
+                    if per_unit:
+                        out[f"ugain_{site}"] = gs
+                        out[f"uoffset_{site}"] = bs
             out["d_mod"] = rel(ma, ms)
             out["h_mod"] = ma
             out["h_mod_shadow"] = ms
@@ -156,6 +177,52 @@ def _snapshots(states0, out, i, T):
     return S
 
 
+def run_checkpoint(agent, params, seeds, M, memory, per_unit=False):
+    """One checkpoint, every condition x episode, in world `params`. Returns
+    {"out", "T", "valid", "states0_np", "cond_rows"}; batch row b is condition b // len(seeds).
+
+    Raises if the world's observation layout differs from the agent's, or if the identity
+    condition (condition 0) does not act exactly like the shadow on every live step."""
+    import numpy as np
+    import jax
+    import jax.numpy as jnp
+    from flax import nnx
+    from src.environment.sensor import get_observation_breakdown
+    from src.environment.core import jax_reset
+
+    wb = get_observation_breakdown(params)
+    if list(wb.items()) != list(agent.obs_breakdown.items()):
+        raise ValueError(f"world observation layout {wb} != agent's {agent.obs_breakdown}")
+    max_steps = int(params.max_steps)
+    modulated = bool(agent.model.modulation_enabled)
+    C, N = M.n, len(seeds)
+    keys = jnp.stack([jax.random.PRNGKey(s) for s in seeds])
+    s0 = jax.vmap(jax_reset, in_axes=(None, 0))(params, keys)
+    for i, s in enumerate(seeds):                     # same parity guard as eval_rollout
+        if not bool(jnp.array_equal(s0.key[i], jax_reset(params, jax.random.PRNGKey(s)).key)):
+            raise RuntimeError(f"batched reset PRNG parity failed at seed {s}")
+    states0 = jax.tree_util.tree_map(lambda x: jnp.concatenate([x] * C, 0), s0)
+    cond_rows = np.repeat(np.arange(C), N)             # batch row b -> condition b // N
+    h0 = agent.model.initial_state(batch_size=C * N)
+    # M, max_steps, memory, modulated and per_unit are closed over (static), not traced
+    fn = functools.partial(_scan, max_steps=max_steps, M=M, memory=memory, modulated=modulated,
+                           per_unit=per_unit)
+    out = nnx.jit(fn)(agent.model, params, states0, h0, jnp.asarray(cond_rows))
+    out = jax.tree_util.tree_map(np.asarray, out)
+    states0_np = jax.tree_util.tree_map(np.asarray, states0)
+    T = np.argmax(out["done"], axis=0) + 1
+    valid = np.arange(max_steps)[:, None] < T[None, :]
+
+    # identity condition must act exactly like the shadow (same inputs, same memory)
+    idb = np.arange(N)
+    mism = (out["action"][:, idb] != out["shadow_action"][:, idb]) & valid[:, idb]
+    if mism.any():
+        raise RuntimeError(f"checkpoint {agent.step}: identity condition diverged from the shadow "
+                           f"in {int(mism.any(0).sum())} episode(s) -- the manipulation path "
+                           f"alters an untouched observation")
+    return {"out": out, "T": T, "valid": valid, "states0_np": states0_np, "cond_rows": cond_rows}
+
+
 def main():
     a = _parse()
     _set_device(a.device)
@@ -166,13 +233,8 @@ def main():
         import replay_mode
         return replay_mode.run(a)
     import numpy as np
-    import jax
-    import jax.numpy as jnp
-    from flax import nnx
     from src.environment.config_loader import (Config, load_env_config, load_env_params,
                                                load_behavior_measure_cfg)
-    from src.environment.sensor import get_observation_breakdown
-    from src.environment.core import jax_reset
     from scripts.analysis.nmn import replay, ckpt_io
     from avoidance_stats_heatmap import episode_measures
     import manip as MP
@@ -215,36 +277,13 @@ def main():
     M = None
     for step in ck:
         agent = replay.load_agent(models, step)
-        wb = get_observation_breakdown(params)
-        if list(wb.items()) != list(agent.obs_breakdown.items()):
-            raise ValueError(f"world observation layout {wb} != agent's {agent.obs_breakdown}")
         if M is None:
             M = MP.load(a.manipulation, agent.obs_breakdown, max_steps)
         modulated = bool(agent.model.modulation_enabled)
         C, N = M.n, len(seeds)
-        keys = jnp.stack([jax.random.PRNGKey(s) for s in seeds])
-        s0 = jax.vmap(jax_reset, in_axes=(None, 0))(params, keys)
-        for i, s in enumerate(seeds):                     # same parity guard as eval_rollout
-            if not bool(jnp.array_equal(s0.key[i], jax_reset(params, jax.random.PRNGKey(s)).key)):
-                raise RuntimeError(f"batched reset PRNG parity failed at seed {s}")
-        states0 = jax.tree_util.tree_map(lambda x: jnp.concatenate([x] * C, 0), s0)
-        cond_rows = np.repeat(np.arange(C), N)             # batch row b -> condition b // N
-        h0 = agent.model.initial_state(batch_size=C * N)
-        # M, max_steps, memory and modulated are closed over (static), not traced
-        fn = functools.partial(_scan, max_steps=max_steps, M=M, memory=a.memory, modulated=modulated)
-        out = nnx.jit(fn)(agent.model, params, states0, h0, jnp.asarray(cond_rows))
-        out = jax.tree_util.tree_map(np.asarray, out)
-        states0_np = jax.tree_util.tree_map(np.asarray, states0)
-        T = np.argmax(out["done"], axis=0) + 1
-        valid = np.arange(max_steps)[:, None] < T[None, :]
-
-        # identity condition must act exactly like the shadow (same inputs, same memory)
-        idb = np.arange(N)
-        mism = (out["action"][:, idb] != out["shadow_action"][:, idb]) & valid[:, idb]
-        if mism.any():
-            raise RuntimeError(f"checkpoint {step}: identity condition diverged from the shadow "
-                               f"in {int(mism.any(0).sum())} episode(s) -- the manipulation path "
-                               f"alters an untouched observation")
+        res = run_checkpoint(agent, params, seeds, M, a.memory)
+        out, T, valid, states0_np = res["out"], res["T"], res["valid"], res["states0_np"]
+        cond_rows = res["cond_rows"]
 
         # natural memory range per unit: every shadow state (true inputs) on every valid step of
         # every condition -- the memory this agent reaches without manipulation, on these trajectories
@@ -269,6 +308,9 @@ def main():
                 r.update(d_mod_mean=float(out["d_mod"][:Ti, b].mean()),
                          d_mod_max=float(out["d_mod"][:Ti, b].max()),
                          out_of_range_mod=float(oor_mod[:Ti, b].mean()))
+                for k in sorted(out):                     # per-site |acting - shadow| gain/offset
+                    if k.startswith(("absdgain_", "absdoffset_", "gainsd_")):
+                        r[f"{k}_mean"] = float(out[k][:Ti, b].mean())
             rows.append(r)
         if a.record == "steps":
             keep = {k: v for k, v in out.items() if not k.startswith("h_")}
