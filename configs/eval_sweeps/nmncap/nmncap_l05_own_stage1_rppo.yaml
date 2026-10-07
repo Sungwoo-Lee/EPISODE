@@ -12,8 +12,7 @@ probe: configs/environment/experiment/behavior_probes/hvsmell/two_channel
 conditions: all
 episodes: 30
 nodes:
-- 109
-- 110
+- 107
 x_axis: steps
 plot_measures:
 - bush_hiding
