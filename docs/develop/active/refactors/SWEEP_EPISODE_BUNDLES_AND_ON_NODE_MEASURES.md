@@ -347,11 +347,11 @@ Each phase ends with its own commit(s) (explicit pathspec, pushed). No phase sta
 
 ## Checkpoints
 
-- [ ] P0.1–P0.4 results recorded (live sweeps, node numpy versions + import check, reader re-grep, 11:42 death finding).
+- [x] P0.1–P0.4 results recorded (live sweeps, node numpy versions + import check, reader re-grep, 11:42 death finding). (2026-10-07 17:10, developer: see Implementation Report, Phase 0; P0.1 must be re-run at C2-gate time.)
 - [x] Phase 1 committed alone; nothing else imports `episode_bundle` at that commit. (2026-10-07, developer: library + 38 tests; only the test file imports it.)
 - [ ] Neuromodulation session's explicit go recorded (date, source) before Phase 2's edits to its files; `git diff` checked on each; no foreign hunk committed.
 - [ ] `SESSION_HOLDS` (E4) implemented as listed; no archive written into, and no file deleted from, a held cell (inventory before/after); any hold lift recorded with its source.
-- [ ] Phase 2: ported parity tools report `exact` on an archive-only cell and on the folder-form cell; outputs pasted.
+- [ ] Phase 2: ported parity tools report `exact` on an archive-only cell and on the folder-form cell; outputs pasted. (Partial, 2026-10-07: this plan's own readers R4–R7 ported and exact on both forms; R9–R12 still wait for the neuromodulation session's go.)
 - [ ] C2-gate evidence (markers + `ps` + node `pgrep`) pasted, timestamped, immediately before the shared-folder worker/driver edit.
 - [ ] Every launch after Phase 3 has `_provenance/<id>/worker/` and the driver ran that copy (`ps` on a node shows the provenance path).
 - [ ] `cell_row` is the only place the row arithmetic exists (`grep nanmean scripts/eval/dwell_sweep/` → one hit).
@@ -376,7 +376,7 @@ Each phase ends with its own commit(s) (explicit pathspec, pushed). No phase sta
 
 ## Implementation Report
 
-> **Implemented by**: developer (Phase 1 only)
+> **Implemented by**: developer (Phase 1; Phase 0 and Phase 2 R4–R7 on 2026-10-07 evening)
 > **Date**: 2026-10-07
 
 ### Phase 1 — archive library
@@ -415,6 +415,56 @@ NAS smoke (scratch dir under `tmp/`, a CIFS mount; not `results/`): a 30-episode
 - Phase 2's ports of R9–R12 still need the neuromodulation session's explicit go (F9); R4–R7 can start now.
 - `members(cell, pattern)` reproduces `Path.glob` semantics for `*`, `?`, `[...]` and `**/`; patterns are matched against member names relative to the cell, so readers that today glob from a level above the cell (e.g. `<ck>/*/*/recordings/...` from the cond dir) must first resolve the cell with `cell_path(cond_dir, step)` and drop the leading step component from their pattern.
 - Plan-review N3–N6 are unaddressed by design (scope of senior-developer / Phase 3 / operations).
+
+### Phase 0 — read-only preflight (2026-10-07, 17:09–17:20)
+
+Raw output: `tmp/20261007_*_bundles_phase0.md` (scratch, not committed).
+
+- **P0.1 live sweeps.** Run markers with `npar_` and no `done_`: `nmncap/{l05_gridchase,l05_own}` (node 107), `nmncap/l05_grid` (106, 107), `nmncap/l05_neutral` (106) — all live: four `run_sweep.py` drivers (PIDs 3406456/3406511/3406585/3406611, started 16:51) on the container, `sweep_worker.sh` processes on 106 and 107. `healrep_noheal/grid` node 112: `npar_112` 16:03, no `done_112`, **no worker process on 112** — the dead sweep of re-review N4, still unresolved. Stale old markers: `metrics_history_dreamer_basic04_size` (102, July), `dp1/dreamer_bins6` (111, July). No worker process on 104 or 105 at 17:10. **C2-gate does not clear today** (live nmncap sweeps + the dead 112 share).
+- **P0.2 node env.** All 14 nodes (101–114): NAS mounted, `/usr/bin/unzip` present, `numpy 2.3.5`, `import avoidance_stats_heatmap` OK. No node excluded.
+- **P0.3 reader re-grep** (`_scratch|rec.gz|load_episode|episodes/*.npz` over `scripts src tests`, then `"recordings"|/recordings/|episode_*|"episodes"`, plus all 9 worktrees under `.claude/worktrees/`). No class-S sweep-cell reader beyond A4's list. Other hits are writers (`eval_rollout.py`, `evaluation_core.py`, `dreamer_srl/eval.py`), class-D/recording-directory tools (render/trajectory/dreamer tools), other pipelines' `_scratch` (`traj_collect`, `launch_collection.py`), `_golden_scratch` CSV gates (`golden_gate.py`, `golden_check.py`), or `"episodes"` as a dict key. **For Phase 3's E2 grep:** worktrees `bb-water`, `thirst`, `thirst-runs` hold *unported* copies of `_traj.py`, `t04_variance_budget.py`, `scene_steps.py`, `obs_manipulation/run.py` (and `bb-water` of `probe_pond.py`); a worktree-wide E2 will block class-S deletion until those worktrees are rebased or listed in `NON_READERS` with a reason.
+- **P0.4 the 11:42 silent collation death.** Not determined. `healrep/l05fix_grid` workers wrote `done_112` at 11:42:06. The container's kernel log (docker-102) has **no OOM-kill line** on 2026-10-07; it shows bursts of CIFS `Close interrupted close` / `Close cancelled mid failed rc:-9` at 11:47:46 and 11:52:35–36 (eight at once), consistent with a signal killing a multi-process pool mid-I/O (the collation pool is `min(cpu_count, 32)`), but the same messages recur all afternoon, so this is suggestive, not a cause. Bounded at ~10 min.
+
+### Phase 2 (partial) — this plan's own readers R4–R7
+
+**Scope.** Only R4–R7. Not touched: the neuromodulation session's four files (R9–R12; no go), `sweep_worker.sh`, `run_sweep.py` (`_measure_cell` is R1, Phase 3). Nothing under `results/` was written, packed or deleted: real cells were **copied** into `tmp/20261007_bundle_readers/` and packed there.
+
+**Files.**
+- `src/utils/episode_bundle.py`: **new function `step_names(cond_dir)`** — steps present as `<digits>/` folder or `<digits>.zip`, each once, sorted as strings; ignores `*.zip.partial-*`, `_run_markers`, a folder named `N.zip`, a file named `N`. *Deviation (addition to F1):* every reader enumerated steps with an `isdigit()` filter on directory names, which silently skips archives; one shared helper instead of four copies of the same parsing. Test `test_step_names_lists_both_forms_once`.
+- `scripts/analysis/basic_behaviour/probe_pond.py` (R4): `episodes_in(cell)` uses `EB.members` (order kept: `episodes/` dirs sorted, then `.npz` sorted within); `measure_episodes` loads through `EB.load_npz` / `EB.load_recording` (failure messages print the same paths for folders); `collate` enumerates steps with `EB.step_names` + `EB.cell_path`, passes the step explicitly. `calibrate` unchanged (its local roll-out folders are read as folders).
+- `scripts/analysis/studies/basicq2_waves/_traj.py` (R5): `_episodes` via `step_names` / `cell_path` / `members`; inserts the repo root on `sys.path` (it did not before). One stated narrowing: the old code took `glob(...recordings/*)[0]` (unsorted, OS order) when a cell held several recordings folders; the port takes the first in sorted order. Sweep cells hold one.
+- `scripts/analysis/studies/thermal_probes/t04_variance_budget.py` (R6): reading moved into a function `newest_recordings(cond_dir)` with the selection logic verbatim, applied to member paths written as they would be for a folder; repo root from `_common.ROOT`.
+- `scripts/analysis/studies/injury_dependence/scene_steps.py` (R7): `step_names` / `cell_path` / `members` / `load_recording`. Episodes are now read in **sorted** order; the old `glob.glob` order was unsorted (OS order) — on the real copy below the result was identical.
+- NEW `tests/scripts/test_bundle_readers.py` (4 tests; not listed in F10 — added as the Phase 2 regression test): synthetic condition with steps 99 / 980 / 1000, folder copy vs archive-only copy, each reader's output equal.
+- `docs/environment/SCRIPTS_DEPENDENCY_MAP.md`: §1c row for the new test; one row for the four ported readers (new `sys.path` repo-root edge); last-updated line. The file had no uncommitted foreign hunks.
+
+**Verification — real cells, read-only** (`tmp/20261007_bundle_readers/{build,verify}.py`). Newest three steps of eight condition folders copied from `results/eval/avoidance/` (thirst `g10s3_ordinary_s42` ×2, basicq2_wave2 `lvl04_*` ×2, thermalprobe_fire_away_clean `lvl05_control`/`lvl06_modulated`, injurygrid_core `lvl02_control` ×2) into a folder-form tree and an archive-only tree (packed with `EB.pack`, folders removed, asserted only `.zip` remain). Each reader was run three ways: **pre-port code on folders, ported code on folders, ported code on archives.** Pre-stated criterion: all three equal (string-equal CSVs / deep-equal decoded data / array-equal npz).
+
+```
+R4 probe_pond collate (BB_DATA_ROOT = tmp tree, spec = g10s3 with the ordinary run only; driver CSVs trimmed to the 3 steps)
+  [old_folder] rc=0 wrote 2 pond CSV(s)  [new_folder] rc=0 wrote 2  [new_zip] rc=0 wrote 2
+  avoid_none_inj70.csv: old_folder==new_folder True; new_folder==new_zip True; rows 3; equal to real pond CSV rows for these steps True
+  avoid_pred_inj00.csv: old_folder==new_folder True; new_folder==new_zip True; rows 3; equal to real pond CSV rows for these steps True
+R5 _traj
+  control/avoid_pred_inj00: ck 10000012 n_eps 30; episodes old==new_folder True, new_folder==new_zip True; _one equal True
+  modulated/avoid_none_inj00: ck 10000055 n_eps 30; episodes old==new_folder True, new_folder==new_zip True; _one equal True
+R6 t04 newest_recordings + per-episode bush share
+  lvl05_control/avoid_pred_inj00: newest=9800058/.../9800058 n=30; old==new_folder True; new_folder==new_zip True
+  lvl06_modulated/avoid_none_inj00: newest=9800012/.../9800012 n=30; old==new_folder True; new_folder==new_zip True
+R7 scene_steps.one(core, lvl02_control, last=3)
+  [old_folder] 180 episodes  [new_folder] 180  [new_zip] 180
+  keys 270; conds with episodes [avoid_none_inj00, avoid_pred_inj30]; old==new_folder True; new_folder==new_zip True
+```
+
+**Synthetic, temp dir.** `pytest tests/scripts/test_bundle_readers.py tests/scripts/test_episode_bundle.py -q` → `43 passed`. The same four reader tests pointed at the **pre-port** copies fail 4/4 (the old code finds no episodes in an archive-only condition — the silent skip this phase removes).
+
+**Existing tests.** `tests/analysis/test_basic_behaviour.py`: 25 passed, 5 failed — all 5 in the test's `load(world)` helper (`glob(..."_manifest.json")[0]` → `IndexError`, a missing data manifest), before any `probe_pond` code; the probe_pond tests (`test_prepond_truncation`, `test_calibration_rule_branches`, `test_collate_tolerance_matches_4_decimal_csv`) pass. Not caused by this change; not investigated further.
+
+**Found, not fixed (pre-existing, outside scope).** `t04_variance_budget.py` picks the "newest" checkpoint as the largest *path string*, so `9800058` beats `10000012`: Figure 4 of the thermal-probes page is drawn from the second-newest checkpoint whenever the step count crosses a digit boundary. The port keeps this behaviour exactly (the test pins it). Owner: whoever maintains the thermal-probes page; `bug-curator` if it should be logged.
+
+**Speed check.** Skipped: no change on the training or sweep hot path (analysis readers only). Reading from an archive is not slower in practice here (one ZIP open per member; 30 episodes per cell).
+
+**Still blocked.** R9–R12 (neuromodulation session's go, F9). Phase 3 (C2-gate: live nmncap sweeps on 106/107 and the dead `healrep_noheal/grid` node-112 share at 17:10). `SWITCHED_READERS["S"]` is Phase 3 code; R4–R7 qualify for it.
 
 ## Verification Report
 
