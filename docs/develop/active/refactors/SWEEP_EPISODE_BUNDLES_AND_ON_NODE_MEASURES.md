@@ -353,3 +353,14 @@ Snapshot rule (CLAUDE.md git-safety): the migration is not a git operation, and 
 | | | | |
 
 **Conclusion**:
+
+## Feedback from plan-reviewer
+
+> **Reviewed by**: plan-reviewer · 2026-10-07 · full report: [[plan_sweep_bundles]] (`docs/reviews/plan_sweep_bundles.md`)
+
+**Verdict: NOT READY** — two ordering problems, each fixed by one added precondition; the design is otherwise careful.
+
+- 🔴 **C1 — the hold does not cover new sweeps.** `HOLD_ROOTS` blocks only `delete`. Once the new worker is live, every new test written into a held root is archive-only, so `case_l05_s42/case.py:147` silently falls back to the CSV-mean check and `test_modulator_engagement.py:166` silently skips — the hazard §A4 names. Fix: land `episode_bundle.py` alone, then the other session's F9 ports, *then* switch the worker (or dual-write legacy folders for held roots).
+- 🔴 **C2 — editing `sweep_worker.sh` while the three no-healing sweeps run.** Bash reads the script's tail (the `done_` marker line) from disk after the episodes finish; an in-place edit most likely leaves those sweeps hanging silently. Fix: no edit until every live sweep's `done_` markers exist and drivers have exited; ideally launch a per-launch copy of the worker stored with the provenance.
+- 🟡 Moderate (details in the report): verification reads the same host's CIFS page cache (verify/delete from a different host; independent `unzip` + `diff -r` on the pilot); G1 can pass vacuously if it seeds from the existing CSV; score-before-pack plus the EXIT-trap cleanup loses episodes on a scoring error; the heartbeat loop outlives a killed worker and a killed `xargs` still writes `done_`; a node-side collation death is still unclassifiable (`RUNNING?` on another host) — add a collation heartbeat and unbuffered logs; partial collation + the max-step incremental rule can leave permanent holes; old-code collation has no marker and can race the migration; node Python env drift (known bug) and cross-node determinism threaten G2's "exact"; "free node" must mean no training and no other sweep, not GPU-free; `HOLD_ROOTS` should be an allow-list.
+- **D1** on-node after eval — agree (pack before scoring). **D2** keep `_scratch/` — agree. **D3** inventory only — agree. **D4** no full copy needed if the pilot passes an independent cross-host check; do back up all per-scene CSVs/figures/provenance (MBs) once, and flag roots whose checkpoints are gone. **D5** the neuromodulation session ports R9–R12, before the worker switch; lift the hold per root only after a ported parity run reports `exact` on an archive-only cell.
