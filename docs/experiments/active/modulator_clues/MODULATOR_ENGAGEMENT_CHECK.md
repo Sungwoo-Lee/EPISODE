@@ -278,3 +278,172 @@ spent on a freeze target that cannot detect the effect, and a misleading "the mo
 the injury effect" caveat. E1 and P-main are sound once the tool route is chosen.
 
 *Reviewed by: plan-reviewer*
+
+## Implementation Report (developer, 2026-10-07)
+
+**In short.** The tooling for this plan (Revision 1a) is built, tested and committed (`0b9c1c67`, fix `3f4a8457`, branch `v5.0`).
+After the coordinator's go, E1, E1-natural, E2 and E3 were computed for all 14 pairs on the 41-point
+checkpoint grid. E4 is built and smoke-tested on one checkpoint only. Its budget is below and it
+**waits for a go**. No statistics or verdict have been computed on the real data: `analyze.py` has
+been run only on synthetic inputs. Running it, and interpreting the result, is the analysis step
+(experiment-analyzer, then plan-reviewer's verdict gate).
+
+### What was built (file by file)
+
+- `scripts/analysis/obs_manipulation/run.py` (live mode, extended):
+  - The shadow's modulator output, previously discarded, is now kept.
+  - Each step records, per FiLM site, the unit-mean |acting − shadow| gain (`absdgain_*`) and
+    offset (`absdoffset_*`), plus the shadow's across-unit gain SD (`gainsd_*`).
+  - The shadow's per-unit gain and offset are returned on request.
+  - The per-checkpoint core is factored into `run_checkpoint()`.
+  - `episodes.csv` gains `_mean` columns. Existing columns are bit-identical to before (checked).
+- `scripts/analysis/obs_manipulation/manip.py`: `from_spec()` compiles an in-memory manipulation,
+  with the same schema and checks as a YAML file.
+- `scripts/analysis/modulator_engagement/runs.py`: the explicit 14-pair list.
+  - Each folder is checked: it holds checkpoints, the modulated run is FiLM and the ordinary run
+    has no modulator, and the top-level seed matches.
+  - The dead 16:01 level-06 seed-42 folders are refused.
+  - Each pair's probe directory, episodes and output leaf are read from its sweep spec, and the
+    spec's paths for those labels are checked against the folders.
+  - The 22-Sep level-05 pair is `20260922-182534` (ordinary) / `20260922-182538` (modulated): the
+    pair the `thermalprobe_neutral_clean` sweep, and so `figures.REFERENCE`, used.
+- `scripts/analysis/modulator_engagement/outcomes.py`: behaviour gaps read through `figures.py` at
+  `10358a45`. **Deviation:** a `git archive` tree of `scripts/` at that commit is used, not a
+  `git worktree`.
+  - Why: the same pinned files result, without writing to the shared `.git`. A full worktree is a
+    1.5 GB checkout, and sparse-checkout on git 2.34 risks changing the main worktree's config.
+  - The import chain's blob hashes are checked against the commit (`figures.py`, `highlight.py`,
+    `collect.py`, `checkpoint_stats.py`).
+  - The 9 main pairs are asserted equal to the working copy (they are exactly equal).
+  - l05fix is read from the working copy and labelled so.
+  - Values match the plan's quoted numbers (e.g. level 05 seed 43 predator gap −12.4, level 04
+    seed 44 +25.8).
+- `scripts/analysis/modulator_engagement/engagement.py`, with subcommands `e1`, `e2`, `e3`,
+  `e4-prepare` and `e4-collect`. Details are in its docstring.
+  - E1 uses live mode as Revision 1a sets out. The acting network sees felt injury 0.70 from step 0.
+  - 0.70 is checked per world as start/max injury, with a fixed start, a kernel that sums to 1, and
+    no perceptual noise.
+  - The trace sensitivity row replays the natural injury-70 episode's felt-injury trace step by step.
+  - E1-natural is computed step-aligned on steps that are live in both episodes.
+  - Every checkpoint's identity episodes are checked against the dwell-sweep CSV (bush dwell equal
+    within CSV rounding; fatal otherwise).
+- `scripts/analysis/modulator_engagement/analyze.py`:
+  - Level-demeaned Spearman with the exact 216-arrangement within-level null, for P-main, P-own and
+    the negative control.
+  - The decision rule.
+  - The secondary rows, the pooled ρ, within-level ρ, P-rank, the level-05 (and 05+06) own-scene
+    sensitivity rows, P-out and P-cause.
+  - Engagement is averaged over each pair's own tested grid points. A missing point is fatal.
+- `tests/analysis/test_modulator_engagement.py` (8 tests) and `docs/environment/SCRIPTS_DEPENDENCY_MAP.md`
+  (new row, a test-suite row, and caller updates for `nmn/{replay,ckpt_io,mod_distribution,freeze}`,
+  `obs_manipulation` and `fast_heal_replication`).
+
+### Choices the plan left open (flag for senior-developer / experiment-analyzer)
+
+1. **E1 site average.** `e1g_mean4` is the mean of the four non-critic FiLM heads (encoder unimodal,
+   encoder multimodal, task GRU, actor), weighted equally. This is the same as pooling every
+   non-critic unit, since every head has 128 units. The encoder therefore weighs 2 of 4, not 1 of 3.
+   Per-site values are in the CSVs, so a 3-site average can be computed without re-running.
+2. **E2/E3 episodes:** 128 greedy episodes in the training world, seeds 90000–90127, the defaults
+   of the existing method-2/3 runners. The plan does not give a number.
+3. **E3** freezes all five sites, as `freeze.py` does (the critic cannot affect behaviour).
+   Conditions: gain frozen, offset frozen. `freeze_both` is not run.
+4. **E4 freeze target:** per checkpoint, the per-unit time-mean over every live step of both rabbit
+   scenes (injury 70 and 0, 30 episodes each), pooled step-weighted.
+5. **Pair checkpoint set** = grid points where both agents' rabbit-scene injury effect was measured.
+   This is 41 for every pair except level 04 seed 44 (39; its testing stopped at 9.6 M).
+
+### Tests
+
+- `tests/analysis/test_modulator_engagement.py`: **8 passed** (52 s, CPU).
+  - Permutation null on synthetic data: exactly 216 level-preserving arrangements; a perfect
+    within-level relation gets p = 1/216; a level effect alone gives demeaned ρ = −1 and p = 1;
+    under independence the null is centred and p ≈ uniform; the decision-rule cases.
+  - The identity condition reproduces the plain rollout exactly. On a real checkpoint (level 05
+    seed 42, step 6000007), the tool's identity condition equals an independent `nmn.replay`
+    rollout of the same seeds bit for bit (actions, lengths, per-unit γ and β), with |Δ| exactly 0.
+    It also equals the dwell sweep's recorded agent positions (`_parity`).
+    - Note: at a different batch size the two programs differ by ≤ 7e-7 (float32 rounding of a
+      different compiled program), so the test compares at equal batch size.
+  - E1 ≈ 0 for a modulator blind to nociception. The felt-injury row of the modulator GRU's input
+    kernel is zeroed. E1 (γ, β; constant and trace; every site) is then < 1e-6, while the task
+    network still reacts (bush dwell changes).
+    - Positive control: the unedited checkpoint gives E1γ, E1β > 0.01, with both sweep checks
+      matching.
+- Existing tests: `tests/env/test_saved_config_compat.py`, `tests/analysis/test_nmn_freeze.py` and
+  `tests/analysis/test_nmn_mod_distribution.py` give **53 passed**.
+- Bug found while computing, and fixed in `3f4a8457`: E3's first row per run had one more column
+  (the equivalence result), so the CSV schema guard stopped every E3 job after one checkpoint. No
+  wrong numbers were written; the rerun resumed. No regression test was added: the guard itself
+  caught the bug.
+
+### Speed check
+
+- `obs_manipulation/run.py` live mode, before versus after this change:
+  - Setup: same command, 3 checkpoints, 30 episodes, CPU, run twice each.
+  - Before: 22.6 s and 23.0 s. After: 23.1 s and 23.1 s. The change is about +1 %, within noise.
+- The training hot path is untouched.
+
+### Smoke-test number
+
+Level 05 seed 42, checkpoint 6000007 (6.0 M steps), unhurt no-animal neutral scene:
+- E1γ = 0.352 per unit per step, mean of the four sites; per site: encoder-uni 0.493, encoder-multi
+  0.347, GRU 0.248, actor 0.321.
+- E1β = 0.335.
+- Shadow across-unit SD of γ = 0.550.
+- The natural felt-injury trace peaks at 0.52 (healing starts before the 0.70 plateau), and its
+  trace E1γ = 0.042.
+- E1-natural γ = 0.077.
+- Sweep checks: both match.
+
+### Computation done (E1, E1-natural, E2, E3)
+
+- **Where:** all under `results/analysis/modulator_engagement/`, run on local CPU with 7 workers
+  (12:31–13:59 KST, 2026-10-07; no lab GPU used).
+  - `outcomes.json` holds the behaviour gaps (pinned `10358a45`, provenance inside).
+  - `e1/`, `e2/` and `e3/` hold one CSV per pair, with one row per checkpoint.
+  - Each pair also has a manifest.
+  - Batch scripts and logs are in `logs/`.
+- **Coverage:** E1, E2 and E3 are 574 rows each, 14 pairs × 41 grid checkpoints, with 0 failed jobs.
+  Every pair's tested checkpoint set is fully covered: 41 everywhere except level 04 seed 44, which
+  has 39.
+- **E1 checks:** at 572 of 574 checkpoints, the identity episodes reproduced the dwell sweep's bush
+  dwell in both the unhurt and injured no-animal scenes.
+  - The other 2 are level 04 seed 44 at 9.8 M and 10.0 M. Testing stopped there, so there is no
+    sweep value; both points fall outside that pair's tested set and are not averaged.
+  - Every scene was deterministic: one felt-injury trace group per checkpoint.
+- **E2:** 128 greedy episodes per checkpoint in the training world (seeds 90000–90127).
+- **E3:** paired survival steps under the gain freeze and the offset freeze, same episodes. The
+  freeze-by-weight-edit equivalence check gave a worst deviation of exactly 0.0 on all 14 runs.
+- **Not computed:** correlations, the permutation null or the verdict (`analyze.py`), and E4.
+
+### E4 budget (waiting for a go)
+
+- **`e4-prepare`** (local CPU): about 28 s per checkpoint, measured. Steps per checkpoint: two live
+  rabbit passes, the pooled target, two edited checkpoints written and read back bit for bit, and a
+  constancy check.
+  - All 14 pairs × 9 checkpoints = 126 checkpoints: about 1 h of serial CPU, about 10 min with 7
+    workers.
+  - Disk: 252 × 2.5 MB ≈ 0.63 GB under `results/analysis/modulator_engagement/e4/ckpts/`.
+- **Scoring sweep:** 252 checkpoint evaluations (126 × gain/offset) × 2 rabbit scenes × 30 episodes.
+  - About 20–28 s each on CPU, measured with `eval_rollout.py` called exactly as the sweep worker
+    calls it. That is about 1.5–2 CPU-process-hours in total.
+  - **The dwell sweep runs on CPU (`--device cpu`), so the GPU budget is zero.** One lab node at
+    NPAR = 8 would take about 15–20 min.
+  - Restricting to the 9 main pairs: 162 evaluations, about 1–1.3 CPU-hours.
+- The specs are generated with `nodes: []`, so nothing launches by accident. The training-runner
+  fills the nodes after `gpu_status` and the diary check.
+- Then `engagement.py e4-collect` and `analyze.py` (P-cause).
+- Verified on one checkpoint:
+  - `eval_rollout.py` restores the edited checkpoint without complaint.
+  - On the original checkpoint it reproduces the sweep's bush dwell (0.1964 / 0.1139).
+  - The frozen-gain copy scores (smoke only, not a result): rabbit-scene injury effect −3.0 pp,
+    against +8.3 pp live.
+
+### Follow-ups
+
+- Run `analyze.py --data results/analysis/modulator_engagement` once E3 is complete (and again
+  after E4). It belongs to the analysis step.
+- `P-cause` and `e4-collect` have only been exercised in the smoke test, not on full E4 data.
+
+*Implemented by: developer*
