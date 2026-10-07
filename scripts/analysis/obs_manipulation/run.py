@@ -6,6 +6,10 @@ applied; the world evolves from the true state. A SHADOW copy of the network is 
 observation of the same trajectory, giving (a) the natural memory for `--memory one_step` and (b)
 the memory-disturbance readout: how far the acting network's recurrent state has moved from the
 natural one, for the task GRU and the modulator's GRU separately.
+`--orientation act_true` swaps the roles: the true-input network acts (every condition follows the
+natural route) and the manipulated copy is the shadow (case study L05 S42, Revision 1). The
+default, `act_manipulated`, is the original behaviour. Per-layer capture
+(`forward_with_activations`) is available through `run_checkpoint(..., capture=True)`.
 
 Outputs in --out:
   episodes.csv   one row per checkpoint x condition x episode: the dwell sweep's own per-episode
@@ -64,6 +68,11 @@ def _parse():
     ap.add_argument("--store", help="replay only: trajectory-store root holding this run's store")
     ap.add_argument("--manipulation", required=True, help="manipulation YAML (see manip.py)")
     ap.add_argument("--memory", required=True, choices=["sustained", "one_step"])
+    ap.add_argument("--orientation", choices=["act_manipulated", "act_true"], default="act_manipulated",
+                    help="live only: which pass acts. act_manipulated (the original tool): the network "
+                         "fed the manipulated input acts and the true-input copy is the shadow. "
+                         "act_true: the true-input network acts (natural route) and the manipulated "
+                         "copy is the shadow. Recorded in manifest.json")
     ap.add_argument("--episodes", required=True, type=int,
                     help="episodes per condition; seeds are the world's behavior_measures.eval_seeds[:N]")
     ap.add_argument("--device", required=True, choices=["cpu", "gpu"])
@@ -98,16 +107,41 @@ def _set_device(device):
         os.environ["JAX_PLATFORMS"] = "cuda"
 
 
-def _scan(model, params, states0, h0, cond_rows, *, max_steps, M, memory, modulated, per_unit=False):
+ORIENTATIONS = ("act_manipulated", "act_true")
+
+
+def _scan(model, params, states0, h0, cond_rows, override, *, max_steps, M, memory, modulated,
+          per_unit=False, orientation="act_manipulated", capture=False, override_index=None):
     """Greedy rollout with manipulation. MUST be entered through nnx.jit (see replay.py).
 
-    For a modulated agent the shadow's modulator output is kept too, so every step also gives,
-    per FiLM site, the unit-mean ABSOLUTE difference between the acting and the shadow network's
-    gain (`absdgain_<site>`) and offset (`absdoffset_<site>`), and the shadow's across-unit SD of
-    the gain (`gainsd_<site>`). The shadow sees the true inputs of the same trajectory, so the
-    difference is caused by the manipulated input alone (teacher-forced along the acting path).
-    `per_unit=True` also returns the shadow's full per-unit gain/offset (`ugain_<site>`,
-    `uoffset_<site>`, shape (T, B, units)) -- callers that need per-unit time-means."""
+    Two passes of the same network run every step on the same world state: the MANIPULATED
+    pass (inputs changed by `M`, then by `override`) and the TRUE-INPUT pass. `orientation`
+    picks which one acts:
+      act_manipulated  the manipulated pass acts; the true-input pass is the shadow (the
+                       original tool, the modulator engagement check's E1);
+      act_true         the true-input pass acts, so every condition follows the natural route,
+                       and the manipulated pass is the shadow (case study L05 S42, Revision 1).
+    Output keys keep one meaning in BOTH orientations: `h_task`, `h_mod`, `gain_*`, `offset_*`
+    belong to the manipulated pass; `h_task_shadow`, `h_mod_shadow`, `gainsd_*`, `ugain_*`,
+    `uoffset_*` to the true-input pass; `action`/`p_act` to whichever pass acts and
+    `shadow_action`/`p_shadow` to the other. Memory: the true-input pass always carries its own
+    state; the manipulated pass carries its own (`sustained`) or uses the true-input pass's
+    (`one_step`).
+
+    For a modulated agent, every step also gives, per FiLM site, the unit-mean ABSOLUTE
+    difference between the manipulated and the true-input pass's gain (`absdgain_<site>`) and
+    offset (`absdoffset_<site>`), and the true-input pass's across-unit SD of the gain
+    (`gainsd_<site>`). `per_unit=True` also returns the true-input pass's full per-unit
+    gain/offset (`ugain_<site>`, `uoffset_<site>`, shape (T, B, units)).
+
+    `override` (traced, (max_steps, B) or None): where not NaN, element `override_index` of the
+    manipulated observation is set to it after `M` (a per-episode felt-injury trace without one
+    compiled program per trace). `capture=True` adds `acts_nat` / `acts_man` (the
+    `forward_with_activations` dicts of the two passes), `obs_nat` / `obs_man`, and for a
+    modulated agent `mod_nat` / `mod_man` (the full modulator outputs), for per-layer analysis
+    and the chain checks of scripts/analysis/nmn/teacher_forced.py. The passes that act and
+    carry memory are always the plain `model(...)` calls; the capture is a second, separate
+    evaluation on the same inputs, so turning it on cannot change a trajectory."""
     import jax
     import jax.numpy as jnp
     from src.environment.core import jax_step
@@ -115,25 +149,33 @@ def _scan(model, params, states0, h0, cond_rows, *, max_steps, M, memory, modula
     sys.path.insert(0, _HERE)
     import manip as MP
 
+    if orientation not in ORIENTATIONS:
+        raise ValueError(f"orientation {orientation!r} not one of {ORIENTATIONS}")
+    if override is not None and override_index is None:
+        raise ValueError("override given without override_index")
     v_step = jax.vmap(jax_step, in_axes=(0, 0, None))
     v_obs = jax.vmap(get_observation, in_axes=(0, None))
     op = jnp.asarray(M.op)[cond_rows]            # (B, K)
     val = jnp.asarray(M.value)[cond_rows]
 
     def body(carry, t):
-        state, h_act, h_sh = carry
+        state, h_man, h_nat = carry
         obs = v_obs(state, params)
         obs_m = MP.apply(obs, t, M.index, op, val, M.t0, M.t1)
-        lg_s, _, h_sh_new, mod_s = model(obs, h_sh)
-        if memory == "sustained":
-            lg_a, v_a, h_act_new, mod = model(obs_m, h_act)
-        else:
-            lg_a, v_a, _, mod = model(obs_m, h_sh)
-            h_act_new = h_sh_new
+        if override is not None:
+            ov = override[t]
+            cur = obs_m[:, override_index]
+            obs_m = obs_m.at[:, override_index].set(jnp.where(jnp.isnan(ov), cur, ov))
+        lg_n, _v_n, h_nat_new, mod_n = model(obs, h_nat)
+        h_in = h_man if memory == "sustained" else h_nat
+        lg_m, _v_m, h_man_new, mod = model(obs_m, h_in)
+        if memory != "sustained":
+            h_man_new = h_nat_new
+        lg_a, lg_s = (lg_m, lg_n) if orientation == "act_manipulated" else (lg_n, lg_m)
         action = jnp.argmax(lg_a, axis=-1)
         nxt, _r, done, _info = v_step(state, action, params)
-        ta, ma = MP.split_memory(h_act_new, modulated)
-        ts, ms = MP.split_memory(h_sh_new, modulated)
+        ta, ma = MP.split_memory(h_man_new, modulated)
+        ts, ms = MP.split_memory(h_nat_new, modulated)
         rel = lambda a, b: jnp.linalg.norm(a - b, axis=-1) / (jnp.linalg.norm(b, axis=-1) + 1e-6)
         out = {"action": action, "shadow_action": jnp.argmax(lg_s, axis=-1), "done": done,
                "agent_pos": nxt.agent_pos, "animal_pos": nxt.animal_pos,
@@ -141,14 +183,14 @@ def _scan(model, params, states0, h0, cond_rows, *, max_steps, M, memory, modula
                "felt_true": obs[:, M.index], "felt_given": obs_m[:, M.index],
                "p_act": jax.nn.softmax(lg_a, -1), "p_shadow": jax.nn.softmax(lg_s, -1),
                "d_task": rel(ta, ts), "h_task": ta, "h_task_shadow": ts}
-        # policy shift: total-variation distance between the acting and the natural move preferences
+        # policy shift: total-variation distance between the acting and the shadow move preferences
         out["policy_shift"] = 0.5 * jnp.abs(out["p_act"] - out["p_shadow"]).sum(-1)
         if modulated:
             from scripts.analysis.nmn.replay import SITE_FIELDS
             for site, (g, b) in SITE_FIELDS.items():
                 if getattr(mod, g, None) is not None:       # mean over units of gain and offset
                     ga, ba = getattr(mod, g), getattr(mod, b)
-                    gs, bs = getattr(mod_s, g), getattr(mod_s, b)
+                    gs, bs = getattr(mod_n, g), getattr(mod_n, b)
                     out[f"gain_{site}"] = ga.mean(-1)
                     out[f"offset_{site}"] = ba.mean(-1)
                     out[f"absdgain_{site}"] = jnp.abs(ga - gs).mean(-1)
@@ -160,7 +202,16 @@ def _scan(model, params, states0, h0, cond_rows, *, max_steps, M, memory, modula
             out["d_mod"] = rel(ma, ms)
             out["h_mod"] = ma
             out["h_mod_shadow"] = ms
-        return (nxt, h_act_new, h_sh_new), out
+        if capture:
+            lc_n, _, _, _, acts_n = model.forward_with_activations(obs, h_nat)
+            lc_m, _, _, _, acts_m = model.forward_with_activations(obs_m, h_in)
+            out["acts_nat"], out["acts_man"] = acts_n, acts_m
+            out["obs_nat"], out["obs_man"] = obs, obs_m
+            # the capture evaluation vs the acting/carrying evaluation (expected 0 or ~1e-7)
+            out["capture_dlogit"] = jnp.maximum(jnp.abs(lc_n - lg_n).max(-1), jnp.abs(lc_m - lg_m).max(-1))
+            if modulated:
+                out["mod_nat"], out["mod_man"] = mod_n, mod
+        return (nxt, h_man_new, h_nat_new), out
 
     return jax.lax.scan(body, (states0, h0, h0), jnp.arange(max_steps))[1]
 
@@ -177,12 +228,17 @@ def _snapshots(states0, out, i, T):
     return S
 
 
-def run_checkpoint(agent, params, seeds, M, memory, per_unit=False):
+def run_checkpoint(agent, params, seeds, M, memory, per_unit=False, orientation="act_manipulated",
+                   capture=False, override=None, override_index=None):
     """One checkpoint, every condition x episode, in world `params`. Returns
     {"out", "T", "valid", "states0_np", "cond_rows"}; batch row b is condition b // len(seeds).
+    `orientation`, `capture`, `override`, `override_index`: see `_scan` (`override` is a numpy
+    array (max_steps, C * N), NaN where untouched).
 
     Raises if the world's observation layout differs from the agent's, or if the identity
-    condition (condition 0) does not act exactly like the shadow on every live step."""
+    condition (condition 0) does not act exactly like the shadow on every live step. With
+    orientation `act_true` it also raises unless every condition's episodes are step-for-step
+    the identity condition's (the acting pass never sees the manipulation)."""
     import numpy as np
     import jax
     import jax.numpy as jnp
@@ -206,8 +262,14 @@ def run_checkpoint(agent, params, seeds, M, memory, per_unit=False):
     h0 = agent.model.initial_state(batch_size=C * N)
     # M, max_steps, memory, modulated and per_unit are closed over (static), not traced
     fn = functools.partial(_scan, max_steps=max_steps, M=M, memory=memory, modulated=modulated,
-                           per_unit=per_unit)
-    out = nnx.jit(fn)(agent.model, params, states0, h0, jnp.asarray(cond_rows))
+                           per_unit=per_unit, orientation=orientation, capture=capture,
+                           override_index=override_index)
+    if override is not None:
+        override = np.asarray(override, np.float32)
+        if override.shape != (max_steps, C * N):
+            raise ValueError(f"override shape {override.shape} != {(max_steps, C * N)}")
+        override = jnp.asarray(override)
+    out = nnx.jit(fn)(agent.model, params, states0, h0, jnp.asarray(cond_rows), override)
     out = jax.tree_util.tree_map(np.asarray, out)
     states0_np = jax.tree_util.tree_map(np.asarray, states0)
     T = np.argmax(out["done"], axis=0) + 1
@@ -220,6 +282,13 @@ def run_checkpoint(agent, params, seeds, M, memory, per_unit=False):
         raise RuntimeError(f"checkpoint {agent.step}: identity condition diverged from the shadow "
                            f"in {int(mism.any(0).sum())} episode(s) -- the manipulation path "
                            f"alters an untouched observation")
+    if orientation == "act_true":           # every condition must follow the natural route
+        for c in range(1, C):
+            cb = np.arange(c * N, (c + 1) * N)
+            if not (np.array_equal(T[cb], T[idb]) and np.array_equal(out["action"][:, cb], out["action"][:, idb])
+                    and np.array_equal(out["agent_pos"][:, cb], out["agent_pos"][:, idb])):
+                raise RuntimeError(f"checkpoint {agent.step}: orientation act_true but condition {c} "
+                                   f"did not follow the identity route")
     return {"out": out, "T": T, "valid": valid, "states0_np": states0_np, "cond_rows": cond_rows}
 
 
@@ -281,7 +350,7 @@ def main():
             M = MP.load(a.manipulation, agent.obs_breakdown, max_steps)
         modulated = bool(agent.model.modulation_enabled)
         C, N = M.n, len(seeds)
-        res = run_checkpoint(agent, params, seeds, M, a.memory)
+        res = run_checkpoint(agent, params, seeds, M, a.memory, orientation=a.orientation)
         out, T, valid, states0_np = res["out"], res["T"], res["valid"], res["states0_np"]
         cond_rows = res["cond_rows"]
 
@@ -327,7 +396,7 @@ def main():
         w.writeheader(); w.writerows(rows)
     sha = subprocess.run(["git", "-C", _ROOT, "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
     json.dump({"run": os.path.abspath(a.run), "checkpoints": ck, "world": a.world, "seeds": seeds,
-               "episodes": a.episodes, "memory": a.memory, "device": a.device, "record": a.record,
+               "episodes": a.episodes, "memory": a.memory, "orientation": a.orientation, "device": a.device, "record": a.record,
                "max_steps": max_steps, "manipulation_file": os.path.abspath(a.manipulation),
                "manipulation": M.spec, "conditions": M.labels, "git_sha": sha,
                "parity_checked_against": a.check_against_sweep},
