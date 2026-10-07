@@ -483,47 +483,62 @@ Level 05 seed 42, checkpoint 6000007 (6.0 M steps), unhurt no-animal neutral sce
 ## Results
 
 *Written by experiment-analyzer, 2026-10-07, after the fixed rule above (Revision 1a) was applied
-unchanged. Numbers from `analyze.py` at commit `f234ba9f`; outcome code pinned at `10358a45`.*
+unchanged. Numbers from `analyze.py` at commit `f234ba9f`; outcome code pinned at `10358a45`.
+Corrected the same day after the verdict gate ([[plan_modulator_engagement_verdict]]): the E4 claim
+is downgraded, the frozen dwell levels are added, the section now leads with P-own and the gap
+decomposition, and mechanism sentences are removed. The pre-registered rule and its outcome are
+unchanged.*
 
 ### What was found (plain language)
 
-**The idea that some modulated agents have an "engaged" modulator and hide more, while others have an
-"idle" one, is not supported. By the rule fixed before the computation, the main result counts
-against it.** Across the 9 replication pairs, and comparing pairs only within the same training level,
-the modulators that respond most to felt injury belong to the pairs where the modulated agent's lead
-in injury-driven bush hiding is *smallest*, not largest. The rank correlation is −0.75, against the
-+0.6 that "supports" would have needed.
+**No positive relation was found between how strongly the modulator responds to felt injury and how
+much the modulated agent itself hides when injured.** Within each training level, the modulated
+agent's own injury-driven bush hiding does not rise with its modulator's response. The rank
+correlation is −0.43, which cannot be told apart from zero, and a strong positive relation is unlikely
+(P-own). This is the substantive test of the modulator.
 
-Three further points matter as much as the verdict:
+By the rule fixed before computing, the pre-registered headline result also **counts against** the
+engaged/idle idea: the modulator's response to felt injury does not predict a larger modulated-agent
+advantage over its ordinary partner (ρ = −0.75, 9 pairs, within level; P-main). This label means "no
+support", not "an inverse relation". A bar of "ρ at or below zero" is met about half the time when
+there is no relation at all. The negative sign reflects the ordinary partner, as the next point
+explains.
 
-1. **There is no idle mode to find.** Every one of the 14 modulated runs responds to felt injury, and
-   by similar amounts: the strongest response is only 1.5 times the weakest. A modulator that cannot
-   see felt injury scores practically zero on the same measure, below one millionth (the developer's control
-   test). So the runs differ in *how much* their modulator responds, never in *whether* it responds.
-   The plan's premise of two modes is not what the data show.
-2. **The negative result mostly comes from the ordinary partner.** The plan's negative control did not
-   come out near zero; it came out at +0.78. Within a level, the pair whose modulator responds most
-   tends to be the pair whose *ordinary* agent, which has no modulator, hides most when injured. The
-   modulated agent's own injury effect is only weakly related to the modulator's response, and in the
-   wrong direction (−0.43). A modulated-minus-ordinary gap then falls as the response rises. The plan
-   assumed the ordinary partner's behaviour would be unrelated to its partner's modulator. That
-   assumption is false here, and it is not explained by level, because level is removed before the
-   correlation is taken. The only thing a pair shares beyond its level is its seed. With 3 pairs per
-   level, this may also be chance (see Contradictions).
-3. **The modulator does carry part of the injury effect, but this does not depend on how strongly it
-   responds.** Freezing the modulator's gain at a fixed value removes on average about half of the
-   modulated agent's injury-driven hiding in the rabbit scene (47 %; 7 of 9 pairs lose some).
-   Freezing its offset removes none. The pairs that respond more strongly do not lose more when the
-   gain is frozen, so the causal prediction is not borne out either.
+Three further points qualify this:
+
+1. **The gap measure mostly reflects the ordinary agent.**
+   - Within a level, the ordinary agent's injury effect varies from seed to seed far more than the
+     modulated agent's: standard deviation 3.6 against 1.9 percentage points.
+   - Of the within-level variance of the gap (modulated minus ordinary), about 57 % comes from the
+     ordinary agent and 17 % from the modulated agent. The remaining 26 % comes from the two moving in
+     opposite directions (their effects correlate −0.43).
+   - The negative control came out at +0.78 (p 0.009, uncorrected). The ordinary partner's injury
+     hiding tracks its modulated partner's modulator response. The cause is unknown: a shared seed, or
+     chance among about 15 comparisons.
+   - So P-main is mostly a test against the ordinary agent, and says little about the modulator itself.
+2. **No run's modulator is blind to felt injury, and the 14 runs do not split into two groups.**
+   - Under a strong probe, felt injury held at 0.70 from the first step, the response varies only
+     1.5-fold between runs and grows with training in every run.
+   - Under the natural course of felt injury, the response is 7–8 times smaller. That is about 7–10 %
+     of how much the gain differs from unit to unit.
+   - In the training world, only 12–21 % of the gain's variance changes over time (E2). The rest is a
+     fixed per-unit rescaling, in every run.
+3. **Freezing the modulator's gain lowered the modulated agent's injury effect on average from 6.5 to
+   3.4 points.**
+   - The 95 % CI on the reduction is −0.3 to 6.4 points, and 7 of 9 pairs go down.
+   - Freezing also roughly doubled bush dwell when the agent is *unhurt*, from 24 % to 47 % of the
+     time.
+   - The result is therefore consistent with the gain carrying part of the effect, but general
+     disruption is not ruled out.
+   - No relation to the modulator's response was detected; the test is underpowered.
 
 The held-out pairs agree in part. The three level-05 fixed-start-temperature pairs show the same
-negative relation. The two 22-September originals, which were chosen because they showed the effect,
-both sit above their level on response and on gap, but two hand-picked pairs cannot set a direction.
+negative sign. The two 22-September originals, which were chosen because they showed the effect,
+cannot set a direction.
 
 Bottom line: on these checkpoints, how strongly the modulator responds to felt injury does not explain
-which seeds show a modulated-agent advantage. The variation between seeds looks like ordinary
-behavioural variation, with the ordinary partner's variation as large a part of the gap as the
-modulated agent's.
+which seeds show a modulated-agent advantage. The ordinary partner's seed-to-seed variation is the
+larger part of that gap.
 
 ### Data, provenance and cross-checks
 
@@ -556,21 +571,45 @@ modulated agent's.
   - The pair stays the largest gap in level 04, so every within-level rank, and every correlation
     below, is unchanged.
 
-### P-main: does the injury response predict the hiding gap? Counts against
+### P-own, the gap decomposition, and P-main (counts against, by the pre-registered rule)
 
-| Statistic (9 main pairs, values demeaned within level) | ρ | One-sided p (216 arrangements, P(null ≥ observed)) |
-|---|---|---|
-| **P-main**: E1γ against the rabbit-scene injury gap (modulated − ordinary) | **−0.75** | 0.995 |
-| **P-own**: E1γ against the modulated agent's own rabbit-scene injury effect | −0.43 | 0.903 |
-| **Negative control**: E1γ against the ordinary partner's rabbit-scene injury effect | **+0.78** | 0.009 |
+| Statistic (9 main pairs, values demeaned within level) | ρ | Upper-tail p, P(null ≥ observed) | Lower-tail p, P(null ≤ observed) |
+|---|---|---|---|
+| **P-own**: E1γ against the modulated agent's own rabbit-scene injury effect | −0.43 | 0.903 | 0.120 |
+| **Negative control**: E1γ against the ordinary partner's rabbit-scene injury effect | **+0.78** | 0.009 | 0.995 |
+| **P-main**: E1γ against the rabbit-scene injury gap (modulated − ordinary) | **−0.75** | 0.995 | 0.009 |
 
-**Verdict under the fixed rule: counts against** (ρ ≤ 0).
-- "Supports" was out of reach on P-main alone. It would have failed on P-own as well (−0.43 < 0.6),
-  and it would have been withdrawn by the negative control (0.78 ≥ 0.6).
-- For reference, the opposite tail of the P-main null is P(null ≤ −0.75) = 0.009 (2 of 216
-  arrangements). The rule has no clause for a significantly negative relation, so this is reported, not
-  used. It is close to a mirror image of the negative control.
-- Pooled across levels, not demeaned (descriptive): P-main −0.42, P-own +0.28, control +0.63.
+All p-values come from the 216 within-level arrangements and are uncorrected. The upper tail is the
+pre-registered one.
+
+- **P-own: −0.43.** There is no positive relation, and the value cannot be told apart from zero
+  (lower-tail p 0.12). This is the substantive test of whether the modulator's response goes with
+  the modulated agent's own injury hiding. A strong positive relation is unlikely.
+- **Negative control: +0.78** (p 0.009, uncorrected). The ordinary partner's injury hiding tracks
+  its modulated partner's modulator response. The cause is unknown: a shared seed, or chance among
+  about 15 comparisons. It means the gap measure mostly reflects the ordinary agent.
+- **The gap decomposition** (analyzer, from `pair_table.csv`; values demeaned within level, 9 pairs).
+  The gap is the modulated effect minus the ordinary effect, so its variance is the modulated
+  variance plus the ordinary variance minus twice their covariance.
+
+  | Part | Share of the gap's within-level variance |
+  |---|---|
+  | Ordinary agent's effect | 56.8 % |
+  | Modulated agent's effect | 16.8 % |
+  | −2 × covariance (the two effects correlate −0.43) | 26.4 % |
+
+  - The within-level SD is 3.57 pp for the ordinary effect and 1.94 pp for the modulated effect
+    (dividing by n = 9). The shares do not depend on that choice.
+- **P-main: −0.75. The verdict under the fixed rule is "counts against"** (ρ ≤ 0). By that rule,
+  the modulator's response to felt injury does not predict a larger modulated-agent advantage.
+  - The negative sign reflects the ordinary partner. The pre-registered "ρ ≤ 0" bar is met about
+    half the time when there is no relation, so the label means "no support". It does not mean the
+    modulator's response and the modulated agent's hiding are inversely related.
+  - "Supports" was out of reach on P-main alone. It would also have failed on P-own (−0.43 < 0.6),
+    and the negative control (0.78 ≥ 0.6) would have withdrawn it.
+  - P-main's lower-tail p of 0.009 is reported but not used; the rule has no clause for it. With the
+    decomposition above, it is close to a mirror image of the negative control.
+- Pooled across levels, not demeaned (descriptive): P-own +0.28, control +0.63, P-main −0.42.
 
 ### P-rank: the 9 pairs ranked by E1γ (not borne out)
 
@@ -592,7 +631,7 @@ bush dwell, averaged over 2–10 M steps. The last column flags the pairs P-rank
 | 9 | Level 04 seed 44 | 0.248 | −0.051 | +8.02 | 6.83 | −1.19 | predicted top 3: **missed (last)** |
 
 - One of the four placements is right. Level 04 seed 44, the pair with the largest gap, has the
-  *least* responsive modulator of all nine.
+  lowest E1γ of the nine.
 - The ranking is mostly a level ranking: level 05 high, level 06 low. Within a level the differences
   are small, 0.01–0.08.
 - The standard error of each pair's E1γ across its checkpoints is 0.003–0.009 (treating checkpoints as
@@ -605,8 +644,8 @@ bush dwell, averaged over 2–10 M steps. The last column flags the pairs P-rank
 - Level 05 seed 42: 0.30 / 0.35 / 0.36. Level 06 seed 43: 0.19 / 0.29 / 0.30. Level 04 seed 44: 0.20 / 0.27 / 0.29.
 - The gap does not follow it. In level 05 seed 42, the gap shrinks from +13.4 to +9.1 to +0.9 while
   E1γ rises. In level 04 seed 44, it grows from +3.8 to +11.7 while E1γ stays the lowest of all.
-- A stronger response to felt injury is something every run acquires with training, independently of
-  whether it hides more than its partner.
+- In every run, the response to felt injury grows with training. No link between that growth and the
+  gap is visible in these thirds.
 
 ### Secondary rows (reported; none can rescue P-main)
 
@@ -638,26 +677,22 @@ upper tail of that null is what a positive relation would need.
 | 06 | −1.0 | −1.0 | +1.0 |
 
 How to read the secondary rows:
-- **Every other way of measuring E1, and every other behaviour gap except the baseline, gives the same
-  negative sign.** This includes the offset, the natural-trace version, every single site, the
-  own-scene sensitivity rows, and the injury and predator gaps. The result does not depend on one
-  choice of measure.
-- **The natural-trace E1γ is about 8 times smaller** than the constant-0.70 version: 0.03–0.05 per
-  unit per step, against 0.25–0.37. In the real injured episode, felt injury peaks at about 0.5 and
-  then falls as the agent heals. The constant 0.70 is the stronger, off-distribution probe the
-  re-review warned about. Both versions rank the pairs much the same.
-- **E1γ against the shared baseline gap is +0.67** (p 0.069). Pairs whose modulator responds more tend
-  to be pairs where the *unhurt* modulated agent dwells in the bush more than its partner, in the same
-  no-animal scene E1 is measured in. This is the scene-sharing link that the first plan review flagged,
-  and it is why the baseline was kept out of the primary outcome.
-- **E3 against the gap is +0.83** (p 0.014), but in a direction that does not help the mode idea.
-  - E3 is frozen minus live survival steps; every value is negative, from −15 to −49 steps on a live
+- **The ranking of pairs by E1 is robust to the choice of E1 variant.** The rows that use the
+  primary gap (offset, natural trace, natural episodes, each site, three sites) are not independent
+  checks. They share the same ordinary-dominated gap. And the variants rank the pairs almost
+  identically: the constant-to-trace ratio is 7.3–8.1 in every run.
+- **The natural-trace E1γ is 7.3–8.1 times smaller** than the constant-0.70 version: 0.032–0.051 per
+  unit per step, against 0.25–0.37.
+  - That is 7–10 % of the gain's across-unit spread, against 53–72 % for the constant probe.
+  - In the natural injured episode, felt injury peaks at 0.52 at the median checkpoint of every run,
+    and then falls as the agent heals. At 12 of 574 checkpoints the agent heals late and the trace
+    reaches 0.61–0.70.
+  - The constant 0.70 from the first step is therefore a stronger, mostly off-distribution probe.
+- **E1γ against the shared baseline gap: +0.67** (p 0.069). This is a lead, uncorrected.
+- **E3 against the gap: +0.83** (p 0.014). This is a lead, uncorrected, one of about 15 correlations
+  in this section.
+  - E3 is frozen minus live survival steps. Every value is negative, from −15 to −49 steps, on a live
     survival of 255–315 steps.
-  - Pairs where freezing the gain costs the *fewest* survival steps have the *largest* injury gap. So
-    the agents that depend least on their gain's moment-to-moment variation in their own world hide
-    more.
-  - This is one of more than a dozen secondary correlations, with no correction for multiple comparisons. Treat it as a lead,
-    not a finding.
 - **Per-pair secondary values:**
 
   | Pair | E1β | E2 (gain) | E3 gain freeze (survival steps) | E3 offset freeze (survival steps) | Live survival (steps) |
@@ -674,7 +709,7 @@ How to read the secondary rows:
 
   (Level 04 seed 44's E3 values are over its 39 tested checkpoints; its live survival is over all 41.)
 
-### P-cause (E4): does freezing remove more of the effect where the response is stronger? Not borne out
+### P-cause (E4): does freezing remove more of the effect where the response is stronger? No relation detected
 
 - **Method.** At 9 checkpoints per pair (2, 3, …, 10 M; 8 for level 04 seed 44), the modulated agent's
   rabbit-scene injury effect was rescored in three versions:
@@ -704,20 +739,46 @@ How to read the secondary rows:
 | *Out of sample:* 22-Sep original, level 04 | 0.303 | 15.44 | 0.46 | 7.1 [−0.7, 15.0] | 0.38 | 5.8 [−10.0, 21.6] |
 | *Out of sample:* 22-Sep original, level 05 | 0.372 | 12.73 | 0.68 | 8.7 [−3.4, 20.8] | 0.37 | 4.8 [−4.2, 13.7] |
 
-- **Main 9 pairs, pooled.** The mean live effect is 6.46 pp. With the gain frozen it is 3.43 pp, so
-  47 % is removed: 3.0 pp, 95 % CI across pairs [−0.3, 6.4]; 7 of 9 pairs are positive. With the
-  offset frozen it is 7.19 pp, so −11 % is removed: −0.7 pp [−4.7, 3.3].
-  - So the gain, not the offset, carries some of the injury effect. This is the closest thing to a
-    positive finding in this check.
-  - Per pair, though, only one interval excludes zero (level 06 seed 42, gain).
+- **Main 9 pairs, pooled.** Freezing the gain lowered the modulated agent's injury effect on average
+  from 6.5 to 3.4 points.
+  - The 95 % CI on the reduction, across pairs, is −0.3 to 6.4 points. 7 of 9 pairs go down; the
+    one-sided sign test gives p 0.09.
+  - Freezing the offset left it at 7.2 points: a reduction of −0.7 [−4.7, 3.3].
+  - Per pair, only one interval excludes zero (level 06 seed 42, gain).
   - At 30 episodes per scene, a single checkpoint's frozen score is noisy. For example, level 04
     seed 42 at 2 M scores +67 pp with the offset frozen, against +16 pp live.
+- **Freezing also roughly doubled unhurt bush dwell.** The table gives mean bush dwell (% of steps)
+  in the rabbit-wander scene, over the 9 main pairs, at the same E4 checkpoints for every condition.
+  It was computed by script (`tmp/` working file) from the original sweep CSVs (live) and the E4 sweep
+  CSVs (frozen), and each per-checkpoint injured − unhurt difference was asserted equal to
+  `e4_effects.csv`.
+
+  | Condition | Injured 70 | Unhurt 0 | Injury effect |
+  |---|---|---|---|
+  | Live | 30.3 | 23.8 | 6.5 |
+  | Gain frozen | 50.8 | 47.3 | 3.4 |
+  | Offset frozen | 48.3 | 41.1 | 7.2 |
+
+  - The verdict review quoted 50.4 / 46.8 and 48.1 / 40.8 for the frozen rows. Those include level 04
+    seed 44's 10 M checkpoint, which has frozen scores but no live one. The table above uses the
+    matched checkpoints, as `analyze.py` does since `f234ba9f`.
+  - Some pairs are near ceiling with the gain frozen: level 05 seed 43 dwells 82 % injured and 78 %
+    unhurt.
+  - **So the result is consistent with the gain carrying part of the injury effect, but general
+    disruption is not ruled out.** A smaller injured-minus-unhurt difference on a doubled baseline is
+    equally explained by disruption or a ceiling. The offset freeze is a partial check: it lifts the
+    baseline too (by 17 points, against 23) but keeps the effect. That argues against *pure*
+    disruption only.
+  - E3 shows the same thing from the survival side: freezing the gain costs 15–49 survival steps in
+    the training world.
 - **Relation to E1γ (descriptive).**
   - In the 4 main pairs above the median E1γ, freezing the gain removes a mean share of 0.50. In the
     5 at or below the median, it removes 0.94. That is the opposite of the prediction.
   - Rank correlation of E1γ with the share removed by the gain freeze: −0.12 (pooled). With the
     percentage points removed: +0.30 pooled, +0.07 demeaned within level (analyzer).
-  - None of these is a relation. **P-cause is not borne out.**
+  - **No relation to E1γ was detected.** With 9 pairs, per-pair E4 intervals of ±5–25 pp and
+    within-level E1γ differences of 0.01–0.08, the test is underpowered and cannot exclude a moderate
+    relation.
 
 ### P-out: do the held-out pairs repeat the sign? Partly
 
@@ -746,12 +807,16 @@ How to read the secondary rows:
 
 ### Contradictions with the plan's assumptions
 
-1. **"Idle" modulators do not exist in this set.**
-   - The plan's motivation pictured some runs with a modulator "close to a constant rescaling".
-   - Across all 14 runs, E1γ lies between 0.248 and 0.372 per unit per step. That is 53–72 % of the
-     gain's own spread across units (0.43–0.57). A modulator blind to felt injury gives below 1e-6.
-   - The question the plan could answer was therefore "do *more* responsive modulators go with larger
-     gaps?", not "do engaged ones differ from idle ones?". The answer to the first is no.
+1. **The runs do not split into "engaged" and "idle".**
+   - No run's modulator is blind to felt injury, and the runs do not split into two groups. The
+     response varies 1.5-fold (E1γ 0.248–0.372 under the 0.70 probe) and grows with training.
+   - Under the natural course of felt injury, it is about 7–8 times smaller, about 8 % of the
+     across-unit spread.
+   - E2 shows that only 12–21 % of the gain's variance is time-varying in the training world in every
+     run. So by the plan's own description of "idle" ("close to a constant rescaling"), every run is
+     largely constant. What this check can address is whether *more* responsive modulators go with
+     larger gaps; no positive relation was found.
+   - The blind-modulator control (below 1e-6) is only a floor.
 2. **The ordinary partner is not independent of its modulated partner's engagement.**
    - The negative control was "expected near 0", and the plan read a value ≥ 0.6 as "a level or scene
      artefact".
@@ -761,23 +826,24 @@ How to read the secondary rows:
      - something tied to the shared seed, such as the same environment random stream during training;
      - chance. With 3 pairs per level and 216 arrangements, two arrangements reach this value, and many
        correlations are reported here.
-   - Either way, any modulated-minus-ordinary gap from these pairs carries as much of the ordinary
-     partner's seed-to-seed variation as the modulated agent's. This matters for reading the
-     replication's per-seed gaps generally, not just for this check.
+   - Either way, the ordinary partner's seed-to-seed variation is the larger part of the gap:
+     about 57 % of its within-level variance, against 17 % from the modulated agent. This matters for
+     reading the replication's per-seed gaps generally, not just for this check.
 3. **Pair checkpoint sets differ slightly from what the plan describes.** The plan says level 04
    seed 44's outcome uses its own tested checkpoint set, but the ordinary side is averaged over 41.
    This is harmless here (see Data), but it is worth fixing in the outcome code.
 
 ### Follow-ups for the user (not acted on)
 
-- A plan-reviewer verdict gate on this Results section, then the PI, per the project's analysis flow.
+- The PI step, per the project's analysis flow (the verdict gate has run; see below).
 - If the shared-seed link (Contradiction 2) matters for the modulator-input study's design, a direct test
   is cheap and needs no training. Correlate the ordinary agents' injury effects with their *modulated
   partners'* effects within level, across all 12 non-original pairs. This is a question for
   experiment-designer.
 - E4's per-checkpoint scores use 30 episodes per scene. Most per-pair intervals span ±5–25 pp. A
-  pre-registered rerun of the gain freeze with more episodes, on the main 9 pairs, would show whether
-  the pooled 47 % holds pair by pair.
+  pre-registered rerun of the gain freeze with more episodes, on the main 9 pairs, is the route to a
+  real causal claim. It would need a dwell-matched or baseline-normalised injury effect, so that
+  disruption and ceiling can be separated from the injury signal.
 
 ## Feedback from plan-reviewer (verdict gate on Results)
 
