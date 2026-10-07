@@ -1,5 +1,7 @@
 """Pure measures of the L05 S42 case study (no JAX, no checkpoints): unit-testable.
 
+No scikit-learn: the lab nodes' environments do not all carry it (numpy only).
+
 Plain-language purpose: the case study asks, layer by layer, how much a change in felt injury
 alone moves an agent's internal activity (Analysis 1, "noticing"), and whether that movement
 points toward "about to go to the bush" (Analysis 2, "acting"). This file holds the arithmetic;
@@ -92,15 +94,99 @@ def shift_size(man, nat, keep, den):
 
 # ------------------------------------------------------------------ Analysis 2
 def _group_folds(groups, k):
-    """Deterministic grouped folds: unique groups sorted, assigned round-robin."""
-    from sklearn.model_selection import GroupKFold
-    k = min(k, len(np.unique(groups)))
-    return list(GroupKFold(n_splits=k).split(np.zeros(len(groups)), groups=groups))
+    """Deterministic grouped folds (no group split across folds), balanced by size: groups in
+    order of decreasing size (ties by id) go to the currently smallest fold."""
+    groups = np.asarray(groups)
+    ids, counts = np.unique(groups, return_counts=True)
+    k = min(k, len(ids))
+    order = sorted(range(len(ids)), key=lambda i: (-counts[i], ids[i]))
+    load, fold_of = np.zeros(k), {}
+    for i in order:
+        f = int(np.argmin(load))
+        fold_of[ids[i]] = f
+        load[f] += counts[i]
+    f_row = np.array([fold_of[g] for g in groups])
+    return [(np.flatnonzero(f_row != f), np.flatnonzero(f_row == f)) for f in range(k)]
+
+
+class _LogReg:
+    """L2-penalised logistic regression, intercept unpenalised, the scikit-learn convention:
+    minimise C * sum(log-loss) + 0.5 * |w|^2. Newton's method with backtracking (numpy only:
+    the lab nodes' environments do not all carry scikit-learn)."""
+
+    def __init__(self, C, max_iter=100, tol=1e-8):
+        self.C, self.max_iter, self.tol = C, max_iter, tol
+
+    def _obj(self, X1, y, beta):
+        z = X1 @ beta
+        return self.C * float(np.sum(np.logaddexp(0.0, z) - y * z)) + 0.5 * float(beta[1:] @ beta[1:])
+
+    def fit(self, X, y):
+        X = np.asarray(X, np.float64)
+        y = np.asarray(y, np.float64)
+        X1 = np.hstack([np.ones((len(X), 1)), X])
+        P = np.eye(X1.shape[1]); P[0, 0] = 0.0
+        beta = np.zeros(X1.shape[1])
+        p0 = np.clip(y.mean(), 1e-6, 1 - 1e-6)
+        beta[0] = np.log(p0 / (1 - p0))
+        f = self._obj(X1, y, beta)
+        for _ in range(self.max_iter):
+            p = 1.0 / (1.0 + np.exp(-(X1 @ beta)))
+            g = self.C * (X1.T @ (p - y)) + P @ beta
+            H = self.C * (X1.T * (p * (1 - p))) @ X1 + P + 1e-10 * np.eye(len(beta))
+            step = np.linalg.solve(H, g)
+            t = 1.0
+            while True:
+                nb = beta - t * step
+                nf = self._obj(X1, y, nb)
+                if nf <= f - 1e-4 * t * float(g @ step) or t < 1e-10:
+                    break
+                t *= 0.5
+            beta, df, f = nb, f - nf, nf
+            if df < self.tol * max(1.0, abs(f)):
+                break
+        self.coef_, self.intercept_ = beta[1:][None], beta[:1]
+        return self
+
+    def predict_proba(self, X):
+        p = 1.0 / (1.0 + np.exp(-(np.asarray(X, np.float64) @ self.coef_[0] + self.intercept_[0])))
+        return np.stack([1 - p, p], 1)
 
 
 def _logreg(C):
-    from sklearn.linear_model import LogisticRegression
-    return LogisticRegression(C=C, max_iter=2000)
+    return _LogReg(C)
+
+
+def log_loss(y, p, eps=1e-15):
+    y = np.asarray(y, np.float64)
+    p = np.clip(np.asarray(p, np.float64), eps, 1 - eps)
+    return float(-np.mean(y * np.log(p) + (1 - y) * np.log(1 - p)))
+
+
+def roc_auc(y, score):
+    """Area under the ROC curve = Mann-Whitney U / (n_pos n_neg), ties at half weight."""
+    y = np.asarray(y).astype(bool)
+    s = np.asarray(score, np.float64)
+    order = np.argsort(s, kind="mergesort")
+    ranks = np.empty(len(s))
+    ss = s[order]
+    i = 0
+    while i < len(ss):                       # average ranks over ties
+        j = i
+        while j + 1 < len(ss) and ss[j + 1] == ss[i]:
+            j += 1
+        ranks[order[i:j + 1]] = 0.5 * (i + j) + 1.0
+        i = j + 1
+    n1, n0 = int(y.sum()), int((~y).sum())
+    return float((ranks[y].sum() - n1 * (n1 + 1) / 2.0) / (n1 * n0))
+
+
+def _ridge(Z, t, alpha):
+    """Ridge regression with an unpenalised intercept: (w, b)."""
+    mz, mt = Z.mean(0), t.mean()
+    Zc = Z - mz
+    w = np.linalg.solve(Zc.T @ Zc + alpha * np.eye(Z.shape[1]), Zc.T @ (t - mt))
+    return w, mt - mz @ w
 
 
 def fit_readout(Z, y, groups):
@@ -109,7 +195,6 @@ def fit_readout(Z, y, groups):
     out-of-fold predictions at the chosen strength (a choice among 5 values: negligible
     optimism, reported as such). The final readout is refitted on all rows. Returns a dict;
     `fitted` False (and NaNs) when either class has fewer than MIN_CLASS rows."""
-    from sklearn.metrics import log_loss, roc_auc_score
     Z, y, groups = np.asarray(Z, np.float64), np.asarray(y, int), np.asarray(groups)
     n_pos, n = int(y.sum()), len(y)
     res = {"n_rows": n, "n_pos": n_pos, "n_groups": int(len(np.unique(groups))), "fitted": False,
@@ -126,13 +211,13 @@ def fit_readout(Z, y, groups):
                 pred[te] = y[tr].mean()
                 continue
             pred[te] = _logreg(C).fit(Z[tr], y[tr]).predict_proba(Z[te])[:, 1]
-        ll = log_loss(y, pred, labels=[0, 1])
+        ll = log_loss(y, pred)
         if ll < best[1]:
             best = (C, ll, pred)
     C, ll, pred = best
     m = _logreg(C).fit(Z, y)
     p = y.mean()
-    res.update(fitted=True, C=float(C), auc_heldout=float(roc_auc_score(y, pred)),
+    res.update(fitted=True, C=float(C), auc_heldout=roc_auc(y, pred),
                logloss_heldout=float(ll),
                logloss_base=float(-(p * np.log(p) + (1 - p) * np.log(1 - p))),
                w=m.coef_[0].astype(np.float64), b=float(m.intercept_[0]))
@@ -140,23 +225,22 @@ def fit_readout(Z, y, groups):
 
 
 def fit_decoder(Z, target, groups):
-    """Ridge regression of felt injury on standardised activity; alpha by grouped CV; held-out
+    """Ridge regression of felt injury on the layer's activity; alpha by grouped CV; held-out
     R^2 from the out-of-fold predictions at that alpha. Returns (w, r2_heldout, alpha)."""
-    from sklearn.linear_model import Ridge
     Z, target = np.asarray(Z, np.float64), np.asarray(target, np.float64)
     folds = _group_folds(np.asarray(groups), OUTER_FOLDS)
-    best = (None, -np.inf, None)
+    best = (None, -np.inf)
     ss = float(((target - target.mean()) ** 2).sum())
     for a in ALPHA_GRID:
         pred = np.empty(len(target))
         for tr, te in folds:
-            pred[te] = Ridge(alpha=a).fit(Z[tr], target[tr]).predict(Z[te])
+            w, b = _ridge(Z[tr], target[tr], a)
+            pred[te] = Z[te] @ w + b
         r2 = 1.0 - float(((target - pred) ** 2).sum()) / ss if ss > 0 else np.nan
         if r2 > best[1]:
-            best = (a, r2, pred)
-    a, r2 = best[0], best[1]
-    w = Ridge(alpha=a).fit(Z, target).coef_.astype(np.float64)
-    return w, float(r2), float(a)
+            best = (a, r2)
+    a, r2 = best
+    return _ridge(Z, target, a)[0], float(r2), float(a)
 
 
 def cosine(a, b):

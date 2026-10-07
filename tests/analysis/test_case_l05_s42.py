@@ -253,3 +253,30 @@ def test_critic_freeze_is_a_null_control():
     # the live critic gain does vary, so the control is not vacuous
     g0 = live["s"]["out"]["ugain_critic"][:, :N][live["s"]["valid"][:, :N]]
     assert float(np.ptp(g0, axis=0).max()) > 0.0
+
+
+def test_numpy_fitters_match_scikit_learn():
+    """measures.py carries its own logistic/ridge/AUC/fold code (the lab nodes' environments do
+    not all have scikit-learn); where scikit-learn is installed, they must agree with it."""
+    sk = pytest.importorskip("sklearn")
+    from sklearn.linear_model import LogisticRegression, Ridge
+    from sklearn.metrics import roc_auc_score
+    rng = np.random.default_rng(3)
+    X = rng.normal(size=(800, 20)); w = rng.normal(size=20)
+    y = (X @ w + rng.normal(size=800) * 2 > 1.0).astype(int)
+    for C in MS.C_GRID:
+        a = MS._LogReg(C).fit(X, y)
+        b = LogisticRegression(C=C, max_iter=10000, tol=1e-10).fit(X, y)
+        np.testing.assert_allclose(a.coef_[0], b.coef_[0], rtol=1e-4, atol=1e-6)
+        np.testing.assert_allclose(a.intercept_, b.intercept_, rtol=1e-4, atol=1e-6)
+    s = np.round(rng.normal(size=800), 1)                       # with ties
+    assert MS.roc_auc(y, s) == pytest.approx(roc_auc_score(y, s))
+    t = X @ w + rng.normal(size=800)
+    wr, br = MS._ridge(X, t, 10.0)
+    r = Ridge(alpha=10.0).fit(X, t)
+    np.testing.assert_allclose(wr, r.coef_, rtol=1e-8); assert br == pytest.approx(r.intercept_)
+    g = rng.integers(0, 37, 800)
+    folds = MS._group_folds(g, 5)
+    assert sorted(np.concatenate([te for _, te in folds]).tolist()) == list(range(800))
+    for tr, te in folds:
+        assert not set(g[tr]) & set(g[te])
