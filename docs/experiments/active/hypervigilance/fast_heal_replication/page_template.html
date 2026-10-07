@@ -19,7 +19,8 @@ td.nw { white-space:nowrap; }
   <p class="lede">On 22 September one modulated agent, trained with fast healing on a bush, hid more when it
   started a test injured, steadily across training, and responded to dangerous animals but not to a harmless
   one; its ordinary partner did not. This page repeats that test on eighteen new agents: both agent types,
-  three training seeds, at three world levels.</p>
+  three training seeds, at three world levels &mdash; plus six more at level 05 in which every episode starts at
+  the same body temperature, as on 22 September.</p>
 </header>
 
 <section class="col toc">
@@ -31,6 +32,7 @@ td.nw { white-space:nowrap; }
     <li><a href="#scenes">Which test scenes, and why it matters</a></li>
     <li><a href="#r2">Figures R2&ndash;R4 &mdash; bush dwell against starting injury, per level</a></li>
     <li><a href="#train">Each run across training, ten injury levels</a></li>
+    <li><a href="#fix">Level 05 with a fixed start temperature</a></li>
     <li><a href="#how">How it is computed</a></li>
     <li><a href="#prov">Data, scenes and provenance</a></li>
   </ul>
@@ -53,6 +55,10 @@ td.nw { white-space:nowrap; }
     <li><strong>Level 05:</strong> level 04 plus cold air and campfires; each episode starts at a random body
     temperature between &minus;10 and +5&nbsp;°C (the 22-Sep level-05 runs started at 0).</li>
     <li><strong>Level 06:</strong> level 05 plus a pond and thirst.</li>
+    <li><strong>Level 05, fixed start temperature</strong> (six more agents, trained 6&ndash;7 October, seeds
+    42&ndash;44): level 05 with every episode starting at the temperature setpoint, as the 22-Sep level-05 runs
+    did, so that the random start is the only difference from the level-05 replication. Reported in its own
+    section (<a href="#fix">section 06</a>).</li>
   </ul>
   <p><strong>Tests.</strong> Every agent was replayed at every saved checkpoint in short fixed test scenes:
   100 steps, the agent in the middle of a 10&times;10 map, a bush three cells to its left, and either no animal,
@@ -71,7 +77,8 @@ td.nw { white-space:nowrap; }
   and how much a hunting predator raises hiding. Modulated agent above ordinary agent, in seeds out of three:
   level 04 &mdash; injury, no animal {{N_l04_inj}}; injury, wandering rabbit {{N_l04_injw}}; predator
   {{N_l04_pred}}. Level 05 &mdash; {{N_l05_inj}}, {{N_l05_injw}}, {{N_l05_pred}}. Level 06 &mdash;
-  {{N_l06_inj}}, {{N_l06_injw}}, {{N_l06_pred}}.</p>
+  {{N_l06_inj}}, {{N_l06_injw}}, {{N_l06_pred}}. Level 05 with a fixed start temperature &mdash; {{N_l05fix_inj}},
+  {{N_l05fix_injw}}, {{N_l05fix_pred}}.</p>
   <h4 class="fh"><span class="n">Figure R1</span>Every pair, three effects</h4>
   {{FIG:summary}}
   {{TABLE:summary}}
@@ -140,8 +147,31 @@ td.nw { white-space:nowrap; }
   </details>
 </section>
 
+<section class="col" id="fix">
+  <h2><span class="num">06</span> Level 05 with a fixed start temperature</h2>
+  <p>The level-05 replication differs from the 22-Sep level-05 runs in one setting besides the seed: each
+  episode starts at a random body temperature between &minus;10 and +5&nbsp;°C instead of at the setpoint.
+  These six agents remove that difference. They were tested in the same neutral scenes as the level-05
+  replication, and in their own level-05 scenes with the start temperature fixed as in their training (copies of
+  the own scenes that change only that one setting).</p>
+  {{FIX_TEXT}}
+  <p>With no animal, bush dwell at injury 0 and at injury 90 (seeds 42 / 43 / 44): modulated {{D_l05fix_M00}}
+  &rarr; {{D_l05fix_M90}} %, ordinary {{D_l05fix_O00}} &rarr; {{D_l05fix_O90}} %. Their rows in Figure R1 are
+  labelled "level 05, fixed start temperature".</p>
+  <h4 class="fh"><span class="n">Figure R8</span>Level 05, fixed start temperature</h4>
+  {{FIG:dose_l05fix}}
+  <details class="more" open><summary>Each run across training (three seeds)</summary>
+  <h4 class="fh"><span class="n">Figure R9a</span>Level 05, fixed start temperature, seed 42</h4>
+  {{FIG:train_l05fix_42}}
+  <h4 class="fh"><span class="n">Figure R9b</span>Level 05, fixed start temperature, seed 43</h4>
+  {{FIG:train_l05fix_43}}
+  <h4 class="fh"><span class="n">Figure R9c</span>Level 05, fixed start temperature, seed 44</h4>
+  {{FIG:train_l05fix_44}}
+  </details>
+</section>
+
 <section class="col" id="how">
-  <h2><span class="num">06</span> How it is computed</h2>
+  <h2><span class="num">07</span> How it is computed</h2>
   <p>Each agent's saved checkpoints were replayed in fixed test scenes, 30 episodes per checkpoint, scene and
   starting injury, and bush dwell recorded as the share of the 100 steps spent on the bush. For each checkpoint
   we form three differences: injured (starting injury 70) minus unhurt (0) with no animal; the same with the
@@ -157,9 +187,11 @@ td.nw { white-space:nowrap; }
 </section>
 
 <section class="col" id="prov">
-  <h2><span class="num">07</span> Data, scenes and provenance</h2>
+  <h2><span class="num">08</span> Data, scenes and provenance</h2>
   <p>Test specifications: <code>configs/eval_sweeps/healrep/</code> (ten specs: level 04 core and injury
-  grids; level 05 neutral, own and injury grids; level 06 neutral, own and injury grid). Results:
+  grids; level 05 neutral, own and injury grids; level 06 neutral, own and injury grid; the fixed-start level 05
+  neutral, own and injury grids, <code>healrep_l05fix_*</code>). Fixed-start own scenes:
+  <code>configs/environment/experiment/behavior_probes/fixed_start/</code>. Results:
   <code>results/eval/avoidance/metrics_history_rppo_healrep/</code>; each test launch saved its spec, code version
   and fully resolved scenes under <code>_provenance/</code>. Level-06 neutral scenes:
   <code>configs/environment/experiment/behavior_probes/neutral_variants/</code>. Training record and design:

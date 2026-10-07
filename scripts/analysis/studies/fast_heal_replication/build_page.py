@@ -65,7 +65,7 @@ def main():
             tok[f"{{{{N_{lv}_{m}}}}}"] = f"{c[m]} of {c['n']}"
     # ---- own vs neutral (levels 05, 06), matched seeds, injury effect with the wandering rabbit
     sc_rows = []
-    for lv in ("l05", "l06"):
+    for lv in ("l05", "l05fix", "l06"):
         for st in ("own", "neutral"):
             up, n, d = 0, 0, []
             for s in RF.SEEDS:
@@ -76,7 +76,8 @@ def main():
                 n += 1
                 up += int(m[0] > o[0])
                 d.append(m[0] - o[0])
-            sc_rows.append({"level": RF.LEVEL_NAME[lv] if st == "own" else "", "set": RF.SET_NAME[st], "n": n,
+            set_name = RF.SET_NAME[st] + (" (fixed start)" if lv == "l05fix" and st == "own" else "")
+            sc_rows.append({"level": RF.LEVEL_NAME[lv] if st == "own" else "", "set": set_name, "n": n,
                             "up": f"{up} of {n}", "d": pp(pd.Series(d).median()) if d else "&ndash;"})
             tok[f"{{{{SC_{lv}_{st}}}}}"] = f"{up} of {n}"
     tok["{{TABLE:scenes}}"] = FB.table(pd.DataFrame(sc_rows), ["level", "set", "n", "up", "d"],
@@ -110,24 +111,26 @@ def main():
                   "per panel, one per starting injury of the test: grey = 0 (unhurt), light to dark blue = 10 to 90; "
                   "each line averages 5 neighbouring checkpoints. Grey here means unhurt, not the ordinary agent as in Figures R1&ndash;R4. Text above each panel: bush dwell at injury 0, 50 "
                   "and 90, mean over 2&ndash;10 M steps. The shaded first 2 M steps are not used in those means.")
-    for k, lv in enumerate(RF.LEVELS):
+    FIGNO = {"l04": (2, 5), "l05": (3, 6), "l06": (4, 7), "l05fix": (8, 9)}   # (dose, training) figure numbers
+    for lv in RF.LEVELS:
         scene = "core scenes" if lv == "l04" else "neutral scenes"
         tok[f"{{{{FIG:dose_{lv}}}}}"] = FB.figure(
             f"rep_dose__{lv}", f"Twelve panels, three seeds by four scenes, {RF.LEVEL_NAME[lv]}: bush dwell against "
             "starting injury, ordinary and modulated.", dose_axes + f" {RF.LEVEL_NAME[lv].capitalize()}, {scene}.",
             "Read each row on its own: does the modulated agent's calm-scene line start low and rise steadily with "
             "injury while the ordinary agent's sits higher and flatter, as in the 22-Sep pair?",
-            f"{FIG} --figure dose --level {lv}", title=f"Figure R{2 + k} &mdash; {RF.LEVEL_NAME[lv]}, bush dwell against starting injury")
+            f"{FIG} --figure dose --level {lv}", title=f"Figure R{FIGNO[lv][0]} &mdash; {RF.LEVEL_NAME[lv]}, bush dwell against starting injury")
         for s in RF.SEEDS:
             tok[f"{{{{FIG:train_{lv}_{s}}}}}"] = FB.figure(
                 f"rep_train__{lv}_s{s}", f"Eight panels, {RF.LEVEL_NAME[lv]}, seed {s}: bush dwell across training, "
                 "ten lines per panel for starting injuries 0 to 90.", train_axes + f" {scene.capitalize()}.",
                 "The same run across training: whether the ten injury lines stay stacked in order (a steady injury "
                 "effect) or tangle and swing together.", f"{FIG} --figure train --level {lv} --seed {s}",
-                title=f"Figure R{5 + k}{'abc'[RF.SEEDS.index(s)]} &mdash; {RF.LEVEL_NAME[lv]}, seed {s}, across training")
+                title=f"Figure R{FIGNO[lv][1]}{'abc'[RF.SEEDS.index(s)]} &mdash; {RF.LEVEL_NAME[lv]}, seed {s}, across training")
     # ---- the answer, from the counts above (main scene set per level)
-    up = sum(c["injw"] for c in cnt.values())
-    n = sum(c["n"] for c in cnt.values())
+    MAIN = ("l04", "l05", "l06")            # the replication proper; the fixed-start arm is reported in section 06
+    up = sum(cnt[l]["injw"] for l in MAIN)
+    n = sum(cnt[l]["n"] for l in MAIN)
     ref04 = next(E for lab, E, ref in R if ref and "level 04" in lab)
     s42 = next(E for lab, E, ref in R if not ref and "level 04" in lab and lab.endswith("seed 42"))
     tok["{{ANSWER}}"] = (
@@ -141,6 +144,13 @@ def main():
         f"with the same settings and seed, yet its ordinary agent's injury effect with no animal is {pp(s42['ordinary']['inj'][0])} "
         f"points against {pp(ref04['ordinary']['inj'][0])} on 22 September. Training is not reproducible run for run, so a "
         "pattern seen in one run needs several seeds before it is believed.</p></div>")
+    fx, r5 = cnt["l05fix"], cnt["l05"]
+    tok["{{FIX_TEXT}}"] = (
+        f"<p>In the neutral scenes the modulated agent's injury effect with the wandering rabbit is the larger one in "
+        f"{fx['injw']} of {fx['n']} fixed-start pairs (random start: {r5['injw']} of {r5['n']}); with no animal in "
+        f"{fx['inj']} of {fx['n']} (random start: {r5['inj']} of {r5['n']}); the predator effect in {fx['pred']} of "
+        f"{fx['n']} (random start: {r5['pred']} of {r5['n']}). Own scenes (fixed start): {tok['{{SC_l05fix_own}}']} "
+        f"for the rabbit injury effect.</p>")
     tok["{{BUILT}}"] = datetime.date.today().isoformat()
     # ---- house style (as the cross-run page)
     house = open(BB.HOUSE).read()

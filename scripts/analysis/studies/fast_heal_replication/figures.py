@@ -10,6 +10,9 @@ thermal-neutral scenes (air 0 C, no campfire, start body temperature 0), all at 
   summary            one row per level x seed pair (+ the 22-Sep originals of levels 04 and 05 as
                      reference rows): injury effect with no animal, with the wandering rabbit, predator
                      response; ordinary and modulated side by side, 95 % intervals
+  (level 05 also has a fixed-start-temperature arm, "l05fix": same world but every episode starts at the
+  temperature setpoint, trained 2026-10-06; its own scenes are the fixed-start copies in
+  behavior_probes/fixed_start/)
   dose  --level L    bush dwell against starting injury 0..90, rows = seeds, columns = four scenes
   train --level L --seed S   the B5 view: ten injury lines across training, four scenes x two agents
 
@@ -33,14 +36,16 @@ import highlight as HL  # noqa: E402  (series, grid_leaf, INJ_GRID, fig_injtrain
 H, K, C = HL.H, HL.K, HL.C
 AV = "results/eval/avoidance"
 REP = f"{AV}/metrics_history_rppo_healrep"
-LEVELS = ("l04", "l05", "l06")
+LEVELS = ("l04", "l05", "l05fix", "l06")
 SEEDS = (42, 43, 44)
 # the scene set each level is read in for the summary: level 04 has no temperature system (core scenes);
 # levels 05 and 06 are read in the thermal-neutral scenes (the cross-run page's 2026-10-06 correction)
-MAIN_SET = {"l04": "core", "l05": "neutral", "l06": "neutral"}
+MAIN_SET = {"l04": "core", "l05": "neutral", "l05fix": "neutral", "l06": "neutral"}
 SET_NAME = {"core": "core scenes", "neutral": "neutral scenes", "own": "own scenes"}
-GRID = {"l04": ("grid", "gridchase"), "l05": ("grid", "gridchase"), "l06": ("grid", "grid")}
-LEVEL_NAME = {"l04": "level 04", "l05": "level 05 (temperature)", "l06": "level 06 (temperature + thirst)"}
+GRID = {"l04": ("grid", "gridchase"), "l05": ("grid", "gridchase"), "l05fix": ("grid", "gridchase"),
+        "l06": ("grid", "grid")}
+LEVEL_NAME = {"l04": "level 04", "l05": "level 05 (temperature)", "l05fix": "level 05, fixed start temperature",
+              "l06": "level 06 (temperature + thirst)"}
 
 for _lv in LEVELS:
     for _s in SEEDS:
