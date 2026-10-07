@@ -20,7 +20,7 @@ Writes results/analysis/injury_dependence/scene_steps/<version>/<label>.npz.
 In the no-animal scene nothing is random, so its 30 episodes per checkpoint are identical copies;
 there the only variation is across checkpoints.
 """
-import argparse, glob, os, sys
+import argparse, os, sys
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np, yaml
 
@@ -28,6 +28,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..",
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from run_manipulations import RUNS, VERSIONS, R          # noqa: E402
+import src.utils.episode_bundle as EB                    # noqa: E402  checkpoint = folder or <step>.zip
 
 EV = os.path.join(ROOT, "results/eval/avoidance")
 OUT = os.path.join(ROOT, "results/analysis/injury_dependence/scene_steps")
@@ -57,20 +58,20 @@ def felt_series(inj, kernel):
 
 def one(job):
     ver, label, run, last = job
-    from src.utils.eval_recording import load_episode
     kernel = kernel_for(run)
     base = os.path.join(EV, f"metrics_history_rppo_injurygrid_{ver}", "_scratch", label)
     out = {}
     for scene in SCENES:
         for s0 in STARTS:
             cdir = os.path.join(base, f"{scene}_inj{s0:02d}")
-            cks = sorted((d for d in os.listdir(cdir) if d.isdigit()), key=int)[-last:] if os.path.isdir(cdir) else []
+            cks = sorted(EB.step_names(cdir), key=int)[-last:] if os.path.isdir(cdir) else []
             bush = np.zeros(T); alive = np.zeros(T); inj = np.zeros(T); felt = np.zeros(T)
             exits, stays, n_ep, early_ck = [], [], 0, []
             for ck in cks:
                 e_in = e_n = 0
-                for p in glob.glob(os.path.join(cdir, ck, "*", ck, "recordings", ck, "episode_*.rec.gz")):
-                    S = load_episode(p)["snapshots"]; n = len(S); n_ep += 1
+                cell = EB.cell_path(cdir, ck)
+                for m in EB.members(cell, f"*/{ck}/recordings/{ck}/episode_*.rec.gz"):   # sorted
+                    S = EB.load_recording(cell, m)["snapshots"]; n = len(S); n_ep += 1
                     ag = np.array([s["agent_pos"] for s in S]); bpos = np.asarray(S[0]["obs_pos"][0])
                     ib = np.all(ag == bpos, axis=1)
                     il = np.array([s["injury_level"] for s in S], float); fl = felt_series(il, kernel)

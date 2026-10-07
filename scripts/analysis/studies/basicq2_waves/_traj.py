@@ -10,10 +10,13 @@ is a different event from standing on one in an empty world.
 Computed once and cached to JSON, because six figures read the same numbers and each pass reads
 thirty episodes per condition per arm off the NAS.
 """
-import gzip, json, os, pickle, glob
+import json, os, posixpath, sys
 import numpy as np
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".."))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+import src.utils.episode_bundle as EB   # noqa: E402  a checkpoint is a folder or its <step>.zip archive
 SCRATCH = os.path.join(ROOT, "results/eval/avoidance/metrics_history_rppo_basicq2_wave2/_scratch")
 CACHE = os.path.join(ROOT, "results/analysis/basicq2_w1/traj_level04.json")
 FIG_ROOT = os.path.join(ROOT, "docs/experiments/active/basic_levels_q2_default/figures")
@@ -33,14 +36,13 @@ NEAR = 2            # Chebyshev cells; matches the probe predators' attack_range
 def _episodes(arm, cond):
     base = os.path.join(SCRATCH, f"lvl04_{arm}", cond)
     if not os.path.isdir(base): return None, []
-    cks = sorted([d for d in os.listdir(base) if d.isdigit()], key=int)
+    cks = sorted(EB.step_names(base), key=int)
     if not cks: return None, []
-    g = glob.glob(os.path.join(base, cks[-1], "*", "*", "recordings", "*"))
+    cell = EB.cell_path(base, cks[-1])
+    recs = EB.members(cell, "*/*/recordings/*/episode_*.rec.gz")
+    g = sorted({posixpath.dirname(r) for r in recs})        # recordings/<ck> folders holding episodes
     if not g: return cks[-1], []
-    out = []
-    for f in sorted(glob.glob(os.path.join(g[0], "episode_*.rec.gz"))):
-        with gzip.open(f, "rb") as fh:
-            out.append(pickle.load(fh))
+    out = [EB.load_recording(cell, r) for r in recs if posixpath.dirname(r) == g[0]]
     return cks[-1], out
 
 

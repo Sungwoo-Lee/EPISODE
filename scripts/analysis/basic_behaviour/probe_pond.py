@@ -21,7 +21,8 @@ beside it. No episode and no scene x checkpoint cell is dropped.
 Layouts read (both written by scripts/eval/eval_rollout.py --record, unchanged):
     <step dir>/<run dir name>/<checkpoint>/episodes/NNNN.npz          termination_reason, length, seed
     <step dir>/<run dir name>/<checkpoint>/recordings/<ckpt>/episode_NNNNNN.rec.gz   snapshots, true_obs
-collate: step dir = <output_dir>/_scratch/<label>/<cond>/<step>/ (run_sweep.py's scratch);
+collate: step dir = <output_dir>/_scratch/<label>/<cond>/<step>/ (run_sweep.py's scratch), or the
+         same files kept as one archive <cond>/<step>.zip (src/utils/episode_bundle.py; read alike);
 calibrate: step dir = <root>/h<S>/<cell>/<scene>/ (one per scene, both agents inside).
 
 Per episode (R2.2): pond cells from replaying the scene's reset (registry.pond_cells) - never typed;
@@ -40,6 +41,7 @@ import csv
 import glob
 import json
 import os
+import posixpath
 import sys
 import warnings
 
@@ -52,6 +54,7 @@ import registry as REG                                                  # noqa: 
 ROOT, DATA = REG.ROOT, REG.DATA_ROOT
 sys.path.insert(0, os.path.join(ROOT, "scripts", "behavior_measures"))
 from avoidance_stats_heatmap import episode_measures                    # noqa: E402
+import src.utils.episode_bundle as EB                                   # noqa: E402  (ROOT via registry)
 
 CSV_TOL = 5e-5            # run_sweep.py writes bush_hiding with 4 decimals (R2-1)
 P_VISIT_MAX, P_OD_MAX = 0.20, 0.02                                     # R2.3 pre-registered rule
@@ -124,28 +127,32 @@ class Scene:
 
 
 def episodes_in(step_dir):
-    """[(run dir name, npz path, rec path)] for every episode under one step dir, paired by index."""
+    """[(run dir name, cell, npz member, rec member or None)] for every episode under one step dir,
+    paired by index. `step_dir` is a step folder or its .zip archive (EB); members are relative to it.
+    Order as before the archive port: episodes/ dirs sorted, then .npz files sorted within each."""
     out = []
-    for ep_dir in sorted(glob.glob(os.path.join(step_dir, "*", "*", "episodes"))):
-        base = os.path.dirname(ep_dir)
-        run = os.path.basename(os.path.dirname(base))
-        for z in sorted(glob.glob(os.path.join(ep_dir, "*.npz"))):
-            i = int(os.path.basename(z)[:-4])
-            rec = glob.glob(os.path.join(base, "recordings", "*", f"episode_{i:06d}.rec.gz"))
-            out.append((run, z, rec[0] if len(rec) == 1 else None))
+    npzs = sorted(EB.members(step_dir, "*/*/episodes/*.npz"), key=lambda n: (posixpath.dirname(n), n))
+    recs = EB.members(step_dir, "*/*/recordings/*/episode_*.rec.gz")
+    for z in npzs:
+        base = posixpath.dirname(posixpath.dirname(z))                   # <run dir>/<checkpoint>
+        run = posixpath.basename(posixpath.dirname(base))
+        i = int(posixpath.basename(z)[:-4])
+        rec = [r for r in recs if posixpath.dirname(posixpath.dirname(r)) == f"{base}/recordings"
+               and posixpath.basename(r) == f"episode_{i:06d}.rec.gz"]
+        out.append((run, step_dir, z, rec[0] if len(rec) == 1 else None))
     return out
 
 
 def measure_episodes(scene: Scene, eps, where: str) -> tuple[list[dict], list[str]]:
     """Per-episode values + every failure message (never stops at the first; R2-3)."""
-    from src.utils.eval_recording import load_episode
     fails, rows, loaded = [], [], []
-    for run, z, rec in eps:
-        if rec is None:
-            fails.append(f"{where}: {os.path.basename(z)} has no matching recording")
+    for run, cell, z, rec_name in eps:
+        if rec_name is None:
+            fails.append(f"{where}: {posixpath.basename(z)} has no matching recording")
             continue
-        npz = np.load(z)
-        ep = load_episode(rec)
+        rec = os.path.join(str(cell), rec_name)                         # for messages only
+        npz = EB.load_npz(cell, z)
+        ep = EB.load_recording(cell, rec_name)
         if int(ep["seed"]) != int(npz["seed"]):
             fails.append(f"{where}: {rec} seed {ep['seed']} != episodes npz seed {int(npz['seed'])}")
             continue
@@ -297,9 +304,9 @@ def calibrate(a) -> int:
 
 # ------------------------------------------------------------------------------------ collate ----
 def _collate_cell(job):
-    scene_path, step_dir, where = job
+    scene_path, step_dir, step, where = job
     rows, fails = measure_episodes(Scene.get(scene_path), episodes_in(step_dir), where)
-    return where, int(os.path.basename(step_dir)), (summarise(rows) if rows else None), fails
+    return where, step, (summarise(rows) if rows else None), fails
 
 
 def driver_csv(path) -> dict:
@@ -317,9 +324,10 @@ def collate(a) -> int:
         for run in spec["runs"]:
             for cond in conds:
                 sd = os.path.join(out_dir, "_scratch", run["label"], cond)
-                steps = sorted(p for p in glob.glob(os.path.join(sd, "*")) if os.path.basename(p).isdigit())
+                steps = EB.step_names(sd) if os.path.isdir(sd) else []     # folder or <step>.zip
                 meta.append((out_dir, run["label"], cond, len(steps)))
-                jobs += [(os.path.join(pdir, f"{cond}.yaml"), p, f"{run['label']}/{cond}") for p in steps]
+                jobs += [(os.path.join(pdir, f"{cond}.yaml"), str(EB.cell_path(sd, s)), int(s),
+                          f"{run['label']}/{cond}") for s in steps]
     print(f"{len(jobs)} scene x checkpoint cells from {len(a.sweep_specs)} spec(s)", flush=True)
     if a.workers > 1:
         import multiprocessing as mp

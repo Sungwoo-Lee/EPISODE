@@ -17,10 +17,34 @@ a given checkpoint does; what moves is the policy itself. So more episodes buy a
 the honest unit of replication is the checkpoint -- and beyond it the training seed, of which this
 study has exactly one per arm.
 """
-import sys, os, glob, gzip, pickle; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np, matplotlib.pyplot as plt
 import _common as C, window_profile as W, house
+if C.ROOT not in sys.path:
+    sys.path.insert(0, C.ROOT)
+import src.utils.episode_bundle as EB   # noqa: E402  a checkpoint is a folder or its <step>.zip archive
 house.apply()
+
+
+def newest_recordings(cond_dir):
+    """The newest checkpoint's recordings under `cond_dir` as [(cell, member)], at most 30.
+    Each checkpoint is a folder <step>/ or an archive <step>.zip (EB). Selection unchanged from the
+    folder-only version: every episode_*.rec.gz below the condition, as a sorted list of paths
+    (archive members get the path they would have as a folder), "newest" = the largest
+    <step>/<run dir>/<ckpt> path string, the first 30 of its episodes."""
+    where = {}
+    for step in (EB.step_names(cond_dir) if os.path.isdir(cond_dir) else []):
+        cell = EB.cell_path(cond_dir, step)
+        for m in EB.members(cell, "**/episode_*.rec.gz"):
+            where[f"{cond_dir}/{step}/{m}"] = (cell, m)
+    recs = sorted(where)
+    if not recs:
+        return []
+    # newest checkpoint directory only -- one checkpoint's worth of episodes
+    newest = max({os.path.normpath(os.path.join(r, "..", "..", "..")) for r in recs})
+    sel = [r for r in recs if r.startswith(newest)][:30] or recs[:30]
+    return [where[r] for r in sel]
+
 
 BUSH = (4, 1)
 ARM = "fire_away_clean"
@@ -30,15 +54,12 @@ for lvl in C.LEVELS:
     for kind in ("control", "modulated"):
         run = f"{lvl}_{kind}"
         for cond, cl in ((C.PRED, "predator"), (C.NONE, "empty")):
-            recs = sorted(glob.glob(f"{SCRATCH}/{run}/{cond}/**/episode_*.rec.gz", recursive=True))
-            if not recs:
+            sel = newest_recordings(f"{SCRATCH}/{run}/{cond}")
+            if not sel:
                 continue
-            # newest checkpoint directory only -- one checkpoint's worth of episodes
-            newest = max({os.path.normpath(os.path.join(r, "..", "..", "..")) for r in recs})
-            sel = [r for r in recs if r.startswith(newest)][:30] or recs[:30]
             per_ep = []
-            for f in sel:
-                S = pickle.load(gzip.open(f, "rb"))["snapshots"]
+            for cell, m in sel:
+                S = EB.load_recording(cell, m)["snapshots"]
                 per_ep.append(100.0 * np.mean(
                     [tuple(np.asarray(s["agent_pos"]).tolist()) == BUSH for s in S]))
             n_rec += len(sel)
