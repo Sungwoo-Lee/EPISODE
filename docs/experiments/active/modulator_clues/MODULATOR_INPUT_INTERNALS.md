@@ -145,6 +145,32 @@ These items override the sections above where they differ.
 read only after the behaviour session's collation has finished. Behaviour effects are quoted from the behaviour
 readout. P1–P3 inform the stage-2 judgement and are not a gate.
 
+## Revision 1a (2026-10-08, before any computation), after the re-review (SOUND WITH CONCERNS)
+
+- **"Undefined" rule.** The share reads "undefined" if the interval of the live injury effect includes 0, **or**
+  the interval of the divisor (live − hidden-from-both) includes 0.
+- **Additivity.** Bootstrap the interaction (live − mod-hidden − main-hidden + both-hidden), resampling episode
+  seeds jointly across the four conditions.
+  - It counts as "additive" only if the interaction's interval includes 0 **and** its half-width is under half the
+    divisor.
+  - Otherwise the reading is "additivity not established" and no share is read.
+- **P3, restated.** In N, I and IT, the pooled share in the rabbit scene is defined, additive and at least 0.25.
+  The comparison with the reference is descriptive only.
+- **Input capture in every condition.** Both the modulator's input and the main network's input are captured, and
+  the felt-injury column is checked to be hidden exactly where intended. The main network's column is zeroed
+  after the modulator has taken its copy; for the reference agent, both read the same array.
+- **Parity with the behaviour sweep.** The first 30 episode seeds of the 100 are the sweep's seeds, and parity is
+  checked on that subset.
+- **Smaller points.**
+  - P2's "exceeds" means larger at at least 7 of 9 checkpoints. Because the reference's raw shifts are about
+    equal, a pass is a hint only.
+  - The share covers only the direct-input route; it is not claimed to be a lower bound.
+  - The unhurt-zero check runs as an assertion on all 100 unhurt episodes.
+  - A condition flagged by the survival guard is left out of the share.
+- **Superseded wording.** The Question section's phrases about the main network changing "less", about
+  disruption that "cannot happen", and P2's original heading are superseded by Revision 1; this section and
+  Revision 1 govern.
+
 ## Outputs
 
 Results go to `results/analysis/modinput_internals/`, with a results section appended below. The behaviour session's stage-1
@@ -178,5 +204,56 @@ Moderate edits:
 Open item: confirm from the recordings that felt injury is exactly 0 in the unhurt scenes.
 
 Checkpoint alignment is fine: every run has a checkpoint within 100 steps of each grid point.
+
+Reviewed by: plan-reviewer
+
+## Feedback from plan-reviewer (re-review of Revision 1, 2026-10-08)
+
+**Verdict: SOUND WITH CONCERNS.** Both Critical findings are resolved: P2 now compares the raw memory-state
+shift at an equal dose, with no divisor; Q3 has the four-condition design, the additivity reading and the
+survival guard. The fixed-index hiding inside the forward pass, the refusal of X, the `trace` row for Q1 and
+the parity check all match the review. Six edits remain. None needs a new condition. Make them before
+computing:
+
+1. **"Undefined" rule is attached to the wrong number (Moderate).** The share's divisor is pooled
+   (live − hidden-from-both), not the live injury effect. If hiding felt injury from both networks barely
+   changes injured dwell, because injury acts through healing or the changed path, the divisor is near 0
+   while the live effect is clearly non-zero, and the share blows up. Fix: read "undefined" when the interval
+   of the divisor (live − both-hidden) includes 0. Keep the live-effect rule as well.
+2. **Additivity can pass just because the intervals are wide (Moderate).** "The sum lies within the
+   both-hidden interval" ignores the sum's own uncertainty, and with 100 episodes a wide interval accepts
+   almost anything. Fix: compute the interaction, live − mod-hidden − main-hidden + both-hidden. Bootstrap it
+   by resampling episode seeds jointly across the four conditions. Read "additive" only if its interval
+   includes 0 *and* its half-width is under half the divisor. Otherwise report "additivity not established",
+   not "additive".
+3. **P3 was never restated (Moderate).** Revision 1 drops the per-checkpoint share, but P3 (l.86-87) still
+   asks for "≥ 0.25 … at 7 of 9", which can no longer be computed. That gap leaves the threshold to be chosen
+   after the data arrive. Fix: restate P3 as "in N, I and IT, the pooled direct-input share in the rabbit
+   scene is defined, additive (item 2) and ≥ 0.25". State the reference comparison as descriptive only.
+4. **The input-capture check covers only the modulator (Moderate).** Main-only-hidden and both-hidden change
+   the main network's input, and that is not asserted. For the reference agent the modulator's input is the
+   same array as the main network's input (`src/models/recurrent_ppo_network.py:584-585`, `mod_in = x`). So
+   main-only-hidden must zero the column *after* the modulator's gather, or the modulator is hidden too.
+   Fix: capture both inputs in all four conditions. Assert that the felt column is 0 exactly where it should
+   be hidden and equals the true value everywhere else. Zeroing the flat observation column before the
+   encoder is correct despite the sensor-order bug, because the encoder slices that same flat vector.
+5. **Parity with the behaviour sweep vs. 100 episodes (Moderate).** The sweep has 30 episodes per scene, and
+   Q3 now runs 100. State that the first 30 episode seeds are the sweep's seeds, and assert parity on that
+   subset only. Otherwise the parity check cannot pass, or it gets loosened silently.
+6. **The entry point still carries the withdrawn claims (Moderate, documentation framing).** The Question
+   section (l.21-22: the network changes "less") and Q3 (l.32-34: disruption "cannot happen"), plus the P2
+   heading "reverses the damping", are what a fresh reader sees first. The override note sits 60 lines lower.
+   Fix: reword those lines in place, or strike them through with a pointer to Revision 1.
+
+Low: (a) P2 "exceeds" has no margin. The review found the reference's raw shifts about equal, so 7 of 9
+can pass by chance. Give a margin, e.g. exceeding by more than the spread between the two scenes at that
+checkpoint. (b) "The share is therefore a lower bound" is not justified: disruption that adds up could
+inflate it. Say "covers only the direct-input route". (c) Run the unhurt-zero precondition as an assertion
+at run time on all 100 unhurt episodes. The recorded traces cover only 30. (d) Say what a survival-guard
+flag does: a flagged condition's dwell difference is not used in the share.
+
+**Cost of being wrong:** low now. Items 1-3 could still produce a "share through the modulator" that is
+really noise, feeding the stage-2 decision, which is several GPU-days. Each fix is a sentence in the plan
+plus a few lines in the tool.
 
 Reviewed by: plan-reviewer
