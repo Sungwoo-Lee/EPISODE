@@ -1171,6 +1171,15 @@ mid-sentence, and looks like a footnote marker.
 
 **Verifying a fix:** the grep returns nothing.
 
+**Amendment (2026-10-08, Modulator Capacity and Input Screen page): an HTML entity escaped twice.**
+*What a reader saw:* the decision table's two rule columns printed the text `&ndash;` in 18 cells, at
+every width — the two columns the section exists to show. *Cause:* the page builder put the entity
+`"&ndash;"` into the table's data, and the shared table helper (`f7b_across_runs/build_page.table`)
+HTML-escapes cell text, so the `&` became `&amp;`. *Why review missed it:* reading the builder, the
+entity looks correct; only the rendered page shows it. *Rule:* data passed to a helper that escapes
+carries plain Unicode characters (`–`) or words (`no`, `n/a`), never HTML entities; entities belong
+only in template markup. *Verify:* `grep -c '&amp;[a-z]*;' page.html` returns 0, and the rendered cell shows the character.
+
 ### F40 — an `auto-fit` grid whose container carries the gap colour as a background
 
 **Saw:** the four-cell evidence tally on a parameter-reference page rendered, between about 561 and
