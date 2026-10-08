@@ -257,3 +257,38 @@ really noise, feeding the stage-2 decision, which is several GPU-days. Each fix 
 plus a few lines in the tool.
 
 Reviewed by: plan-reviewer
+
+## Implementation Report (developer, 2026-10-08)
+
+**What was built** (commit `2a37427b`, pushed to `origin/v5.0`). It covers Revision 1 and 1a.
+
+- `src/models/recurrent_ppo_network.py`: an analysis-only `forward_hidden(x, h, mod_col, main_col)`.
+  - Felt injury is set to 0 after the log compression, at fixed integer columns. The modulator column is `mod_input_idx.index(felt_col)`.
+  - The modulator takes its copy first; only then is the main network's column zeroed.
+  - The inputs both networks actually received are captured as `mod.in` / `main.in`.
+  - `__call__` (the training path) is unchanged. Its traced-program hash is identical to the pre-edit hash on all 9 test network configurations.
+- `scripts/analysis/modulator_engagement/runs.py`: new group `nmninp` with the N, I, IT and X runs at seed 42.
+- `scripts/analysis/modinput_internals/{internals,measures}.py`: subcommands `precondition`, `q1`, `q2`, `q3`, `parity`, `summarize`, `score`.
+- `tests/analysis/test_modinput_internals.py`: 44 tests, all passing. They cover the no-hide identity, the input-capture assertion, the refusal of X, the unhurt-zero check, the share / undefined / additivity / survival-guard arithmetic, and P1–P3.
+- `docs/environment/SCRIPTS_DEPENDENCY_MAP.md`: updated.
+
+**Regression tests.** `tests/models` plus the engagement and case-study tests: 249 passed. One test failed, and it is already recorded in Known Bugs (`test_hand_computed_breakdown_matches_the_live_environment`: stale sensor widths since `47b1b8c3`, unrelated to this change).
+
+**Speed check: skipped.** The training forward pass traces exactly the same program as before (hash check above), so training speed cannot change.
+
+**Collected** (on CPU in the container, the same device as the sweeps; outputs in `results/analysis/modinput_internals/`). Nine checkpoints per agent (2 … 10 M), 100 episodes per condition. Wall time about 15 minutes, with five agents in parallel.
+
+- `precondition.json`: felt injury is exactly 0 in every recorded unhurt sweep episode (540 episodes per agent). The run-time assertion also passed on all 100 unhurt episodes in both scenes at every checkpoint.
+- `parity.json`: live dwell on the first 30 seeds equals the stage-1 / replication sweep CSV at 9 checkpoints × 4 scenes for every agent. Q1's natural-episode dwell and Q2's identity dwell both equal Q3's live dwell.
+- Every Q3 input-capture assertion passed.
+- `q1/<agent>.csv`, `q2/<agent>.csv`, `q3/{summary.json, per_checkpoint.csv, summary_table.txt}`, `score.json`.
+
+**Flags for the analyst.** These are facts about the data. Nothing was changed after seeing them.
+
+1. **The no-animal scene is deterministic.** All 100 seeds give the same episode at each checkpoint, so its bootstrap intervals have zero width. Its additivity check therefore passes only if the interaction is exactly 0.
+2. **The bootstrap resamples seeds only, and the checkpoints are fixed.** The rabbit-scene intervals (half-width about 0.5 pp) therefore do not include variation between checkpoints.
+3. **Hiding felt injury from both networks reproduces the unhurt episodes exactly.** This held in every injured episode (1,800 per agent). In these scenes felt injury is the only way injury reaches the agent, so the divisor (live minus both-hidden) equals the live injury effect, and the indirect-route caveat is empty here.
+4. **No condition shortened survival.** All episodes ran the full 100 steps, so the survival guard never fired.
+5. **The raw memory shift is reported in its natural units.** It is the Euclidean length over the 128 memory units. Each unit is bounded, so the number is comparable between agents, but it is not itself in [−1, 1].
+
+Implemented by: developer
