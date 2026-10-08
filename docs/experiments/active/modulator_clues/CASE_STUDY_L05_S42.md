@@ -356,6 +356,10 @@ Implemented by: developer
 
 ## Results (experiment-analyzer, 2026-10-08)
 
+*Revised the same day after the results review ([[plan_case_study_l05_s42_results]]): the claim that the
+modulated agents register felt injury less, which came from the across-state normalisation, is withdrawn; the
+numerator/denominator table is added in §1.*
+
 ### What was found (plain language)
 
 This study looked inside one ordinary agent and one modulated agent, the pair whose modulated member showed
@@ -365,9 +369,9 @@ measurements were fixed in advance as the only ones that could count, together w
 difference counts as a clue to how the modulator works.
 
 **None of the three passed.** (1) Felt injury (nociception) does *not* move the modulated agent's memory
-more than the ordinary agent's. It is the other way round: in every pair, including the different seed,
-the ordinary agent's memory moves more. So this is a general difference between the two kinds of agent,
-not something special to the pair that hides more. (2) The change in memory output pushes slightly more
+more than the ordinary agent's. In raw units the two agents' memory shifts are about equal. On the
+pre-registered measure, which divides the shift by how much the memory varies across ordinary moments, the
+modulated agent's is smaller, but only because its memory varies more. (2) The change in memory output pushes slightly more
 toward "about to go to the bush" in the modulated agents of both same-seed pairs and not in the different
 seed, but the pair studied falls one checkpoint short of the fixed threshold, and the push is small. (3)
 Switching off the modulator's response at the encoder changes the agent's behaviour so much, even when
@@ -379,13 +383,12 @@ Overall, the study found no candidate mechanism for the extra hiding.
 
 | Primary cell (fixed before computation) | Case pair (needs ≥ 7/9) | Same-seed pair (needs ≥ 6/9) | Seed-43 pair (needs < 6/9) | Reading |
 |---|---|---|---|---|
-| **C1**: felt injury shifts the memory state more in the modulated agent (natural trace) | 2/9: **fails** | 1/9: fails | 0/9: holds | **Not a candidate. Direction reversed**: the ordinary agent's memory shifts more, at 7/9, 8/9 and 9/9 checkpoints of the three pairs |
+| **C1**: felt injury shifts the memory state more in the modulated agent (natural trace) | 2/9: **fails** | 1/9: fails | 0/9: holds | **Not a candidate.** On the pre-registered normalised size the modulated agent's is smaller (7/9, 8/9, 9/9), because its memory state varies more across states (9/9 in every pair); the raw injury shift is about equal (modulated larger at 4/9 and 4/9 in the seed-42 pairs) |
 | **C2**: the memory-output shift pushes more toward the bush in the modulated agent (natural trace) | 6/9: **fails by one checkpoint** | 6/9: holds | 1/9: holds (reversed, 8/9) | **Not a candidate.** Expected direction in both seed-42 pairs, absent in seed 43; small; fragile (see C2 below) |
 | **C3**: freezing the modulator at the encoder lowers the injury effect, with the disruption guard passed | 5/9 lowered, **guard fails** | 7/9 lowered, guard fails | 3/9 lowered, guard fails | **Undetermined (disruption).** Unhurt bush dwell moves by 67, 53 and 40 points on average, against limits of 7, 4 and 3 |
 
 **Overall verdict on the study question: no candidate mechanism.** The modulated agent of the case pair
-does not register felt injury more strongly in its memory (it registers it less, as every modulated agent
-here does). Its memory output points slightly more toward going to the bush, but not consistently enough
+does not register felt injury more strongly in its memory; this holds on the raw shift too. Its memory output points slightly more toward going to the bush, but not consistently enough
 to pass the rule fixed beforehand. Where the modulator's contribution could be removed without breaking
 behaviour (memory and actor), removing it changed nothing measurable. Where it breaks behaviour (encoder,
 all places), the test is uninformative. The prior chance that at least one of the three cells passes by
@@ -418,7 +421,12 @@ files `a1/*.csv` and `a2/*.csv`, and C3 from `a3/a3_summary.csv`. Every count ma
   tested against a behavioural difference that is present at these checkpoints. One correction to the
   Question section's wording: the case agent's lead is a lead in the *injury effect*. When injured, it
   does **not** spend more time on the bush than its partner (17.1 against 20.0 %, more at only 1 of 9
-  checkpoints). Its larger injury effect comes from staying off the bush when unhurt (3.6 against 17.6 %).
+  checkpoints). Its larger injury effect comes from low unhurt dwell (3.6 against 17.6 % here; 4.8 against 17.6 % over
+  all 41 checkpoints of the replication window, from 2 to 10 M steps, where the gap is +9.7). When injured it hides about as much as its
+  partner, or slightly less. The same-seed pair's smaller lead is built the other way round: it comes from
+  higher injured dwell (20.8 against 18.7 %), with unhurt dwell about equal (12.0 against 12.5 %). The two
+  seed-42 leads are therefore built differently, which weakens reading C2's agreement across them as a
+  shared mechanism.
 
 ### 1. Primary cells in detail
 
@@ -435,12 +443,47 @@ checkpoint where the ordinary agent's natural felt-injury trace peaked at about 
 | Seed 43 | −1.82† | −1.36† | −1.64† | −1.65† | −0.21 | −0.07 | −0.22 | −0.28† | −1.29† | 0/9 |
 | Fixed start | −0.25 | −0.10 | −0.06 | −0.05 | −0.04 | +0.06 | +0.01 | +0.00 | −0.12 | 3/9 |
 
-- **Direction: reversed.** The ordinary agent's memory moves more under felt injury in every pair. The
-  differences are small (about −0.1 to −0.3 of the layer's spread) except at † checkpoints. Dropping the
-  † checkpoints leaves 2/8, 1/8 and 0/3, so the stronger probe explains the size of the seed-43 reversal,
-  not its sign.
-- **Robust to every variant computed:** the 0.70 stress probe (2/9, 0/9, 0/9), the reversed orientation
-  (0/9, 1/9, 0/9), and each scene alone (2/9 or less in both seed-42 pairs).
+- **Not a candidate:** felt injury does not move the case modulated agent's memory state more than its
+  partner's. On the pre-registered normalised size, the modulated agent's is smaller (7/9, 8/9, 9/9). This
+  is because its memory state varies more across states (9/9 in every pair). The injury shift itself is
+  about equal in both agents (modulated larger at 4/9 and 4/9 in the seed-42 pairs). The memory state is
+  bounded between −1 and 1 and is not modulated directly, so its raw units can be compared between agents.
+  The table below gives the numerator and denominator separately.
+- The normalised differences are small (about −0.1 to −0.3 of the layer's spread) except at † checkpoints.
+  The 0.70 stress probe (2/9, 0/9, 0/9), the reversed orientation (0/9, 1/9, 0/9) and each scene alone
+  (2/9 or less in both seed-42 pairs) give the same counts, but every variant shares the same
+  denominator, so they do not add independent support.
+
+**Raw shift, across-state spread and normalised size** (Revision 1 required numerator and denominator to
+be reported separately). Medians over the nine checkpoints, modulated / ordinary, with the number of
+checkpoints where the modulated agent's value is larger. Both scenes, acting agent on the true
+observations. Raw shift = mean length of the injury shift in the layer's own units, kept units only;
+spread = square root of the summed per-unit variance across unhurt states; size = shift ÷ spread. The last
+column is the raw shift under the equal-dose 0.70 probe, which gives every agent the same felt-injury input
+(the natural trace differs between agents: †). Generated from `a1/*.csv` by script, not typed.
+
+| Layer | Pair | Raw shift, natural trace: mod. / ord. (mod. larger) | Across-state spread: mod. / ord. (mod. larger) | Normalised size: mod. / ord. (mod. larger) | Raw shift, 0.70 probe: mod. / ord. (mod. larger) |
+|---|---|---|---|---|---|
+| `enc.out` | Case | 0.69 / 0.62 (5/9) | 1.90 / 1.20 (9/9) | 0.35 / 0.53 (0/9) | 3.21 / 3.60 (4/9) |
+| `enc.out` | Same-seed | 0.69 / 0.59 (7/9) | 1.90 / 1.27 (9/9) | 0.36 / 0.43 (0/9) | 2.95 / 3.09 (5/9) |
+| `enc.out` | Seed 43 | 0.51 / 2.35 (1/9) | 2.18 / 1.40 (9/9) | 0.23 / 1.82 (0/9) | 3.04 / 2.88 (4/9) |
+| `enc.out` | Fixed start | 0.53 / 0.56 (4/9) | 2.03 / 1.19 (9/9) | 0.27 / 0.46 (0/9) | 3.24 / 2.96 (6/9) |
+| `rnn.state` | Case | 1.76 / 1.83 (4/9) | 2.79 / 2.64 (9/9) | 0.63 / 0.73 (2/9) | 6.26 / 6.65 (4/9) |
+| `rnn.state` | Same-seed | 1.54 / 1.84 (4/9) | 3.09 / 2.75 (9/9) | 0.50 / 0.65 (1/9) | 6.60 / 6.46 (2/9) |
+| `rnn.state` | Seed 43 | 1.43 / 4.64 (1/9) | 3.22 / 2.51 (9/9) | 0.44 / 1.85 (0/9) | 5.77 / 5.90 (3/9) |
+| `rnn.state` | Fixed start | 1.65 / 1.55 (6/9) | 3.01 / 2.67 (9/9) | 0.52 / 0.58 (3/9) | 5.63 / 5.75 (4/9) |
+| `rnn.out` | Case | 1.73 / 1.83 (3/9) | 3.16 / 2.64 (9/9) | 0.55 / 0.73 (2/9) | 7.71 / 6.65 (8/9) |
+| `rnn.out` | Same-seed | 1.62 / 1.84 (4/9) | 3.53 / 2.75 (9/9) | 0.46 / 0.65 (0/9) | 7.70 / 6.46 (9/9) |
+| `rnn.out` | Seed 43 | 1.51 / 4.64 (1/9) | 3.60 / 2.51 (9/9) | 0.41 / 1.85 (0/9) | 6.55 / 5.90 (9/9) |
+| `rnn.out` | Fixed start | 1.52 / 1.55 (4/9) | 3.32 / 2.67 (9/9) | 0.47 / 0.58 (0/9) | 6.86 / 5.75 (8/9) |
+
+- **Spread:** the modulated agent's is larger at 9/9 checkpoints in every pair, at all three layers (36 of
+  36 pair-layers).
+- **Raw shift, memory state:** about equal (natural trace 4/9, 4/9 in the seed-42 pairs; at equal dose
+  within 2–6 %, modulated larger at 2–4/9). The seed-43 ordinary agent's larger shift is dose-driven (†).
+- **Raw shift, memory output and encoder output:** both are layers the modulator rescales in the modulated
+  agent, so their raw units are not strictly comparable between agents. At equal dose the memory output's
+  raw shift is *larger* in the modulated agent at 8–9/9 checkpoints in every pair.
 
 **C2: memory-output push toward the bush** (units: the readout's own standard deviation of predicted
 log-odds over unhurt steps).
@@ -563,17 +606,18 @@ What the table shows:
   into units that *are* active when unhurt (`enc.uni.mod`, 0.28–0.46), which the ordinary agent never
   does. After the activation, the ordinary agent carries more shift in the silent units than the modulated
   agent (about 1.2–1.3 against 0.5–0.6; seed-43 ordinary 8.0, a † agent).
-- **From the encoder output onward, modulated agents shift less than ordinary agents, in every pair.** At
-  the encoder output the count is 0/9 in all four pairs. The modulator enlarges the encoder shift before the
-  activation (`enc.raw` 0.25 → `enc.mod` 0.72 in the case agent), but after the activation it is smaller
-  than the ordinary agent's (0.35 against 0.53). This is a property of the modulated design in these runs,
-  not of the case pair.
+- **Encoder output and memory layer, normalised measure only.** On the normalised measure, at the encoder
+  output and the memory layer, every modulated agent's shift is smaller relative to its across-state
+  spread. In raw units the shifts are similar, and the spread is larger (numerator/denominator table in §1).
+  Past the memory layer the pattern does not hold: at the actor output the fixed-start modulated agent
+  shifts more (6/9). Within the modulated agent, the modulator enlarges the encoder shift before the
+  activation (`enc.raw` 0.25 → `enc.mod` 0.72 in the case agent).
 - **The modulator's own memory** shifts most in the case agent (0.71, against 0.48–0.53 in the other three
   modulated agents). This is a single agent with no rule attached, so it is a description only.
 - The seed-43 ordinary agent's large values (1.2–1.85) come from its stronger natural probe (†, 6 of 9
   checkpoints).
-- Under the 0.70 stress probe the ordering is the same at the encoder and memory (for example memory
-  state, case 2.24 against 2.46). Full stress-probe medians are in `a1/*.csv` (`probe == const`).
+- Under the 0.70 stress probe the normalised ordering is the same at the encoder and memory (for example
+  memory state, case 2.24 against 2.46), again through the shared denominator. Full stress-probe medians are in `a1/*.csv` (`probe == const`).
 
 ### 3. Analysis 2: readout quality, injury-decoder alignment and push per layer (descriptive)
 
@@ -642,16 +686,16 @@ directions in that layer, so acting and noticing can be told apart there.
 
 What these show:
 - **Readout quality is uniformly high.** The AUC is 0.96–1.00 everywhere, except the seed-43 ordinary critic
-  output (0.84). It is as high in the encoder's first stage as in the actor layer, which suggests the
-  readout mostly reads where the agent is relative to the bush, a cue present in every layer. The "bush
-  direction" is therefore closer to "near the bush" than to "intends to go". That is the right thing to
-  project onto, but it means a small push is expected.
-- **Acting and noticing can be separated in every main-network layer.** The median cosine is within ±0.06
-  in all of them. The largest single-checkpoint values, 0.3–0.4, are in the post-activation heads
-  (`actor.out`, `critic.out`); elsewhere they stay below 0.3.
-- **The modulator's own memory is the exception.** Its median cosine is −0.16 to +0.32, reaching 0.81–0.96
-  at some checkpoints of three of the four modulated agents. There, the felt-injury direction and the
-  "going to the bush" direction can nearly coincide, so this layer cannot separate acting from noticing.
+  output (0.84). It is as high in the encoder's first stage as in the actor layer. *Interpretation, not
+  tested:* the readout may mostly read where the agent is relative to the bush, a cue present in every
+  layer, so the "bush direction" may be closer to "near the bush" than to "intends to go". If so, a small
+  push is expected.
+- **Readout and injury decoder.** The bush readout's weights are no more related to the felt-injury
+  decoder's weights than chance in the main network (median cosine within ±0.06; two unrelated directions
+  in 128 units give about ±0.09). This shows the readout does not restate the injury decoder; it does not
+  by itself show that a layer separates acting from noticing. In the modulator's own memory (16 units,
+  chance about ±0.25) they are close at single checkpoints (0.81–0.96 in three of the four modulated
+  agents), with unstable sign (medians −0.16 to +0.32).
 - **Felt injury is linearly readable almost everywhere.** The held-out R² of the felt-injury decoder is
   ≥ 0.9 in every layer past the first stage, in every agent (first stage before the modulator, with
   silent units dropped: 0.63–0.90). Every agent therefore "notices" injury in the sense of carrying it. What differs is how
@@ -693,14 +737,16 @@ What it shows:
   96 % at 9 M, and its frozen injury effect ranges from −60 to +23 points across checkpoints. The guard was
   written for exactly this case, and the encoder result says nothing about whether the encoder carries the
   extra hiding.
-- **Memory and actor freezes leave behaviour intact in both seed-42 agents, and remove nothing.** The case
+- **Memory and actor freezes pass the guard in both seed-42 agents. Each alone changes the injury effect
+  by less than about 3 points. A shared contribution is not excluded.** The case
   agent's injury effect is 13.5 live, 13.4 with the memory freeze and 14.7 with the actor freeze. The
   same-seed agent's is 8.8, 8.7 and 9.1. The memory freeze "lowers" the effect at 7/9 checkpoints in the
   case agent, but by 0.1 points on average. In the seed-43 agent, the live effect (5.5) is so small that
   even a 3–6-point unhurt change fails the guard.
-- **The steady part of the modulator's output at memory and actor is enough** for the behaviour these
-  agents show. Whatever the injury-dependent part of the modulator contributes, it is not at those two
-  places, in either seed-42 agent.
+- Each place was frozen alone. A contribution shared between memory and actor, where either one alone
+  suffices, would also give a null for each single freeze; memory and actor together were not run, and the
+  all-places freeze is disrupted. Per-checkpoint changes are within about ±3 points at 8 or 9 of 9 checkpoints in both seed-42 agents, so
+  smaller effects cannot be seen.
 
 ### 5. Caveats carried from the Implementation Report
 
@@ -733,15 +779,16 @@ only body signals. None of it is supported by a rule passed here.
 1. **No internal target to carry over.** No primary cell passed, so the case study gives no mechanism the
    body-only design should aim to strengthen. The body-only experiment should stand on its own behavioural
    readout, as it is designed to.
-2. **The all-senses modulator damps felt injury in the main network rather than amplifying it.** From the
-   encoder output onward, every modulated agent here (four of four, including the one that hides less)
-   shifts less under natural felt injury than its ordinary partner. If the body-only idea works as
-   intended, the first internal sign should be this reversing: the encoder-output and memory shift under
-   felt injury should match or exceed the ordinary agent's. That is cheap to check with this tooling (Analysis
-   1 on the body-only agents' checkpoints), and it is worth fixing as a check before their results are
-   read.
+2. **Compare internal injury responses in raw units, not divided by the spread across states.** Here the
+   spread-normalised size differed between agents mainly because the modulated agents' layers vary more,
+   while the raw memory-state shift was about equal. A spread-based check would therefore measure layer
+   variance, not the injury response, and should not be fixed for the body-only experiment. Two checks fit
+   better: (a) the raw shift of the memory state (bounded, not modulated directly) under the equal-dose
+   probe, reported beside the spread rather than divided by it; and (b) hiding felt injury from the modulator
+   only (its felt-injury input held at the unhurt value while the main network still receives it), which
+   asks directly whether the modulator's injury response changes behaviour (item 4).
 3. **Report the two parts of the injury effect separately.** The case agent's lead came from hiding *less
-   when unhurt*, not more when injured. The body-only readout should report injured dwell and unhurt dwell
+   when unhurt*, not more when injured; the same-seed pair's came from more hiding when injured. The body-only readout should report injured dwell and unhurt dwell
    beside the injury effect, so that a "lead" made of lower unhurt hiding is not mistaken for stronger
    injury-driven hiding.
 4. **Use a non-disruptive way to remove the modulator's injury response.** Freezing the gain and offset at
@@ -752,8 +799,9 @@ only body signals. None of it is supported by a rule passed here.
 5. **If C2 is followed up**, it should be pre-registered as one primary measure in the body-only runs, with
    the seed as the unit and the stress-probe and covariate-readout versions stated in advance as secondary.
    Here it depended on the measurement choice and went the wrong way in the fixed-start pair.
-6. **Do not use the modulator's own memory as an "acting" measure.** Its injury direction and bush
-   direction can nearly coincide, so a push there cannot be separated from simply registering felt injury.
+6. **Do not use the modulator's own memory as an "acting" measure.** Its readout and injury decoder are
+   close at single checkpoints, with unstable sign, so a push there cannot be separated from simply
+   registering felt injury.
 
 ### Related issues
 
