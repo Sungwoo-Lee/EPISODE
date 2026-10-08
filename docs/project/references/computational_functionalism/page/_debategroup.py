@@ -1,4 +1,4 @@
-"""Build one multi-panel debate-group figure (used by fig06, fig08, fig09)."""
+"""Build one multi-panel debate-group figure (used by fig05, fig07 and fig08)."""
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import _cffig as _cf

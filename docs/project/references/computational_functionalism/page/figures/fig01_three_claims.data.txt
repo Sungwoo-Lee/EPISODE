@@ -1,0 +1,1 @@
+A schematic: nothing is computed and no data file is summarised. It shows 4 of the 4 claims about substrate that the synthesis's vocabulary section sets out, each named with the reviewed work that states it most clearly; the four keys are checked against works.csv when the figure is drawn. The example sentences are illustrations written for this page, not quotations.
