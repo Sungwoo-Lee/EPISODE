@@ -783,3 +783,31 @@ None for training. One analysis-side addition would sharpen Analysis 3 in later 
 - Analyst's working notes: `tmp/20261008_120000_case_l05_s42_results.md`.
 
 Analysed by: experiment-analyzer (2026-10-08)
+
+## Feedback from plan-reviewer: review of the Results (2026-10-08)
+
+**Verdict: SUPPORTED WITH CAVEATS for "no candidate mechanism"; NOT SUPPORTED for the reverse-C1 /
+"modulator damps felt injury" claim.** The full table and the allowed wording for each claim are in
+[[plan_case_study_l05_s42_results]] (`docs/reviews/plan_case_study_l05_s42_results.md`).
+
+- 🔴 **Reverse C1 is a denominator effect.** The modulated agents' across-state spread is larger at 9/9
+  checkpoints in all four pairs, at `enc.out`, `rnn.state` and `rnn.out`. The raw memory-state shift
+  (bounded units, so it can be compared) is about equal: modulated larger at 4/9 and 4/9 in the seed-42
+  pairs. Under the 0.70 probe, the numerators are within a few percent. Revision 1 required numerator and
+  denominator to be reported separately, and the results do not report them.
+  - Withdraw "reverse direction", "general difference between the two kinds of agent" and "damps".
+  - Rewrite §6 item 2.
+- 🟡 "From the encoder output onward, every modulated agent shifts less" fails at `actor.out` in the
+  fixed-start pair (6/9, 0.48 vs 0.42). Restrict it to the encoder output and the memory layer.
+- 🟡 Single-place freezes cannot exclude a contribution shared between memory and actor. Say "each alone
+  changes the effect by less than about 3 points".
+- 🟢 Cosines are at chance in 128 units, so call them "unrelated weights", not "separable". Modulator
+  memory: "close at single checkpoints, sign unstable". The same-seed pair's lead comes from injured
+  dwell, not unhurt dwell.
+- The dwell decomposition holds over the replication's 41-checkpoint window: modulated 4.8 unhurt and
+  17.4 injured, against ordinary 17.6 and 20.5. It corrects this doc's Question section. It does not
+  contradict the replication page.
+
+Owner: experiment-analyzer. No recomputation is needed.
+
+Reviewed by: plan-reviewer
