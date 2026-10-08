@@ -12,6 +12,14 @@ Each pair also names the eval-sweep spec and labels that produced its behaviour 
 scenes the engagement measures use (probe directory, episode count) are read from that spec, so
 engagement and behaviour are measured in the same scenes by construction.
 
+The modulator-input study's four seed-42 level-05 runs (group `nmninp`, keys `nmninp_<V>_s42`,
+V in N, I, IT, X) are listed here too, for the internal-measures screen
+(docs/experiments/active/modulator_clues/MODULATOR_INPUT_INTERNALS.md). Each has a modulator but
+no ordinary twin of its own: its `ordinary` field names the descriptive partner (the replication's
+level-05 seed-42 ordinary agent), whose sweep label lives in a different spec, so its label here is
+None and `spec_scene` returns only the modulated label. Their reference modulated agent is pair
+`l05_s42`.
+
 Plan: docs/experiments/active/modulator_clues/MODULATOR_ENGAGEMENT_CHECK.md (Revision 1a).
 """
 from __future__ import annotations
@@ -68,6 +76,18 @@ _FIX = {
 }
 
 
+_INP = "configs/eval_sweeps/nmninp"
+#: variant -> (run folder, what the modulator reads). Input-study stage 1, seed 42, level 05.
+NMNINP = {
+    "N": ("20261007-111854_rppo_nmninp_l05_N_s42", ("Interoceptive Nociception",)),
+    "I": ("20261007-111909_rppo_nmninp_l05_I_s42", ("Satiation", "Interoceptive Nociception")),
+    "IT": ("20261007-111922_rppo_nmninp_l05_IT_s42",
+           ("Satiation", "Body Temperature", "Interoceptive Nociception")),
+    "X": ("20261007-111937_rppo_nmninp_l05_X_s42",
+          ("Extero Nociception", "Thermoception", "Olfaction", "Collision", "Visual")),
+}
+
+
 def _build():
     out = []
     for lv, (spec, own, seeds) in _MAIN.items():
@@ -90,11 +110,17 @@ def _build():
                     "20260922-182538_rppo_bq2cover_lvl05_t16quad_s42",
                     "configs/eval_sweeps/thermal_probes/thermalprobe_neutral_clean_rppo.yaml",
                     ("lvl05_control", "lvl05_modulated")))
+    # modulator-input study (seed 42, level 05); partner = the l05_s42 ordinary agent
+    partner = _MAIN["l05"][2][42][0]
+    for v, (folder, _reads) in NMNINP.items():
+        out.append(Pair(f"nmninp_{v}_s42", "nmninp", f"l05inp_{v}", 42, partner, folder,
+                        f"{_INP}/nmninp_l05_neutral_stage1_rppo.yaml", (None, f"l05_{v}_s42")))
     return tuple(out)
 
 
 PAIRS = _build()
-GROUPS = {"main": ("main",), "oos": ("oos_fix", "oos_orig"), "all": ("main", "oos_fix", "oos_orig")}
+GROUPS = {"main": ("main",), "oos": ("oos_fix", "oos_orig"), "all": ("main", "oos_fix", "oos_orig"),
+          "nmninp": ("nmninp",)}
 
 
 def select(which):
@@ -123,12 +149,21 @@ def spec_scene(pair, own=False):
     for k in ("probe", "episodes", "output_dir", "runs"):
         if k not in sp:
             raise ValueError(f"{path}: mandatory key {k!r} missing")
-    by_label = {r["label"]: os.path.basename(r["path"].rstrip("/")) for r in sp["runs"]}
-    labels = dict(zip(("ordinary", "modulated"), pair.labels))
+    by_label = {r["label"]: r["path"].rstrip("/") for r in sp["runs"]}
+    labels = {a: lab for a, lab in zip(("ordinary", "modulated"), pair.labels) if lab is not None}
     for agent, lab in labels.items():
         want = getattr(pair, agent)
-        if by_label.get(lab) != want:
-            raise ValueError(f"{path}: label {lab!r} points at {by_label.get(lab)!r}, expected {want!r}")
+        got = by_label.get(lab)
+        # a spec path is a folder name or a glob on the run tag (the nmninp specs); a glob
+        # must resolve to exactly this one folder
+        if got is not None and any(c in got for c in "*?["):
+            import glob
+            hits = [os.path.basename(h) for h in glob.glob(os.path.join(ROOT, got))]
+            got = hits[0] if len(hits) == 1 else f"<glob {got!r}: {len(hits)} matches>"
+        elif got is not None:
+            got = os.path.basename(got)
+        if got != want:
+            raise ValueError(f"{path}: label {lab!r} points at {got!r}, expected {want!r}")
     return sp["probe"], int(sp["episodes"]), sp["output_dir"], labels
 
 

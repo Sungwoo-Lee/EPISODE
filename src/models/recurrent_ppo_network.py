@@ -553,7 +553,28 @@ class ActorCriticRNN(nnx.Module):
         acts["logits"], acts["value"] = logits, value
         return logits, value, h_new, mod_info, acts
 
-    def _forward(self, x, h, acts):
+    def forward_hidden(self, x: jnp.ndarray, h: Any, mod_col=None, main_col=None):
+        """Analysis only: the forward pass with one input column held at 0 for the
+        modulator, the main (task) network, or both (modulator input study,
+        docs/experiments/active/modulator_clues/MODULATOR_INPUT_INTERNALS.md, Revision 1/1a).
+
+        `mod_col`: a column of the MODULATOR'S input (`mod_input_idx.index(obs_col)`), or None.
+        `main_col`: a column of the flat observation the main network reads, or None.
+        Both are Python ints fixed at trace time (never a sensor dict: see Known Bugs,
+        alphabetical sensor order under jit). The hide is applied after the log compression,
+        and the main network's column is zeroed only AFTER the modulator has taken its copy
+        (for an "all" modulator both read the same array). symlog(0) = 0, so 0 is the
+        unhurt value. The training path (`__call__`) never reaches this code.
+
+        Returns (logits, value, h_new, mod_info, acts) with `acts` the full
+        `forward_with_activations` dict plus `mod.in` (the modulator's input as used) and
+        `main.in` (the main network's compressed input as used)."""
+        acts = {}
+        logits, value, h_new, mod_info = self._forward(x, h, acts, hide=(mod_col, main_col))
+        acts["logits"], acts["value"] = logits, value
+        return logits, value, h_new, mod_info, acts
+
+    def _forward(self, x, h, acts, hide=None):
         """Forward pass for a single step.
 
         `acts` is None (the training / inference path) or a plain dict that receives named
@@ -568,6 +589,9 @@ class ActorCriticRNN(nnx.Module):
 
         Returns:
             (logits, value, h_new): Policy logits, value estimate, and new hidden state.
+
+        `hide` is None (every caller except `forward_hidden`) or a (mod_col, main_col) pair of
+        Python ints / None; with None the traced program is op-for-op the pre-hide one.
         """
         # Compress unbounded modalities (olfaction ~40, visual ~13) to ~[0, 3.7] range.
         # Mirrors DreamerV3's global symlog applied in its trainer — applied here
@@ -585,6 +609,15 @@ class ActorCriticRNN(nnx.Module):
                 mod_in = x
             else:
                 mod_in = x[..., jnp.asarray(self.mod_input_idx)]
+            if hide is not None:
+                # Analysis only (forward_hidden). Modulator copy first, then the main
+                # network's column: for an "all" modulator mod_in IS x.
+                mod_col, main_col = hide
+                if mod_col is not None:
+                    mod_in = mod_in.at[..., int(mod_col)].set(0.0)
+                if main_col is not None:
+                    x = x.at[..., int(main_col)].set(0.0)
+                acts["mod.in"], acts["main.in"] = mod_in, x
             mod_output, mod_h_new = self.modulator(mod_in, mod_h)
 
             # --- Task path with modulation ---
@@ -666,6 +699,14 @@ class ActorCriticRNN(nnx.Module):
             return logits, value, h_combined_new, mod_output
 
         else:
+            if hide is not None:
+                # Analysis only (forward_hidden): no modulator to hide from.
+                mod_col, main_col = hide
+                if mod_col is not None:
+                    raise ValueError("forward_hidden: mod_col given but this network has no modulator")
+                if main_col is not None:
+                    x = x.at[..., int(main_col)].set(0.0)
+                acts["main.in"] = x
             # --- Original unmodulated path (exact baseline) ---
             x_proj = self.obs_encoder(
                 x,
