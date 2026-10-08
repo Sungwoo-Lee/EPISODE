@@ -17,6 +17,7 @@ All numbers: mean over the 0.2 M checkpoint grid from 2 to 10 M training steps w
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import os
 import sys
 
@@ -24,7 +25,10 @@ import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "fast_heal_replication"))
-import figures as RF  # noqa: E402  (effect, MEASURES, HL, H)
+# load by path under its own name: this folder has a figures.py of its own
+_spec = importlib.util.spec_from_file_location("fast_heal_figures", os.path.join(HERE, "..", "fast_heal_replication", "figures.py"))
+RF = importlib.util.module_from_spec(_spec)  # (effect, MEASURES, HL, H)
+_spec.loader.exec_module(RF)
 
 HL, H = RF.HL, RF.H
 AV = "results/eval/avoidance"
@@ -116,7 +120,7 @@ def figure(T, scene_set):
         t.set_color(H.INK_2 if k == "reference" else H.INK)
     axs[0].set_ylim(-0.6, len(R) - 0.4)
     fig.subplots_adjust(left=0.33, right=0.98, top=0.97, bottom=0.17 * 14 / len(R), wspace=0.12)
-    for _, r in R.iterrows():
+    for _, r in T.iterrows():  # figure order, top to bottom
         data_rows.append({"what": f"{r.row}: checkpoints used", "used": int(r[f"{scene_set}_ckpts"]),
                           "total": HL.GRID_N, "note": "0.2 M grid 2-10 M training steps; 30 episodes per checkpoint, "
                           "scene and injury" + ("" if r[f"{scene_set}_ckpts"] >= HL.GRID_N else

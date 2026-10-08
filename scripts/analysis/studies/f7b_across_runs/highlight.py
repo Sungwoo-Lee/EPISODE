@@ -406,15 +406,16 @@ def fig_injdose(key):
     return dose_figure(lambda agent, sc: grid_leaf(key, agent, sc), SCENE_ROWS)
 
 
-def fig_injdose_seeds(keys):
-    """Bush dwell against starting injury for several runs of one condition: rows = runs (seeds),
-    columns = the four scenes, ordinary vs modulated in each panel; the B6 layout stacked."""
+def fig_injdose_seeds(keys, labels=None):
+    """Bush dwell against starting injury for several runs of one condition: rows = runs (seeds, or the
+    given row `labels`), columns = the four scenes, ordinary vs modulated in each panel; the B6 layout stacked."""
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
     fig, axs = plt.subplots(len(keys), 4, figsize=(10.4, 2.8 * len(keys) + 1.0), sharex=True, sharey=True)
     rows = []
     x = [int(i) for i in INJURIES]
     for r_, key in enumerate(keys):
+        lab = labels[r_] if labels else f"seed {key.rsplit('_s', 1)[1]}"
         for c_, (sc, name) in enumerate(SCENE_ROWS):
             ax = axs[r_, c_]
             for agent in ("ordinary", "modulated"):
@@ -430,11 +431,11 @@ def fig_injdose_seeds(keys):
                     ax.plot(x, edge, color=col, lw=0.7, ls=(0, (3, 2)))
                 ax.plot(x, m, color=col, lw=2.0, marker=AGENT_MK[agent], ms=4.5,
                         mfc=col if agent == "modulated" else H.PAPER, mew=1.3, zorder=3)
-                rows.append(grid_row(f"seed {key.rsplit('_s', 1)[1]}, {agent}, {name}: checkpoints per starting injury", v, leaf))
+                rows.append(grid_row(f"{lab}, {agent}, {name}: checkpoints per starting injury", v, leaf))
             if r_ == 0:
                 ax.set_title(name, loc="left", fontsize=H.FS_BODY)
             if c_ == 0:
-                ax.set_ylabel(f"seed {key.rsplit('_s', 1)[1]}\nbush dwell (%)", fontsize=H.FS_LABEL)
+                ax.set_ylabel(f"{lab}\nbush dwell (%)", fontsize=H.FS_LABEL)
             if r_ == len(keys) - 1:
                 ax.set_xlabel("starting injury", fontsize=H.FS_LABEL)
     axs[0, 0].set_ylim(0, 100)

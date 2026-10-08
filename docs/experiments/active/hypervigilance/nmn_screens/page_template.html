@@ -1,0 +1,152 @@
+<title>Modulator Capacity and Input Screen</title>
+{{HOUSE_STYLE}}
+<style>
+/* hue is spent on data; chrome goes to ink (register F11 amendment) */
+:root { --accent:var(--ink); --accent-text:var(--ink); --warn:var(--ink-2); }
+.wrap > .col { max-width:880px; }
+.wrap > #decision.col { max-width:1120px; }  /* the ten-column decision table; prose inside stays at 880 */
+#decision > p { max-width:880px; }
+.fh { margin:0 0 2px; }
+.fh .n { font-family:var(--f-head); font-weight:600; color:var(--ink-3); margin-right:8px; }
+.toc ul { margin:0; padding-left:22px; display:flex; flex-direction:column; gap:6px; }
+details.bb-data > summary, details.more > summary { cursor:pointer; color:var(--ink-2); font-size:14.5px; }
+details.bb-data[open] > summary, details.more[open] > summary { margin-bottom:8px; }
+td.nw { white-space:nowrap; }
+#decision table.wide td:nth-child(2), #decision table.wide th:nth-child(2) { min-width:15em; }
+#decision table.wide th { min-width:5.5em; }
+@media (max-width:600px) { #decision table.wide td:nth-child(2), #decision table.wide th:nth-child(2) { min-width:9em; } }
+details.more > .fh { margin-top:44px; }
+details.more > .fh:first-of-type { margin-top:8px; }
+</style>
+<div class="wrap">
+
+<header class="col">
+  <p class="eyebrow">grid_world_pain &middot; hypervigilance &middot; level-05 modulator screens &middot; stage 1 (one seed)</p>
+  <h1>Modulator Capacity and Input Screen</h1>
+  <p class="lede">Thirteen modulated agents trained at level 05 with one seed each: nine with a different modulator
+  memory size and gain sharing, four with the modulator reading only part of what the agent senses. Each is
+  tested exactly as in the fast-bush-healing replication and shown beside the six existing level-05 agents, to
+  choose which settings get two more seeds.</p>
+</header>
+
+<section class="col toc">
+  <h4>On this page</h4>
+  <ul>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#setup">01 &middot; Settings and tests</a></li>
+    <li><a href="#effects">02 &middot; Figures S1&ndash;S4: every setting, three effects</a></li>
+    <li><a href="#decision">03 &middot; Stage-2 decision table</a></li>
+    <li><a href="#dose">04 &middot; Figures S5&ndash;S8: bush dwell against starting injury</a></li>
+    <li><a href="#train">05 &middot; Each run across training</a></li>
+    <li><a href="#how">06 &middot; How it is computed</a></li>
+    <li><a href="#prov">07 &middot; Data, scenes and provenance</a></li>
+  </ul>
+</section>
+
+<section class="col" id="summary">
+  <h2><span class="num">SUMMARY</span></h2>
+  {{SUMMARY}}
+</section>
+
+<section class="col" id="setup">
+  <h2><span class="num">01</span> Settings and tests</h2>
+  <p><strong>The modulator.</strong> The modulated agent has a small extra network that reads the agent's senses
+  and, at each of four places in the main network, multiplies every neuron's activity by a learned gain and adds
+  a learned offset. The current version has a memory of 16 units, gives each neuron its own gain (grouping 1)
+  and reads all 58 sensed numbers. The fast-bush-healing replication found that this version does not reliably
+  make injury-driven hiding larger than in the ordinary agent.</p>
+  <p><strong>Capacity screen (nine settings).</strong> Modulator memory 32, 64 or 128 units, crossed with 8, 16
+  or 32 neurons sharing one gain and offset (16, 8 or 4 shared gains per 128-neuron layer). Everything else is
+  the current modulated agent.</p>
+  <p><strong>Input screen (four settings).</strong> Current memory and grouping; the modulator reads only:
+  felt injury (N, 1 number); fullness and felt injury (I, 2); all body signals &mdash; fullness, body temperature,
+  felt injury (IT, 3); or the outside world only &mdash; contact, heat, smell, collision, vision (X, 49). In every
+  setting the main network still reads all 58 numbers.</p>
+  <p><strong>Training and tests.</strong> Level 05 (cold air, campfires, fast healing on bushes, random start
+  temperature), 10 million steps, seed 42 only. Tests as in the replication: at every saved checkpoint, 30
+  episodes of 100 steps in fixed scenes &mdash; the agent in the middle of a 10&times;10 map, one bush three cells
+  away, no animal, a harmless wandering rabbit, a chasing rabbit or a hunting predator &mdash; starting unhurt
+  (injury 0) or injured (70), and at injuries 0&ndash;90 for the dose figures. Neutral scenes (air 0&nbsp;°C, no
+  campfire) and own scenes (training-like cold air, campfire beside the bush). <strong>Bush dwell</strong> is the
+  share of the 100 steps spent on the bush. References: the replication's level-05 ordinary and current modulated
+  agents, seeds 42&ndash;44.</p>
+</section>
+
+<section class="col" id="effects">
+  <h2><span class="num">02</span> Every setting, three effects</h2>
+  <p>For each setting: how much more an injured agent hides with no animal and with the wandering rabbit, and how
+  much a hunting predator raises hiding; the six references above the line.</p>
+  <h4 class="fh"><span class="n">Figure S1</span>Capacity screen, neutral scenes</h4>
+  {{FIG:cap_neutral}}
+  <h4 class="fh"><span class="n">Figure S2</span>Capacity screen, own scenes</h4>
+  {{FIG:cap_own}}
+  <h4 class="fh"><span class="n">Figure S3</span>Input screen, neutral scenes</h4>
+  {{FIG:inp_neutral}}
+  <h4 class="fh"><span class="n">Figure S4</span>Input screen, own scenes</h4>
+  {{FIG:inp_own}}
+</section>
+
+<section class="col" id="decision">
+  <h2><span class="num">03</span> Stage-2 decision table</h2>
+  <p>Every setting's effects in percentage points (pp) of bush dwell, beside the range of the six references.
+  The two rule columns are for reference only &mdash; the choice of which settings get seeds 43 and 44 is made by
+  judgement. <em>Strict</em>: injury effect with the rabbit at least 12.2 pp and with no animal at least
+  14.7 pp, each interval's lower end above the six-reference maximum (neutral scenes). <em>Option A</em>: rabbit
+  effect at least the reference maximum (9.2 pp), no-animal effect at least the reference median (10.65 pp),
+  and own-scene effects not below the weakest reference. With one seed, the strict rule passes a true +3 pp
+  improvement about 10 % of the time and option A about 47 %; option A also passes a setting with no real effect
+  about 17 % of the time.</p>
+  {{TABLE:decision}}
+</section>
+
+<section class="col" id="dose">
+  <h2><span class="num">04</span> Bush dwell against starting injury</h2>
+  <p>Each row is one setting (black) against the level-05 ordinary agent with the same seed (grey); the top row
+  is the current modulated agent. A setting that makes hiding more injury-driven shows a black line that starts
+  low and rises more steeply than the grey one; a black line that is high everywhere hides more regardless of
+  injury.</p>
+  <h4 class="fh"><span class="n">Figure S5</span>Capacity screen, modulator memory 32</h4>
+  {{FIG:dose_cap_h32}}
+  <h4 class="fh"><span class="n">Figure S6</span>Capacity screen, modulator memory 64</h4>
+  {{FIG:dose_cap_h64}}
+  <h4 class="fh"><span class="n">Figure S7</span>Capacity screen, modulator memory 128</h4>
+  {{FIG:dose_cap_h128}}
+  <h4 class="fh"><span class="n">Figure S8</span>Input screen</h4>
+  {{FIG:dose_inp}}
+</section>
+
+<section class="col" id="train">
+  <h2><span class="num">05</span> Each run across training</h2>
+  <p>The same tests across training for every setting, ordinary agent (left) against the setting (right): ten
+  lines per panel, one per starting injury.</p>
+  {{TRAIN}}
+</section>
+
+<section class="col" id="how">
+  <h2><span class="num">06</span> How it is computed</h2>
+  <p>Each agent's saved checkpoints were replayed in fixed test scenes, 30 episodes per checkpoint, scene and
+  starting injury, and bush dwell recorded as the share of the 100 steps spent on the bush. For each checkpoint
+  three differences are formed: injured (starting injury 70) minus unhurt (0) with no animal; the same with the
+  wandering rabbit; and the hunting predator minus no animal, both unhurt. Only checkpoints from 2 to 10 million
+  training steps are used, one every 0.2 million steps (41 per run), and each difference is averaged over them.
+  The 95 % interval allows for neighbouring checkpoints being alike: it uses an effective number of checkpoints,
+  reduced by the correlation between each checkpoint and the next (the lag-1 autocorrelation). It describes how
+  steady one run is across training, not how much a second seed would differ; the six references show that
+  seed-to-seed spread. In the training figures each line averages 5 neighbouring checkpoints only to make ten
+  overlapping lines readable. Every new setting has one seed, so a setting that stands out here is a candidate for
+  more seeds, not a result.</p>
+</section>
+
+<section class="col" id="prov">
+  <h2><span class="num">07</span> Data, scenes and provenance</h2>
+  <p>Designs: <code>docs/experiments/active/hypervigilance/NMN_CAPACITY_GRID_L05.md</code> and
+  <code>NMN_INPUT_L05.md</code>. Agent configs: <code>configs/models/recurrent_ppo/nmn_capacity_grid/</code> and
+  <code>nmn_input_l05/</code>. Test specs: <code>configs/eval_sweeps/nmncap/</code>, <code>nmninp/</code>; results:
+  <code>results/eval/avoidance/metrics_history_rppo_nmncap/</code>, <code>&hellip;_nmninp/</code>; references:
+  <code>&hellip;_healrep/</code>. Each test launch saved its spec, code version and resolved scenes under
+  <code>_provenance/</code>. Figures: <code>scripts/analysis/studies/nmn_screens/figures.py</code>; table:
+  <code>readout.py</code>; page: <code>build_page.py</code>, same folder. Built {{BUILT}}.</p>
+</section>
+
+</div>
+{{LIGHTBOX}}

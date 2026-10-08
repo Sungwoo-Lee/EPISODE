@@ -15,7 +15,6 @@ conditions: all
 episodes: 30
 nodes:
 - 109
-- 113
 x_axis: steps
 plot_measures:
 - bush_hiding
