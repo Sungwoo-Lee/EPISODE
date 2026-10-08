@@ -41,7 +41,7 @@ SEEDS = (42, 43, 44)
 # the scene set each level is read in for the summary: level 04 has no temperature system (core scenes);
 # levels 05 and 06 are read in the thermal-neutral scenes (the cross-run page's 2026-10-06 correction)
 MAIN_SET = {"l04": "core", "l05": "neutral", "l05fix": "neutral", "l06": "neutral"}
-SET_NAME = {"core": "core scenes", "neutral": "neutral scenes", "own": "own scenes"}
+SET_NAME = {"core": "core scenes", "neutral": "no-temperature scenes", "own": "training-like scenes"}  # display names (2026-10-08)
 GRID = {"l04": ("grid", "gridchase"), "l05": ("grid", "gridchase"), "l05fix": ("grid", "gridchase"),
         "l06": ("grid", "grid")}
 LEVEL_NAME = {"l04": "level 04", "l05": "level 05 (temperature)", "l05fix": "level 05, fixed start temperature",

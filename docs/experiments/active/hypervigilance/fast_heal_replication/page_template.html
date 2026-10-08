@@ -67,7 +67,7 @@ td.nw { white-space:nowrap; }
   0, 10, &hellip;, 90 for the four scenes of the injury figures. <strong>Bush dwell</strong> is the share of the
   100 steps the agent spent on the bush.</p>
   <p>Level 04 has no temperature system and is tested in the core scenes (no temperature parts). Levels 05 and 06 are tested in
-  <strong>neutral</strong> scenes: air at 0&nbsp;°C, no campfire, body temperature starting at 0, so that warmth
+  <strong>no-temperature</strong> scenes: air at 0&nbsp;°C, no campfire, body temperature starting at 0, so that warmth
   is no reason to sit in the bush (see <a href="#scenes">which test scenes</a>).</p>
 </section>
 
@@ -86,17 +86,17 @@ td.nw { white-space:nowrap; }
 
 <section class="col" id="scenes">
   <h2><span class="num">03</span> Which test scenes, and why it matters</h2>
-  <p>Agents trained with temperature can be tested in two kinds of scenes. In their <strong>own</strong>
+  <p>Agents trained with temperature can be tested in two kinds of scenes. In <strong>training-like</strong>
   scenes the air is as cold as in training and a campfire stands right beside the bush, so the bush is one of
   the few warm places and every agent has a reason to sit in it whether or not it is hurt. In
-  <strong>neutral</strong> scenes the air is 0&nbsp;°C and there is no campfire. On the cross-run page this
-  mattered: in later studies the modulated agent's larger injury effect showed in neutral scenes and was hidden
-  in their own scenes. The table repeats that check here.</p>
+  <strong>no-temperature</strong> scenes the air is 0&nbsp;°C and there is no campfire. On the cross-run page this
+  mattered: in later studies the modulated agent's larger injury effect showed in no-temperature scenes and was hidden
+  in training-like scenes. The table repeats that check here.</p>
   {{TABLE:scenes}}
   <p>Here the check does not repeat the cross-run page's result: the modulated agent's injury effect with the
-  wandering rabbit is the larger one in {{SC_l05_neutral}} level-05 seeds in neutral scenes against
-  {{SC_l05_own}} in the own scenes, and in {{SC_l06_neutral}} against {{SC_l06_own}} at level 06. In these
-  replication agents the neutral scenes do not reveal a hidden modulator advantage; the differences between seeds
+  wandering rabbit is the larger one in {{SC_l05_neutral}} level-05 seeds in no-temperature scenes against
+  {{SC_l05_own}} in training-like scenes, and in {{SC_l06_neutral}} against {{SC_l06_own}} at level 06. In these
+  replication agents the no-temperature scenes do not reveal a hidden modulator advantage; the differences between seeds
   are as large as the differences between agent types.</p>
   <p>A seed counts when the modulated agent's injury effect with the wandering rabbit (injury 70 minus 0) is
   the larger one; the difference is modulated minus ordinary, in percentage points (pp) of bush dwell, mean over
@@ -151,9 +151,9 @@ td.nw { white-space:nowrap; }
   <h2><span class="num">06</span> Level 05 with a fixed start temperature</h2>
   <p>The level-05 replication differs from the 22-Sep level-05 runs in one setting besides the seed: each
   episode starts at a random body temperature between &minus;10 and +5&nbsp;°C instead of at the setpoint.
-  These six agents remove that difference. They were tested in the same neutral scenes as the level-05
-  replication, and in their own level-05 scenes with the start temperature fixed as in their training (copies of
-  the own scenes that change only that one setting).</p>
+  These six agents remove that difference. They were tested in the same no-temperature scenes as the level-05
+  replication, and in training-like level-05 scenes with the start temperature fixed as in their training (copies of
+  the training-like scenes that change only that one setting).</p>
   {{FIX_TEXT}}
   <p>So the fixed start temperature does not bring back the 22-Sep pattern: the two agent types are as close as
   with the random start. Seed 43's modulated agent is again the exception, hiding more than its ordinary partner at
@@ -192,11 +192,11 @@ td.nw { white-space:nowrap; }
 <section class="col" id="prov">
   <h2><span class="num">08</span> Data, scenes and provenance</h2>
   <p>Test specifications: <code>configs/eval_sweeps/healrep/</code> (ten specs: level 04 core and injury
-  grids; level 05 neutral, own and injury grids; level 06 neutral, own and injury grid; the fixed-start level 05
-  neutral, own and injury grids, <code>healrep_l05fix_*</code>). Fixed-start own scenes:
+  grids; level 05 no-temperature, training-like and injury grids; level 06 no-temperature, training-like and injury grid; the fixed-start level 05
+  no-temperature, training-like and injury grids, <code>healrep_l05fix_*</code>). Fixed-start training-like scenes:
   <code>configs/environment/experiment/behavior_probes/fixed_start/</code>. Results:
   <code>results/eval/avoidance/metrics_history_rppo_healrep/</code>; each test launch saved its spec, code version
-  and fully resolved scenes under <code>_provenance/</code>. Level-06 neutral scenes:
+  and fully resolved scenes under <code>_provenance/</code>. Level-06 no-temperature scenes:
   <code>configs/environment/experiment/behavior_probes/neutral_variants/</code>. Training record and design:
   <code>docs/experiments/active/hypervigilance/FAST_HEAL_REPLICATION.md</code>. Figures:
   <code>scripts/analysis/studies/fast_heal_replication/figures.py</code>; page: <code>build_page.py</code> in the

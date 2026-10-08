@@ -96,7 +96,7 @@ def main():
                 "agent (filled black square). Horizontal, left: injury 70 minus injury 0 with no animal; middle: the "
                 "same with the wandering rabbit (the two share one scale); right: hunting predator minus no animal, "
                 "unhurt. All in percentage points of bush dwell, mean over the checkpoints from 2 to 10 M training "
-                "steps, with a 95 % interval. Level 04 is read in its core scenes, levels 05 and 06 in neutral scenes.")
+                "steps, with a 95 % interval. Level 04 is read in its core scenes, levels 05 and 06 in no-temperature scenes.")
     tok["{{FIG:summary}}"] = FB.figure(
         "rep_summary", "Rows of paired dot-and-interval marks, one row per level and seed, three panels.", sum_axes,
         "Whether the modulated agent's larger injury effect, seen in the 22-Sep pairs, repeats across seeds; the "
@@ -113,7 +113,7 @@ def main():
                   "and 90, mean over 2&ndash;10 M steps. The shaded first 2 M steps are not used in those means.")
     FIGNO = {"l04": (2, 5), "l05": (3, 6), "l06": (4, 7), "l05fix": (8, 9)}   # (dose, training) figure numbers
     for lv in RF.LEVELS:
-        scene = "core scenes" if lv == "l04" else "neutral scenes"
+        scene = "core scenes" if lv == "l04" else "no-temperature scenes"
         tok[f"{{{{FIG:dose_{lv}}}}}"] = FB.figure(
             f"rep_dose__{lv}", f"Twelve panels, three seeds by four scenes, {RF.LEVEL_NAME[lv]}: bush dwell against "
             "starting injury, ordinary and modulated.", dose_axes + f" {RF.LEVEL_NAME[lv].capitalize()}, {scene}.",
@@ -149,10 +149,10 @@ def main():
         f"larger one in {cnt['l05fix']['injw']} of {cnt['l05fix']['n']} pairs (<a href=\"#fix\">section 06</a>).</p></div>")
     fx, r5 = cnt["l05fix"], cnt["l05"]
     tok["{{FIX_TEXT}}"] = (
-        f"<p>In the neutral scenes the modulated agent's injury effect with the wandering rabbit is the larger one in "
+        f"<p>In the no-temperature scenes the modulated agent's injury effect with the wandering rabbit is the larger one in "
         f"{fx['injw']} of {fx['n']} fixed-start pairs (random start: {r5['injw']} of {r5['n']}); with no animal in "
         f"{fx['inj']} of {fx['n']} (random start: {r5['inj']} of {r5['n']}); the predator effect in {fx['pred']} of "
-        f"{fx['n']} (random start: {r5['pred']} of {r5['n']}). Own scenes (fixed start): {tok['{{SC_l05fix_own}}']} "
+        f"{fx['n']} (random start: {r5['pred']} of {r5['n']}). Training-like scenes (fixed start): {tok['{{SC_l05fix_own}}']} "
         f"for the rabbit injury effect.</p>")
     tok["{{BUILT}}"] = datetime.date.today().isoformat()
     # ---- house style (as the cross-run page)

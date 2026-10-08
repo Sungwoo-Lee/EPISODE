@@ -66,8 +66,8 @@ details.more > .fh:first-of-type { margin-top:8px; }
   temperature), 10 million steps, seed 42 only. Tests as in the replication: at every saved checkpoint, 30
   episodes of 100 steps in fixed scenes &mdash; the agent in the middle of a 10&times;10 map, one bush three cells
   away, no animal, a harmless wandering rabbit, a chasing rabbit or a hunting predator &mdash; starting unhurt
-  (injury 0) or injured (70), and at injuries 0&ndash;90 for the dose figures. Neutral scenes (air 0&nbsp;°C, no
-  campfire) and own scenes (training-like cold air, campfire beside the bush). <strong>Bush dwell</strong> is the
+  (injury 0) or injured (70), and at injuries 0&ndash;90 for the dose figures. <strong>No-temperature scenes</strong>: air 0&nbsp;°C, no
+  campfire, so only injury and animals drive hiding. <strong>Training-like scenes</strong>: cold air as in training, a campfire beside the bush. <strong>Bush dwell</strong> is the
   share of the 100 steps spent on the bush. References: the replication's level-05 ordinary and current modulated
   agents, seeds 42&ndash;44.</p>
 </section>
@@ -76,13 +76,13 @@ details.more > .fh:first-of-type { margin-top:8px; }
   <h2><span class="num">02</span> Every setting, three effects</h2>
   <p>For each setting: how much more an injured agent hides with no animal and with the wandering rabbit, and how
   much a hunting predator raises hiding; the six references above the line.</p>
-  <h4 class="fh"><span class="n">Figure S1</span>Capacity screen, neutral scenes</h4>
+  <h4 class="fh"><span class="n">Figure S1</span>Capacity screen, no-temperature scenes</h4>
   {{FIG:cap_neutral}}
-  <h4 class="fh"><span class="n">Figure S2</span>Capacity screen, own scenes</h4>
+  <h4 class="fh"><span class="n">Figure S2</span>Capacity screen, training-like scenes</h4>
   {{FIG:cap_own}}
-  <h4 class="fh"><span class="n">Figure S3</span>Input screen, neutral scenes</h4>
+  <h4 class="fh"><span class="n">Figure S3</span>Input screen, no-temperature scenes</h4>
   {{FIG:inp_neutral}}
-  <h4 class="fh"><span class="n">Figure S4</span>Input screen, own scenes</h4>
+  <h4 class="fh"><span class="n">Figure S4</span>Input screen, training-like scenes</h4>
   {{FIG:inp_own}}
 </section>
 
@@ -91,9 +91,9 @@ details.more > .fh:first-of-type { margin-top:8px; }
   <p>Every setting's effects in percentage points (pp) of bush dwell, beside the range of the six references.
   The two rule columns are for reference only &mdash; the choice of which settings get seeds 43 and 44 is made by
   judgement. <em>Strict</em>: injury effect with the rabbit at least 12.2 pp and with no animal at least
-  14.7 pp, each interval's lower end above the six-reference maximum (neutral scenes). <em>Option A</em>: rabbit
+  14.7 pp, each interval's lower end above the six-reference maximum (no-temperature scenes). <em>Option A</em>: rabbit
   effect at least the reference maximum (9.2 pp), no-animal effect at least the reference median (10.65 pp),
-  and own-scene effects not below the weakest reference. With one seed, the strict rule passes a true +3 pp
+  and training-like-scene effects not below the weakest reference. With one seed, the strict rule passes a true +3 pp
   improvement about 10 % of the time and option A about 47 %; option A also passes a setting with no real effect
   about 17 % of the time.</p>
   {{TABLE:decision}}

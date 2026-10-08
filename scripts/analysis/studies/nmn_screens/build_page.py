@@ -32,6 +32,7 @@ PAGE_DIR = os.path.join(ROOT, "docs/experiments/active/hypervigilance/nmn_screen
 FB.FIG_DIR = os.path.join(PAGE_DIR, "figures")
 FIG = "scripts/analysis/studies/nmn_screens/figures.py"
 STUDY_NAME = {"cap": "capacity screen", "inp": "input screen"}
+SCENE_NAME = {"neutral": "no-temperature", "own": "training-like"}   # display names of the two scene sets
 
 
 def pp(v):
@@ -64,8 +65,8 @@ def main():
     tok["{{TABLE:decision}}"] = FB.table(
         D, ["screen", "row", "neutral_inj", "neutral_injw", "neutral_pred", "own_inj", "own_injw", "ckpts",
             "rule_strict", "rule_option_A"],
-        ["screen", "agent / setting", "injury, no animal", "injury, rabbit", "predator", "own: injury, no animal",
-         "own: injury, rabbit", "check&shy;points", "strict", "option A"],
+        ["screen", "agent / setting", "injury, no animal", "injury, rabbit", "predator", "training-like: injury, no animal",
+         "training-like: injury, rabbit", "check&shy;points", "strict", "option A"],
         num=("neutral_inj", "neutral_injw", "neutral_pred", "own_inj", "own_injw", "ckpts"), min_width=1080)
     # ---- summary (counts against the six references, neutral scenes)
     lines = []
@@ -83,7 +84,7 @@ def main():
             f"{len(up_n)} ({'; '.join(up_n) if up_n else 'none'}). Predator effect below every reference "
             f"({pp(rmin['pred'])} pp): {len(lo_p)} ({'; '.join(lo_p) if lo_p else 'none'}). Option A passes {pa}; the "
             f"strict rule passes {int((C.rule_strict.astype(str) == 'True').sum())}.</li>")
-    tok["{{SUMMARY}}"] = ("<div class=\"callout\"><p>Neutral scenes, seed 42, against the six level-05 references "
+    tok["{{SUMMARY}}"] = ("<div class=\"callout\"><p>No-temperature scenes, seed 42, against the six level-05 references "
                           "(ordinary and current modulated agents, seeds 42&ndash;44):</p><ul>" + "".join(lines) +
                           "</ul>{{SUMMARY_NOTE}}</div>")
     # ---- figures
@@ -94,15 +95,15 @@ def main():
                 "of bush dwell, mean over the checkpoints from 2 to 10 M training steps, with a 95 % interval.")
     for k, (s, st) in enumerate([(s, st) for s in RO.STUDY for st in RO.SETS]):
         tok[f"{{{{FIG:{s}_{st}}}}}"] = FB.figure(
-            f"screen_{s}__{st}", f"Rows of dot-and-interval marks, {STUDY_NAME[s]}, {st} scenes: three effects per agent.",
-            eff_axes + f" {st.capitalize()} scenes.",
+            f"screen_{s}__{st}", f"Rows of dot-and-interval marks, {STUDY_NAME[s]}, {SCENE_NAME[st]} scenes: three effects per agent.",
+            eff_axes + f" {SCENE_NAME[st].capitalize()} scenes.",
             "Whether any setting's injury effects sit outside the spread of the six references, and whether its "
             "predator effect changes.", f"{FIG} --figure effects --study {s}",
-            title=f"Figure S{k + 1} &mdash; {STUDY_NAME[s]}, {st} scenes")
+            title=f"Figure S{k + 1} &mdash; {STUDY_NAME[s]}, {SCENE_NAME[st]} scenes")
     dose_axes = ("Horizontal: starting injury of the test, 0 (unhurt) to 90 in steps of 10. Vertical: bush dwell, the "
                  "share of the scene's 100 steps spent on the bush (%), mean over the checkpoints from 2 to 10 M training "
                  "steps, 0&ndash;100 in every panel. Rows: the current modulated agent, then one row per setting; "
-                 "columns: no animal, wandering rabbit, chasing rabbit, hunting predator (injury-grid neutral scenes). "
+                 "columns: no animal, wandering rabbit, chasing rabbit, hunting predator (injury-grid no-temperature scenes). "
                  "Open grey circles: the level-05 ordinary agent, seed 42; filled black squares: the row's modulated "
                  "agent, seed 42; dashed edges and shading: 95 % interval.")
     for k, (stem, extra, args) in enumerate([("cap_h32", "modulator memory 32", "--study cap --size 32"),
