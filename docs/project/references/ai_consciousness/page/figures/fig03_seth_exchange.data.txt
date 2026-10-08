@@ -1,0 +1,1 @@
+All 50 replies are counted once in each panel (field_data/commentaries.csv). The verdict is the reviewer's reading of each reply; the treatment is the reviewer's reading of Seth's response. The themes are the curator's grouping.

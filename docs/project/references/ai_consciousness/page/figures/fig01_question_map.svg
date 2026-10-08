@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="838.656pt" height="485.856pt" viewBox="0 0 838.656 485.856" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.8, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 485.856 
+L 838.656 485.856 
+L 838.656 0 
+L 0 0 
+z
+" style="fill: #fbfbfa"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 112.392 135.489056 
+Q 112.392 150.954007 112.392 165.077317 
+" clip-path="url(#pbf02cfdbfb)" style="fill: none; stroke: #4e545e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 114.792 160.277317 
+L 112.392 165.077317 
+L 109.992 160.277317 
+z
+" clip-path="url(#pbf02cfdbfb)" style="fill: #4e545e; stroke: #4e545e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 112.392 237.942176 
+Q 112.392 253.407127 112.392 267.530437 
+" clip-path="url(#pbf02cfdbfb)" style="fill: none; stroke: #4e545e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 114.792 262.730437 
+L 112.392 267.530437 
+L 109.992 262.730437 
+z
+" clip-path="url(#pbf02cfdbfb)" style="fill: #4e545e; stroke: #4e545e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 112.392 340.395296 
+Q 112.392 355.860247 112.392 369.983557 
+" clip-path="url(#pbf02cfdbfb)" style="fill: none; stroke: #4e545e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 114.792 365.183557 
+L 112.392 369.983557 
+L 109.992 365.183557 
+z
+" clip-path="url(#pbf02cfdbfb)" style="fill: #4e545e; stroke: #4e545e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 208.521942 202.1796 
+Q 265.862658 202.1796 321.861732 202.1796 
+" clip-path="url(#pbf02cfdbfb)" style="fill: none; stroke: #4e545e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 317.061732 199.7796 
+L 321.861732 202.1796 
+L 317.061732 204.5796 
+z
+" clip-path="url(#pbf02cfdbfb)" style="fill: #4e545e; stroke: #4e545e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 419.328 237.942176 
+Q 419.328 253.407127 419.328 267.530437 
+" clip-path="url(#pbf02cfdbfb)" style="fill: none; stroke: #4e545e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 421.728 262.730437 
+L 419.328 267.530437 
+L 416.928 262.730437 
+z
+" clip-path="url(#pbf02cfdbfb)" style="fill: #4e545e; stroke: #4e545e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 515.457942 304.63272 
+Q 572.798658 304.63272 628.797732 304.63272 
+" clip-path="url(#pbf02cfdbfb)" style="fill: none; stroke: #4e545e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 623.997732 302.23272 
+L 628.797732 304.63272 
+L 623.997732 307.03272 
+z
+" clip-path="url(#pbf02cfdbfb)" style="fill: #4e545e; stroke: #4e545e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 23.994432 135.81792 
+L 200.789568 135.81792 
+Q 210.61152 135.81792 210.61152 130.229568 
+L 210.61152 69.223392 
+Q 210.61152 63.63504 200.789568 63.63504 
+L 23.994432 63.63504 
+Q 14.17248 63.63504 14.17248 69.223392 
+L 14.17248 130.229568 
+Q 14.17248 135.81792 23.994432 135.81792 
+z
+" clip-path="url(#pbf02cfdbfb)" style="fill: #f1f2f0; stroke: #c9cdc9; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 23.994432 238.27104 
+L 200.789568 238.27104 
+Q 210.61152 238.27104 210.61152 232.682688 
+L 210.61152 171.676512 
+Q 210.61152 166.08816 200.789568 166.08816 
+L 23.994432 166.08816 
+Q 14.17248 166.08816 14.17248 171.676512 
+L 14.17248 232.682688 
+Q 14.17248 238.27104 23.994432 238.27104 
+z
+" clip-path="url(#pbf02cfdbfb)" style="fill: #f1f2f0; stroke: #c9cdc9; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 23.994432 340.72416 
+L 200.789568 340.72416 
+Q 210.61152 340.72416 210.61152 335.135808 
+L 210.61152 274.129632 
+Q 210.61152 268.54128 200.789568 268.54128 
+L 23.994432 268.54128 
+Q 14.17248 268.54128 14.17248 274.129632 
+L 14.17248 335.135808 
+Q 14.17248 340.72416 23.994432 340.72416 
+z
+" clip-path="url(#pbf02cfdbfb)" style="fill: #f1f2f0; stroke: #c9cdc9; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 23.994432 443.17728 
+L 200.789568 443.17728 
+Q 210.61152 443.17728 210.61152 437.588928 
+L 210.61152 376.582752 
+Q 210.61152 370.9944 200.789568 370.9944 
+L 23.994432 370.9944 
+Q 14.17248 370.9944 14.17248 376.582752 
+L 14.17248 437.588928 
+Q 14.17248 443.17728 23.994432 443.17728 
+z
+" clip-path="url(#pbf02cfdbfb)" style="fill: #f1f2f0; stroke: #c9cdc9; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 330.930432 238.27104 
+L 507.725568 238.27104 
+Q 517.54752 238.27104 517.54752 232.682688 
+L 517.54752 171.676512 
+Q 517.54752 166.08816 507.725568 166.08816 
+L 330.930432 166.08816 
+Q 321.10848 166.08816 321.10848 171.676512 
+L 321.10848 232.682688 
+Q 321.10848 238.27104 330.930432 238.27104 
+z
+" clip-path="url(#pbf02cfdbfb)" style="fill: #f1f2f0; stroke: #c9cdc9; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 330.930432 340.72416 
+L 507.725568 340.72416 
+Q 517.54752 340.72416 517.54752 335.135808 
+L 517.54752 274.129632 
+Q 517.54752 268.54128 507.725568 268.54128 
+L 330.930432 268.54128 
+Q 321.10848 268.54128 321.10848 274.129632 
+L 321.10848 335.135808 
+Q 321.10848 340.72416 330.930432 340.72416 
+z
+" clip-path="url(#pbf02cfdbfb)" style="fill: #f1f2f0; stroke: #c9cdc9; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_14">
+    <path d="M 637.866432 340.72416 
+L 814.661568 340.72416 
+Q 824.48352 340.72416 824.48352 335.135808 
+L 824.48352 274.129632 
+Q 824.48352 268.54128 814.661568 268.54128 
+L 637.866432 268.54128 
+Q 628.04448 268.54128 628.04448 274.129632 
+L 628.04448 335.135808 
+Q 628.04448 340.72416 637.866432 340.72416 
+z
+" clip-path="url(#pbf02cfdbfb)" style="fill: #f1f2f0; stroke: #c9cdc9; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_1">
+    <text style="font-weight: 600; font-size: 13px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #4e545e" x="112.392" y="33.68713" transform="rotate(-0 112.392 33.68713)">In principle</text>
+   </g>
+   <g id="text_2">
+    <text style="font-weight: 600; font-size: 13px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #4e545e" x="419.328" y="33.68713" transform="rotate(-0 419.328 33.68713)">In practice</text>
+   </g>
+   <g id="text_3">
+    <text style="font-weight: 600; font-size: 13px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #4e545e" x="726.264" y="33.242286" transform="rotate(-0 726.264 33.242286)">What to do</text>
+   </g>
+   <g id="text_4">
+    <text style="font-weight: 600; font-size: 11.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="29.723904" y="81.545515" transform="rotate(-0 29.723904 81.545515)">Is there a fact to find?</text>
+   </g>
+   <g id="text_5">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #6e747e" x="29.723904" y="124.77829" transform="rotate(-0 29.723904 124.77829)">status in this collection: open</text>
+   </g>
+   <g id="text_6">
+    <text style="font-weight: 600; font-size: 11.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(29.723904 184.392151)">Could any AI be conscious</text>
+    <text style="font-weight: 600; font-size: 11.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(29.723904 196.033655)">at all?</text>
+   </g>
+   <g id="text_7">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #6e747e" x="29.723904" y="227.23141" transform="rotate(-0 29.723904 227.23141)">status in this collection: open</text>
+   </g>
+   <g id="text_8">
+    <text style="font-weight: 600; font-size: 11.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(29.723904 286.451755)">What exactly would have to</text>
+    <text style="font-weight: 600; font-size: 11.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(29.723904 298.545802)">be copied?</text>
+   </g>
+   <g id="text_9">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #6e747e" x="29.723904" y="329.68453" transform="rotate(-0 29.723904 329.68453)">status in this collection: open</text>
+   </g>
+   <g id="text_10">
+    <text style="font-weight: 600; font-size: 11.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(29.723904 389.298391)">What role do the living</text>
+    <text style="font-weight: 600; font-size: 11.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(29.723904 401.516422)">body, interoception and</text>
+    <text style="font-weight: 600; font-size: 11.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(29.723904 413.666172)">feeling play?</text>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #6e747e" x="29.723904" y="432.13765" transform="rotate(-0 29.723904 432.13765)">status in this collection: open</text>
+   </g>
+   <g id="text_12">
+    <text style="font-weight: 600; font-size: 11.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="336.659904" y="184.111838" transform="rotate(-0 336.659904 184.111838)">How could anyone tell?</text>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #6e747e" x="336.659904" y="227.23141" transform="rotate(-0 336.659904 227.23141)">status in this collection: open</text>
+   </g>
+   <g id="text_14">
+    <text style="font-weight: 600; font-size: 11.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(336.659904 286.451755)">Are today's systems</text>
+    <text style="font-weight: 600; font-size: 11.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(336.659904 298.093259)">candidates?</text>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #6e747e" x="336.659904" y="329.565936" transform="rotate(-0 336.659904 329.565936)">status in this collection: leaning</text>
+   </g>
+   <g id="text_16">
+    <text style="font-weight: 600; font-size: 11.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(643.595904 286.451755)">What follows for ethics</text>
+    <text style="font-weight: 600; font-size: 11.5px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #16181d" transform="translate(643.595904 298.545802)">and policy?</text>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #6e747e" x="643.595904" y="329.68453" transform="rotate(-0 643.595904 329.68453)">status in this collection: open</text>
+   </g>
+   <g id="text_18">
+    <g id="patch_15">
+     <path d="M 122.213952 163.693962 
+L 194.081764 163.693962 
+Q 196.281764 163.693962 196.281764 161.493962 
+L 196.281764 140.412118 
+Q 196.281764 138.212118 194.081764 138.212118 
+L 122.213952 138.212118 
+Q 120.013952 138.212118 120.013952 140.412118 
+L 120.013952 161.493962 
+Q 120.013952 163.693962 122.213952 163.693962 
+z
+" style="fill: #fbfbfa"/>
+    </g>
+    <text style="font-style: italic; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(122.213952 148.436962)">is the question</text>
+    <text style="font-style: italic; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(122.213952 159.302556)">well posed?</text>
+   </g>
+   <g id="text_19">
+    <g id="patch_16">
+     <path d="M 122.213952 266.288105 
+L 205.607702 266.288105 
+Q 207.807702 266.288105 207.807702 264.088105 
+L 207.807702 242.713902 
+Q 207.807702 240.513902 205.607702 240.513902 
+L 122.213952 240.513902 
+Q 120.013952 240.513902 120.013952 242.713902 
+L 120.013952 264.088105 
+Q 120.013952 266.288105 122.213952 266.288105 
+z
+" style="fill: #fbfbfa"/>
+    </g>
+    <text style="font-style: italic; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(122.213952 250.867652)">if yes, what must</text>
+    <text style="font-style: italic; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(122.213952 261.896699)">be copied?</text>
+   </g>
+   <g id="text_20">
+    <g id="patch_17">
+     <path d="M 122.213952 368.801296 
+L 204.920202 368.801296 
+Q 207.120202 368.801296 207.120202 366.601296 
+L 207.120202 344.998671 
+Q 207.120202 342.798671 204.920202 342.798671 
+L 122.213952 342.798671 
+Q 120.013952 342.798671 120.013952 344.998671 
+L 120.013952 366.601296 
+Q 120.013952 368.801296 122.213952 368.801296 
+z
+" style="fill: #fbfbfa"/>
+    </g>
+    <text style="font-style: italic; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(122.213952 353.142108)">is the living body</text>
+    <text style="font-style: italic; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(122.213952 364.409889)">part of it?</text>
+   </g>
+   <g id="text_21">
+    <g id="patch_18">
+     <path d="M 231.774609 191.452417 
+L 299.945391 191.452417 
+Q 302.145391 191.452417 302.145391 189.252417 
+L 302.145391 168.537183 
+Q 302.145391 166.337183 299.945391 166.337183 
+L 231.774609 166.337183 
+Q 229.574609 166.337183 229.574609 168.537183 
+L 229.574609 189.252417 
+Q 229.574609 191.452417 231.774609 191.452417 
+z
+" style="fill: #fbfbfa"/>
+    </g>
+    <text style="font-style: italic; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(231.774609 176.314527)">how could we</text>
+    <text style="font-style: italic; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(255.917031 187.061011)">tell?</text>
+   </g>
+   <g id="text_22">
+    <g id="patch_19">
+     <path d="M 429.149952 266.087527 
+L 508.956671 266.087527 
+Q 511.156671 266.087527 511.156671 263.887527 
+L 511.156671 242.924793 
+Q 511.156671 240.724793 508.956671 240.724793 
+L 429.149952 240.724793 
+Q 426.949952 240.724793 426.949952 242.924793 
+L 426.949952 263.887527 
+Q 426.949952 266.087527 429.149952 266.087527 
+z
+" style="fill: #fbfbfa"/>
+    </g>
+    <text style="font-style: italic; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(429.149952 250.949637)">apply it to</text>
+    <text style="font-style: italic; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(429.149952 261.696121)">today's systems</text>
+   </g>
+   <g id="text_23">
+    <g id="patch_20">
+     <path d="M 542.803812 293.905537 
+L 602.788187 293.905537 
+Q 604.988187 293.905537 604.988187 291.705537 
+L 604.988187 270.990303 
+Q 604.988187 268.790303 602.788187 268.790303 
+L 542.803812 268.790303 
+Q 540.603812 268.790303 540.603812 270.990303 
+L 540.603812 291.705537 
+Q 540.603812 293.905537 542.803812 293.905537 
+z
+" style="fill: #fbfbfa"/>
+    </g>
+    <text style="font-style: italic; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(542.803812 278.767647)">what should</text>
+    <text style="font-style: italic; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(555.092875 289.514131)">we do?</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pbf02cfdbfb">
+   <rect x="10.08" y="10.08" width="818.496" height="465.696"/>
+  </clipPath>
+ </defs>
+</svg>

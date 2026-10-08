@@ -1,0 +1,201 @@
+<title>Could a Machine Be Conscious?</title>
+{{HOUSE_STYLE}}
+<style>
+/* ---- page-specific additions to the House Style Sheet ----
+   DEPARTURES, stated on the page (guide 0a; register F11 amendment):
+   * Figure 3 spends blue on "supports Seth" and orange on "rejects him"; so the page chrome takes no hue:
+     --accent is set to ink, and the page uses no .warn / .pick / .danger box.
+   * This page introduces ideas and debates rather than reporting an analysis, so its figure captions
+     follow the user's waiver of guide 11 (no axes sentence, data statement or method block). */
+:root { --accent: var(--ink-2); --accent-text: var(--ink); }
+.callout ul { margin:0; padding-left:1.2em; }
+.callout li + li { margin-top:6px; }
+/* question status chip in a heading */
+.qst { font-family:var(--f-mono); font-size:.62em; font-weight:500; letter-spacing:.02em; vertical-align:.18em;
+  background:var(--sunk); color:var(--ink); padding:.15em .55em; border-radius:3px; margin-left:.35em; white-space:nowrap; }
+/* contents list */
+ol.toc { list-style:none; padding-left:0; margin:0; columns:2 18rem; column-gap:2rem; }
+ol.toc li { break-inside:avoid; padding:2px 0; }
+ol.toc li.t3 { padding-left:1.1em; font-size:.94em; }
+ol.toc a { color:var(--ink); text-decoration:none; border-bottom:1px solid var(--line); }
+/* author-year links into the reference list */
+a.cref { color:inherit; text-decoration:none; border-bottom:1px dotted var(--ink-3); }
+a.cref:hover { border-bottom-style:solid; }
+/* reference list */
+ul.refs { list-style:none; padding-left:0; margin:0; display:flex; flex-direction:column; gap:10px; }
+ul.refs li { min-width:0; scroll-margin-top:24px; }
+ul.refs .rbody { display:flex; flex-direction:column; gap:2px; min-width:0; font-size:15px; }
+ul.refs .rmeta { color:var(--ink-2); font-size:14px; }
+ul.refs .rmeta a { overflow-wrap:anywhere; }
+ul.refs .rtag { font-family:var(--f-mono); font-size:11px; padding:1px 6px; border-radius:3px; white-space:nowrap; vertical-align:1px; }
+ul.refs .rtag.read { background:var(--ink); color:var(--ground); }
+ul.refs .rtag.short { background:var(--rule); color:var(--ink); }
+ul.refs li:target { background:var(--sunk); border-radius:4px; box-shadow:0 0 0 6px var(--sunk); }
+h4 { margin-top:1.4em; }
+/* display maths, typeset by MathJax (script below); scrolls in its own box if wider than the column */
+.mathblock { overflow-x:auto; padding:6px 0; margin:.6em 0; }
+/* two-column vocabulary tables: the term column must not starve the definition on a phone (register F48 family) */
+table:not(.wide) th:first-child, table:not(.wide) td:first-child { width:34%; }
+/* figures keep a width floor and scroll sideways on a PHONE only, so their labels stay legible (register F65);
+   applied at every width it cropped every figure on desktop, whose column is 688 px (register F24) */
+@media (max-width: 760px) { .figscroll img { min-width:820px; } }
+/* a lead-in line belongs to the list under it, not floating between two lists (register F51) */
+p + ul, p + ol { margin-top:.25em; }
+</style>
+<script>window.MathJax={tex:{inlineMath:[],displayMath:[["$$","$$"]]},svg:{fontCache:"global"},options:{enableMenu:false}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"></script>
+
+<div class="wrap">
+
+<header class="col">
+  <p class="eyebrow">grid_world_pain &middot; reference topic &middot; field review</p>
+  <h1>Could a Machine Be Conscious?</h1>
+  <p class="lede">The arguments and debates about consciousness in artificial intelligence, from many sides:
+  what each position says, why its holders believe it, what the others answer, and what could change
+  anyone's mind.</p>
+</header>
+
+<section class="col">
+  <h2><span class="num">PURPOSE</span></h2>
+  {{SYN:entry}}
+</section>
+
+<section class="col">
+  <div class="howto">
+    <p class="eyebrow">How to read this page</p>
+    <p>This page organises a field; it does not take a side. Every position is stated as strongly as its
+    own holders state it, and where a source's author gives an answer, the critic's surviving counter is
+    given too. It is built from {{N_REFS}} works: {{N_CORE}} core papers and one published debate, in
+    which {{N_COMM}} researchers replied to the neuroscientist Anil Seth and he answered them.</p>
+    <p>The page has three parts. The first explains the words and the background. The middle, section 03,
+    takes the field's seven questions one at a time. Each question gets its background, the positions, the
+    arguments, how the debate moved, where it stands, and what evidence would change it. The last part uses
+    the Seth debate as a worked example, then lists what the field agrees on, common misreadings, and what
+    this collection leaves out. A name with a year, such as <em>Michel 2026</em>, links to its entry in
+    the reference list. Click any figure to open it full size.</p>
+    <p><strong>Numbering.</strong> Section numbers follow the source document. Its three internal working
+    sections (7, 10 and 11) are left out, so the numbers jump from 06 to 08.</p>
+  </div>
+</section>
+
+<section class="col">
+  <h2><span class="num">CONTENTS</span></h2>
+  {{TOC}}
+</section>
+
+<section class="col">
+  <h3>Reading conventions</h3>
+  {{SYN:conventions}}
+</section>
+
+<hr>
+
+<section class="col">
+{{SYN:1}}
+</section>
+
+<section class="col">
+{{SYN:2}}
+</section>
+
+<hr>
+
+<section class="col">
+{{SYN:3}}
+</section>
+
+<hr>
+
+<section class="col">
+{{SYN:4}}
+</section>
+
+<section class="col">
+{{SYN:5}}
+</section>
+
+<section class="col">
+{{SYN:6}}
+</section>
+
+<section class="col">
+{{SYN:8}}
+</section>
+
+<section class="col">
+{{SYN:9}}
+</section>
+
+<hr>
+
+<section class="col">
+  <h2 id="references"><span class="num">REFERENCES</span></h2>
+  <p>The whole collection: {{N_REFS}} works. The core papers come first, then Seth's response, then the
+  {{N_COMM}} replies in alphabetical order. Each entry says how deeply it was reviewed: <em>reviewed in
+  full</em> (overview, argument and section-by-section summary) or <em>structured review</em> (a short entry
+  in a fixed format, used for each reply in the debate).</p>
+  {{REFS}}
+</section>
+
+<hr>
+
+<section class="col">
+  <h4>Provenance</h4>
+  <p class="foot">Built by <code>python docs/project/references/ai_consciousness/page/build_page.py</code>.
+  The text is the public part of <code>docs/project/references/ai_consciousness/ai_consciousness_synthesis.md</code>,
+  rendered at build time, so the page and the synthesis cannot disagree. The synthesis was written from nine
+  per-paper reviews in the same folder. A script checked their 726 quotations against the cited PDF pages,
+  and a domain reviewer read the synthesis before it was revised. Each figure is drawn by its own script in
+  <code>page/</code> from the data files in <code>field_data/</code>, which are written by
+  <code>field_data/build_field_data.py</code>. The House Style Sheet is taken from
+  <code>docs/develop/active/meta/house_style_sheet.template.html</code>. The PDFs are in <code>sources/</code>,
+  including the full <em>Behavioral and Brain Sciences</em> treatment of Seth's article (target article, fifty
+  commentaries and his response).</p>
+</section>
+
+</div>
+
+<div id="figure-holding">
+<figure data-at="before:31-could-any-ai-be-conscious-at-all--open">
+  <p class="cue" hidden>&larr; the figure is wider than the screen &mdash; scroll it sideways, or click it to open full size</p><div class="scroll figscroll"><img data-fig="fig01_question_map" alt="A diagram of seven boxes, one per question, in three columns. In principle: Is there a fact to find? leads to Could any AI be conscious at all?, which leads to What exactly would have to be copied?, which leads to What role do the living body, interoception and feeling play? Could any AI be conscious leads across to the In practice column: How could anyone tell?, which leads to Are today's systems candidates?, which leads to the What to do column: What follows for ethics and policy? Each box gives its status in this collection: all open except Are today's systems candidates, which is leaning."></div>
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 1 &mdash; The seven questions, and the order a reader usually needs them in.</b> The
+    in-principle questions come first, because how to test, and what to do, both depend on what could be
+    true at all. Only one question leans in a direction: whether today's systems are candidates.</span>
+    <span><b>Source.</b> {{NOTE:fig01_question_map}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/ai_consciousness/page/fig01_question_map.py</code></p>
+</figure>
+
+<figure data-at="before:31-could-any-ai-be-conscious-at-all--open--where-it-stands-now">
+  <p class="cue" hidden>&larr; the figure is wider than the screen &mdash; scroll it sideways, or click it to open full size</p><div class="scroll figscroll"><img data-fig="fig02_field_map" alt="A grid with four columns for stance on computational functionalism (supports it, restricts or narrows it, rejects it, takes no side) and six rows for stance on whether AI could be conscious (likely or already partly conscious, possible, unlikely for current systems, very unlikely for computers, the question should be reframed, gives no verdict). Each cell gives a count of works and names the core papers in it. The largest cells are: takes no side with gives no verdict, 13, including Bayne et al. 2024; supports it with possible, 9, including Bengio and Elmoznino 2025 and Butlin et al. 2023; restricts it with unlikely for current systems, 8, including Seth's target article and Aru, Larkum and Shine 2023; rejects it with very unlikely, 5."></div>
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 2 &mdash; The collection on two questions at once.</b> Across the top, does each work
+    accept that the right computation is enough for consciousness? Down the side, what does it say about
+    AI consciousness? No cell holds a majority. Works that reject computational functionalism mostly also
+    doubt computer consciousness, as you would expect, but works that support it still mostly say only
+    "possible", not "likely". This is not a vote: the collection was built around one debate.</span>
+    <span><b>Source.</b> {{NOTE:fig02_field_map}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/ai_consciousness/page/fig02_field_map.py</code></p>
+</figure>
+
+<figure data-at="before:45-what-seths-response-concedes-partly-concedes-and-holds">
+  <p class="cue" hidden>&larr; the figure is wider than the screen &mdash; scroll it sideways, or click it to open full size</p><div class="scroll figscroll"><img data-fig="fig03_seth_exchange" alt="Two panels. Left: ten horizontal bars, one per theme of the fifty replies to Seth, each split by verdict: supports Seth in blue, extends his case and qualifies it in greys, rejects it in orange. The largest theme, Beyond computation: physical and biological candidates, has 9 replies, all supporting or extending. Themes such as Functionalism defended and Computation is wider than Seth's Turing sense are mostly orange. Right: a four by four grid of the replies' verdicts against how Seth's response treated them. Of 21 qualifying replies, 13 were conceded in full or in part. Of 15 rejecting replies, 7 were conceded in part and 8 held against. All supporting and extending replies but one were agreed with."></div>
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 3 &mdash; The fifty replies to Seth: what they argued, and how he answered.</b> The
+    replies that reject Seth cluster on computation: that his case against it is not made, or that he uses
+    too narrow an idea of computation. The replies that support him cluster on candidates beyond
+    computation, mostly biological. Seth conceded something, in full or in part, to 13 of the 21 replies that
+    qualified his view, and held his ground against 8 of the 15 that rejected it. The colours are the
+    reviewers' reading of each reply; the treatment is the reviewers' reading of Seth's response.</span>
+    <span><b>Source.</b> {{NOTE:fig03_seth_exchange}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/ai_consciousness/page/fig03_seth_exchange.py</code></p>
+</figure>
+</div><!-- /figure-holding -->
+
+{{HOUSE_VIEWER}}

@@ -1,0 +1,1 @@
+All 59 works in the collection are counted, one per cell (field_data/works.csv). For 9 of them both codes come from the reviewer's own record; the rest are the curator's reading of the review, a reading aid rather than a measurement. Names in a cell are the core papers; the 50 commentaries are counted but not named. Not a vote: the collection was built around one debate.
