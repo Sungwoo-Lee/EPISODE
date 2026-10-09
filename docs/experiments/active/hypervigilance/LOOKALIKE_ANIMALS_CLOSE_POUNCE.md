@@ -134,10 +134,10 @@ WandB group `lookalike_animals`, job type `pilot` (two seeds; exploratory). Tag 
 
 | Run | Agent | Seed | Tag | node:GPU | Status | Launched | WandB ID | Log |
 |---|---|---|---|---|---|---|---|---|
-| 1 | ordinary | 42 | rppo_lookalike_l05_t1none_s42 | 110:0 | planned | — | — | — |
-| 2 | modulated | 42 | rppo_lookalike_l05_t16quad_s42 | 110:1 | planned | — | — | — |
-| 3 | ordinary | 43 | rppo_lookalike_l05_t1none_s43 | 111:0 | planned | — | — | — |
-| 4 | modulated | 43 | rppo_lookalike_l05_t16quad_s43 | 111:1 | planned | — | — | — |
+| 1 | ordinary | 42 | rppo_lookalike_l05_t1none_s42 | 110:0 | running | 2026-10-09T17:54:54 | 272ytkfm | logs/20261009_175454_rppo_lookalike_l05_t1none_s42.log |
+| 2 | modulated | 42 | rppo_lookalike_l05_t16quad_s42 | 110:1 | running | 2026-10-09T17:54:57 | vthv4edn | logs/20261009_175457_rppo_lookalike_l05_t16quad_s42.log |
+| 3 | ordinary | 43 | rppo_lookalike_l05_t1none_s43 | 111:0 | running | 2026-10-09T17:55:01 | lprr4chw | logs/20261009_175501_rppo_lookalike_l05_t1none_s43.log |
+| 4 | modulated | 43 | rppo_lookalike_l05_t16quad_s43 | 111:1 | running | 2026-10-09T17:55:05 | fcjgr42x | logs/20261009_175505_rppo_lookalike_l05_t16quad_s43.log |
 
 Nodes chosen by the user (RTX 3090). Tags checked unique in `train_command*.sh`, `configs/` and
 `docs/experiments/` on 2026-10-09.
