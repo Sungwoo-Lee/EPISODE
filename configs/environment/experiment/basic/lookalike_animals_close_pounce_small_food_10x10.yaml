@@ -1,0 +1,105 @@
+# Basic world — lookalike_animals_close_pounce_small_food_10x10
+# ---------------------------------------------------------------------------
+# PURPOSE (plain language): level 05 (the cold world with campfires, random start
+# position / nutrition / injury / body temperature, pouncing predators) with THREE changes,
+# made for the hypervigilance study (design: docs/experiments/active/hypervigilance/
+# LOOKALIKE_ANIMALS_CLOSE_POUNCE.md, created 2026-10-09):
+#
+#   1. LOOKALIKE ANIMALS — the hunting predator and the harmless wandering rabbit smell the
+#      same: both get properties [0, 0.6, 0.6, 0, 0] with properties_std [0, 0.3, 0.3, 0, 0]
+#      (level 05: predator [0, 0.7, 0.5, 0, 0], rabbit [0, 0.5, 0.7, 0, 0], same std). Vision
+#      was already identical ([1.0], std 0). The shared mean is the midpoint of the two old
+#      means, so each animal's total smell strength (channel sum 1.2) and the size of its
+#      per-episode smell noise are unchanged — only the identity information is removed.
+#   2. CLOSE POUNCE — detection_range [3, 3] and attack_range [3, 3] (level 05: detection
+#      [1, 7], attack [2, 3]). Detection never exceeds pounce reach in any episode, so a
+#      predator random-walks like the rabbit until the agent is within 3 cells and then
+#      pounces on that same step: there is no long visible approach that would give it away.
+#      attack_success_rate 0.5 and attack_delay [1, 3] are level 05's values.
+#   3. SMALLER FOOD — food max_consumption 12 -> 6 bites (then the item reappears at a random
+#      cell, regeneration_delay 0 as before). Food count 1-4 per episode, food_nutrition_gain 6
+#      and metabolic cost are level 05's, so a bush-sitting agent must leave cover twice as
+#      often to keep fed.
+#
+# Bush healing is UNCHANGED (body.recovery_in_bush_multiplier 25, inherited from default.yaml).
+# Everything else is level 05.
+#
+# LIST-REPLACE FOOTGUN (CONFIG_GUIDE §1): `entities` and `resources` are redeclared, so each
+# list is restated IN FULL. `entities` = level 04's two entries verbatim except the five
+# marked keys; `resources` = level 03's two entries verbatim except food `max_consumption`.
+# `obstacles` and `thermal` are NOT redeclared: they come from level 05 unchanged. The
+# resolved config was diffed against level 05 through train.py's own assembly path on
+# 2026-10-09: only the keys marked CHANGED below differ.
+#
+# No critical-settings registry VALUE changes; a "no canonical value changed" change-log
+# entry is recorded in docs/environment/CONFIG_CRITICAL_SETTINGS.md (2026-10-09) because the
+# `sensory.olfactory_grid_range` registry row describes predator/rabbit smell as the identity
+# carrier, which this world removes.
+extends: environment/experiment/basic/05-campfire_thermal_10x10
+
+environment:
+  resources:
+    - name: "food"
+      type: "food"
+      count_low: 1
+      count_high: 4
+      spawn_area: [[1, 1], [10, 10]]
+      properties: [1.0, 0.0, 0.0, 0.0, 0.0]
+      properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      max_consumption: 6            # CHANGED (level 05: 12) — smaller food items
+      regeneration_delay: 0
+      damage: [0.0, 0.0]
+      nociception_intensity: 0.0
+    - name: "hiding_predator"
+      type: "hiding_predator"
+      count_low: 2
+      count_high: 12
+      spawn_area: [[1, 1], [10, 10]]
+      properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+      properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      max_consumption: -1
+      regeneration_delay: 20
+      damage: [15.0, 45.0]
+      nociception_intensity: 0.9
+  entities:
+    - class: "predator"
+      behaviour: "hunt"
+      tag: "pred"
+      count_low: 0
+      count_high: 2
+      properties: [0.0, 0.6, 0.6, 0.0, 0.0]       # CHANGED (level 05: [0, 0.7, 0.5, 0, 0]) — same as rabbit
+      properties_std: [0.0, 0.3, 0.3, 0.0, 0.0]   # unchanged; equal to rabbit's
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      move_interval: [1, 1]
+      damage: [15.0, 120.0]
+      attack_delay: [1, 3]
+      nociception_intensity: 0.9
+      spawn_area: [[1, 1], [10, 10]]
+      patrol_area: [[1, 1], [10, 10]]
+      detection_range: [3, 3]       # CHANGED (level 05: [1, 7]) — never beyond pounce reach
+      max_stamina: [30, 150]
+      stamina_recovery_rate: [1, 1]
+      hunt_stamina_threshold: [0.7, 0.7]
+      lose_interest_multiplier: [1.5, 1.5]
+      attack_range: [3, 3]          # CHANGED (level 05: [2, 3]) — pounce reach = detection range
+      attack_success_rate: 0.5
+    - class: "neutral"
+      behaviour: "wander"
+      tag: "rabbit"
+      count_low: 0
+      count_high: 2
+      properties: [0.0, 0.6, 0.6, 0.0, 0.0]       # CHANGED (level 05: [0, 0.5, 0.7, 0, 0]) — same as predator
+      properties_std: [0.0, 0.3, 0.3, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      move_interval: [1, 1]
+      damage: [0.0, 0.0]
+      attack_delay: [0, 0]
+      nociception_intensity: 0.1    # read only for damaging animals (sensor.py), so inert here
+      spawn_area: [[1, 1], [10, 10]]
+      patrol_area: [[1, 1], [10, 10]]

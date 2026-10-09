@@ -1,7 +1,7 @@
 ---
 title: Fast-bush-healing replication — level 04, + temperature, + temperature and thirst
 created: 2026-10-05
-last_updated: 2026-10-07
+last_updated: 2026-10-09
 status: active
 ---
 
@@ -165,3 +165,11 @@ injury alone, fullness and felt injury, those two plus body temperature, or the 
 main network still reads everything. One seed first; more seeds by the user's judgement. This
 replication's level-05 runs (both agents, seeds 42–44) are its references and are not retrained. Design,
 readout and run table: [[NMN_INPUT_L05]].
+
+## Follow-up: lookalike animals, close pounce, small food (designed 2026-10-09)
+
+A changed level-05 world in which the predator and the rabbit smell the same, the predator notices the
+agent only when it can already pounce (3 cells), and food items last 6 bites instead of 12 — built so
+that caution toward an unidentified animal should depend on injury. Both agents, seeds 42 and 43, same
+training settings as this replication's level-05 arm, which is its reference. Design, test-scene needs
+and run table: [[LOOKALIKE_ANIMALS_CLOSE_POUNCE]].
