@@ -3,12 +3,12 @@ title: "Behaviour-test sweep: score on the node, bundle the raw episodes, migrat
 topic: refactors
 status: active
 created: 2026-10-07
-last_updated: 2026-10-07
+last_updated: 2026-10-11
 ---
 
 # Behaviour-test sweep: score on the node, bundle the raw episodes, migrate the old folders
 
-> **Status**: PLANNED, revision 1 (answers the plan review's NOT READY verdict; user decisions D1–D5 taken 2026-10-07; not implemented)
+> **Status**: IN PROGRESS — Phases 1, 2 and 3 implemented (Phase 3 on 2026-10-11 in a worktree branch; G1 subset passed; G2/G3/speed check on nodes and Phase M pending)
 > **Opened**: 2026-10-07
 > **Related**: [scripts/eval/dwell_sweep/README.md](../../../../scripts/eval/dwell_sweep/README.md) (the pipeline this changes) · [[EVAL_ROLLOUT_BATCHING_PERF]] (the batched test path) · [[SCRIPTS_DEPENDENCY_MAP]] (maintenance contract) · [[EXPERIMENT_EVAL_DURING_TRAINING]] (a second caller of the same scoring function) · plan review: [[plan_sweep_bundles]]
 
@@ -349,22 +349,22 @@ Each phase ends with its own commit(s) (explicit pathspec, pushed). No phase sta
 
 - [x] P0.1–P0.4 results recorded (live sweeps, node numpy versions + import check, reader re-grep, 11:42 death finding). (2026-10-07 17:10, developer: see Implementation Report, Phase 0; P0.1 must be re-run at C2-gate time.)
 - [x] Phase 1 committed alone; nothing else imports `episode_bundle` at that commit. (2026-10-07, developer: library + 38 tests; only the test file imports it.)
-- [ ] Neuromodulation session's explicit go recorded (date, source) before Phase 2's edits to its files; `git diff` checked on each; no foreign hunk committed.
-- [ ] `SESSION_HOLDS` (E4) implemented as listed; no archive written into, and no file deleted from, a held cell (inventory before/after); any hold lift recorded with its source.
-- [ ] Phase 2: ported parity tools report `exact` on an archive-only cell and on the folder-form cell; outputs pasted. (Partial, 2026-10-07: this plan's own readers R4–R7 ported and exact on both forms; R9–R12 still wait for the neuromodulation session's go.)
+- [x] Neuromodulation session's explicit go recorded (date, source) before Phase 2's edits to its files; `git diff` checked on each; no foreign hunk committed. (2026-10-11, developer: go relayed by the coordinator; R9–R12 + internals precondition, one commit each.)
+- [ ] (2026-10-11: implemented with the eight exact run names + two held roots; G1 only read the held root — open until Phase M's before/after inventory.) `SESSION_HOLDS` (E4) implemented as listed; no archive written into, and no file deleted from, a held cell (inventory before/after); any hold lift recorded with its source.
+- [x] Phase 2: ported parity tools report `exact` on an archive-only cell and on the folder-form cell; outputs pasted. (R4–R7 2026-10-07; R9–R12 + internals 2026-10-11, see Phase 3 report.)
 - [ ] C2-gate evidence (markers + `ps` + node `pgrep`) pasted, timestamped, immediately before the shared-folder worker/driver edit.
 - [ ] Every launch after Phase 3 has `_provenance/<id>/worker/` and the driver ran that copy (`ps` on a node shows the provenance path).
-- [ ] `cell_row` is the only place the row arithmetic exists (`grep nanmean scripts/eval/dwell_sweep/` → one hit).
-- [ ] `experiment_eval_checkpoint.py` still imports `_measure_cell, HEAD, KEYS` from `run_sweep` and works on a directory; `probes.py` test passes.
-- [ ] Regression test `test_poll_done_does_not_wait_forever_on_dead_worker` shown failing on the pre-change `poll_done`.
-- [ ] `--dry-run` on the `l05fix_own` spec prints the 5-argument command against the provenance copy and unchanged LPT loads.
+- [x] `cell_row` is the only place the row arithmetic exists (`grep nanmean scripts/eval/dwell_sweep/` → one hit). (2026-10-11: plus `plot_summary.py`, which averages for figures only; pinned by `test_cell_row_is_the_only_nanmean`.)
+- [x] `experiment_eval_checkpoint.py` still imports `_measure_cell, HEAD, KEYS` from `run_sweep` and works on a directory; `probes.py` test passes. (2026-10-11: import check + `test_measure_cell_dir_equals_zip`; `test_basic_behaviour.py` green.)
+- [x] Regression test `test_poll_done_does_not_wait_forever_on_dead_worker` shown failing on the pre-change `poll_done`. (2026-10-11.)
+- [x] `--dry-run` on the `l05fix_own` spec prints the 5-argument command against the provenance copy and unchanged LPT loads. (2026-10-11: SIX arguments after N1 — repo root added; run on an absolute-path gate copy of the spec, 144 checkpoint-evals, 72/72 across two nodes.)
 - [ ] Throwaway output dir: `kill -9` the worker bash on one node → `alive_` stops (heartbeat loop exits), `poll_done` reports stalled/dead within 11 min; `kill -9` its `xargs` → `done_` is written but collation lists the missing cells and exits non-zero; `--status` shows both.
 - [ ] `kill -9` during `--collate-only --from-bundles` launched on a node → `--status` on the container shows `DEAD` within 6 min.
 - [ ] G1, G2, G3 pass with the pre-stated criteria; numbers pasted.
 - [ ] Speed check within budget.
 - [ ] M0.5 backup sha256 list matches; M1 independent-check report all-identical, run on a host different from the packing host; deletes ran on host B.
 - [ ] No per-scene CSV, figure or `_provenance/` file changed mtime during migration (pilot list before/after).
-- [ ] README, SCRIPTS_DEPENDENCY_MAP (diffed for foreign hunks), trajectory-story skill updated in the same commit as the code; `bug-curator` handed the env-drift note.
+- [ ] README, SCRIPTS_DEPENDENCY_MAP (diffed for foreign hunks), trajectory-story skill updated in the same commit as the code; `bug-curator` handed the env-drift note. (2026-10-11: docs in commit `3bd5ee43`; bug-curator hand-off still open — parent.)
 
 ## Decisions (resolved by the user, 2026-10-07)
 
@@ -465,6 +465,88 @@ R7 scene_steps.one(core, lvl02_control, last=3)
 **Speed check.** Skipped: no change on the training or sweep hot path (analysis readers only). Reading from an archive is not slower in practice here (one ZIP open per member; 30 episodes per cell).
 
 **Still blocked.** R9–R12 (neuromodulation session's go, F9). Phase 3 (C2-gate: live nmncap sweeps on 106/107 and the dead `healrep_noheal/grid` node-112 share at 17:10). `SWITCHED_READERS["S"]` is Phase 3 code; R4–R7 qualify for it.
+
+### Phase 3 — on-node pipeline, parity-reader ports, migration CLI (2026-10-11, developer)
+
+**In plain words.** The test machines now write each checkpoint's test episodes to their own local disk, pack every checkpoint × scene cell into one archive, copy that single file to the shared disk, and score the cell locally into a small table. The launching machine only merges those tables. On today's (heavily loaded) NAS this turns ~110 s of shared-disk work per cell into ~2 s. The scoring from archives reproduces the existing tables exactly (Gate G1, subset), and the five tools that check results exactly against the raw episodes now accept archives.
+
+**Context of this pass.** User resumed the plan on 2026-10-11 ("build the new pipeline now, migration later"; speed is the priority; deletion risk acceptable, keep verify-before-delete simple). Developed in worktree branch `worktree-agent-a4b97ca06dd8f01a1`, base `e509d743` (v5.0 tip). Nothing in the shared folder's working tree was edited; no sweep was launched on a node; nothing under `results/` was written except `results/eval/avoidance/_bundle_gate/` (own gate output). C2-gate (no live sweep before the shared-folder copy changes) is the parent's check at merge time; per review N3, G2/G3/the speed check can be launched **from this worktree** before merging (the copied worker takes the repo root as an argument; the dry run below shows the worktree root being passed).
+
+**Neuromodulation session's go.** 2026-10-11, via cross-session message relayed by the coordinator: GO on R9–R12 and on one extra reader, `scripts/analysis/modinput_internals/internals.py::precondition`, with the condition "identical result on a folder copy vs an archive copy before each commit; one commit per file". That session has no sweep running or planned and does not use `run_sweep.py`/`sweep_worker.sh`. No foreign hunks: the five files had no uncommitted changes in the shared folder (`git status` at session start) and the worktree started at the v5.0 tip.
+
+**Files.**
+- NEW `scripts/eval/dwell_sweep/cell_measures.py` (F2) — `cell_row(step, episodes)` (arithmetic moved verbatim), `measure_cell(cell, step=None)`, `measure_cell_n` (also returns the episode count), `HEAD`.
+- NEW `scripts/eval/dwell_sweep/finish_cells.py` (F3) — `--repo-root` mandatory (N1). Per cell: `EB.pack` into a **local** archive → `publish()` one sequential copy to `<cell>.zip.partial-<host>-<pid>` on the NAS, fsync, drop cache, re-read sha256, `os.replace` → score from local staging. Rows piece: `run_label, cond, step, step_M, <11>, n_episodes, numpy_version, bundle`. Per-cell timings logged.
+- `scripts/eval/dwell_sweep/run_sweep.py` (F4) — imports `cell_measures` + `EB`; `_measure_cell` kept (folder or `.zip`); `aggregate()` replaced by `collate()` (coverage check; incomplete groups not merged; reads the node's line pieces if `rows_<node>.csv` is missing) and `aggregate_from_bundles(seed_from_csv=…)` (+ `measure_groups`); `with_collate_markers` (`.started`/`.alive` thread/`.done`/`.failed`), `collation_state`, `status()`; liveness `poll_done(…, clock, sleep)` with the F4.7 thresholds as module constants; `report_fails`; `write_provenance` copies `WORKER_FILES` into `_provenance/<id>/worker/` and records `launch_format`, `repo_root`, `worker_sha256`, `cells`; `worker_command()` passes the 6 arguments; `_scratch/_format`; `check_lock()`; `node_warning()`; CLI `--nodes`, `--status`, `--collate-only [--launch|--from-bundles]`.
+- `scripts/eval/dwell_sweep/sweep_worker.sh` (F5) — six mandatory arguments (`… <launch_id> <repo_root>`; usage error, exit 2, otherwise); `cd` to argument 6; staging `/tmp/dwellsweep_<launch>_<node>_<pid>/`; `started_`/`alive_` (heartbeat loop tied to `$$`)/`lines_`/`exit_` (EXIT trap; never deletes staging); `eval_rollout` stderr → `_scratch/_logs/<id>/eval_<node>.log`; `finish_cells.py` from the worker's own folder; rows pieces concatenated into `rows_<node>.csv`; `xargs` status in `prog_`.
+- `scripts/analysis/studies/f7b_across_runs/aggregate_only.py` (F6) — default: collate the newest (or `--launch`) launch's rows tables; `--from-bundles --workers N`: rescore on this host. Done-marker refusal kept.
+- NEW `scripts/eval/dwell_sweep/bundle_scratch.py` (F7) — `inventory`, `backup-tables`, `pack [--into] [--newest N]`, `verify`, `gate`, `independent-check`, `delete`, `extract`, `unlock`; E1 (markers + local `ps`), E2 (`SWITCHED_READERS`, **`NON_READERS` with one reason per entry — review N7**), E3 (lock + stale rule), E4 (`SESSION_HOLDS` with the eight exact run names — review N6b — plus the two held roots; unresolvable labels held). Class D removed from all code paths (addendum a). **Not run** against any real root except the read-only G1 subset below.
+- Parity readers (one commit each): `scripts/analysis/obs_manipulation/run.py::_parity` (R9), `scripts/analysis/case_l05_s42/case.py::_parity` (R10), `tests/analysis/test_case_l05_s42.py` (R11: the identity test also runs `_parity` on an archive-only copy in `tmp_path`), `tests/analysis/test_modulator_engagement.py` (R12), `scripts/analysis/modinput_internals/internals.py::precondition` (added by the go).
+- NEW tests `tests/scripts/test_dwell_sweep_collate.py` (23), `tests/scripts/test_bundle_scratch.py` (16).
+- Docs: `scripts/eval/dwell_sweep/README.md` (files table, on-node section replaces "Recursive-glob aggregation", output layout — `_scratch/` no longer "safe to delete", node-safety usable-node definition, "Liveness and `--status`", "Reading raw episodes", "Migrating old folders"); `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` (rows for the three new scripts and two tests, `run_sweep.py`/`sweep_worker.sh`/`aggregate_only.py`/reader rows, §0 depth note, last-updated line); `.claude/skills/trajectory-story/SKILL.md` (one line: run `bundle_scratch.py extract` first — addendum b).
+
+**Re-review findings handled here.** N1: repo root is the worker's mandatory 6th argument and `finish_cells.py --repo-root` (no default; tests `test_worker_refuses_without_repo_root`, `test_finish_cells_requires_repo_root`, and `test_copied_worker_end_to_end` runs the copy from a provenance-like folder against a different repo root). N3: G2/G3 can run from the worktree before merging (stated above). N4: E1 reports a node with `npar_`/`started_` and no `done_` as "live, or dead and unresolved" — it blocks until a human resolves it; no automatic dead-declaration (kept simple per the user). N5: not encoded; `delete_verified` already refuses on the packing host, so packing on the container and deleting on the container is impossible — the roles are an operator choice for Phase M. N6b: exact run names. N7: `NON_READERS`.
+
+**Deviations from the plan (none silent).**
+1. **Score from local staging, not from the archive re-read over the NAS** (F3 says "the score is computed from the archive just written"). The archive is byte-identical to staging (checked twice: `EB.pack`'s verify and the sha256 re-read after publishing) and exists before scoring starts, so M3 (pack before score) holds; re-reading it over the NAS cost ~2 s/cell for no added information. Chosen for speed under the user's 2026-10-11 instruction.
+2. **Pack locally, then one sequential file copy to the NAS** instead of `EB.pack` writing the ZIP directly onto CIFS (many small writes/seeks).
+3. **An existing archive is replaced on publish** (a re-test of a group that was not merged last time); a differing old archive is logged (`REPLACED differing archive`). `EB.pack`'s refuse-to-overwrite rule still applies to `bundle_scratch.py pack`.
+4. Driver also clears `fail_` and `lines_` of launched nodes (otherwise an old `fail_` makes every later launch exit non-zero).
+5. Exit codes: 2 unhealthy node, 3 groups not merged, 4 failed worklist lines.
+6. E1 does not `ssh` to nodes (markers + local `ps` only; new-code workers are visible through `alive_`, old-code ones through `npar_` without `done_`). E2 greps this checkout only, not other worktrees (P0.3 found unported copies in three worktrees that would block forever). Kept simple per the user.
+7. `bundle_scratch.py --newest N` added (subset gate, parent's instruction after the full G1 proved too slow on today's NAS — ~10 cells/min).
+8. `gate` also fails if the root holds a per-scene CSV with no archives (`CSV_WITHOUT_ARCHIVES`).
+9. The node warning (F4.11) checks only "one node and > 50 lines" and prints the usable-node definition; it does not run `pgrep`/diary checks itself.
+
+**Tests.**
+```
+pytest tests/scripts/test_episode_bundle.py tests/scripts/test_bundle_readers.py tests/analysis/test_basic_behaviour.py -q
+  61 passed, 12 skipped
+pytest tests/scripts/test_dwell_sweep_collate.py tests/scripts/test_bundle_scratch.py -q
+  38 passed (before --newest); test_bundle_scratch.py after --newest: 16 passed
+experiment_eval_checkpoint.py and basic_behaviour/probes.py import fine against the new run_sweep.
+```
+Regression test for the silent hang (`test_poll_done_does_not_wait_forever_on_dead_worker`), run against the pre-change `run_sweep.py` (`tmp/20261011_regress_poll_old.py`): `PRE-CHANGE poll_done: FAILED (still waiting after 5 s)`; passes on the new code.
+
+**Parity readers — folder copy vs archive copy** (`tmp/20261011_bundle_reader_parity.py`, cells copied — never moved — into `results/eval/avoidance/_bundle_gate/readers/{folder,archive}/`, run through a local overlay so the worktree code sees the shared `results/`):
+```
+[folder]  R9 om._parity: parity with the dwell sweep: 30/30 episodes identical at checkpoint 6000013
+[folder]  R10 case._parity -> 'exact'
+[archive] R9 om._parity: parity with the dwell sweep: 30/30 episodes identical at checkpoint 6000013
+[archive] R10 case._parity -> 'exact'
+[folder]  R12 gate=True; om._parity: 30/30 episodes identical at checkpoint 6000007
+[archive] R12 gate=True; om._parity: 30/30 episodes identical at checkpoint 6000007
+[folder]  internals.precondition: {'reference': 'pass: felt injury exactly 0 in 540 recorded unhurt episodes, 54540 steps'}
+[archive] internals.precondition: {'reference': 'pass: felt injury exactly 0 in 540 recorded unhurt episodes, 54540 steps'}
+pytest test_case_l05_s42.py::test_identity_reproduces_live_exactly_in_act_true_orientation (ported R11, runs the
+  archive-only copy too) + test_modulator_engagement.py::test_identity_condition_reproduces_the_plain_rollout_exactly
+  -> 2 passed
+```
+
+**Commits** (branch `worktree-agent-a4b97ca06dd8f01a1`, base `e509d743`): R9 `c7846f00`, R10 `4796014c`, R12 `36c8fa4d`, Phase 3 pipeline `3bd5ee43`, R11 `fbdef097`, internals `bf3fd271`, this report (next commit).
+
+**Gate G1 — subset (parent's instruction 2026-10-11).** Root `metrics_history_rppo_healrep/l05fix_own` (held; read only), newest 3 checkpoints of each of the 72 (run, scene) groups = 216 cells, packed into `results/eval/avoidance/_bundle_gate/g1/` (8 workers, container): pack 216/216 in 1674 s, verify 216/216 identical in 706 s, gate in 356 s:
+`cells 216, groups 72, reference CSVs 72, csv_compared 72, csv_byte_identical 72 (header + the 3 rows), rows_compared 216, rows_identical 216, episodes 30 in every archive → all_ok: true`. **PASS** (zero tolerance, no CSV seeding). The full-root G1 (3,600 cells) was started first and stopped by the parent's instruction at 224 archives (~10 cells/min on today's NAS); its partial output was removed.
+
+**Container smoke of the real pipeline** (`tmp/20261011_container_smoke.sh`; no node launch): one worklist line (newest checkpoint 10000020 of `l05fix_ordinary_s44` × 12 scenes) through a COPY of the new worker with the worktree as repo root, real `eval_rollout.py`: rc 0, 266 s for the line (play dominates), `done_`/`exit_ rc=0`, 12 archives and 1 rows table on the NAS, **12/12 rows string-identical to the existing CSV** (scored by node 105 on 2026-10-07; this ran on docker-102, numpy 2.3.5). Per cell: pack 0.01–0.03 s, publish 1.1–2.5 s, score 0.06–0.07 s.
+
+**Speed (container, shared NAS under heavy load from this session's own jobs — ratios matter, not absolutes)** (`tmp/20261011_cell_speed_bench.py`, 6 real cells):
+
+| per cell | old | new |
+|---|---|---|
+| files written to the NAS | 64 + 5 dirs | 1 archive (+1 rows piece per line) |
+| write to NAS | 89.6 s (64-file copy) | 2.0 s (publish incl. fsync + sha256 re-read) |
+| pack | — | 0.03 s (local) |
+| score | 20.0 s (NAS re-read, cold cells) | 0.07 s (local staging) |
+| total I/O + score | **109.7 s** | **2.1 s** |
+
+Not measured here (needs nodes; parent's step): end-to-end gathering time old vs new on one node with the same workload, and the ≤ 5 % worker-time budget. Expected: the play phase is unchanged; the old per-cell NAS cost is replaced by ~2 s.
+
+**Prepared for the parent (not run).** Spec copies in the shared `tmp/`: `20261011_bundle_g2_spec.yaml` (output `_bundle_gate/l05fix_own`, all 6 runs), `20261011_bundle_g3_spec.yaml` (Dreamer `rr1p0` only, output `_bundle_gate/g3_dreamer`), `20261011_bundle_speed_{old,new}_spec.yaml` (outputs `_bundle_gate/speed_{old,new}`). Commands and pass criteria in the developer's hand-off message; G2 compare script `tmp/20261011_g2_compare.py` (in the worktree).
+
+**Not done / follow-ups.** Phase M (migration) not started. Live-kill checkpoints (`kill -9` worker/xargs/collation) not exercised on nodes. `bug-curator` hand-off (numpy version now in every rows table) not sent — owner: parent. `CONFIG_GUIDE.md` / `CONFIG_CRITICAL_SETTINGS.md` unaffected (no config keys).
+
+Implemented by: developer
 
 ## Verification Report
 
