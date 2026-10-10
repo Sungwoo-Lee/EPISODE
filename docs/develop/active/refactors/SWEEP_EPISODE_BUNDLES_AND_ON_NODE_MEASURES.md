@@ -548,6 +548,23 @@ Not measured here (needs nodes; parent's step): end-to-end gathering time old vs
 
 Implemented by: developer
 
+### Merge and node speed check (parent session, 2026-10-11)
+
+- **Merged** fast-forward into `v5.0` (`e509d743` → `4a518b94`) at ~05:35 after the C2 check: no `run_sweep`/`aggregate_only`/`sweep_worker` process on the container, `pgrep -fc 'sweep_worker|eval_rollout|run_sweep'` = 0 on nodes 101, 103–113, and the neuromodulation session confirmed no sweep running or planned. Pushed.
+- **Speed check, same node (105), same job** (`tmp/20261011_bundle_speed_{old,new}_spec.yaml`: 6 runs × 2 newest checkpoints × 12 scenes = 144 cells, 30 episodes each). Old = `run_sweep.py`/`sweep_worker.sh` at `e509d743`, run from `tmp/20261011_speedold/dwell_sweep/` (three levels below the repo root, so its root resolution is unchanged).
+
+| | old (`e509d743`) | new (`4a518b94`) | new + launch fixes |
+|---|---|---|---|
+| wall time, end to end | 481 s | 324 s | **115 s** |
+| node phase (play + pack + score) | 46 s | 47 s | 46 s |
+| gathering into CSVs | ~330 s (re-read 9,000+ files) | 46 s | 12 s |
+| files left under `_scratch` | 9,220 | 171 | 171 |
+| CSVs byte-identical to old | — | 72/72 | 72/72 |
+
+  Per cell on the node (`finish_105.log`): pack 0.01 s, publish 0.01–0.02 s, score 0.05–0.06 s.
+- **Two launch-time costs found and fixed** (same commit as this note): (1) `write_provenance` ran `git status --porcelain -- configs src scripts`, 107 s on the NAS because of the untracked-file scan; now `-uno -- src scripts/eval scripts/behavior_measures`, 3 s (scenes are snapshotted into the provenance folder anyway). (2) `build_groups` read every existing CSV's newest step one at a time (~0.3 s NAS latency each, 21 s for 72, ~100 s for a 360-CSV grid); now read in 16 threads. Dry run 47 s → 4 s. `tests/scripts/test_dwell_sweep_collate.py` + `test_bundle_scratch.py`: 39 passed.
+- For scale: the old pipeline's gathering of the 12-agent no-healing grid (`healrep_noheal/grid`, 360 CSVs) took 7,021 s on node 113 the night before.
+
 ## Verification Report
 
 > **Verified by**:

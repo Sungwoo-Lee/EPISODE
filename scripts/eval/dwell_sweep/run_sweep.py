@@ -69,6 +69,7 @@ import threading
 import time
 import traceback
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import yaml
@@ -228,6 +229,11 @@ def build_groups(spec, output_dir, max_checkpoints):
     conditions = resolve_conditions(spec)
     checkpoint_groups = []
     cond_groups = []
+    # Read every existing CSV's newest step up front, in threads: each open costs ~0.3 s of
+    # NAS latency, so 360 CSVs read one by one took ~100 s before launch (2026-10-11).
+    csvs = [output_dir / mandatory(r, "label", "runs[]") / f"{c}.csv" for r in spec["runs"] for c in conditions]
+    with ThreadPoolExecutor(max_workers=16) as ex:
+        maxdone_by_csv = dict(zip(csvs, ex.map(read_existing_max_step, csvs)))
     for run in spec["runs"]:
         label = mandatory(run, "label", "runs[]")
         path = mandatory(run, "path", "runs[]")
@@ -248,7 +254,7 @@ def build_groups(spec, output_dir, max_checkpoints):
             if not cfg_path.exists():
                 raise ValueError(f"condition config not found: {cfg_path}")
             out_csv = output_dir / label / f"{cond}.csv"
-            maxdone = read_existing_max_step(out_csv)
+            maxdone = maxdone_by_csv[out_csv]
             newck = [c for c in all_ckpts if c > maxdone]
             if max_checkpoints:
                 newck = newck[-max_checkpoints:]
@@ -703,7 +709,10 @@ def write_provenance(spec_path, spec, output_dir, checkpoint_groups, nodes, npar
         steps[g["run_label"]].append(int(g["step"]))
     runs = [{"label": r["label"], "path": r["path"], "steps_evaluated": sorted(steps.get(r["label"], []))}
             for r in spec["runs"]]
-    dirty = _git("status", "--porcelain", "--", "configs", "src", "scripts")
+    # Tracked edits in the code a node runs. Untracked files and configs/ are left out: the full
+    # `status -- configs src scripts` took ~107 s on the NAS (2026-10-11), this ~3 s, and the
+    # scenes are snapshotted above anyway.
+    dirty = _git("status", "--porcelain", "-uno", "--", "src", "scripts/eval", "scripts/behavior_measures")
     prov = {"started": datetime.datetime.now().isoformat(timespec="seconds"), "host": socket.gethostname(),
             "argv": sys.argv, "git_sha": _git("rev-parse", "HEAD"), "branch": _git("rev-parse", "--abbrev-ref", "HEAD"),
             "uncommitted_changes": dirty.splitlines(), "spec": str(spec_path), "probe_dir": str(pdir.relative_to(REPO_ROOT)),
