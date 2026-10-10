@@ -565,6 +565,9 @@ Implemented by: developer
 - **Two launch-time costs found and fixed** (same commit as this note): (1) `write_provenance` ran `git status --porcelain -- configs src scripts`, 107 s on the NAS because of the untracked-file scan; now `-uno -- src scripts/eval scripts/behavior_measures`, 3 s (scenes are snapshotted into the provenance folder anyway). (2) `build_groups` read every existing CSV's newest step one at a time (~0.3 s NAS latency each, 21 s for 72, ~100 s for a 360-CSV grid); now read in 16 threads. Dry run 47 s → 4 s. `tests/scripts/test_dwell_sweep_collate.py` + `test_bundle_scratch.py`: 39 passed.
 - For scale: the old pipeline's gathering of the 12-agent no-healing grid (`healrep_noheal/grid`, 360 CSVs) took 7,021 s on node 113 the night before.
 
+- **Gate G3 (Dreamer): not passable, pre-existing.** `tmp/20261011_bundle_g3_spec.yaml` on node 106: `eval_rollout.py` fails loading the archived `clean` probe scenes (`Obstacle(bush): 'visual_properties' has length 8 but visual_vector_size is 1`); archived configs are deliberately not kept loadable. The new pipeline reports 12 groups NOT MERGED ("no row") and exits 4; the old pipeline at `e509d743` on the same spec wrote 0 CSVs and exited 0. Not a regression; Dreamer sweeps need current-schema scenes first.
+- **Phase M (migration) not done, by user decision (2026-10-11).** `find results/eval -maxdepth 4 -name _scratch` lists 144 roots; a 6-root sample held 1,600–8,940 cells each (~800k cells, ~50M files in total). The user chose to leave old folders as they are; new sweeps write archives. `bundle_scratch.py inventory --all` did not finish within 32 min on the container and was stopped.
+
 ## Verification Report
 
 > **Verified by**:
