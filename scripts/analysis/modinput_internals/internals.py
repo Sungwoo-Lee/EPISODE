@@ -429,9 +429,8 @@ def parity(out_root, agents=Q3_AGENTS):
 # ------------------------------------------------------------------ precondition (recordings)
 def precondition(agents=Q3_AGENTS):
     """Felt injury exactly 0 at every recorded step of the unhurt sweep episodes."""
-    import glob
     import numpy as np
-    from src.utils.eval_recording import load_episode
+    import src.utils.episode_bundle as EB
     _C, E, R, om, MP, _ = _mods()
     rep = {}
     for name in agents:
@@ -447,8 +446,9 @@ def precondition(agents=Q3_AGENTS):
         n_steps, n_eps, worst = 0, 0, 0.0
         for sc in unh:
             for st in ck:
-                recs = sorted(glob.glob(os.path.join(ROOT, out_dir, "_scratch", lab, sc, str(st), "*", str(st),
-                                                     "recordings", str(st), "episode_*.rec.gz")))
+                # <step>.zip archive or legacy <step>/ folder (plan SWEEP_EPISODE_BUNDLES..., F8)
+                cell = EB.cell_path(os.path.join(ROOT, out_dir, "_scratch", lab, sc), st)
+                recs = [] if cell is None else EB.members(cell, f"*/{st}/recordings/{st}/episode_*.rec.gz")
                 if len(recs) != SWEEP_EPISODES:
                     raise RuntimeError(f"{name}/{sc}/{st}: {len(recs)} recordings, expected {SWEEP_EPISODES}")
                 if br is None:
@@ -456,7 +456,7 @@ def precondition(agents=Q3_AGENTS):
                     br = replay.load_agent(os.path.join(pair.run_dirs[role], "models"), st).obs_breakdown
                     col = MP.sensor_offsets(br)[E.FELT][0]
                 for f in recs:
-                    ep = load_episode(f)
+                    ep = EB.load_recording(cell, f)
                     for k in ("obs", "true_obs"):
                         x = np.asarray(ep[k])[:, col]
                         worst = max(worst, float(np.abs(x).max()))
