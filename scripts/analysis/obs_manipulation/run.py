@@ -406,17 +406,18 @@ def main():
 
 def _parity(sweep_dir, step, seeds, states0_np, out, T, N, episode_measures):
     """Identity condition vs the dwell sweep's recordings, episode by episode. Fatal on mismatch."""
-    import glob
     import numpy as np
-    from src.utils.eval_recording import load_episode
-    recs = sorted(glob.glob(os.path.join(sweep_dir, str(step), "*", str(step), "recordings",
-                                         str(step), "episode_*.rec.gz")))
+    import src.utils.episode_bundle as EB
+    # the sweep cell is a <step>.zip archive or a legacy <step>/ folder (plan
+    # SWEEP_EPISODE_BUNDLES_AND_ON_NODE_MEASURES, F8); same members, same order either way
+    cell = EB.cell_path(sweep_dir, step)
+    recs = [] if cell is None else EB.members(cell, f"*/{step}/recordings/{step}/episode_*.rec.gz")
     if len(recs) != N:
         raise RuntimeError(f"parity: found {len(recs)} sweep recordings for checkpoint {step} "
                            f"under {sweep_dir}, expected {N}")
     bad = []
     for i, p in enumerate(recs):
-        ep = load_episode(p)
+        ep = EB.load_recording(cell, p)
         if int(ep["seed"]) != seeds[i]:
             raise RuntimeError(f"parity: recording {i} has seed {ep['seed']}, tool used {seeds[i]}")
         S_ref = ep["snapshots"]
