@@ -137,7 +137,7 @@ def _const(MP, E, br, Tm, value):
 
 @pytest.mark.integration
 @needs_ckpt
-def test_identity_reproduces_live_exactly_in_act_true_orientation():
+def test_identity_reproduces_live_exactly_in_act_true_orientation(tmp_path):
     """act_true orientation, identity manipulation: the two captured passes are equal at every
     layer (zero shift), the acting episodes equal the original orientation's and the dwell
     sweep's recordings exactly, and the chain assertions hold on the captured tensors."""
@@ -164,6 +164,18 @@ def test_identity_reproduces_live_exactly_in_act_true_orientation():
     assert np.array_equal(old["out"]["action"], o["action"]) and np.array_equal(old["T"], r["T"])
     scratch = os.path.join(ROOT, out_dir, "_scratch", labels["modulated"], "avoid_none_inj00")
     om._parity(scratch, STEP, seeds, r["states0_np"], o, r["T"], len(seeds), episode_measures)
+    # the same exact check on an archive-only copy of the sweep cell (plan
+    # SWEEP_EPISODE_BUNDLES_AND_ON_NODE_MEASURES, F8): archives must not weaken the parity test
+    import shutil
+    import src.utils.episode_bundle as EB
+    arch = tmp_path / "avoid_none_inj00"
+    arch.mkdir()
+    cell = EB.cell_path(scratch, STEP)
+    if str(cell).endswith(EB.BUNDLE_SUFFIX):
+        shutil.copy2(cell, arch / f"{STEP}.zip")
+    else:
+        EB.pack(cell, arch / f"{STEP}.zip")
+    om._parity(str(arch), STEP, seeds, r["states0_np"], o, r["T"], len(seeds), episode_measures)
     dev = C._chain(agent, o, np.arange(2 * len(seeds)), "nat")
     assert max(dev.values()) <= C.G2_TOL, dev
 
