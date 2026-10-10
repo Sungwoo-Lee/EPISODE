@@ -33,6 +33,7 @@ Hard-won lessons from the chasing-rabbit study (memory: `20260609_1721_aggregate
 (`/home/vncuser/miniconda3/envs/grid_world_pain/bin/python`). It reads the recordings dir
 `results/eval/<run>/models/<ckpt>/recordings/<pct>/` (must contain `run_meta.pkl` + `episode_*.rec.gz`,
 which `scripts/eval/eval_rollout.py --record` writes). It is animal-layout-agnostic — it reads classes/tags from `run_meta`.
+Behaviour-test sweep cells are stored as one archive per checkpoint x scene (`_scratch/<label>/<cond>/<step>.zip`, since 2026-10-11); the script needs a folder, so run `scripts/eval/dwell_sweep/bundle_scratch.py extract <step>.zip <dest>` first and point it at `<dest>/<run_tag>/<step>/recordings/<step>/`.
 
 | Subcommand | What it gives |
 |---|---|

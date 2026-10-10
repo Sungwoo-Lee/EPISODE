@@ -1,84 +1,131 @@
 #!/usr/bin/env bash
-# Unified per-node dwell-sweep worker: EVAL ONLY (rollout -> .rec.gz recordings under a
-# scratch dir). Aggregation into CSVs is done ONCE by run_sweep.py after all nodes finish
-# (a single aggregation path shared by rPPO and Dreamer, via recursive glob).
+# Per-node behaviour-test sweep worker: play the test episodes into NODE-LOCAL staging, then
+# archive + score each cell on this node (finish_cells.py), so the shared disk receives ONE
+# archive per checkpoint x scene cell plus one small rows table per worklist line, instead of
+# ~64 small files and 5 directories per cell. Plan:
+# docs/develop/active/refactors/SWEEP_EPISODE_BUNDLES_AND_ON_NODE_MEASURES.md (F5).
 #
-# Promoted + unified from tmp/dist_metrics_worker.sh (rPPO) and
-# tmp/dist_dreamer_worker_batched.sh (Dreamer). Both algorithms go through the SAME call
-# to scripts/eval/eval_rollout.py --batched --device cpu --record --config-list (unified
-# 2026-07-21, moved to --config-list 2026-07-23 -- see docs/environment/
-# SCRIPTS_DEPENDENCY_MAP.md); they differ only in --checkpoint form (rPPO:
-# <run>/models/<step>, Dreamer: <run>/checkpoints/<episode>) and Dreamer's extra
-# --agent_config (+ optional --episode).
+# Both algorithms go through the SAME call to scripts/eval/eval_rollout.py --batched --device cpu
+# --record --config-list; they differ only in --checkpoint form (rPPO: <run>/models/<step>,
+# Dreamer: <run>/checkpoints/<episode>) and Dreamer's extra --agent_config (+ optional --episode).
 #
-# CHECKPOINT-granularity worklist (one line = one checkpoint + ALL its pending
-# conditions, evaluated in ONE eval_rollout.py process -- builds the model + restores
-# the checkpoint ONCE instead of once per condition; see run_sweep.py's build_groups()
-# docstring for why the grouping is per-checkpoint, not per-condition).
+# CHECKPOINT-granularity worklist (one line = one checkpoint + ALL its pending scenes, evaluated
+# in ONE eval_rollout.py process -- the model is built and the checkpoint restored once).
 #
-# Usage: sweep_worker.sh <worklist_file> <node_id> <npar> <n_episodes>
-#   worklist line format: CHECKPOINT|AGENT_CONFIG_OR_-|EPISODE_OR_-|CFG1,OUT1;CFG2,OUT2;...
+# run_sweep.py launches a COPY of this file (and of finish_cells.py / cell_measures.py) stored in
+# <output_dir>/_provenance/<launch_id>/worker/, so a later edit of the repo's copy can never reach
+# a running worker. The repo root is therefore passed in (argument 6, mandatory): it cannot be
+# derived from this file's location (plan-review N1).
+#
+# Usage: sweep_worker.sh <worklist_file> <node_id> <npar> <n_episodes> <launch_id> <repo_root>
+#   worklist line format: CHECKPOINT|AGENT_CONFIG_OR_-|EPISODE_OR_-|CFG1,CELL1;CFG2,CELL2;...
+#   (CELL = <scratch>/<run_label>/<cond>/<step>; the archive is written to CELL.zip)
+#
+# Markers in <scratch>/_run_markers/ (read by run_sweep.py poll_done / --status):
+#   started_<node>   host, pid, start time               npar_<node>   settings line
+#   alive_<node>     "<epoch> <lines finished>", rewritten every 60 s while this script lives
+#   lines_<node>     one line appended per finished worklist line
+#   fail_<node>      "FAIL <stage> <line>" per failed line (staging kept in /tmp for recovery)
+#   prog_<node>      summary line;  done_<node>  normal end;  exit_<node>  "rc=<rc> <epoch>" (EXIT trap)
+# Rows: <scratch>/_rows/<launch_id>/<node>/<line hash>.csv, concatenated at the end into
+#   <scratch>/_rows/<launch_id>/rows_<node>.csv.
+# Logs: <scratch>/_logs/<launch_id>/eval_<node>.log (eval_rollout stderr), finish_<node>.log.
 set -uo pipefail
 
+if [ "$#" -ne 6 ]; then
+  echo "usage: sweep_worker.sh <worklist> <node> <npar> <n_episodes> <launch_id> <repo_root> (got $# args)" >&2
+  exit 2
+fi
+WL="$1"; NODE="$2"; NPAR="$3"; NEP="$4"; LAUNCH_ID="$5"; R="$6"
+[ -f "$WL" ] || { echo "sweep_worker.sh: worklist not found: $WL" >&2; exit 1; }
+[ -f "$R/scripts/eval/eval_rollout.py" ] || { echo "sweep_worker.sh: repo root $R has no scripts/eval/eval_rollout.py" >&2; exit 1; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-R="$(cd "$SCRIPT_DIR/../../.." && pwd)"   # scripts/eval/dwell_sweep -> repo root (3 up)
+FINISH="$SCRIPT_DIR/finish_cells.py"
+[ -f "$FINISH" ] || { echo "sweep_worker.sh: $FINISH not found next to the worker" >&2; exit 1; }
 cd "$R"
 PY=/home/vncuser/miniconda3/envs/grid_world_pain/bin/python
+export PYTHONUNBUFFERED=1
 
 # --- Tuning baked in from the CPU-bound eval-sweep diagnosis (see README.md) ---
 export JAX_PLATFORMS=cpu
 export XLA_FLAGS="--xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=1"
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 TF_NUM_INTRAOP_THREADS=1 TF_NUM_INTEROP_THREADS=1
 
-WL="$1"; NODE="${2:-x}"; NPAR="${3:-18}"; NEP="${4:-30}"
-[ -f "$WL" ] || { echo "sweep_worker.sh: worklist not found: $WL" >&2; exit 1; }
-
-# Per-node persistent XLA compile cache: the compiled program depends only on shape,
-# identical across a model's checkpoints, so eval #2..N skip the ~7s compile.
+# Per-node persistent XLA compile cache (shape-only dependence: eval #2..N skip the compile).
 export JAX_COMPILATION_CACHE_DIR="/tmp/jaxcache_dwellsweep_$NODE"
 export JAX_PERSISTENT_CACHE_MIN_ENTRY_SIZE_BYTES=0 JAX_PERSISTENT_CACHE_MIN_COMPILE_TIME_SECS=0
 mkdir -p "$JAX_COMPILATION_CACHE_DIR"
 
-# Worklist lives at <output_dir>/_scratch/_worklists/worklist_<node>.txt; markers go one
-# level up, at <output_dir>/_scratch/_run_markers/.
-MARK="$(dirname "$(dirname "$WL")")/_run_markers"; mkdir -p "$MARK"
-# Defense-in-depth: clear our own stale completion marker from a prior run before doing
-# any work. run_sweep.py already clears this marker (race-free, since it controls launch
-# ordering) immediately before launching workers -- this is a backstop in case the worker
-# is ever invoked some other way.
-rm -f "$MARK/done_$NODE"
-echo "NODE=$NODE NPAR=$NPAR NEP=$NEP $(date)" > "$MARK/npar_$NODE"
+# Worklist lives at <scratch>/_worklists/worklist_<node>.txt.
+SCR="$(dirname "$(dirname "$WL")")"
+MARK="$SCR/_run_markers"; ROWS="$SCR/_rows/$LAUNCH_ID"; LOGD="$SCR/_logs/$LAUNCH_ID"
+mkdir -p "$MARK" "$ROWS/$NODE" "$LOGD"
+rm -f "$MARK/done_$NODE" "$MARK/exit_$NODE" "$MARK/lines_$NODE" "$MARK/alive_$NODE"
+echo "NODE=$NODE NPAR=$NPAR NEP=$NEP LAUNCH=$LAUNCH_ID $(date)" > "$MARK/npar_$NODE"
+echo "host=$(hostname) pid=$$ $(date +%s) launch=$LAUNCH_ID" > "$MARK/started_$NODE"
+: > "$MARK/lines_$NODE"
 
-export PY NEP MARK NODE
+STAGE_ROOT="/tmp/dwellsweep_${LAUNCH_ID}_${NODE}_$$"
+mkdir -p "$STAGE_ROOT"
+
+# Heartbeat tied to THIS process: exits as soon as the worker is gone (review M4a).
+WPID=$$
+( while kill -0 "$WPID" 2>/dev/null; do
+    echo "$(date +%s) $(wc -l < "$MARK/lines_$NODE" 2>/dev/null || echo 0)" > "$MARK/alive_$NODE.tmp" \
+      && mv -f "$MARK/alive_$NODE.tmp" "$MARK/alive_$NODE"
+    sleep 60
+  done ) &
+HB=$!
+# The trap never deletes staging (review M3): leftovers are listed for recovery.
+trap 'rc=$?; kill $HB 2>/dev/null; { echo "rc=$rc $(date +%s)"; ls -d "$STAGE_ROOT"/* 2>/dev/null; } > "$MARK/exit_$NODE"' EXIT
+
+export PY NEP MARK NODE ROWS LOGD FINISH STAGE_ROOT R
 runeval() {
   IFS='|' read -r ckpt agent ep cfg_out_list <<<"$1"
   extra=""
   [ "$agent" != "-" ] && extra="--agent_config $agent"
   [ "$ep" != "-" ] && extra="$extra --episode $ep"
 
-  # Expand the ';'-separated 'cfg,out' pairs into a --config-list file (one
-  # '<cfg>\t<out>' line per pending condition for THIS checkpoint), creating each
-  # condition's output dir up front (eval_rollout.py also mkdir -p's it, but this
-  # keeps behavior identical to the pre-config-list worker).
-  cl_file="$(mktemp)"
+  stage="$(mktemp -d -p "$STAGE_ROOT")"
+  cl_file="$stage/config_list.tsv"
+  finish_pairs=()
   IFS=';' read -ra pairs <<< "$cfg_out_list"
+  k=0
   for pair in "${pairs[@]}"; do
     pcfg="${pair%%,*}"
-    pout="${pair#*,}"
-    mkdir -p "$pout"
-    printf '%s\t%s\n' "$pcfg" "$pout" >> "$cl_file"
+    pcell="${pair#*,}"
+    mkdir -p "$stage/$k" "$(dirname "$pcell")"
+    printf '%s\t%s\n' "$pcfg" "$stage/$k" >> "$cl_file"
+    finish_pairs+=("$stage/$k=$pcell")
+    k=$((k + 1))
   done
 
-  "$PY" scripts/eval/eval_rollout.py --config-list "$cl_file" $extra --checkpoint "$ckpt" \
-    --eval-n-episodes "$NEP" --record --record-n-episodes "$NEP" \
-    --device cpu --quiet --batched --seed 0 >/dev/null 2>&1 \
-    || echo "FAIL $1" >> "$MARK/fail_$NODE"
-  rm -f "$cl_file"
+  hash="$(printf '%s' "$1" | md5sum | cut -c1-16)"
+  if "$PY" scripts/eval/eval_rollout.py --config-list "$cl_file" $extra --checkpoint "$ckpt" \
+       --eval-n-episodes "$NEP" --record --record-n-episodes "$NEP" \
+       --device cpu --quiet --batched --seed 0 >/dev/null 2>>"$LOGD/eval_$NODE.log" \
+     && "$PY" "$FINISH" --repo-root "$R" --pairs "${finish_pairs[@]}" \
+       --rows-piece "$ROWS/$NODE/$hash.csv" --episodes "$NEP" --log "$LOGD/finish_$NODE.log"; then
+    rm -rf "$stage"
+  else
+    echo "FAIL $stage $1" >> "$MARK/fail_$NODE"
+  fi
+  echo "$hash" >> "$MARK/lines_$NODE"
 }
 export -f runeval
 
 t0=$(date +%s)
 n=$(wc -l < "$WL")
 xargs -P "$NPAR" -I@ bash -c 'runeval "$1"' _ @ < "$WL"
-echo "[$NODE] done $n evals in $(( $(date +%s)-t0 ))s $(date +%H:%M:%S)" >> "$MARK/prog_$NODE"
+xrc=$?
+
+# Concatenate the line pieces into one rows table per node (header once).
+out="$ROWS/rows_$NODE.csv"; tmpo="$out.tmp"; first=1; : > "$tmpo"
+for f in "$ROWS/$NODE"/*.csv; do
+  [ -f "$f" ] || continue
+  if [ $first -eq 1 ]; then cat "$f" >> "$tmpo"; first=0; else tail -n +2 "$f" >> "$tmpo"; fi
+done
+mv -f "$tmpo" "$out"
+rmdir "$STAGE_ROOT" 2>/dev/null
+echo "[$NODE] done $n lines in $(( $(date +%s)-t0 ))s xargs_rc=$xrc $(date +%H:%M:%S)" >> "$MARK/prog_$NODE"
 touch "$MARK/done_$NODE"
