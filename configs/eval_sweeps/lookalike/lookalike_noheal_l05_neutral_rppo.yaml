@@ -1,0 +1,25 @@
+# Lookalike-animals pilot, NO-HEALING re-test (body.recovery_base_rate 0.0 in the test scene only), so the
+# starting injury holds for the whole 100 steps. Scenes: behavior_probes/no_healing/lookalike__* (copies of the
+# lookalike scenes changing only the healing rate). Same episodes/conditions as the lookalike specs.
+name: lookalike_noheal_l05_neutral
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_lookalike_noheal/neutral
+probe: configs/environment/experiment/behavior_probes/no_healing/lookalike__thermal__neutral_clean
+conditions: all
+episodes: 30
+nodes:
+- 106
+- 107
+x_axis: steps
+plot_measures:
+- bush_hiding
+- survival_steps
+runs:
+- label: lookalike_ordinary_s42
+  path: results/JAX_RecurrentPPO/20261009-175459_rppo_lookalike_l05_t1none_s42
+- label: lookalike_modulated_s42
+  path: results/JAX_RecurrentPPO/20261009-175502_rppo_lookalike_l05_t16quad_s42
+- label: lookalike_ordinary_s43
+  path: results/JAX_RecurrentPPO/20261009-175506_rppo_lookalike_l05_t1none_s43
+- label: lookalike_modulated_s43
+  path: results/JAX_RecurrentPPO/20261009-175510_rppo_lookalike_l05_t16quad_s43
