@@ -163,7 +163,8 @@ def test_identity_condition_reproduces_the_plain_rollout_exactly():
     sys.path.insert(0, os.path.join(ROOT, "scripts", "behavior_measures"))
     from avoidance_stats_heatmap import episode_measures
     scratch = os.path.join(ROOT, out_dir, "_scratch", labels["modulated"], "avoid_none_inj00")
-    if os.path.isdir(os.path.join(scratch, str(STEP))):
+    import src.utils.episode_bundle as EB
+    if EB.cell_path(scratch, STEP) is not None:          # <step>.zip archive or legacy <step>/ folder
         om._parity(scratch, STEP, seeds, r["states0_np"], o, r["T"], N, episode_measures)
 
 
