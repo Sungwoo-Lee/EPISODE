@@ -142,9 +142,10 @@ def _parity(om, E, episode_measures, out_dir, label, scene, step, seeds, r):
     sweep's own recordings when they are on disk (positions at every step, bush dwell,
     survival); otherwise the per-checkpoint CSV mean. Fatal on any mismatch."""
     import numpy as np
+    import src.utils.episode_bundle as EB
     N = len(seeds)
     scratch = os.path.join(ROOT, out_dir, "_scratch", label, scene)
-    if os.path.isdir(os.path.join(scratch, str(step))):
+    if EB.cell_path(scratch, step) is not None:          # <step>.zip archive or legacy <step>/ folder
         om._parity(scratch, step, seeds, r["states0_np"], r["out"], r["T"], N, episode_measures)
         return "exact"
     b = float(np.mean([E._bush(episode_measures, r["states0_np"], r["out"], i, r["T"], om._snapshots)
