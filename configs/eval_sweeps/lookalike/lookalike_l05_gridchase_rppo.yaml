@@ -1,0 +1,25 @@
+# Lookalike-animals pilot tests (design: docs/experiments/active/hypervigilance/LOOKALIKE_ANIMALS_CLOSE_POUNCE.md).
+# Scenes: behavior_probes/lookalike/ (copies of the replication scenes with the shared smell, the 3-cell
+# pouncing predator and one 6-bite food item). Same episodes/conditions as the healrep specs.
+name: lookalike_l05_gridchase
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_lookalike/gridchase
+probe: configs/environment/experiment/behavior_probes/lookalike/injury_grid__chase_neutral_clean
+conditions: all
+episodes: 30
+nodes:
+- 111
+- 112
+x_axis: steps
+plot_measures:
+- bush_hiding
+- survival_steps
+runs:
+- label: lookalike_ordinary_s42
+  path: results/JAX_RecurrentPPO/20261009-175459_rppo_lookalike_l05_t1none_s42
+- label: lookalike_modulated_s42
+  path: results/JAX_RecurrentPPO/20261009-175502_rppo_lookalike_l05_t16quad_s42
+- label: lookalike_ordinary_s43
+  path: results/JAX_RecurrentPPO/20261009-175506_rppo_lookalike_l05_t1none_s43
+- label: lookalike_modulated_s43
+  path: results/JAX_RecurrentPPO/20261009-175510_rppo_lookalike_l05_t16quad_s43

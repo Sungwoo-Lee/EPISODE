@@ -278,7 +278,29 @@ meet animals they never trained on. New test specifications must have:
    runs train, before any checkpoint of these runs is evaluated**, and the commit SHA is recorded here.
    Any later change to a scene is a new, separately named scene set, never an edit of the frozen one.
 
-   Frozen test-scene commit: *(to be filled when the specs are written)*.
+   Frozen test-scene commit: *(SHA below)*. Written 2026-10-10, after the four runs had finished
+   training (not while they trained, as planned) but before any checkpoint was evaluated or any
+   result of these runs was read.
+
+   **What was frozen.** Scenes: `configs/environment/experiment/behavior_probes/lookalike/`, written by
+   its `generate_lookalike_variants.py` from the replication's scene folders (no-temperature:
+   `thermal/neutral_clean`; training-like: `hvsmell/two_channel`; injury grid: `injury_grid/neutral_clean`
+   and `injury_grid/chase_neutral_clean`; the replication's extra smell-variant scenes are left out, since
+   smell no longer differs). Each scene `extends:` its source and changes only: every animal's smell
+   [0, 0.6, 0.6, 0, 0] (spread 0); the hunting predator's noticing range 3 cells and pounce (reach 3,
+   success 0.5; cooldown 3 steps as in the source scenes, training draws 1-3); one food item of 6 bites
+   at [2, 5] (three cells above the agent's start, six steps from the bush, away from where the animal
+   enters). Bush healing as in training (25x). The chasing rabbit keeps its chase. The generator's
+   `--check` confirms every copy differs from its source only in the animal and food lists, and the
+   eval script's own loader (`load_env_params`) resolves the pounce on, reach 3, noticing 3, food 6 bites.
+   Test specs: `configs/eval_sweeps/lookalike/` (30 episodes x 100 steps per checkpoint and scene,
+   results under `results/eval/avoidance/metrics_history_rppo_lookalike/`).
+
+   **Not in this freeze: the per-encounter readout (items 6-7).** The test pipeline records every
+   episode's positions (agent, animals) step by step, which is enough to compute it, but its collation
+   step deletes those recordings after computing the 11 standard measures. The encounter readout needs a
+   separate pass that keeps the recordings (e.g. the newest 20 checkpoints of each run); it will be
+   specified before it is run.
 
 ## Verification record (2026-10-09)
 
