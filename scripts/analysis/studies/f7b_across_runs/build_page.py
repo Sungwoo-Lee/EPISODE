@@ -205,14 +205,16 @@ def bush_tables():
     return t1, t2, t3
 
 
-def table(df, cols, heads, num=(), nowrap=(), min_width=720):
+def table(df, cols, heads, num=(), nowrap=(), min_width=720, raw=()):
+    """`raw` columns already hold page HTML (a caller's own markup): emitted as-is, never escaped or wrapped."""
     out = ['<p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>'
            f'<div class="scroll"><table class="wide" style="min-width:{min_width}px"><thead><tr>']
     cls = lambda c: ' class="n"' if c in num else ""
     out += [f"<th{cls(c)}>{h}</th>" for c, h in zip(cols, heads)]
     out.append("</tr></thead><tbody>")
     for _, r in df.iterrows():
-        cell = lambda c: (f'<td class="n nw">{html.escape(num_text(r[c]))}</td>' if c in nowrap and c not in ("id", "run", "when") else
+        cell = lambda c: (f'<td{cls(c)}>{r[c]}</td>' if c in raw else
+                          f'<td class="n nw">{html.escape(num_text(r[c]))}</td>' if c in nowrap and c not in ("id", "run", "when") else
                           f'<td class="nw">{html.escape(num_text(r[c]))}</td>' if c in nowrap else
                           f"<td{cls(c)}>{BB.wrap_cell(num_text(r[c]) if c in num else r[c])}</td>")
         out.append("<tr>" + "".join(cell(c) for c in cols) + "</tr>")

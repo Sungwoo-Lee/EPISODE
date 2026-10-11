@@ -166,7 +166,7 @@ def data_table(stem, rows):
     lo_, hi_ = (f"{min(pcts):.0f}", f"{max(pcts):.0f}") if pcts else ("", "")
     span = ("n/a" if not pcts else f"{lo_}%" if lo_ == hi_ else f"{lo_}&ndash;{hi_}%")   # "100%", never "100–100%"
     summary = (f"<b>Data.</b> {len(merged)} subset{'s' if len(merged) != 1 else ''} "
-               f"({len(rows)} rows before merging identical ones), using {span} of what was available "
+               + (f"({len(rows)} rows before merging identical ones), " if len(rows) != len(merged) else "") + f"using {span} of what was available "
                f"&mdash; open for the counts, emitted by the figure script")
     return (f'<details class="bb-data"><summary>{summary}</summary>'
             '<p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>'

@@ -1,0 +1,9 @@
+[
+ {
+  "what": "8 series (every agent x healing series, per starting injury)",
+  "used": 328,
+  "total": 328,
+  "pct": 100.0,
+  "note": "0.2 M grid 2-10 M steps; 30 episodes per checkpoint"
+ }
+]

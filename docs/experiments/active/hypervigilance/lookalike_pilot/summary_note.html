@@ -1,0 +1,37 @@
+  <p><strong>Question.</strong> Does an injured agent hide more when a harmless rabbit wanders nearby than when
+  no animal is around, by more than it does when unhurt, while the rabbit alone barely moves an unhurt agent?
+  That two-part pattern is what this project calls hypervigilance. This page reports the first test of agents
+  trained in the <em>lookalike-animals</em> world, where the predator and the rabbit smell the same and the
+  predator only reveals itself when it pounces, beside twelve earlier level-05 agents tested the same way.</p>
+
+  <p><strong>Answer: no agent shows the pattern.</strong></p>
+
+  <p><strong>The rabbit alone already makes unhurt agents hide.</strong> At injury 0 the rabbit adds about
+  1&ndash;10 points of bush dwell (25 for one agent), with an interval above zero in 13 of the 16 agents
+  (section 06 table). That fails the second half of the pattern, and in the lookalike world it is the expected
+  result of an agent that cannot tell the rabbit from the predator by smell.</p>
+
+  <p><strong>With bush healing on, as in training, injury does not change the rabbit's effect.</strong> In 13
+  of 16 agents the rabbit adds the same amount at injury 10 as when unhurt, within &plusmn;1 point; the other
+  three differ by 2&ndash;3 points in both directions (Figures 1&ndash;3, section 05). A likely reason, not yet
+  checked directly: healing on the bush is fast, so a test that starts injured barely stays injured.</p>
+
+  <p><strong>With healing switched off in the test only, ordinary agents show a larger raw gap, but not the
+  pattern.</strong> When the starting injury lasts the whole episode, the rabbit's extra hiding at injury 10
+  exceeds its unhurt value by +6.7 points on average over the 8 ordinary agents (steadily above zero in 5,
+  +6.5 to +13.9) and by +1.3 over the 8 modulated agents (Figures 4&ndash;6). That gap disappears on the
+  log-odds scale, which removes the effect of where an agent sits on its S-shaped hiding curve: there the
+  rabbit's effect at injury 10 is no larger than at injury 0 in any of the 16 agents, and it is smaller in 6
+  (section 06 table). Modulated agents already hide about twice as much at injury 10 with no animal, so their
+  smaller raw gap may only reflect sitting higher on that curve; a real difference between the two kinds of
+  agent is not shown. At injury 70 nothing shows in any agent, because an injured agent without the rabbit
+  already hides 80&ndash;90&nbsp;% of the time.</p>
+
+  <div class="callout warn"><p><strong>How far this goes.</strong> Injury 10 was chosen <em>after</em> looking
+  at the curves; the only contrast stated in advance was injury 70. At injury 20 two agents go the opposite
+  way. Healing-off is a test-only change the agents never saw in training, and each group has two or three
+  seeds. The raw-scale gap at mild injury is a lead only if a fresh test, fixed in advance and measured on the
+  log-odds scale, finds it again.</p>
+  <p><strong>Correction.</strong> A first draft of this summary read the raw gap as &ldquo;yes for most ordinary
+  agents&rdquo;. The review before publication pointed to the rabbit-alone effect and the log-odds scale, and
+  the log-odds table, computed for all 16 agents, reversed that reading.</p></div>

@@ -1,0 +1,196 @@
+<title>Lookalike Animals Pilot Results</title>
+{{HOUSE_STYLE}}
+<style>
+/* hue is spent on data; chrome goes to ink (register F11 amendment) */
+:root { --accent:var(--ink); --accent-text:var(--ink); --warn:var(--ink-2); }
+.wrap > .col { max-width:880px; }
+.wrap > #numbers.col { max-width:1000px; }
+#numbers > p, #numbers > ul { max-width:880px; }
+.fh { margin:0 0 2px; }
+.fh .n { font-family:var(--f-head); font-weight:600; color:var(--ink-3); margin-right:8px; }
+.toc ul { margin:0; padding-left:22px; display:flex; flex-direction:column; gap:6px; }
+details.bb-data > summary { cursor:pointer; color:var(--ink-2); font-size:14.5px; }
+details.bb-data[open] > summary { margin-bottom:8px; }
+span.ci { color:var(--ink-3); font-size:0.88em; white-space:nowrap; }
+span.nw { white-space:nowrap; }
+</style>
+<div class="wrap">
+
+<header class="col">
+  <p class="eyebrow">grid_world_pain &middot; hypervigilance &middot; lookalike-animals pilot &middot; 4 new runs and 12 level-05 runs, 2&ndash;3 seeds per agent</p>
+  <h1>Lookalike Animals Pilot Results</h1>
+  <p class="lede">Four agents were trained in a new world built to make caution around animals worthwhile:
+  the harmless rabbit and the predator smell the same, the predator gives no warning before it pounces, and
+  food runs out faster. Each agent was then tested with the bush healing it had in training and again with
+  healing switched off. Twelve agents from an earlier world were tested the same way for comparison.</p>
+</header>
+
+<section class="col toc">
+  <h4>On this page</h4>
+  <ul>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#setup">01 &middot; What was tested</a></li>
+    <li><a href="#curves">02 &middot; Figures 1&ndash;3: hiding against injury</a></li>
+    <li><a href="#extra">03 &middot; Figures 4&ndash;6: the rabbit's extra hiding at each injury</a></li>
+    <li><a href="#train">04 &middot; Figures 7&ndash;9: the injury-10 contrast across training</a></li>
+    <li><a href="#numbers">05 &middot; All agents in numbers</a></li>
+    <li><a href="#limits">06 &middot; What these results do not show</a></li>
+    <li><a href="#how">07 &middot; How it is computed</a></li>
+    <li><a href="#prov">08 &middot; Data, scenes and provenance</a></li>
+  </ul>
+</section>
+
+<section class="col" id="summary">
+  <h2><span class="num">SUMMARY</span></h2>
+  {{SUMMARY}}
+</section>
+
+<section class="col" id="setup">
+  <h2><span class="num">01</span> What was tested</h2>
+  <p><strong>What we are looking for.</strong> <em>Hypervigilance</em> here means: an injured agent hides more
+  when a harmless rabbit is around than when no animal is around, by more than an unhurt agent does. Hiding is
+  measured as <strong>bush dwell</strong>, the share of a 100-step test episode the agent spends on a bush.
+  The rabbit on its own should barely move an unhurt agent.</p>
+  <p><strong>The new world (lookalike animals).</strong> Level 05 of the training curriculum (a cold
+  10&times;10 map with campfires, bushes, one or two predators and rabbits) with three changes: both animals
+  carry the same smell, so smell cannot tell them apart; the predator notices the agent only at 3 cells, the
+  distance it pounces from, so it walks like the rabbit until the moment it strikes; and each food item lasts
+  6 bites instead of 12, so an agent sitting on a bush has to come out to eat more often. Resting on a bush
+  still heals injury 25 times faster than elsewhere, as in level 05. Design and reasons:
+  <code>LOOKALIKE_ANIMALS_CLOSE_POUNCE.md</code>.</p>
+  <p><strong>Agents.</strong> The ordinary agent and the modulated agent (the same network plus a small
+  neuromodulator network that rescales its activity), seeds 42 and 43, trained for 10 million steps. For
+  comparison, the twelve level-05 agents of the fast-bush-healing replication: ordinary and modulated, seeds
+  42&ndash;44, trained either with a random start temperature (&ldquo;replication&rdquo;) or a fixed one
+  (&ldquo;fixed start&rdquo;). Those were trained in level 05 itself, where the two animals smell different.</p>
+  <p><strong>Tests.</strong> At every saved checkpoint, 30 episodes of 100 steps in fixed scenes: the agent in
+  the middle of the map, one bush three cells away, air at 0&nbsp;°C and no campfire, so only injury and animals
+  can drive hiding. The agent starts at injury 0, 10, 20 &hellip; 90, with either no animal or one wandering
+  rabbit. Each scene is run twice: <strong>healing on</strong>, as in training, and <strong>healing off</strong>,
+  where the healing rate is set to zero in the test scene only (nothing else changes), so the starting injury
+  lasts the whole episode. The lookalike agents were tested in the lookalike version of each scene (shared
+  smell, one 6-bite food item); the level-05 agents in the original scenes.</p>
+  <p><strong>The number that matters.</strong> The rabbit's extra hiding is bush dwell with the rabbit minus
+  bush dwell with no animal. Hypervigilance shows as this extra hiding being <em>larger</em> for an injured
+  agent than for an unhurt one. The <strong>injury-10 contrast</strong> is the rabbit's extra hiding at
+  injury 10 minus the same at injury 0, and the injury-70 contrast is the same at injury 70. Injury 70 is the
+  level fixed in advance in the design; injury 10 was picked after the healing-off results were seen
+  (section 06).</p>
+</section>
+
+<section class="col" id="curves">
+  <h2><span class="num">02</span> Hiding against injury</h2>
+  <p>With healing on, bush dwell rises only slowly with injury, probably because healing on the bush is fast
+  enough that a test which starts injured does not stay injured for long (not checked step by step). With healing off the injury stays, and hiding climbs steeply to 70&ndash;90 %.
+  The gap between the orange and grey lines is the rabbit's extra hiding.</p>
+  <h4 class="fh"><span class="n">Figure 1</span>Lookalike-animals agents</h4>
+  {{FIG:curves_lookalike}}
+  <h4 class="fh"><span class="n">Figure 2</span>Level-05 replication agents</h4>
+  {{FIG:curves_replication}}
+  <h4 class="fh"><span class="n">Figure 3</span>Level-05 fixed-start agents</h4>
+  {{FIG:curves_fixedstart}}
+</section>
+
+<section class="col" id="extra">
+  <h2><span class="num">03</span> The rabbit's extra hiding at each injury</h2>
+  <p>The same data as section 02, reduced to one line per test: orange minus grey. A line that rises above
+  its dotted line (its own value for an unhurt agent) is what hypervigilance would look like.</p>
+  <h4 class="fh"><span class="n">Figure 4</span>Lookalike-animals agents</h4>
+  {{FIG:extra_lookalike}}
+  <h4 class="fh"><span class="n">Figure 5</span>Level-05 replication agents</h4>
+  {{FIG:extra_replication}}
+  <h4 class="fh"><span class="n">Figure 6</span>Level-05 fixed-start agents</h4>
+  {{FIG:extra_fixedstart}}
+</section>
+
+<section class="col" id="train">
+  <h2><span class="num">04</span> The injury-10 contrast across training</h2>
+  <p>Whether the raw mild-injury gap seen with healing off holds through training or comes and goes. This is the
+  percentage-point contrast; section 06 shows it does not survive on the log-odds scale.</p>
+  <h4 class="fh"><span class="n">Figure 7</span>Lookalike-animals agents</h4>
+  {{FIG:train_lookalike}}
+  <h4 class="fh"><span class="n">Figure 8</span>Level-05 replication agents</h4>
+  {{FIG:train_replication}}
+  <h4 class="fh"><span class="n">Figure 9</span>Level-05 fixed-start agents</h4>
+  {{FIG:train_fixedstart}}
+</section>
+
+<section class="col" id="numbers">
+  <h2><span class="num">05</span> All agents in numbers</h2>
+  <p>Each cell is a contrast in percentage points of bush dwell: how much more hiding the rabbit adds at that
+  injury than it adds to an unhurt agent. <strong>Above zero</strong> means injury makes the rabbit matter more
+  (the direction hypervigilance predicts); below zero means it matters less. The mean is over the checkpoints from
+  2 to 10 M training steps, with its 95 % interval in brackets; <strong>bold</strong> cells have an interval
+  that does not include zero. The interval describes how steady one run is across training, not how much
+  another seed would differ.</p>
+  {{TABLE:contrast}}
+</section>
+
+<section class="col" id="limits">
+  <h2><span class="num">06</span> What these results do not show</h2>
+  <ul>
+    <li><strong>Injury 10 was chosen after looking.</strong> The design fixed injury 70 for the test. With
+    healing off, injured agents already hide 70&ndash;90 % of the time at injury 70, leaving the rabbit little
+    room to add more, so lower injuries were examined afterwards. A pattern found this way needs a fresh test
+    fixed in advance before it counts.</li>
+    <li><strong>The rabbit alone already drives hiding.</strong> The pattern requires the rabbit to barely move
+    an unhurt agent. It does not: the first column of the table below is above zero in 13 of the 16 agents.</li>
+    <li><strong>The larger gap at mild injury comes from the shape of the curve.</strong> Hiding rises in an S
+    shape with injury: near zero when unhurt, steep in the middle, flat near the top. Any added push, including
+    a rabbit whose effect does not depend on injury at all, moves an agent in the steep middle part more, in
+    percentage points, than one at the bottom. On the log-odds scale, which removes this effect, the rabbit's
+    effect at injury 10 is no larger than at injury 0 in any agent (last column below, healing off): about
+    flat for the ordinary agents (smaller for one), smaller for five of the eight modulated ones.</li>
+    <li><strong>Injury 20 goes both ways.</strong> It was looked at as well; there two agents (fixed-start
+    ordinary seed 42, lookalike modulated seed 43) show the rabbit mattering <em>less</em> when injured.</li>
+    <li><strong>Healing off is a test-only change.</strong> The agents were trained with healing; a lasting
+    injury is a situation they never met in training.</li>
+    <li><strong>Two seeds per agent in the new world.</strong> This is a pilot; a pattern in two runs is a clue
+    to follow, not a result.</li>
+  </ul>
+  <p><strong>The rabbit's effect on two scales, healing off.</strong> First column: the rabbit's extra bush
+  dwell for an unhurt agent, in percentage points. Next two: the rabbit's effect in <em>log-odds</em> &mdash; the
+  log of hiding odds (dwell divided by time off the bush) with the rabbit, minus the same with no animal &mdash;
+  at injury 0 and injury 10. Last column: injury 10 minus injury 0; hypervigilance predicts it above zero.
+  Each value is computed per checkpoint (bush dwell clipped to 0.5&ndash;99.5 % before the log) and averaged
+  over the checkpoints from 2 to 10 M steps, with the same 95 % interval as section 05; bold cells exclude
+  zero.</p>
+  {{TABLE:logodds}}
+</section>
+
+<section class="col" id="how">
+  <h2><span class="num">07</span> How it is computed</h2>
+  <p>Every saved checkpoint of each agent (one every 0.2 million training steps) was replayed in fixed test
+  scenes, 30 episodes per checkpoint, scene and starting injury; bush dwell is the share of the 100 steps spent
+  on the bush. For each checkpoint, the rabbit's extra hiding at a given injury is
+  the bush dwell with the wandering rabbit minus the bush dwell with no animal, at that injury. The injury-10
+  contrast subtracts the unhurt value from the injury-10 value, so it removes any part of the rabbit's effect
+  that does not depend on injury. Only checkpoints from 2 to 10 million steps enter the averages (41 per run);
+  before that the agent is still learning to survive. The 95 %
+  interval allows for neighbouring checkpoints being alike: it uses an <em>effective</em> number of
+  checkpoints, reduced according to how strongly each checkpoint's value correlates with the next one's (the
+  lag-1 autocorrelation). It therefore describes how steady a single run is across training; how much a
+  different seed would differ is shown by comparing rows. &ldquo;Healing off&rdquo; sets the body's base
+  healing rate to zero in the test scene; since bush healing is a multiple of that rate, the agent heals
+  nowhere. Every scene file was checked to differ from its source in that one setting only. Section 06
+  repeats these steps on log-odds (log of dwell over one minus dwell), so an agent on the steep part of its
+  hiding curve does not look more sensitive just for being there.</p>
+</section>
+
+<section class="col" id="prov">
+  <h2><span class="num">08</span> Data, scenes and provenance</h2>
+  <p>Design: <code>docs/experiments/active/hypervigilance/LOOKALIKE_ANIMALS_CLOSE_POUNCE.md</code>. Training
+  runs: <code>results/JAX_RecurrentPPO/20261009-1754*_rppo_lookalike_l05_*</code>. Scenes:
+  <code>configs/environment/experiment/behavior_probes/lookalike/</code> (healing on) and
+  <code>behavior_probes/no_healing/lookalike__*</code> (healing off) for the lookalike agents;
+  <code>behavior_probes/injury_grid/neutral_clean</code> and <code>no_healing/injury_grid__neutral_clean</code>
+  for the level-05 agents. Test specs: <code>configs/eval_sweeps/lookalike/</code>,
+  <code>configs/eval_sweeps/healrep/</code>, <code>configs/eval_sweeps/healrep_noheal/</code>. Results:
+  <code>results/eval/avoidance/metrics_history_rppo_lookalike/</code>, <code>&hellip;_lookalike_noheal/</code>,
+  <code>&hellip;_healrep/</code>, <code>&hellip;_healrep_noheal/</code>. Figures:
+  <code>scripts/analysis/studies/lookalike_pilot/figures.py</code>; page: <code>build_page.py</code>, same
+  folder. Built {{BUILT}}.</p>
+</section>
+
+</div>
+{{LIGHTBOX}}

@@ -1,0 +1,9 @@
+[
+ {
+  "what": "12 series (every agent x healing series, whole training)",
+  "used": 600,
+  "total": 600,
+  "pct": 100.0,
+  "note": "checkpoints with all four tests (no animal and rabbit, injury 0 and 10); 30 episodes each"
+ }
+]
