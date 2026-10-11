@@ -1,6 +1,6 @@
 ---
 name: takeaway
-description: "Answer the current job or analysis in a compact, plain-English summary that leads with the take-home message: one take-home sentence, up to six evidence bullets, a 'how sure are we' line, a 'what it means / next' line, ~300 words. Jargon is explained on first use or replaced by plain words. Numbers are re-checked against the files. Print-only — writes nothing. Trigger on /takeaway, 'what's the takeaway', 'bottom line', 'so what did we find', 'give me the short answer'."
+description: "Answer the current job or analysis in a compact, plain-English summary that leads with the take-home message: a take-home box, a small table of the key numbers against their comparison, a plain-words key to the table, 'how sure are we' and 'next' lines, ~300 words. Jargon is explained on first use or replaced by plain words. Numbers are re-checked against the files. Print-only — writes nothing. Trigger on /takeaway, 'what's the takeaway', 'bottom line', 'so what did we find', 'give me the short answer'."
 ---
 
 # /takeaway — the short answer to the current job
@@ -22,19 +22,31 @@ diary or commit.
 ## 2. Print
 
 ```
-**Take-home:** <one sentence: the answer, in plain English>
+> **Take-home:** <one or two sentences: the answer, in plain English>
 
-**Why we think so**
-- <evidence, plain words; a number with its unit and what it is compared with>
-- <at most six bullets; each may take two sentences: the finding, then why it matters>
+| <What was measured> | <Result> | <Compared with> | <Verdict> |
+|---|---|---|---|
+| <plain-English name of the measure> | <number + unit> | <reference value or range> | <yes / no / lower / unclear> |
+
+**Reading the table:** <one or two sentences defining each measure in plain words, and what the
+comparison column is (e.g. "the range of the six existing agents, i.e. seed-to-seed variation")>
+
+**Also worth knowing:** <optional, at most three short bullets for findings that don't fit a row>
 
 **How sure are we:** <one or two sentences: what the evidence rests on (seeds, sample size,
 checks done) and what could still overturn it>
 
-**What it means / next:** <one or two sentences: the consequence, then the next step or decision>
+**Next:** <one or two sentences: the consequence, then the next step or decision>
 
 Details: <one owning doc link>
 ```
+
+- The **take-home box** carries the whole answer: someone who reads only it must get the conclusion.
+- The **table** holds the 2–6 numbers the take-home rests on, one row each. The verdict column says,
+  per row, whether that number supports the take-home. Cells stay short; explanations go in
+  "Reading the table", not in the cells.
+- A job with no numbers (a bug hunt, a design choice) replaces the table with a table of the options
+  or causes considered: `| Option / cause | What we found | Verdict |`.
 
 ## Rules
 
@@ -45,6 +57,6 @@ Details: <one owning doc link>
   "extra time hiding in a bush when hurt (injury effect)". After that the term alone is fine.
 - No run IDs, SHAs, config paths, flag names or bare shorthand (`H₁a`, `Δ_SS`) — describe what they are.
   Use the project's own vocabulary (CLAUDE.md, Conventional terms only).
-- **~300 words cap**, excluding the Details line. Aim for 200–300; cut bullets before cutting the explanation of a term.
+- **~300 words cap**, excluding the Details line. Aim for 200–300; cut table rows and extra bullets before cutting the explanation of a term.
 - Numbers keep their units and a comparison ("11.0 vs 9.1 percentage points", not "11.0").
 - One Details link to the owning doc; the user opens it for depth.
