@@ -1,0 +1,2 @@
+level-05 episodes with exactly one predator (left)|6,674,860|6,674,860|100.0|3,537,750 injury deaths over 1,361,573,944 steps; steps outside a bush = 0.74 x steps
+worlds (right)|9|9|100.0|planner inputs from mappings.json

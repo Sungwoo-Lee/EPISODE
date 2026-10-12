@@ -1,0 +1,238 @@
+{
+ "world": "w4",
+ "tag": "w4_trip8",
+ "role": "lever",
+ "levers": {
+  "trip": 8
+ },
+ "trip_food": 8,
+ "sensitivity": true,
+ "label": "world 4 (++--)",
+ "signs": "++--",
+ "grid": [
+  51,
+  26,
+  61
+ ],
+ "per_map": {
+  "warm0": {
+   "weight": 0.5900000000000001,
+   "iters": 126,
+   "delta": 9.854212978410715e-05,
+   "decision_open": {
+    "hide": 0.5567313774144894,
+    "forage": 0.11304918989928478,
+    "other": 0.33021943268622583,
+    "n": 41106,
+    "n_start": 41106
+   },
+   "decision_open_ties_dropped": {
+    "hide": 0.5585585585585585,
+    "forage": 0.12565040287812565,
+    "other": 0.3157910385633158,
+    "n": 33633,
+    "n_start": 41106
+   },
+   "decision_in_bush": {
+    "hide": 0.8566875881866394,
+    "forage": 0.05259572811754975,
+    "other": 0.09071668369581083,
+    "n": 41106,
+    "n_start": 41106
+   },
+   "gap": {
+    "q10": -1.7416468972492138,
+    "q50": 9.153700360997078,
+    "q90": 24.22129649332136,
+    "within_1": 0.09351432880844646,
+    "hide_better": 0.8099304237824162
+   },
+   "rollout": {
+    "n_starts": 4000,
+    "max_steps": 500,
+    "survival": 0.7185,
+    "mean_steps": 411.84575,
+    "deaths": {
+     "predator": 858,
+     "trap": 49,
+     "rock": 3,
+     "starvation": 216,
+     "over-eating": 0,
+     "cold": 0,
+     "heat": 0
+    },
+    "deaths_before_step_20": {
+     "predator": 60,
+     "trap": 15,
+     "rock": 2,
+     "starvation": 216,
+     "over-eating": 0,
+     "cold": 0,
+     "heat": 0
+    },
+    "death_share_of_starts": {
+     "predator": 0.2145,
+     "trap": 0.01225,
+     "rock": 0.00075,
+     "starvation": 0.054,
+     "over-eating": 0.0,
+     "cold": 0.0,
+     "heat": 0.0
+    },
+    "time_share": {
+     "bush": 0.23764540486334992,
+     "travel": 0.46370880359940586,
+     "eat": 0.0652544065344853,
+     "warm": 0.19935194183744764,
+     "open": 0.03403944316531129
+    },
+    "warm_cell_share": 0.2748747559007225,
+    "hits_per_100_steps": {
+     "predator": 0.24754413515254195,
+     "trap": 0.3755046640641551,
+     "rock": 0.8996693543638608
+    },
+    "damage_per_100_steps": {
+     "predator": 16.75232778291387,
+     "trap": 11.237823869737639,
+     "rock": 2.6990080630915823
+    },
+    "agent_steps": 1647383
+   }
+  },
+  "warm1": {
+   "weight": 0.41,
+   "iters": 124,
+   "delta": 9.862817128691859e-05,
+   "decision_open": {
+    "hide": 0.844207658249404,
+    "forage": 0.0954361893640831,
+    "other": 0.060356152386512915,
+    "n": 41106,
+    "n_start": 41106
+   },
+   "decision_open_ties_dropped": {
+    "hide": 0.8539477461958083,
+    "forage": 0.10149296583405111,
+    "other": 0.044559287970140686,
+    "n": 34830,
+    "n_start": 41106
+   },
+   "decision_in_bush": {
+    "hide": 0.9400330851943756,
+    "forage": 0.05984527806159685,
+    "other": 0.00012163674402763587,
+    "n": 41106,
+    "n_start": 41106
+   },
+   "gap": {
+    "q10": -8.526512829121202e-14,
+    "q50": 11.000402392119508,
+    "q90": 26.48847698155015,
+    "within_1": 0.09115457597431031,
+    "hide_better": 0.850070549311536
+   },
+   "rollout": {
+    "n_starts": 4000,
+    "max_steps": 500,
+    "survival": 0.7465,
+    "mean_steps": 420.14175,
+    "deaths": {
+     "predator": 751,
+     "trap": 46,
+     "rock": 1,
+     "starvation": 216,
+     "over-eating": 0,
+     "cold": 0,
+     "heat": 0
+    },
+    "deaths_before_step_20": {
+     "predator": 45,
+     "trap": 19,
+     "rock": 1,
+     "starvation": 216,
+     "over-eating": 0,
+     "cold": 0,
+     "heat": 0
+    },
+    "death_share_of_starts": {
+     "predator": 0.18775,
+     "trap": 0.0115,
+     "rock": 0.00025,
+     "starvation": 0.054,
+     "over-eating": 0.0,
+     "cold": 0.0,
+     "heat": 0.0
+    },
+    "time_share": {
+     "bush": 0.5075858326386273,
+     "travel": 0.4219218870773971,
+     "eat": 0.0654529096429955,
+     "warm": 0.0,
+     "open": 0.005039370640980098
+    },
+    "warm_cell_share": 0.28390120715211,
+    "hits_per_100_steps": {
+     "predator": 0.20808453337474792,
+     "trap": 0.3499414185807528,
+     "rock": 0.8287679098780352
+    },
+    "damage_per_100_steps": {
+     "predator": 13.987689868954941,
+     "trap": 10.489763276322812,
+     "rock": 2.4863037296341055
+    },
+    "agent_steps": 1680567
+   }
+  }
+ },
+ "pooled": {
+  "decision_open": {
+   "hide": 0.6745966525568045,
+   "forage": 0.10582785967985209,
+   "other": 0.21957548776334357
+  },
+  "decision_open_ties_dropped": {
+   "hide": 0.6796681254898309,
+   "forage": 0.1157458536900551,
+   "other": 0.204586020820114
+  },
+  "decision_in_bush": {
+   "hide": 0.8908592419598114,
+   "forage": 0.05556804359460907,
+   "other": 0.05357271444557973
+  },
+  "gap_within_1": 0.09254683014645065,
+  "survival": 0.7299800000000001,
+  "mean_steps": 415.24711,
+  "death_share_of_starts": {
+   "predator": 0.2035325,
+   "trap": 0.011942500000000002,
+   "rock": 0.0005450000000000001,
+   "starvation": 0.054000000000000006,
+   "over-eating": 0.0,
+   "cold": 0.0,
+   "heat": 0.0
+  },
+  "time_share": {
+   "bush": 0.34832098025121366,
+   "travel": 0.4465761678253823,
+   "eat": 0.06533579280897447,
+   "warm": 0.11761764568409412,
+   "open": 0.022149413430335503
+  },
+  "warm_cell_share": 0.2785756009137914,
+  "hits_per_100_steps": {
+   "predator": 0.2313656984236464,
+   "trap": 0.36502373341596017,
+   "rock": 0.8705997621246723
+  },
+  "real_choice": false,
+  "exploratory_decision_open_hungry": {
+   "hide": 0.5693205955334988,
+   "forage": 0.21539255583126554,
+   "other": 0.21528684863523576
+  }
+ },
+ "seconds": 80.34423565864563
+}

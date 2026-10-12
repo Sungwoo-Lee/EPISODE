@@ -1,0 +1,5 @@
+level 02: steps outside a bush (1 agent(s), 1,000,000 episodes)|420,149,061|499,253,167|84.2|the rest are steps in a bush, where no store has a single predator or trap death
+level 03: steps outside a bush (2 agent(s), 2,000,000 episodes)|571,627,368|746,865,666|76.5|the rest are steps in a bush, where no store has a single predator or trap death
+level 04: steps outside a bush (2 agent(s), 2,000,000 episodes)|393,893,345|575,193,960|68.5|the rest are steps in a bush, where no store has a single predator or trap death
+level 05: steps outside a bush (2 agent(s), 2,000,000 episodes)|385,861,038|518,504,624|74.4|the rest are steps in a bush, where no store has a single predator or trap death
+old level 06 = today's level 07: steps outside a bush (2 agent(s), 2,000,000 episodes)|303,896,610|421,121,807|72.2|the rest are steps in a bush, where no store has a single predator or trap death

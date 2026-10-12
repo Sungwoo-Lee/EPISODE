@@ -1,0 +1,9 @@
+level 05 (reference): hungry start states x 2 maps|40,300|82,212|49.0|start states with food energy below 100 only (EXPLORATORY, not pre-registered); open ground; ties kept
+world 1  - - - -: hungry start states x 2 maps|40,300|82,212|49.0|start states with food energy below 100 only (EXPLORATORY, not pre-registered); open ground; ties kept
+world 2  + - - +: hungry start states x 2 maps|40,300|82,212|49.0|start states with food energy below 100 only (EXPLORATORY, not pre-registered); open ground; ties kept
+world 3  - + - +: hungry start states x 2 maps|40,300|82,212|49.0|start states with food energy below 100 only (EXPLORATORY, not pre-registered); open ground; ties kept
+world 4  + + - -: hungry start states x 2 maps|40,300|82,212|49.0|start states with food energy below 100 only (EXPLORATORY, not pre-registered); open ground; ties kept
+world 5  - - + +: hungry start states x 2 maps|40,300|82,212|49.0|start states with food energy below 100 only (EXPLORATORY, not pre-registered); open ground; ties kept
+world 6  + - + -: hungry start states x 2 maps|40,300|82,212|49.0|start states with food energy below 100 only (EXPLORATORY, not pre-registered); open ground; ties kept
+world 7  - + + -: hungry start states x 2 maps|40,300|82,212|49.0|start states with food energy below 100 only (EXPLORATORY, not pre-registered); open ground; ties kept
+world 8  + + + +: hungry start states x 2 maps|40,300|82,212|49.0|start states with food energy below 100 only (EXPLORATORY, not pre-registered); open ground; ties kept

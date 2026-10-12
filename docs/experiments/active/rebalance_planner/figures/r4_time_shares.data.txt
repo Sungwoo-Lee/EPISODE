@@ -1,0 +1,9 @@
+level 05 (reference): rollouts x 2 maps|8,000|8,000|100.0|all steps lived by the rollouts (shares of agent-steps); a trip's arrival step into a bush counts as bush
+world 1  - - - -: rollouts x 2 maps|8,000|8,000|100.0|all steps lived by the rollouts (shares of agent-steps); a trip's arrival step into a bush counts as bush
+world 2  + - - +: rollouts x 2 maps|8,000|8,000|100.0|all steps lived by the rollouts (shares of agent-steps); a trip's arrival step into a bush counts as bush
+world 3  - + - +: rollouts x 2 maps|8,000|8,000|100.0|all steps lived by the rollouts (shares of agent-steps); a trip's arrival step into a bush counts as bush
+world 4  + + - -: rollouts x 2 maps|8,000|8,000|100.0|all steps lived by the rollouts (shares of agent-steps); a trip's arrival step into a bush counts as bush
+world 5  - - + +: rollouts x 2 maps|8,000|8,000|100.0|all steps lived by the rollouts (shares of agent-steps); a trip's arrival step into a bush counts as bush
+world 6  + - + -: rollouts x 2 maps|8,000|8,000|100.0|all steps lived by the rollouts (shares of agent-steps); a trip's arrival step into a bush counts as bush
+world 7  - + + -: rollouts x 2 maps|8,000|8,000|100.0|all steps lived by the rollouts (shares of agent-steps); a trip's arrival step into a bush counts as bush
+world 8  + + + +: rollouts x 2 maps|8,000|8,000|100.0|all steps lived by the rollouts (shares of agent-steps); a trip's arrival step into a bush counts as bush

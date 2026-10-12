@@ -1,0 +1,125 @@
+{
+ "world": "configs/environment/experiment/basic/lookalike_animals_close_pounce_small_food_10x10.yaml",
+ "n": 6000,
+ "src": "working tree",
+ "head": "5f6af25f",
+ "eating_nutrition_cost": 1.0,
+ "sets": [
+  {
+   "max_abs_diff": {
+    "nutrition": 7.62939453125e-06,
+    "injury": 3.051757815342171e-06,
+    "body_temp": 1.2969970697440658e-06,
+    "drive": 1.857236799196471e-05
+   },
+   "death_flag_mismatches": 0,
+   "simulator_settings": "Body(max_nutrition=200.0, setpoint=100.0, metabolic_cost=1.0, food_gain_net=5.0, overeating_death=True, max_injury=100.0, recovery_base=0.2, bush_multiplier=25.0, t_set=0.0, t_min=-15.0, t_max=15.0, k_ex=0.04, k_loss=0.02, k_met=0.0, warm_scale=2.0, cool_scale=0.25, death_penalty=100.0, coupling=False, coupling_rate=1.0, heal_cold_s=0.0, heal_warm_s=0.0, heal_cost=0.0, shortfall='partial', inj_gain=0.0, inj_mode='cooling_only', b5=False, b5_low=0.0, b5_high=100.0, b5_floor=0.0, b5_over_floor=1.0, b5_over_start=150.0)",
+   "pass": true,
+   "food_nutrition_gain": 6.0
+  },
+  {
+   "max_abs_diff": {
+    "nutrition": 7.62939453125e-06,
+    "injury": 3.051757815342171e-06,
+    "body_temp": 1.2969970697440658e-06,
+    "drive": 1.857236799196471e-05
+   },
+   "death_flag_mismatches": 0,
+   "simulator_settings": "Body(max_nutrition=200.0, setpoint=100.0, metabolic_cost=1.0, food_gain_net=15.0, overeating_death=True, max_injury=100.0, recovery_base=0.2, bush_multiplier=25.0, t_set=0.0, t_min=-15.0, t_max=15.0, k_ex=0.04, k_loss=0.02, k_met=0.0, warm_scale=2.0, cool_scale=0.25, death_penalty=100.0, coupling=False, coupling_rate=1.0, heal_cold_s=0.0, heal_warm_s=0.0, heal_cost=0.0, shortfall='partial', inj_gain=0.0, inj_mode='cooling_only', b5=False, b5_low=0.0, b5_high=100.0, b5_floor=0.0, b5_over_floor=1.0, b5_over_start=150.0)",
+   "pass": true,
+   "food_nutrition_gain": 16.0
+  },
+  {
+   "max_abs_diff": {
+    "nutrition": 7.62939453125e-06,
+    "injury": 3.051757815342171e-06,
+    "body_temp": 1.2969970697440658e-06,
+    "drive": 1.857236799196471e-05
+   },
+   "death_flag_mismatches": 0,
+   "simulator_settings": "Body(max_nutrition=200.0, setpoint=100.0, metabolic_cost=1.0, food_gain_net=5.0, overeating_death=True, max_injury=100.0, recovery_base=0.2, bush_multiplier=25.0, t_set=0.0, t_min=-15.0, t_max=15.0, k_ex=0.04, k_loss=0.02, k_met=0.0, warm_scale=2.0, cool_scale=0.25, death_penalty=100.0, coupling=False, coupling_rate=1.0, heal_cold_s=0.0, heal_warm_s=0.0, heal_cost=0.0, shortfall='partial', inj_gain=0.0, inj_mode='cooling_only', b5=False, b5_low=0.0, b5_high=100.0, b5_floor=0.0, b5_over_floor=1.0, b5_over_start=150.0)",
+   "pass": true,
+   "food_nutrition_gain": 6.0,
+   "world": "configs/environment/experiment/basic/lookalike_hf_w2_newAD_10x10.yaml"
+  },
+  {
+   "max_abs_diff": {
+    "nutrition": 7.62939453125e-06,
+    "injury": 3.051757815342171e-06,
+    "body_temp": 1.2969970697440658e-06,
+    "drive": 1.857236799196471e-05
+   },
+   "death_flag_mismatches": 0,
+   "simulator_settings": "Body(max_nutrition=200.0, setpoint=100.0, metabolic_cost=1.0, food_gain_net=15.0, overeating_death=True, max_injury=100.0, recovery_base=0.2, bush_multiplier=25.0, t_set=0.0, t_min=-15.0, t_max=15.0, k_ex=0.04, k_loss=0.02, k_met=0.0, warm_scale=2.0, cool_scale=0.25, death_penalty=100.0, coupling=False, coupling_rate=1.0, heal_cold_s=0.0, heal_warm_s=0.0, heal_cost=0.0, shortfall='partial', inj_gain=0.0, inj_mode='cooling_only', b5=False, b5_low=0.0, b5_high=100.0, b5_floor=0.0, b5_over_floor=1.0, b5_over_start=150.0)",
+   "pass": true,
+   "food_nutrition_gain": 16.0,
+   "world": "configs/environment/experiment/basic/lookalike_hf_w3_newBD_10x10.yaml"
+  },
+  {
+   "max_abs_diff": {
+    "nutrition": 7.62939453125e-06,
+    "injury": 3.051757815342171e-06,
+    "body_temp": 1.2969970697440658e-06,
+    "drive": 1.857236799196471e-05
+   },
+   "death_flag_mismatches": 0,
+   "simulator_settings": "Body(max_nutrition=200.0, setpoint=100.0, metabolic_cost=1.0, food_gain_net=15.0, overeating_death=True, max_injury=100.0, recovery_base=0.2, bush_multiplier=25.0, t_set=0.0, t_min=-15.0, t_max=15.0, k_ex=0.04, k_loss=0.02, k_met=0.0, warm_scale=2.0, cool_scale=0.25, death_penalty=100.0, coupling=False, coupling_rate=1.0, heal_cold_s=0.0, heal_warm_s=0.0, heal_cost=0.0, shortfall='partial', inj_gain=0.0, inj_mode='cooling_only', b5=False, b5_low=0.0, b5_high=100.0, b5_floor=0.0, b5_over_floor=1.0, b5_over_start=150.0)",
+   "pass": true,
+   "food_nutrition_gain": 16.0,
+   "world": "configs/environment/experiment/basic/lookalike_hf_w4_newAB_10x10.yaml"
+  },
+  {
+   "max_abs_diff": {
+    "nutrition": 7.62939453125e-06,
+    "injury": 3.051757815342171e-06,
+    "body_temp": 1.2969970697440658e-06,
+    "drive": 1.857236799196471e-05
+   },
+   "death_flag_mismatches": 0,
+   "simulator_settings": "Body(max_nutrition=200.0, setpoint=100.0, metabolic_cost=1.0, food_gain_net=5.0, overeating_death=True, max_injury=100.0, recovery_base=0.2, bush_multiplier=25.0, t_set=0.0, t_min=-15.0, t_max=15.0, k_ex=0.04, k_loss=0.02, k_met=0.0, warm_scale=2.0, cool_scale=0.25, death_penalty=100.0, coupling=False, coupling_rate=1.0, heal_cold_s=0.0, heal_warm_s=0.0, heal_cost=0.0, shortfall='partial', inj_gain=0.0, inj_mode='cooling_only', b5=False, b5_low=0.0, b5_high=100.0, b5_floor=0.0, b5_over_floor=1.0, b5_over_start=150.0)",
+   "pass": true,
+   "food_nutrition_gain": 6.0,
+   "world": "configs/environment/experiment/basic/lookalike_hf_w5_newCD_10x10.yaml"
+  },
+  {
+   "max_abs_diff": {
+    "nutrition": 7.62939453125e-06,
+    "injury": 3.051757815342171e-06,
+    "body_temp": 1.2969970697440658e-06,
+    "drive": 1.857236799196471e-05
+   },
+   "death_flag_mismatches": 0,
+   "simulator_settings": "Body(max_nutrition=200.0, setpoint=100.0, metabolic_cost=1.0, food_gain_net=5.0, overeating_death=True, max_injury=100.0, recovery_base=0.2, bush_multiplier=25.0, t_set=0.0, t_min=-15.0, t_max=15.0, k_ex=0.04, k_loss=0.02, k_met=0.0, warm_scale=2.0, cool_scale=0.25, death_penalty=100.0, coupling=False, coupling_rate=1.0, heal_cold_s=0.0, heal_warm_s=0.0, heal_cost=0.0, shortfall='partial', inj_gain=0.0, inj_mode='cooling_only', b5=False, b5_low=0.0, b5_high=100.0, b5_floor=0.0, b5_over_floor=1.0, b5_over_start=150.0)",
+   "pass": true,
+   "food_nutrition_gain": 6.0,
+   "world": "configs/environment/experiment/basic/lookalike_hf_w6_newAC_10x10.yaml"
+  },
+  {
+   "max_abs_diff": {
+    "nutrition": 7.62939453125e-06,
+    "injury": 3.051757815342171e-06,
+    "body_temp": 1.2969970697440658e-06,
+    "drive": 1.857236799196471e-05
+   },
+   "death_flag_mismatches": 0,
+   "simulator_settings": "Body(max_nutrition=200.0, setpoint=100.0, metabolic_cost=1.0, food_gain_net=15.0, overeating_death=True, max_injury=100.0, recovery_base=0.2, bush_multiplier=25.0, t_set=0.0, t_min=-15.0, t_max=15.0, k_ex=0.04, k_loss=0.02, k_met=0.0, warm_scale=2.0, cool_scale=0.25, death_penalty=100.0, coupling=False, coupling_rate=1.0, heal_cold_s=0.0, heal_warm_s=0.0, heal_cost=0.0, shortfall='partial', inj_gain=0.0, inj_mode='cooling_only', b5=False, b5_low=0.0, b5_high=100.0, b5_floor=0.0, b5_over_floor=1.0, b5_over_start=150.0)",
+   "pass": true,
+   "food_nutrition_gain": 16.0,
+   "world": "configs/environment/experiment/basic/lookalike_hf_w7_newBC_10x10.yaml"
+  },
+  {
+   "max_abs_diff": {
+    "nutrition": 7.62939453125e-06,
+    "injury": 3.051757815342171e-06,
+    "body_temp": 1.2969970697440658e-06,
+    "drive": 1.857236799196471e-05
+   },
+   "death_flag_mismatches": 0,
+   "simulator_settings": "Body(max_nutrition=200.0, setpoint=100.0, metabolic_cost=1.0, food_gain_net=15.0, overeating_death=True, max_injury=100.0, recovery_base=0.2, bush_multiplier=25.0, t_set=0.0, t_min=-15.0, t_max=15.0, k_ex=0.04, k_loss=0.02, k_met=0.0, warm_scale=2.0, cool_scale=0.25, death_penalty=100.0, coupling=False, coupling_rate=1.0, heal_cold_s=0.0, heal_warm_s=0.0, heal_cost=0.0, shortfall='partial', inj_gain=0.0, inj_mode='cooling_only', b5=False, b5_low=0.0, b5_high=100.0, b5_floor=0.0, b5_over_floor=1.0, b5_over_start=150.0)",
+   "pass": true,
+   "food_nutrition_gain": 16.0,
+   "world": "configs/environment/experiment/basic/lookalike_hf_w8_newABCD_10x10.yaml"
+  }
+ ],
+ "pass_": true
+}

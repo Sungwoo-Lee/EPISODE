@@ -1,0 +1,9 @@
+level 02, ordinary agent|1,000,000|1,000,000|100.0|every evaluation episode of the agent's Wave-2 trajectory store; over-eating: 0 episode(s), too few to draw
+level 03, ordinary agent|1,000,000|1,000,000|100.0|every evaluation episode of the agent's Wave-2 trajectory store; over-eating: 8 episode(s), too few to draw
+level 03, modulated agent|1,000,000|1,000,000|100.0|every evaluation episode of the agent's Wave-2 trajectory store; over-eating: 12 episode(s), too few to draw
+level 04, ordinary agent|1,000,000|1,000,000|100.0|every evaluation episode of the agent's Wave-2 trajectory store; over-eating: 0 episode(s), too few to draw
+level 04, modulated agent|1,000,000|1,000,000|100.0|every evaluation episode of the agent's Wave-2 trajectory store; over-eating: 5 episode(s), too few to draw
+level 05, ordinary agent|1,000,000|1,000,000|100.0|every evaluation episode of the agent's Wave-2 trajectory store; over-eating: 0 episode(s), too few to draw
+level 05, modulated agent|1,000,000|1,000,000|100.0|every evaluation episode of the agent's Wave-2 trajectory store; over-eating: 2 episode(s), too few to draw
+old level 06 = today's level 07, ordinary agent|1,000,000|1,000,000|100.0|every evaluation episode of the agent's Wave-2 trajectory store; over-eating: 65 episode(s), too few to draw
+old level 06 = today's level 07, modulated agent|1,000,000|1,000,000|100.0|every evaluation episode of the agent's Wave-2 trajectory store; over-eating: 45 episode(s), too few to draw

@@ -1,0 +1,13 @@
+level 02, 1 visible predator(s)|0|1,000,000|0.0|single point, not drawn; 99 % survive, given in the caption
+level 03, 0 visible predator(s)|667,894|2,000,000|33.4|episodes with this predator count, both agents pooled
+level 03, 1 visible predator(s)|667,486|2,000,000|33.4|episodes with this predator count, both agents pooled
+level 03, 2 visible predator(s)|664,620|2,000,000|33.2|episodes with this predator count, both agents pooled
+level 04, 0 visible predator(s)|667,894|2,000,000|33.4|episodes with this predator count, both agents pooled
+level 04, 1 visible predator(s)|667,486|2,000,000|33.4|episodes with this predator count, both agents pooled
+level 04, 2 visible predator(s)|664,620|2,000,000|33.2|episodes with this predator count, both agents pooled
+level 05, 0 visible predator(s)|667,894|2,000,000|33.4|episodes with this predator count, both agents pooled
+level 05, 1 visible predator(s)|667,486|2,000,000|33.4|episodes with this predator count, both agents pooled
+level 05, 2 visible predator(s)|664,620|2,000,000|33.2|episodes with this predator count, both agents pooled
+old level 06 = today's level 07, 0 visible predator(s)|667,894|2,000,000|33.4|episodes with this predator count, both agents pooled
+old level 06 = today's level 07, 1 visible predator(s)|667,486|2,000,000|33.4|episodes with this predator count, both agents pooled
+old level 06 = today's level 07, 2 visible predator(s)|664,620|2,000,000|33.2|episodes with this predator count, both agents pooled

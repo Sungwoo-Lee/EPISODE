@@ -1,0 +1,15 @@
+  <p><strong>No candidate world offers a real choice by the pre-registered bar.</strong> In all eight worlds
+  the ideal planner's best move is to hide in a bush in {{hide_min}}&ndash;{{hide_max}} % of start states and to
+  go out to eat in only {{eat_min}}&ndash;{{eat_max}} %; the bar needed both at 20 % (for eating, about
+  {{bar_hungry}} % of the hungry start states). The closest is world 4 &mdash; the new predator setting with
+  fewer, bigger food items &mdash; at {{w4_eat}} %. Only {{nt_min}}&ndash;{{nt_max}} % of start states have
+  hiding and eating within 1 reward unit of each other.</p>
+  <p>When the agent is fed, injury above about 20 sends it to a bush; when hungry, it tolerates more injury
+  before hiding. This is consistent with fast bush healing plus the bush being the only hazard-free place:
+  healing first and eating afterwards costs little. Fewer, bigger food items move the balance most toward
+  eating (+{{eF_B_abs}} points); invisible hazards move it toward hiding.</p>
+  <p><strong>Exploratory:</strong> from world 8, no single lever brings eating to 20 %; from world 4, only
+  lowering bush healing to 5 &mdash; a planner-only change, since training bush healing is fixed &mdash; does
+  (hide {{w4_heal5_hide}} %, eat {{w4_heal5_eat}} %). A link between injury and hunger is a hypothesis for a
+  next study. The planner has no predator position, so whether these worlds create a dilemma when a predator
+  is near is for the training runs to show.</p>

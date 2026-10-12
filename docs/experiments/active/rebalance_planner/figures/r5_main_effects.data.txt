@@ -1,0 +1,1 @@
+half-factorial worlds|8|9|88.9|level 05 reference and trip-4 sensitivity worlds excluded; each world = 2 maps x (all start states, 4,000 rollouts)

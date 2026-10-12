@@ -1,0 +1,2 @@
+fatal predator or trap hits outside a bush, level 05 (4 agents, 4,000,000 episodes)|1,547,748|1,574,065|98.3|of all injury deaths: the rest are rock or unattributed hits, or hits taken in a bush (none)
+steps outside a bush, level 05 (same agents)|763,893,443|763,893,443|100.0|every step after t = 0 spent outside a bush

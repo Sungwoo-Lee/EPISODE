@@ -1,0 +1,9 @@
+level 05 (reference)|1,326|80,886|1.6|one temperature slice (-2.5 deg) of all grid states; map without a warm bush; open ground
+world 1  - - - -|1,326|80,886|1.6|one temperature slice (-2.5 deg) of all grid states; map without a warm bush; open ground
+world 2  + - - +|1,326|80,886|1.6|one temperature slice (-2.5 deg) of all grid states; map without a warm bush; open ground
+world 3  - + - +|1,326|80,886|1.6|one temperature slice (-2.5 deg) of all grid states; map without a warm bush; open ground
+world 4  + + - -|1,326|80,886|1.6|one temperature slice (-2.5 deg) of all grid states; map without a warm bush; open ground
+world 5  - - + +|1,326|80,886|1.6|one temperature slice (-2.5 deg) of all grid states; map without a warm bush; open ground
+world 6  + - + -|1,326|80,886|1.6|one temperature slice (-2.5 deg) of all grid states; map without a warm bush; open ground
+world 7  - + + -|1,326|80,886|1.6|one temperature slice (-2.5 deg) of all grid states; map without a warm bush; open ground
+world 8  + + + +|1,326|80,886|1.6|one temperature slice (-2.5 deg) of all grid states; map without a warm bush; open ground

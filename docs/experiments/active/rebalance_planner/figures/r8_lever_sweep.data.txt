@@ -1,0 +1,16 @@
+from world 8: as designed (trip to food 5) (start states x 2 maps)|82,212|82,212|100.0|EXPLORATORY single-lever sweep, not pre-registered; bush healing is planner-only, for understanding only
+from world 8: predator hit odds x0.5 (start states x 2 maps)|82,212|82,212|100.0|EXPLORATORY single-lever sweep, not pre-registered; bush healing is planner-only, for understanding only
+from world 8: predator hit odds x2 (start states x 2 maps)|82,212|82,212|100.0|EXPLORATORY single-lever sweep, not pre-registered; bush healing is planner-only, for understanding only
+from world 8: trip to food 4 (start states x 2 maps)|82,212|82,212|100.0|EXPLORATORY single-lever sweep, not pre-registered; bush healing is planner-only, for understanding only
+from world 8: trip to food 6 (start states x 2 maps)|82,212|82,212|100.0|EXPLORATORY single-lever sweep, not pre-registered; bush healing is planner-only, for understanding only
+from world 8: trip to food 8 (start states x 2 maps)|82,212|82,212|100.0|EXPLORATORY single-lever sweep, not pre-registered; bush healing is planner-only, for understanding only
+from world 8: bush healing 12.5 (planner only) (start states x 2 maps)|82,212|82,212|100.0|EXPLORATORY single-lever sweep, not pre-registered; bush healing is planner-only, for understanding only
+from world 8: bush healing 5 (planner only) (start states x 2 maps)|82,212|82,212|100.0|EXPLORATORY single-lever sweep, not pre-registered; bush healing is planner-only, for understanding only
+from world 4: as designed (trip to food 5) (start states x 2 maps)|82,212|82,212|100.0|EXPLORATORY single-lever sweep, not pre-registered; bush healing is planner-only, for understanding only
+from world 4: predator hit odds x0.5 (start states x 2 maps)|82,212|82,212|100.0|EXPLORATORY single-lever sweep, not pre-registered; bush healing is planner-only, for understanding only
+from world 4: predator hit odds x2 (start states x 2 maps)|82,212|82,212|100.0|EXPLORATORY single-lever sweep, not pre-registered; bush healing is planner-only, for understanding only
+from world 4: trip to food 4 (start states x 2 maps)|82,212|82,212|100.0|EXPLORATORY single-lever sweep, not pre-registered; bush healing is planner-only, for understanding only
+from world 4: trip to food 6 (start states x 2 maps)|82,212|82,212|100.0|EXPLORATORY single-lever sweep, not pre-registered; bush healing is planner-only, for understanding only
+from world 4: trip to food 8 (start states x 2 maps)|82,212|82,212|100.0|EXPLORATORY single-lever sweep, not pre-registered; bush healing is planner-only, for understanding only
+from world 4: bush healing 12.5 (planner only) (start states x 2 maps)|82,212|82,212|100.0|EXPLORATORY single-lever sweep, not pre-registered; bush healing is planner-only, for understanding only
+from world 4: bush healing 5 (planner only) (start states x 2 maps)|82,212|82,212|100.0|EXPLORATORY single-lever sweep, not pre-registered; bush healing is planner-only, for understanding only

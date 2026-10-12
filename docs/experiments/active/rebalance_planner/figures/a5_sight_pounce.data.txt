@@ -1,0 +1,14 @@
+sight 1, pounce 2|475,120|6,674,860|7.1|level-05-world episodes with exactly one visible predator of this kind
+sight 1, pounce 3|479,120|6,674,860|7.2|level-05-world episodes with exactly one visible predator of this kind
+sight 2, pounce 2|476,880|6,674,860|7.1|level-05-world episodes with exactly one visible predator of this kind
+sight 2, pounce 3|480,020|6,674,860|7.2|level-05-world episodes with exactly one visible predator of this kind
+sight 3, pounce 2|476,400|6,674,860|7.1|level-05-world episodes with exactly one visible predator of this kind
+sight 3, pounce 3|475,340|6,674,860|7.1|level-05-world episodes with exactly one visible predator of this kind
+sight 4, pounce 2|476,000|6,674,860|7.1|level-05-world episodes with exactly one visible predator of this kind
+sight 4, pounce 3|480,560|6,674,860|7.2|level-05-world episodes with exactly one visible predator of this kind
+sight 5, pounce 2|474,340|6,674,860|7.1|level-05-world episodes with exactly one visible predator of this kind
+sight 5, pounce 3|481,420|6,674,860|7.2|level-05-world episodes with exactly one visible predator of this kind
+sight 6, pounce 2|473,360|6,674,860|7.1|level-05-world episodes with exactly one visible predator of this kind
+sight 6, pounce 3|476,180|6,674,860|7.1|level-05-world episodes with exactly one visible predator of this kind
+sight 7, pounce 2|475,100|6,674,860|7.1|level-05-world episodes with exactly one visible predator of this kind
+sight 7, pounce 3|475,020|6,674,860|7.1|level-05-world episodes with exactly one visible predator of this kind

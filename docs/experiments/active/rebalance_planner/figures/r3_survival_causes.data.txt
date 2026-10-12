@@ -1,0 +1,9 @@
+level 05 (reference): rollouts x 2 maps|8,000|8,000|100.0|random training-style starts on open ground, 500 steps, pooled 0.59 / 0.41 over the two maps
+world 1  - - - -: rollouts x 2 maps|8,000|8,000|100.0|random training-style starts on open ground, 500 steps, pooled 0.59 / 0.41 over the two maps
+world 2  + - - +: rollouts x 2 maps|8,000|8,000|100.0|random training-style starts on open ground, 500 steps, pooled 0.59 / 0.41 over the two maps
+world 3  - + - +: rollouts x 2 maps|8,000|8,000|100.0|random training-style starts on open ground, 500 steps, pooled 0.59 / 0.41 over the two maps
+world 4  + + - -: rollouts x 2 maps|8,000|8,000|100.0|random training-style starts on open ground, 500 steps, pooled 0.59 / 0.41 over the two maps
+world 5  - - + +: rollouts x 2 maps|8,000|8,000|100.0|random training-style starts on open ground, 500 steps, pooled 0.59 / 0.41 over the two maps
+world 6  + - + -: rollouts x 2 maps|8,000|8,000|100.0|random training-style starts on open ground, 500 steps, pooled 0.59 / 0.41 over the two maps
+world 7  - + + -: rollouts x 2 maps|8,000|8,000|100.0|random training-style starts on open ground, 500 steps, pooled 0.59 / 0.41 over the two maps
+world 8  + + + +: rollouts x 2 maps|8,000|8,000|100.0|random training-style starts on open ground, 500 steps, pooled 0.59 / 0.41 over the two maps

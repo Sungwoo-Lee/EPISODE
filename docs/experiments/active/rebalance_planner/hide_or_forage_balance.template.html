@@ -1,0 +1,678 @@
+<title>Hide or Forage Balance</title>
+__HOUSE_STYLE__
+<style>
+  /* REQUIRED OVERRIDE (House Style Sheet, F11 amendment): the figures spend blue (hide in a bush), green (go out
+     to eat), orange (warming) and red (predator death) on data, so the page chrome uses none of them. */
+  :root { --accent: #3f5b7a; --accent-text: #35506e; --warn: #7a5340; }
+  :root { --f-head: 'Pretendard', system-ui, -apple-system, "Segoe UI", sans-serif;
+          --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  figure, figcaption { min-width: 0; }
+  /* column floors only for the folded data-accounting tables, whose last column is prose (F24 amendment);
+     the page's content tables (.ctab) carry no floors, so they fit the 688 px column (format review 2026-10-12) */
+  details.datause table.datatable td:last-child, details.datause table.datatable th:last-child { min-width: 220px; }
+  details.datause table.datatable td:first-child, details.datause table.datatable th:first-child { min-width: 160px; }
+  table.ctab th { white-space: normal; }
+  table.ctab td:first-child { white-space: nowrap; }   /* short row labels on one line, no floor */
+  table.levers td:first-child { white-space: normal; }  /* long lever names may wrap */
+  table.ctab code { white-space: normal; overflow-wrap: anywhere; }
+  /* prose columns keep a readable floor on a phone (the table then scrolls there); floors stay well under
+     the 688 px column, so desktop and tablet show no cue */
+  table.groups td:nth-child(2) { min-width: 220px; }
+  table.levers td:first-child { min-width: 190px; }
+  p.kind { display: inline-block; align-self: flex-start; margin: 0 0 6px; padding: 2px 9px; border-radius: 3px;
+           font-size: 12.5px; letter-spacing: .02em; border: 1px solid var(--rule); color: var(--ink-2); }
+  p.kind-planner { border-color: var(--accent); color: var(--accent-text); }
+  p.kind-recordings { border-color: var(--ink-2); color: var(--ink-2); }
+  /* F65: dense figures keep a legible floor on a phone and scroll sideways; house.save guarantees >= 9 px
+     labels at the 688 px column, so the floor is 685 px (<= the column, so no cue on a desktop) */
+  .figscroll img { min-width: 685px; }
+  ol, ul { margin: 0; padding-left: 1.4em; } li + li { margin-top: 6px; }
+  /* F71: data-accounting tables are collapsed under a one-line summary */
+  details.datause > summary { cursor: pointer; }
+  .tag-explore { display: inline-block; padding: 1px 8px; border: 1px solid var(--warn); color: var(--warn);
+                 border-radius: 3px; font-size: 12.5px; letter-spacing: .04em; }
+</style>
+
+<div class="wrap">
+
+<section class="col">
+  <p class="eyebrow">grid_world_pain &middot; rebalance-planner study &middot; ideal planner, no trained agent</p>
+  <h1>Hide or Forage Balance</h1>
+  <p class="lede">In eight candidate training worlds, does an agent ever face a real choice between staying
+  safe in a bush and going out to eat, or does one option always win? An agent-free answer from an ideal
+  planner, motivated by what kills today's trained agents.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">PURPOSE</span></h2>
+<p>Trained agents in the current level-05 world die mostly from predators, and many of those deaths happen
+while they are out finding food. A planned experiment changes four groups of world settings &mdash; the
+predator, the food, whether traps and rocks can be seen, and how many hazards there are &mdash; in eight
+combinations. Before training agents in those worlds, this page asks a narrower question with no agent at
+all: <strong>in each world, is hiding in a bush sometimes the better move and going out to eat sometimes
+the better move, depending on how hungry and injured the agent is?</strong> If one option always wins, the
+world cannot teach an agent to weigh the two.</p>
+<p><strong>Scope.</strong> The planner asks whether <em>body state alone</em> &mdash; food energy, injury,
+body temperature &mdash; ever makes eating and hiding comparably good. Predators, traps and rocks enter only
+as an average chance of being hit on each step spent outside a bush. There is no predator position, no cue,
+no lookalike animal. So this page cannot say whether these worlds create a dilemma <em>when a predator is
+near</em>; that needs trained agents.</p>
+<div class="callout">
+  <p class="eyebrow">The answer, in brief</p>
+  __SUMMARY__
+</div>
+</section>
+
+<section class="col">
+<h2><span class="num">01</span> Words used on this page</h2>
+<dl class="glossary">
+  <dt>Ideal planner</dt>
+  <dd>A program that, for every combination of food energy, injury, body temperature and place, works out
+  the choice with the best long-run reward under the world's rules. It knows its body state exactly and
+  never makes a mistake, so it shows what the rules reward, not what a trained agent does. It maximises the
+  environment's own reward (the decrease in the body's distance from its comfortable state, minus 100 on
+  death) with discount 0.95, the training runs' own setting.</dd>
+  <dt>Value iteration</dt>
+  <dd>How the planner is solved: every state's value is repeatedly replaced by the best one-step reward plus
+  the discounted value of where that choice leads, until the values stop changing.</dd>
+  <dt>Discount</dt>
+  <dd>How much a reward one step later counts compared with one now (0.95: about a 20-step horizon).</dd>
+  <dt>Start states</dt>
+  <dd>The body states a training episode can begin in: food energy 0&ndash;200, injury 0&ndash;100, body
+  temperature &minus;10 to +5&deg;, the agent standing on open ground. The planner's grid has {{n_starts}} of
+  them; shares on this page are shares of these.</dd>
+  <dt>Hide / eat / other</dt>
+  <dd>The planner's best next move, grouped: <em>hide</em> = go to or stay in a bush; <em>eat</em> = go to
+  food or eat; <em>other</em> = warm up at a fire or stay in the open.</dd>
+  <dt>Near-tie</dt>
+  <dd>A start state where the best "hide" move and the best "eat" move are worth almost the same (within 1
+  reward unit for the near-tie share; within 0.5 when "ties dropped" readings leave such states out).</dd>
+  <dt>Hungry start states</dt>
+  <dd>Start states with food energy below 100, the setpoint the reward pulls toward ({{hungry_frac}} % of all
+  start states). Above 100, eating only moves the body away from its setpoint, so it is never best.</dd>
+  <dt>Half factorial</dt>
+  <dd>A design that tests four two-level groups in 8 of the 16 possible combinations, chosen so each group's
+  effect can still be estimated: the average of the four worlds where it is new minus the four where it is
+  not (its <em>main effect</em>). The price is that each main effect is mixed with a three-way interaction of
+  the other groups.</dd>
+  <dt>Bush healing</dt>
+  <dd>Resting in a bush heals 25 times faster than resting in the open (5 injury points per rest step). The
+  user's rule fixes this in training; it is changed on this page only inside the planner, for understanding.</dd>
+</dl>
+</section>
+
+<section class="col">
+<h2><span class="num">02</span> Motivation: what kills trained agents</h2>
+<p>These figures read already-aggregated counts from 27 million recorded evaluation episodes (2026-10-11):
+the Wave-2 agents of levels 02&ndash;06, one ordinary and one modulated agent per level, and, for level 05,
+also the agents of the single-channel-smell study. The Wave-2 "level 06" was recorded on 2026-09-22, before
+the levels were renumbered on 2026-09-30; that world is today's level 07 (sensory noise) and is labelled so.
+At level 05 the ordinary agent survives {{a_surv}} % of episodes, starves in {{a_starv}} % and dies of injury
+in {{a_inj}} % (Figure 1); predators cause {{a_pred_of_inj}} % of those injury deaths.</p>
+
+<figure>
+  <p class="cue" hidden>Wider than this column — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="a1_endings_by_level" alt="Stacked bars, one per trained agent from level 02 to the old level 06. Survival to 500 steps falls from 99 percent at level 02 to about 26 percent at the old level 06; starvation takes about a quarter to a third of episodes from level 03 on, and injury deaths grow from about 10 percent at level 03 to about 47 percent at the old level 06. Cold deaths are a thin sliver."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:a1_endings_by_level__
+  <figcaption>
+    <span><b>Figure 1 — injury deaths grow level by level; at level 05 they end {{a_inj}} % of the ordinary
+    agent's episodes.</b> Ordinary and modulated agents end their episodes in almost the same proportions at
+    every level.</span>
+    <span><b>Axes.</b> Horizontal: share of the agent's episodes, percent, by how the episode ended (bars sum to
+    100 %). Vertical: one row per trained agent, by level and agent kind; "old level 06" is today's level 07.</span>
+    __DATA:a1_endings_by_level__
+    <span><b>How it is computed.</b> Each trained agent's evaluation store holds 1,000,000 episodes of its
+    final checkpoint in its own training world, each run until death or the 500-step cap. The episode
+    table records why each episode ended (its termination reason): survived to the cap, starvation (food
+    energy reached 0), injury (injury reached 100, from any source: a predator, a trap &mdash; the config's
+    <code>hiding_predator</code>, a trap with no smell &mdash; or a rock), cold (body temperature below its
+    limit) or over-eating (food energy reached 200). The bars are counts divided by the 1,000,000 episodes,
+    so no sampling error worth drawing remains. Over-eating ends a handful of episodes in nine million and is
+    listed in the data table rather than drawn. The counts come from
+    <code>predator_deaths.py</code>, which read the stores once on 2026-10-11 and saved the totals; this
+    figure reads only those totals. Ordinary agents have a plain recurrent network; modulated agents add a
+    side network that rescales it by body state. <b>What this figure does not show:</b> which source caused
+    each injury death (Figure 2 splits predators from traps), how long agents lived before dying, or agents
+    trained in the eight candidate worlds, which do not exist yet.</span>
+  </figcaption>
+</figure>
+
+<p>Where are agents when the fatal hit comes? At level 05, {{a_ate_share}} % of predator deaths fall in the
+twenty steps after eating, but that is mainly because agents spend {{a_ate_steps}} % of their steps there.
+Per step, heading to food ({{a_rate_tow}} deaths per 1,000 steps) and roaming ({{a_rate_oth}}) are about four
+times as dangerous as the period just after eating ({{a_rate_ate}}), and no store has a single death in a bush
+(Figure 2).</p>
+
+<figure>
+  <p class="cue" hidden>Wider than this column — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="a2_predator_risk_by_activity" alt="Two grouped bar panels with one row of three bars per level. Left, visible predators: fatal hits per 1,000 steps are near zero at level 02 and below 1 at level 03; at levels 04 and 05 they are about 1.1 just after eating and about 4.3 to 4.7 when heading to food or roaming; at the old level 06 about 1.2, 6.3 and 8.0. Right, traps: all rates below 1.5, highest at the old level 06."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:a2_predator_risk_by_activity__
+  <figcaption>
+    <span><b>Figure 2 — per step outside a bush, heading to food and roaming carry about four times the predator
+    risk of the period just after eating.</b> Traps kill far less often than visible predators, except at level 02,
+    where predators barely kill at all.</span>
+    <span><b>Axes.</b> Horizontal, both panels on the same scale: fatal hits per 1,000 steps spent in the
+    activity. Vertical: level. Bar shade: the activity (light = just ate, mid = heading to food, full = roaming).
+    Left panel:
+    deaths from a visible predator; right panel: deaths from a trap.</span>
+    __DATA:a2_predator_risk_by_activity__
+    <span><b>How it is computed.</b> For every injury death, <code>predator_deaths.py</code> found the last
+    step on which the agent took damage and recorded what hit it (a visible predator, a trap, or something
+    else such as a rock) and what the agent was doing. The activity is a working definition, not a measured
+    intention: "just ate" means the agent ate on at least one of the last 20 steps; "heading to food" means
+    this step brought it closer to the nearest food item; "roaming" is any other step outside a bush. Every
+    step outside a bush after the first was counted into one of the three, giving the exposure. The rate is
+    fatal hits in the activity divided by steps in it, times 1,000; both agents of a level are pooled.
+    Steps in a bush are left out because no store records a single predator or trap death there: animals
+    cannot enter a bush. A hit on the same step as the death and a hit a few steps earlier both count, since
+    a hit lands over three steps. <b>What this figure does not show:</b> non-lethal hits, deaths from rocks,
+    or whether the agent could have seen the predator coming; and "heading to food" also catches steps that
+    approach food by accident while doing something else.</span>
+  </figcaption>
+</figure>
+
+<p>Agents are also hungrier than usual when the fatal hit comes. At level 05, {{a_fat20}} % of fatal predator or trap
+hits come when food energy is below 20, against {{a_all20}} % of all steps outside a bush (Figure 3). That is consistent
+with hunger pushing agents out when it is risky, though the figure cannot show cause.</p>
+
+<figure>
+  <p class="cue" hidden>Wider than this column — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="a3_hunger_at_fatal_hit" alt="Two distributions of food energy from 0 to 200. All steps outside a bush, grey, peak sharply just below the setpoint of 100, median 95. Steps before a fatal predator or trap hit, red, are spread far more widely, with a second peak near zero food energy, median 60."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:a3_hunger_at_fatal_hit__
+  <figcaption>
+    <span><b>Figure 3 — fatal hits come disproportionately when the agent is very hungry.</b> Most steps outside a
+    bush are spent near the setpoint; the step before a fatal hit is spread across all food levels, with a
+    second peak near empty.</span>
+    <span><b>Axes.</b> Horizontal: food energy on the step before, 0&ndash;200 (100 is the setpoint the reward
+    pulls toward), in bins of 5. Vertical: share of the steps in each group falling in each bin, percent; each
+    curve sums to 100 %, so the two compare in shape, not in count.</span>
+    __DATA:a3_hunger_at_fatal_hit__
+    <span><b>How it is computed.</b> The four level-05 agents are pooled: the ordinary and modulated Wave-2
+    agents and the two agents of the smell study trained on the unmodified level-05 body. For every injury
+    death caused by a visible predator or a trap outside a bush, the agent's food energy (its satiation, which
+    at level 05 equals nutrition) is read on the step before the fatal hit, so the hit's own step does not
+    move it. The comparison curve is the food energy before every step spent outside a bush in the same
+    episodes, after the first step. Both are binned in steps of 5 and divided by their own totals, so each
+    curve is a distribution; the medians are given in the legend. Comparing shapes this way shows whether
+    deaths are over-represented at some hunger level relative to the time spent there. <b>What this figure
+    does not show:</b> whether hunger caused the deaths. Hungry agents take more risks, but they are also
+    the ones whose episodes lasted long enough to run low; and deaths from rocks, and deaths inside a bush
+    (there are none), are not included.</span>
+  </figcaption>
+</figure>
+
+<p>Each extra predator is costly. At level 05, episodes with no predator survive {{a_cnt0}} % of the time, with
+one predator {{a_cnt1}} %, with two {{a_cnt2}} % (Figure 4).</p>
+
+<figure>
+  <p class="cue" hidden>Wider than this column — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="a4_survival_by_predator_count" alt="Lines of survival to 500 steps against the number of visible predators, one per level, labelled at their right ends. With no predator, 70 to 85 percent survive; with one, 7 to 60 percent; with two, 1 to 25 percent. Level 03 is highest and level 07 (old 06) lowest."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:a4_survival_by_predator_count__
+  <figcaption>
+    <span><b>Figure 4 — survival collapses with the first predator, at every level from 03 on.</b> Level 02
+    always has exactly one, slow predator and survives {{a_l02}} % of episodes; as a single point it is given here
+    and in the data table, not drawn.</span>
+    <span><b>Axes.</b> Horizontal: number of visible predators drawn for the episode (0, 1 or 2). Vertical: share
+    of those episodes that survive the 500-step cap, percent. One line per level, named at its right end and
+    told apart by grey shade (level 05 darkest and thickest).</span>
+    __DATA:a4_survival_by_predator_count__
+    <span><b>How it is computed.</b> The episode table of each store records, for every episode, which animals
+    and resources were active. <code>by_predator_count.py</code> counted, for each number of visible
+    predators (animals whose class is predator; traps are counted separately and are not included here),
+    how many episodes ended by survival to the cap and by each cause of death. This figure divides survivors
+    by all episodes with that predator count, pooling the level's two agents. The predator count is drawn at
+    random when an episode starts, so each count's episodes are otherwise comparable within a level. Levels
+    differ in more than predators (food, cold, sensing), so compare the shapes of the lines rather than their
+    heights across levels. <b>What this figure does not show:</b> the predators' traits (Figure 5 does that
+    for one-predator episodes), the number of traps, or survival time; and it is not a per-step hazard, so it
+    mixes how often predators kill with how long agents live without them.</span>
+  </figcaption>
+</figure>
+
+<p>Which predators kill? In level-05 episodes with exactly one predator, survival falls steeply with the
+predator's sight (Figure 5). A predator that notices the agent from 3 cells and pounces from 3 &mdash; the
+setting of today's lookalike world &mdash; leaves {{a_s33}} % of episodes alive; with a pounce reach of 2,
+{{a_s32}} %. A pounce only fires during a chase, and a chase ends once the agent is more than 1.5 &times;
+the predator's sight away (<code>core.py</code>, <code>_hunt_step</code>), so at sight 1 the pounce reach
+makes no difference ({{a_s1}} % survive either way).</p>
+
+<figure>
+  <p class="cue" hidden>Wider than this column — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="a5_sight_pounce" alt="Two line panels against predator sight from 1 to 7 cells, dashed for pounce reach 2 and solid for 3. Left: survival falls from 55 percent at sight 1 to about 2 percent at sight 6 and 7; pounce reach 3 is lower than 2 at sight 2 to 5. Right: injury deaths rise from 27 percent at sight 1 to about 50 percent for pounce 2 and 65 to 71 percent for pounce 3."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:a5_sight_pounce__
+  <figcaption>
+    <span><b>Figure 5 — predators that see farther kill more; a longer pounce adds to it once sight is 2 or
+    more.</b> Sight 3 with pounce 3, today's lookalike setting, is among the deadlier combinations.</span>
+    <span><b>Axes.</b> Horizontal, both panels: the predator's sight (<code>detection_range</code>), cells.
+    Vertical, left: share of episodes surviving the 500-step cap, percent; right: share ending in an injury
+    death, percent. Line style: pounce reach (<code>attack_range</code>), dashed = 2 cells, solid = 3 cells.</span>
+    __DATA:a5_sight_pounce__
+    <span><b>How it is computed.</b> From 20 level-05-world agents (the two Wave-2 agents and the 18 agents of
+    the single-channel-smell study, whose worlds differ from level 05 only in how animals smell),
+    <code>one_predator_traits.py</code> kept the {{pq_eps}} episodes with exactly one visible predator and
+    read that predator's sampled traits. Sight is drawn uniformly from 1&ndash;7 and pounce reach from 2&ndash;3,
+    independently, per episode, so the fourteen combinations have about 475,000 episodes each.
+    <code>one_predator_aggregate.py</code> reduced the table to counts per sight, pounce and number of traps;
+    this figure sums over traps and divides survivors and injury deaths by the episodes in each combination.
+    The injury deaths include trap deaths, about a tenth of the total; Figure 13 shows the same data as a
+    per-step hazard with the trap part removed. <b>What this figure does not show:</b> the effect of the
+    predator's other traits (stamina, pounce delay), or what happens with two predators; and these are
+    today's trained agents, whose ability to evade a given predator is part of every number here.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">03</span> The candidate worlds</h2>
+<p>The planned experiment (design: <code>docs/<wbr>experiments/<wbr>active/<wbr>hypervigilance/<wbr>LOOKALIKE_HALF_FACTORIAL_L05.md</code>)
+starts from today's lookalike world &mdash; level 05 on a 10 &times; 10 grid, 500-step episodes, a hunting
+predator and a harmless rabbit that smell the same &mdash; and changes four groups of settings. Bush healing
+is unchanged in every world.</p>
+__TABLE:t_groups__
+<p>A full design would need all 16 combinations; the half factorial uses 8, with D set to the product of the
+other three signs. World 1 is today's lookalike world. In the next table, predator odds are relative to level 05,
+energy per item is food energy net of the per-step drain, and trap hits, rock hits and injury are per 100 travel
+steps or per travel step outside a bush.</p>
+__TABLE:t_worlds__
+<p>The right-hand columns are the numbers the planner was given for each world; section 04 explains where they
+come from.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">04</span> How each world enters the planner</h2>
+<p>The planner reuses the internal-state interaction study's model of a reduced level 05: five places (open
+cold ground, a cold bush, a bush on a fire ring, an open fire ring, and a food item), trips of fixed length
+between them, two maps (with and without a bush beside a fire, 41 % / 59 % of episodes), and the exact body
+rules. Its body update was checked against the environment's own code on {{vb_sets}} settings, including
+every candidate world's config as loaded and food energy 16 per bite, {{vb_n}} random states each (largest
+difference {{vb_max}}, no disagreement on deaths). The new hazard code reproduces the old planner's values
+exactly when fed the old study's measured hit odds (largest value difference {{vp_v}}), and the rebuilt
+level 05 matches the old study's result (survival {{v3_new}} % vs {{v3_old}} %; hide best in {{v3_newhide}} %
+vs {{v3_oldhide}} % of start states, on the map without a warm bush). The five-place model itself and its fixed
+trips are <em>not</em> validated against the real map.</p>
+<ul>
+  <li><b>Predator.</b> The planner sees a chance of being hit, sized like a real predator hit (15&ndash;120
+  injury), on every step outside a bush. Its level-05 value comes from the old study's recordings of trained
+  agents: hits of 60 or more can only be predators, giving {{p_pred_move}} predator hits per moving step.
+  Each world scales that by how deadly its predators are relative to level 05 (Figure 13, left), times the
+  expected number of predators. Sight 3 with pounce 3 is a deadly combination ({{lam33}} injury deaths per
+  1,000 steps outside a bush, against {{lam05}} for level 05's mix; the ratio is taken after the trap part is
+  removed), so the lookalike setting gives
+  {{scaleAm}} &times; level 05's hit odds; the new setting, sight and pounce 2&ndash;3 with exactly one
+  predator, averages {{lamAp}} and gives {{scaleAp}} &times;. <b>A+ therefore means lower model hazard</b>,
+  as faced by today's trained agents with their evasion skill.</li>
+  <li><b>Food.</b> Bites per item and energy per bite are the configs'. The trip to the next item is the median
+  distance to the nearest of 1&ndash;4 items ({{trip14}} steps, the old study's measured value) or 1&ndash;3
+  items ({{trip13}} steps), on a 10 &times; 10 grid. After each bite the item moves with probability one over
+  its bites, and the trip is paid again.</li>
+  <li><b>Traps and rocks.</b> When visible, the trained agents' own measured hit rates, scaled by the expected
+  count ({{trapvis}} trap hits per 100 travel steps in world 1). When invisible, the planner assumes the agent
+  cannot route around them: a hit on a travel step has probability equal to their density, count / 100 cells
+  ({{trapinv_min}}&ndash;{{trapinv_max}} trap hits per 100 travel steps). This is an assumption, probably too
+  high: a remembering agent would avoid a trap after the first hit.</li>
+</ul>
+</section>
+
+<section class="col">
+<h2><span class="num">05</span> The pre-registered verdict</h2>
+<p>Before any world was solved, the rule was written down (<code>docs/<wbr>experiments/<wbr>active/<wbr>rebalance_planner/<wbr>PREREGISTRATION.md</code>): a world <strong>offers a real choice</strong> if
+hiding is the best move in at least 20 % of start states <em>and</em> eating is the best move in at least
+20 %. What that bar really asks: eating is best in about 0 % of start states whose food energy is above 100,
+so 20 % of all start states means about {{bar_hungry}} % of the hungry ones.</p>
+<p><strong>No world meets it.</strong> Hiding is best in {{hide_min}}&ndash;{{hide_max}} % of start states and
+eating in {{eat_min}}&ndash;{{eat_max}} % (Figure 6; level 05: {{l05_hide}} % and {{l05_eat}} %). The closest is
+world 4 (the new predator setting, fewer and bigger food items) at {{w4_eat}} % ({{w4t4_eat}} % with a food trip of 4
+instead of 5). Only {{nt_min}}&ndash;{{nt_max}} % of start states have hide and eat within 1 reward unit of
+each other (table below Figure 6).</p>
+
+<figure>
+  <p class="cue" hidden>Wider than this column — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="r1_decision_balance" alt="Dot plot, one row per world from level 05 to world 8. Hide in a bush is best in 64 to 77 percent of start states, far right of the 20 percent line; go out to eat sits at 7 to 15 percent, left of the line; other sits at 16 to 22 percent. Every row is labelled one-sided."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:r1_decision_balance__
+  <figcaption>
+    <span><b>Figure 6 — in every world, hiding is the best move in about two-thirds or more of start states and
+    eating in at most {{eat_max}} %.</b> The pre-registered bar needs both at 20 %.</span>
+    <span><b>Axes.</b> Horizontal: share of training start states on open ground whose best move is in each
+    group, percent (the three dots of a row sum to 100 %). Vertical: one row per world; signs give groups
+    A, B, C, D at their current (&minus;) or new (+) value. Dotted line: the 20 % bar. Right-hand text: "real
+    choice" when both hide and eat reach 20 %, otherwise "one-sided".</span>
+    __DATA:r1_decision_balance__
+    <span><b>How it is computed.</b> For each world, the planner is solved by value iteration on a grid of
+    51 food levels &times; 26 injury levels &times; 61 temperatures, in each of five places, on both maps.
+    In every start state &mdash; the agent on open ground, any food energy and injury, body temperature between
+    &minus;10 and +5&deg; &mdash; the move with the highest value is read and assigned to a group: go to a bush
+    (hide), go to food (eat), or go to a fire ring or stay in the open (other). The shares of the two maps are
+    combined with weights 0.59 and 0.41, the share of episodes without and with a bush beside a fire. Near-ties
+    are kept, as pre-registered; the table below also gives the shares with them dropped. The threshold, the
+    measure and the pooling were fixed before any world was solved (PREREGISTRATION.md). <b>What this figure does
+    not show:</b> how often the planner's own policy is in each state (Figure 9 shows time use), the choice
+    from inside a bush, or anything about trained agents. A share of start states is a share of possible
+    situations, not of time: an agent that hides heals quickly and then spends its time elsewhere.</span>
+  </figcaption>
+</figure>
+
+<p>Per world, in percent of start states (near-tie: hide and eat within 1 reward unit of each other; ties
+dropped: states whose best two groups are within 0.5 reward units left out):</p>
+__TABLE:t_decision__
+
+<p>The choice maps show where the boundary lies (Figure 7). When the agent is not hungry, injury above about
+20 sends it to a bush. When it is hungry, it tolerates more injury before hiding: the boundary slopes from about
+20 up to about 60 as food energy falls. When it is fed and barely injured, the best move is "other" &mdash;
+mostly warming up &mdash; not eating.</p>
+
+<figure>
+  <p class="cue" hidden>Wider than this column — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="r2_choice_maps" alt="Nine small maps of food energy against injury. In every map, blue (hide) fills everything above injury about 20 for food above about 70; green (eat) fills a wedge at low food energy whose top slopes from injury about 60 near empty down to about 20 at food 70; grey (other) fills the strip of low injury and food above 70. The green wedge is largest in worlds 3, 4 and 8 and smallest in worlds 1 and 5."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:r2_choice_maps__
+  <figcaption>
+    <span><b>Figure 7 — the choice between hiding and eating is settled by injury when fed and by a sloping line
+    when hungry.</b> The eat region grows with fewer, bigger food items (worlds 3, 4, 7, 8) and shrinks when hazards
+    are invisible.</span>
+    <span><b>Axes.</b> Each panel, horizontal: food energy, 0&ndash;200 (100 is the setpoint). Vertical: injury,
+    0&ndash;100 (100 is death). Colour: the best move at that body state; pale cells are near-ties (the best two
+    groups within 0.5 reward units). All panels share both scales.</span>
+    __DATA:r2_choice_maps__
+    <span><b>How it is computed.</b> These are slices of the same solutions as Figure 6: the agent on open
+    ground, on the map without a bush beside a fire (the more common one, 59 % of episodes), at body temperature
+    &minus;2.5&deg;, the middle of the start range. At each grid point the best move is coloured by its group.
+    A cell is pale when the second-best group is within 0.5 reward units of the best, which marks where the
+    planner's preference is weak. Reading a map: a horizontal boundary means injury alone decides; a sloping one
+    means food energy and injury decide together. The strip at injury 100 is grey because the agent is already
+    dead there, and the thin column at food 0 likewise. <b>What this figure does not show:</b> other body
+    temperatures (colder bodies shift states toward "other"), the map with a warm bush (where the warm bush
+    absorbs warming, so hiding covers more), or how often a real episode passes through each cell.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">06</span> What the planner's own policy does</h2>
+<p>Following the planner's best moves from 4,000 random start states per map for 500 steps gives survival and
+time use. Survival ranges from {{surv_min}} % (world {{surv_min_w}}) to {{surv_max}} % (world {{surv_max_w}});
+level 05 gives {{l05_surv}} % and world 1 {{w1_surv}} % (Figure 8). Almost every death is from a hit: the
+{{starv_early}} % or so who starve all start nearly empty and die in the first 20 steps. These survival numbers
+inherit the predator hazard as faced by today's trained agents, so they are a guide, not a forecast.</p>
+
+<figure>
+  <p class="cue" hidden>Wider than this column — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="r3_survival_causes" alt="Stacked bars, one per world. Survival to 500 steps ranges from 49 percent in world 5 to 74 percent in world 4. Predator deaths are the largest cause, 17 to 39 percent; trap deaths reach 9 to 15 percent in the four worlds with invisible hazards (5 to 8) and about 1 percent elsewhere; starvation is about 3 percent everywhere."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:r3_survival_causes__
+  <figcaption>
+    <span><b>Figure 8 — under the planner's policy, predators kill most, invisible traps add a share, and nobody
+    starves after the first steps.</b> Rock deaths are under 1 %; no world has a death from cold or over-eating.</span>
+    <span><b>Axes.</b> Horizontal: share of starts, percent, by outcome after 500 steps (bars sum to 100 %).
+    Vertical: one row per world.</span>
+    __DATA:r3_survival_causes__
+    <span><b>How it is computed.</b> For each world and map, 4,000 start states are drawn the way training
+    episodes start (food energy 0&ndash;200, injury 0&ndash;100, temperature &minus;10 to +5&deg;, open ground).
+    Each is followed step by step: at every decision the planner's best move at the nearest grid state is
+    taken, the body is updated by the validated body rules, and on every step outside a bush a hit is drawn
+    from that world's per-source odds (predator, trap, rock), so a hit's source is known when it kills.
+    Food moves after a bite with probability one over its bites. The two maps are combined 0.59 / 0.41. With
+    4,000 starts per map, a share has a standard error of about 1 point. The pre-registration said 2,000
+    starts; the code ran 4,000, which only narrows the error. <b>What this figure does not show:</b> trained
+    agents (the planner knows its injury and never errs), single predator encounters (hits are random per step,
+    with no predator position), or how much trap deaths would fall if the agent remembered where traps
+    are.</span>
+  </figcaption>
+</figure>
+<p>Per world, survival and causes of death in percent of starts (Figure 8):</p>
+__TABLE:t_outcomes__
+
+<p>The map shares of Figure 6 describe possible situations; time use describes the policy. The planner spends
+{{tbush_min}}&ndash;{{tbush_max}} % of its steps in a bush (Figure 9), and much of the rest travelling between
+the fire, food and bushes; world 4, for example, is in a bush {{w4_time_bush}} % of the time and travelling
+{{w4_time_travel}} %.</p>
+
+<figure>
+  <p class="cue" hidden>Wider than this column — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="r4_time_shares" alt="Stacked bars, one per world, of where steps are spent. In a bush 21 to 45 percent; travelling 30 to 49 percent; eating about 20 percent in worlds with small food items and about 7 percent with big ones; warming on a fire ring 11 to 13 percent; other time in the open 1 to 9 percent."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:r4_time_shares__
+  <figcaption>
+    <span><b>Figure 9 — the policy spends a fifth to under half its time in a bush, and much of the rest
+    travelling.</b> Bigger food items cut eating time from about a fifth to about a fourteenth.</span>
+    <span><b>Axes.</b> Horizontal: share of all steps lived by the rollouts, percent, by where and how the step was
+    spent (bars sum to 100 %). Vertical: one row per world.</span>
+    __DATA:r4_time_shares__
+    <span><b>How it is computed.</b> The same rollouts as Figure 8. Every step lived is put in one group: in a
+    bush (including a bush beside a fire, and the arrival step of a trip into a bush); travelling (any other step
+    of a trip between places); eating; warming (resting or standing on an open fire ring); or other time in the
+    open. Shares are over all agent-steps, so agents that live longer count more, and the two maps are combined
+    0.59 / 0.41. Trips have fixed lengths in the planner (2 steps to a bush, ring or open ground; 4 or 5 to food),
+    and keeping body temperature near 0 means moving back and forth between the cold and a fire ring, which is
+    why travel is large. <b>What this figure does not show:</b> where trained agents spend their time (in the
+    real level 05 they are in a bush about a quarter of the time), the length of single bouts, or the time
+    spent searching for food, which the planner replaces with a fixed trip.</span>
+  </figcaption>
+</figure>
+<p>Per world, time use in percent of agent-steps (Figure 9):</p>
+__TABLE:t_time__
+</section>
+
+<section class="col">
+<h2><span class="num">07</span> What each group of settings does</h2>
+<p>The half factorial gives each group's main effect (Figure 10). Fewer, bigger food items (B) move the
+balance most toward eating ({{eF_B}} points) and cut the time spent eating ({{eT_B}} points). Invisible hazards (C) push it
+toward hiding ({{eA_C}}) and cost survival ({{eS_C}}); with the assumed hit density, that is an upper bound.
+The new predator setting (A) changes survival by {{eS_A}} points because, as mapped, it lowers the model's hazard
+(section 04). Hazard load (D) barely matters. None moves eating anywhere near the bar.</p>
+
+<figure>
+  <p class="cue" hidden>Wider than this column — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="r5_main_effects" alt="Grouped horizontal bars, one group per settings group, three bars each. Predator setting A: hide minus 2, eat plus 1, survival plus 12 points. Food group B: hide minus 3, eat plus 4, survival plus 5. Concealment C: hide plus 7, eat minus 3, survival minus 8. Hazard load D: all within about 1 point of zero."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:r5_main_effects__
+  <figcaption>
+    <span><b>Figure 10 — food (B) and concealment (C) move the balance by a few points in opposite directions;
+    the predator setting (A) moves survival most.</b></span>
+    <span><b>Axes.</b> Horizontal: main effect, the mean of the four worlds with the group at its new value minus
+    the mean of the four at its current value, in percentage points. Vertical: the four groups; within each,
+    bars for the share of start states where hiding is best (blue), where eating is best (green), and survival at
+    500 steps (light grey, the "survived" colour of Figures 1 and 8).</span>
+    __DATA:r5_main_effects__
+    <span><b>How it is computed.</b> Each of the eight worlds contributes its pooled decision shares (Figure 6)
+    and survival (Figure 8). A group's main effect averages the four worlds where that group is new and
+    subtracts the average of the four where it is not; because the eight worlds are balanced, every other group
+    appears equally often on both sides. In this half factorial, each main effect is mixed with one three-way
+    interaction of the other groups (for example A with B&times;C&times;D), so a large three-way interaction would
+    be read as a main effect. Level 05 and the sensitivity worlds are left out. A and C are model inputs as much
+    as world settings: A acts through the measured hazard of each sight and pounce combination, C through the
+    assumed trap density. <b>What this figure does not show:</b> uncertainty from the rollouts (about 1 point in
+    survival per world, less in the average of four), two-way interactions, or how trained agents would respond to
+    each group, which is what the planned training runs measure.</span>
+  </figcaption>
+</figure>
+<p>Main effects in percentage points (mean of the four "+" worlds minus the four "&minus;" worlds):</p>
+__TABLE:t_effects__
+</section>
+
+<section class="col">
+<h2><span class="num">08</span> Hungry start states only <span class="tag-explore">EXPLORATORY</span></h2>
+<p>Not pre-registered, and on a different denominator. Because eating is never best when food energy is above
+100, the same shares were read among hungry start states only. Eating is best in {{level05_hun}} % of them at
+level 05, {{w4_hun}} % in world 4 ({{w4t4_hun}} % with a food trip of 4), {{w3_hun}} % in world 3 and
+{{w8_hun}} % in world 8; worlds 2 ({{w2_hun}} %) and 7 ({{w7_hun}} %) are indistinguishable from level 05.
+Hiding stays best in about half or more of hungry start states everywhere (Figure 11).</p>
+
+<figure>
+  <p class="cue" hidden>Wider than this column — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="r7_hungry_states" alt="Dot plot like Figure 6 but over hungry start states only. Hide is best in 50 to 69 percent; eat in 14 to 31 percent, with level 05 at 19 percent; worlds 3, 4 and 8 sit clearly above level 05 and worlds 2 and 7 next to it."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:r7_hungry_states__
+  <figcaption>
+    <span><b>Figure 11 (exploratory) — among hungry start states, fewer and bigger food items lift eating above
+    level 05's {{level05_hun}} %; nothing lifts hiding below about half.</b></span>
+    <span><b>Axes.</b> Horizontal: share of hungry start states (food energy below 100) on open ground whose best
+    move is in each group, percent. Vertical: one row per world. Right-hand text: the eating share. Dotted line: 20 %,
+    shown for orientation only; it is not the pre-registered bar, which is over all start states.</span>
+    __DATA:r7_hungry_states__
+    <span><b>How it is computed.</b> The same solutions and the same best moves as Figure 6, restricted to start
+    states with food energy below 100 &mdash; {{hungry_frac}} % of the grid. Above the setpoint, eating only moves
+    the body away from where the reward pulls it, so the planner never eats there; leaving those states out shows
+    how the choice divides where both options are live. The two maps are combined 0.59 / 0.41 as before. This view
+    was added after the first results were seen, so it is exploratory; the 20 % line is drawn for orientation,
+    not as a test, and no world is said to pass or fail it. Differences of a few points between worlds are within
+    what the choice of grid and map weights can move. <b>What this figure does not show:</b> a verdict on any world,
+    states at or above the setpoint, or how long a real agent stays hungry, which depends on how it forages.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">09</span> What would it take? Single levers <span class="tag-explore">EXPLORATORY</span></h2>
+<p>Not pre-registered. Starting from world 8 and, separately, from world 4, one setting at a time was changed:
+predator hit odds halved or doubled, the food trip set to 4, 6 or 8 steps, and bush healing lowered to 12.5 or 5
+(Figure 12). Bush healing is fixed in training by the user's rule; it is changed here inside the planner only,
+<em>for understanding only</em>.</p>
+<ul>
+  <li><b>From world 8, no single lever brings eating to 20 %.</b> Halving or doubling the predator odds moves
+  survival ({{w8_pred05_surv}} % and {{w8_pred2_surv}} %, from {{w8_surv}} %) but barely moves the choice. Longer
+  food trips make eating <em>rarer</em> (trip 8: {{w8_trip8_eat}} %). Bush healing 5 lowers hiding to
+  {{w8_heal5_hide}} % but moves the freed share mostly to "other": eating {{w8_heal5_eat}} %. With near-ties
+  dropped, the same world reads hide {{w8_heal5_tdhide}} % / eat {{w8_heal5_tdeat}} %.</li>
+  <li><b>From world 4, bush healing 5 gives hide {{w4_heal5_hide}} % and eat {{w4_heal5_eat}} %</b>, the only
+  single-lever world where both reach 20 % with near-ties kept; bush healing 12.5 reaches it with near-ties dropped
+  (hide {{w4_heal125_tdhide}} % / eat {{w4_heal125_tdeat}} %). No predator or food-trip lever does.</li>
+</ul>
+<p>Even at bush healing 5 from world 8, hiding is still best in {{w8_heal5_hide}} % of start states. The pattern
+is consistent with fast healing plus the bush being the only hazard-free place: a hit is cheap to undo once the
+agent is safe.</p>
+
+<figure>
+  <p class="cue" hidden>Wider than this column — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="r8_lever_sweep" alt="Two dot panels, one lever per row, starting from world 8 on the left and world 4 on the right. Hide stays at 59 to 76 percent from world 8 and eat at 6 to 14 percent. From world 4, hide is 48 to 68 percent and eat 11 to 22 percent; only bush healing 5 from world 4 carries the label both at least 20 percent."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:r8_lever_sweep__
+  <figcaption>
+    <span><b>Figure 12 (exploratory) — only lowering bush healing, a planner-only change, cuts hiding much; from
+    world 4 it brings eating to {{w4_heal5_eat}} %.</b></span>
+    <span><b>Axes.</b> Horizontal, both panels on the same scale: share of training start states on open ground whose
+    best move is in each group, percent. Vertical: the lever changed (first row: the world as designed). Left: one
+    lever changed from world 8; right: from world 4. Dotted line: 20 %.</span>
+    __DATA:r8_lever_sweep__
+    <span><b>How it is computed.</b> Each row is a full planner solution of the starting world with one input
+    changed, read exactly as in Figure 6 (both maps, combined 0.59 / 0.41, near-ties kept). Predator odds multiply
+    the predator's per-step hit chance on every activity outside a bush, leaving traps and rocks alone. The food
+    trip replaces the number of steps to the next item. Bush healing replaces the 25-times healing multiplier for
+    resting in a bush; it is not a setting the training runs may change, so these rows show why the balance is
+    one-sided, not a proposal. The world-8 levers and their values were written down before that sweep was run and
+    labelled exploratory there (PREREGISTRATION.md, section 2); the world-4 sweep reuses them and was added later. The full numbers, with near-ties dropped and over hungry states, are in the
+    table below. <b>What this figure does not show:</b> combinations of levers, other values of each lever, or
+    trained agents; and "both at least 20 %" is a description, not a verdict.</span>
+  </figcaption>
+</figure>
+<p>Values in percent of start states (hungry only: of start states with food energy below 100); survival in
+percent of starts.</p>
+__TABLE:t_levers__
+</section>
+
+<section class="col">
+<h2><span class="num">10</span> Sensitivity checks</h2>
+<p>Two choices could have hidden a real choice. A food trip of 4 instead of 5 for the big-item worlds raises
+eating by about 2 points. A longer planning horizon (discount 0.99, as the old study checked) makes hiding
+<em>more</em> dominant: world 4 {{w4_g099_hide}} % hide / {{w4_g099_eat}} % eat, world 8 {{w8_g099_hide}} % /
+{{w8_g099_eat}} %. Neither changes the verdict.</p>
+<p>Values in percent; arrows run from the world as designed to the changed world.</p>
+__TABLE:t_sensitivity__
+</section>
+
+<section class="col">
+<h2><span class="num">11</span> Predator hazard, measured from trained agents</h2>
+<p>The predator numbers the planner uses (section 04) come from the deaths in Figure 5, turned into a per-step
+hazard (Figure 13).</p>
+
+<figure>
+  <p class="cue" hidden>Wider than this column — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="r6_hazard_mapping" alt="Left: injury deaths per 1,000 steps outside a bush, trap part removed, against predator sight 1 to 7; a solid line for pounce reach 3 rises from about 0.6 to about 10, a dashed line for pounce reach 2 from about 0.6 to about 4.4. Right: mean injury per travel step by source for each world: about 0.5 to 0.8 in worlds with visible hazards and 2.4 to 2.9 with invisible ones, mostly from traps."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:r6_hazard_mapping__
+  <figcaption>
+    <span><b>Figure 13 — the predator hazard rises with sight and, from sight 2, with pounce reach; invisible traps
+    dominate the planner's travel cost in worlds 5&ndash;8.</b></span>
+    <span><b>Axes.</b> Left, horizontal: predator sight (<code>detection_range</code>), cells; vertical: injury
+    deaths per 1,000 steps outside a bush, with the trap part removed (the quantity the planner uses); line style
+    gives the pounce reach, dashed = 2 cells, solid = 3 cells. Right, horizontal: mean injury per travel step
+    outside a bush, by source; vertical: one row per world.</span>
+    __DATA:r6_hazard_mapping__
+    <span><b>How it is computed.</b> Left: for each sight and pounce combination, injury deaths in the one-predator
+    episodes are divided by {{outside_share}} &times; their total steps &mdash; the share of steps level-05 agents
+    spend outside a bush ({{outside_lo}}&ndash;{{outside_hi}} across the four level-05 stores). Injury deaths include
+    trap deaths, so a common slope on the number of traps, fitted within each combination ({{trap_slope}} &times;
+    10<sup>&minus;5</sup> per trap), is subtracted at each combination's mean trap count; the lines show the result (the values before the
+    subtraction are in <code>mappings.json</code>). A world's predator
+    hazard is the simple mean over the combinations it draws, times its expected predator count, relative to
+    level 05's mix; that ratio scales the predator hit rate measured in the old study's recordings. It assumes the
+    share of encounters that kill is the same across combinations and that hazard grows in proportion to predator
+    count. Right: per-source hit odds times mean hit size, for a step of travel. <b>What this figure does not
+    show:</b> the hazard for an agent that evades better or worse than today's trained agents, which is baked into
+    every number; nor non-lethal hits. Sight 3 with pounce 2 ({{lam32}}) is slightly below sight 2 with pounce 2
+    ({{lam22}}), unexplained.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">12</span> Limits and disclosures</h2>
+<ul>
+  <li><b>The forage share is capped near 50 % by construction.</b> Eating is never best above the setpoint, which
+  is about half of all start states.</li>
+  <li><b>Invisible traps are probably overstated.</b> The planner assumes a hit on a travel step with probability
+  equal to trap density; a real agent repeats paths and can remember where it was hit.</li>
+  <li><b>Trained agents' evasion is baked into the predator hazard.</b> Survival numbers and the group A effect
+  depend on it; the decision shares depend on it much less (halving or doubling the predator odds moves them
+  by a few points, section 09).</li>
+  <li><b>The five-place model is a simplification.</b> Fixed trips, no predator position, no searching; only the
+  body update was validated against the environment, not the reduced map.</li>
+  <li><b>The objective is the environment's reward</b> with discount 0.95, not survival as such; a policy that
+  maximised survival steps could choose differently.</li>
+  <li><b>Disclosures.</b> The pre-registration (<code>docs/<wbr>experiments/<wbr>active/<wbr>rebalance_planner/<wbr>PREREGISTRATION.md</code>) said 2,000 rollouts per map; the code ran 4,000. The change of
+  group A to exactly one predator came after the first results were read; the verdict did not change. The
+  hungry-states view, the lever sweeps (world 4 added at the verdict review) and the discount-0.99 check were
+  added after the first results and are labelled exploratory or sensitivity.</li>
+</ul>
+</section>
+
+<section class="col">
+<h2><span class="num">13</span> What this means</h2>
+<p>With bush healing as it is, hiding is cheap: a typical predator hit heals in a dozen or so rest steps in a bush, and the
+bush is the only place no hazard reaches. So in the planner, hunger and injury rarely compete. When injured, the agent heals
+first and eats afterwards, and it has time to do both. The four groups of settings shift the balance by a few
+points, and fewer, bigger food items shift it the most. None makes eating and hiding comparably good across many
+body states. That might need a link between injury and hunger: for example, healing that costs food, or
+food that runs short while the agent hides. This is a <strong>hypothesis for a next study</strong>, not a
+conclusion of this one. It also leaves open what trained agents do when a predator is actually near, which only
+the planned training runs can show.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">14</span> How to reproduce this</h2>
+<ul>
+  <li>Scripts, one per figure plus the planner, mappings, validation and tables:
+  <code>scripts/<wbr>analysis/<wbr>studies/<wbr>rebalance_planner/</code> (reuses
+  <code>internal_state_interactions/<wbr>bodysim.py</code> and <code>planner.py</code> by path).</li>
+  <li>Outputs: <code>docs/<wbr>experiments/<wbr>active/<wbr>rebalance_planner/<wbr>figures/</code> &mdash;
+  <code>mappings.json</code>, <code>results.json</code>, <code>validation_body.json</code>,
+  <code>validation_planner.json</code>, one JSON per world in <code>worlds/</code>, and the aggregated real-agent
+  data in <code>data/</code>.</li>
+  <li>The real-agent aggregates were made from the trajectory stores by <code>predator_deaths.py</code>,
+  <code>by_predator_count.py</code>, <code>one_predator_traits.py</code> and <code>one_predator_aggregate.py</code>.</li>
+  <li>Pre-registration, with a timeline of what was fixed before and after the first results: <code>docs/<wbr>experiments/<wbr>active/<wbr>rebalance_planner/<wbr>PREREGISTRATION.md</code>.</li>
+  <li>Design of the candidate worlds: <code>docs/<wbr>experiments/<wbr>active/<wbr>hypervigilance/<wbr>LOOKALIKE_HALF_FACTORIAL_L05.md</code>.</li>
+</ul>
+<p>Departures from the House Style Sheet, as on the project's other analysis pages: the chrome accent and
+warning hues are moved off the figure palette; headings use Pretendard and code the reader's system monospace;
+an evidence-kind badge sits above each caption; wide tables and figures sit in scroll boxes with an overflow cue;
+exploratory sections carry an "EXPLORATORY" tag.</p>
+</section>
+
+</div>
+__HOUSE_SCRIPT__
