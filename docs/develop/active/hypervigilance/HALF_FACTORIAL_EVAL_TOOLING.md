@@ -38,8 +38,9 @@ because the pass rule needs that noise before any comparison is read.
 record enough: its per-episode files have no injury, no damage and no damage source, and its full
 recordings (kept for 10 episodes only) have injury but still no damage or source. The project's
 **trajectory store** (the large-scale recorder already used for the 27-million-episode foraging-death
-analysis) records everything needed. On a real stored level-05 run, every damaging step is
-attributed to exactly one source (predator, hidden trap or rock) with no unexplained remainder. So the
+analysis) records everything needed. On a real stored level-05 run, every damaging step has an
+identifiable source (predator, hidden trap or rock) and none is unexplained; the only overlaps are
+predator hits on a rock or trap cell, which the design already excludes from hazard events. So the
 plan builds the episode-recording driver on the trajectory-store collector and changes no recorder.
 Details and numbers in "Analysis §A1".
 
@@ -95,6 +96,7 @@ Appendix A:
 | … with **no** identifiable source | **0** |
 | trap and rock on the same step | 0 (reset placement resolves overlaps, `core.py:1461`) |
 | predator and rock on the same step | 150 (excluded by the design's event rule) |
+| predator and trap on the same step | 78 (excluded by the same rule) |
 | on an active rock cell with **no** damage (t ≥ 1) | 0 |
 | rock-only damage range | 1.0002 – 4.9999 (config 1–5) |
 | trap-only damage range | 15.001 – 44.999 (config 15–45) |
@@ -146,8 +148,17 @@ writes copies of the replication's probe scenes with constants typed into the fi
 food item of `max_consumption 6` at `[2, 5]`. It never reads the training world. Worlds 2–8 differ in
 exactly those values (predator ranges `[2, 3]`, food 9 bites with `body.food_nutrition_gain 16`,
 masked rocks and traps), so a generalised builder that **reads the world config** is needed (user
-decision 2026-10-13: scenes are rebuilt per world). `experiment-designer` is specifying the seven scene
-sets in parallel; this plan covers only the builder and its proof of equivalence on world 1.
+decision 2026-10-13: scenes are rebuilt per world). `experiment-designer` specified the seven scene
+sets in parallel (design doc §"Per-world test scenes (specification, 2026-10-13)", commit `9d64532f`):
+the scenes contain no rocks or traps, so only the predator's noticing distance and pounce reach
+(fixed 3 / 3, or drawn per episode from {2, 3} in A+ worlds), the food item's bites (6 or 9) and
+`body.food_nutrition_gain` (6 or 16) follow the world; output under
+`configs/environment/experiment/behavior_probes/lookalike_hf/w<k>/<source>/` with the same four
+sources as world 1; the existing no-healing generator is run unchanged on top; worlds 5/1, 6/2, 7/3,
+8/4 must come out identical; and the procedure run for world 1 must reproduce world 1's frozen set
+byte for byte. The old generator cannot write a `body:` override and its `--check` would reject one.
+This plan covers only the builder and its checks; producing and freezing the 728 scenes and the 49
+sweep specs (`configs/eval_sweeps/lookalike_hf/`) stays with `experiment-designer`.
 
 The test-scene sweep itself (`scripts/eval/dwell_sweep/run_sweep.py`) takes one result folder per run
 (`runs[].path`), so it cannot see the checkpoints of a run that was stopped and resumed into a second
@@ -183,7 +194,7 @@ ordinary folders are identical (checked with `diff`).
   checks the diary and `pgrep` (processes in their CPU start-up phase are invisible to `nvidia-smi`).
 - Card models: only RTX 3090, RTX 4090 and RTX 6000 Ada (user). The collector's manifest refuses to
   extend a store on a different card model than it was started on (`compute_device_kind` is
-  manifest-guarded), so one run's whole collection must stay on one card (Design §D5).
+  manifest-guarded), so one run's whole collection must stay on one card (Design §D2).
 - `scripts/eval/traj_collect/collect_worker.sh` sets no `CUDA_VISIBLE_DEVICES`, so every GPU worker
   lands on GPU 0 (README "GPU limitation"). The new driver calls the collector itself with
   `CUDA_VISIBLE_DEVICES` set, and does not use `collect_worker.sh`.
@@ -243,7 +254,8 @@ runs:
     root: results/JAX_RecurrentPPO/20261009-175459_rppo_lookalike_l05_t1none_s42
     world: 1                                # free label for the analysis (world number, "fh", …)
     agent: ordinary
-    scene_sets: [<designer's world-1 sets>] # empty list = rollouts only (fast-heal σ runs)
+    scene_specs: []                         # committed sweep specs this run takes part in; [] = no sweep
+                                            # (world 1: already swept in the pilot; fast-heal σ runs: none)
     training: {node: 110, gpu: 0}           # card it trained on (eligibility for the watcher); null for old runs
 ```
 
@@ -397,33 +409,45 @@ unchanged).
 #### D5. Test-scene builder — `scripts/eval/build_world_scenes.py`
 
 ```
-build_world_scenes.py --spec <scene-set spec YAML> [--check]
+build_world_scenes.py --world <world config> --src <probe folder> [--src ...] --out <folder>
+                      --follow <spec YAML> [--keep <prefixes>] [--check]
 ```
 
-The spec (written by `experiment-designer`, one per world and scene set):
+`--follow` names a small YAML (written by `experiment-designer`; one file serves all eight worlds)
+listing which values the scenes take **from the resolved world** and which are fixed. The content
+below is what the 2026-10-13 specification implies; the designer owns the final file:
 
 ```yaml
-world: configs/environment/experiment/basic/lookalike_hf_w2_newAD_10x10.yaml
-sources: [behavior_probes/injury_grid/neutral_clean, behavior_probes/thermal/neutral_clean]
-keep: []                                   # optional scene-name prefixes
-out: configs/environment/experiment/behavior_probes/<set name>
-copy_from_world:                           # read from the RESOLVED world config (extends chain applied)
-  - {entity_tag: pred,   fields: [properties, detection_range, attack_range, attack_success_rate]}
-  - {entity_tag: rabbit, fields: [properties]}
-  - {resource: food,     fields: [max_consumption, properties, visual_properties]}
-  - {key: body.food_nutrition_gain}
-overrides:                                 # fixed values written after copying
-  entities: {"*": {properties_std: [0, 0, 0, 0, 0]}}
-  resources: {food: {count: 1, spawn_area: [[2, 5], [2, 5]], regeneration_delay: 0}}
+from_world:                         # read from the RESOLVED world config (extends chain applied)
+  - {entity_tag: pred, fields: [detection_range, attack_range]}   # [3,3] or [2,3] per the world
+  - {resource: food,   fields: [max_consumption]}                 # 6 or 9
+  - {key: body.food_nutrition_gain}                               # 6 or 16; written as a body: block
+fixed:                              # world-1 constants, copied from the old generator
+  entities: {"*": {properties: [0.0, 0.6, 0.6, 0.0, 0.0], properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]},
+             pred: {attack_success_rate: 0.5}}
+  resources: {food: {count: 1, spawn_area: [[2, 5], [2, 5]], regeneration_delay: 0, ...}}  # the old FOOD dict
 ```
 
 Behaviour: resolve the world through the same `extends:` loader the trainer uses; for each source
-scene write `extends: <source>` plus only the copied and overridden blocks (as the world-1 generator
-does); refuse if a source scene already has resources (as today); write a header naming the spec and
-the world. `--check` (i) re-loads every output with `load_env_params` (the eval script's loader) and
-asserts that every copied value equals the world's resolved value, (ii) asserts that each output
-differs from its source only in the declared blocks. The world-1 generator is left untouched (its
-output is frozen); equivalence is proved by Checkpoint C7.
+scene write its own header comment (naming this builder and the `--follow` file; never the world, so
+paired worlds produce identical files), the `extends: <source>` line, then only the animal
+list, the resource list and (if `from_world` names a `body.` key **and** its value differs from the
+source scene's resolved value) a `body:` block. Emitting `body:` only when it changes something is
+what lets the world-1 run reproduce the frozen files byte for byte (world 1's gain equals the source
+scenes' gain; to be confirmed in C7). Refuse a source scene that already has resources (as today).
+`--check`, run with `load_env_params` (the simulator's loader, not only the YAML loader):
+(i) every `from_world` value of every output equals the world's resolved value; (ii) each output
+differs from its source only in the animal list, the resource list and the `body:` key it wrote;
+(iii) observation width equals the world's (58 here); (iv) with `--compare-to <folder>`, every file
+is byte-identical, **after removing leading `#` comment lines**, to the same-named file in another
+folder, and loads to identical params (used for world 1 against the frozen set, and for the pairs
+5/1, 6/2, 7/3, 8/4). The header is excluded because the frozen files name the old generator; a new
+file that claimed to come from it would misstate its own provenance. If the designer needs literal
+byte identity including the header, that is a one-line change to the header format, but it has to be
+decided, not assumed.
+The world-1 generator and its frozen output are left untouched. The no-healing copies are made by
+running the existing `configs/environment/experiment/behavior_probes/no_healing/generate_no_healing_variants.py`
+unchanged on the new folders (designer's specification); the builder does not reimplement it.
 
 #### D6. Test-scene sweep across split folders — `scripts/eval/dwell_sweep/run_sweep.py`
 
@@ -431,9 +455,14 @@ output is frozen); equivalence is proved by Checkpoint C7.
 checkpoint list comes from `run_lineage` (each checkpoint carries its own folder into the worklist
 line via `checkpoint_path`). Without the key, behaviour is byte-for-byte unchanged (existing specs and
 `basic_behaviour/probes.py`, which imports `list_checkpoints` and `resolve_run_dir`, are unaffected).
-The watcher writes each sweep spec on the fly under `<sweep output_dir>/_specs/` from the manifest
-(`scene_sets`), with `nodes: [<node>]` and `npar` from the watcher (Open Question 2); `run_sweep.py`
-already copies the spec into `_provenance/`.
+The sweep specs are the designer's frozen, committed files in `configs/eval_sweeps/lookalike_hf/`
+(seven per world, each listing that world's two runs). Two small additions let the watcher use them
+unchanged: a `--only-run <label>` flag (evaluate one listed run when the other is still training;
+the incremental CSV logic already makes a later second launch pick up only the missing run), and
+the existing `--nodes` override for the card's node. The six split runs need `lineage: true` in
+those specs (the designer writes it; `run_sweep.py` refuses a run whose folder has a resumed child
+when `lineage` is absent, so a forgotten flag cannot silently drop the post-resume checkpoints).
+`npar` comes from the watcher (Open Question 2).
 
 #### D7. Eval watcher — `scripts/eval/eval_watch.py`
 
@@ -467,8 +496,8 @@ Every interval:
    before the next. Order of runs: manifest order.
 5. **Launch** each job with the existing CIFS-bypass pattern (write a job script to the node's `/tmp`
    over SSH, start it with `./run_command.py --no-tail --log <log> <node> "bash <script>"`). The job
-   script runs, in order: `rollout_blocks.py` (GPU), the run's scene sweeps (`run_sweep.py` with the
-   generated spec), `readouts.py`. It traps EXIT to write a done/failed marker.
+   script runs, in order: `rollout_blocks.py` (GPU), the run's scene sweeps (`run_sweep.py
+   <spec> --only-run <label> --nodes <node>` for each spec in `scene_specs`), `readouts.py`. It traps EXIT to write a done/failed marker.
 6. **Diary.** Before launch: `diary_append.py training-start --tag hfeval_<run id> --node N --gpu G
    --cell "eval: rollouts, scenes, readouts" --wandb - --doc docs/develop/active/hypervigilance/HALF_FACTORIAL_EVAL_TOOLING.md`;
    on the marker: `training-done`. The watcher asserts that the row text it is about to write does not
@@ -501,7 +530,7 @@ root, under `scripts/<a>/<b>/<c>/<d>/` five; follow the depth rule in `SCRIPTS_D
 | `scripts/analysis/studies/half_factorial/bootstrap.py`, `minimums.py` | D4 |
 | `scripts/analysis/studies/half_factorial/scene_estimator.py` | readout (c) estimator moved out of `lookalike_pilot/build_page.py` |
 | `scripts/analysis/studies/half_factorial/readouts.py` | CLI writing per run × checkpoint JSON |
-| `configs/eval_sweeps/half_factorial/runs_l05.yaml` | the manifest: 14 new runs, world 1 seeds 42 and 43 (4 runs), six fast-heal level-05 runs (rollouts only, `scene_sets: []`). Values from the experiment doc's manifest and §A4; `experiment-designer` fills `scene_sets` |
+| `configs/eval_sweeps/half_factorial/runs_l05.yaml` | the manifest: 14 new runs (each with its world's seven sweep specs and spec labels), world 1 seeds 42 and 43 (4 runs, `scene_specs: []`, already swept), six fast-heal level-05 runs (`scene_specs: []`). Values from the experiment doc's launch manifest and §A4 |
 | `tests/utils/test_run_lineage.py` | fake folder trees: single, one resume, two resumes, aborted child, mismatched config, post-resume drop rule, `pick` ties and out-of-range |
 | `tests/analysis/test_half_factorial_readouts.py` | hand-built tiny stores (written with `src/utils/trajectory_store.build_table`) with known answers for every row of the D3 table, the source guard raising, truncation flags, the R3 filters, DiD weights, bootstrap on a constant readout (SE 0), minimums |
 | `tests/scripts/test_eval_watch_decisions.py` | the decision function of D7 with mocked cluster / diary / queue inputs: queue priority, two-check rule, pack-node-first, diary-row regex and the `lookalike_hf` assert, finished-but-diary-says-running |
@@ -511,7 +540,7 @@ Modified files:
 
 | File | Change |
 |---|---|
-| `scripts/eval/dwell_sweep/run_sweep.py` | `build_groups` (around lines 210–282) and `write_worklist` (300–318): optional `lineage: true` per run (D6). `resolve_run_dir`, `list_checkpoints`, `checkpoint_path` keep their signatures |
+| `scripts/eval/dwell_sweep/run_sweep.py` | `build_groups` (around lines 210–282) and `write_worklist` (300–318): optional `lineage: true` per run; refusal when a run has a resumed child and no `lineage`; new `--only-run <label>` flag (D6). `resolve_run_dir`, `list_checkpoints`, `checkpoint_path` keep their signatures |
 | `scripts/eval/dwell_sweep/README.md` | document `lineage: true` |
 | `scripts/analysis/studies/lookalike_pilot/build_page.py` | import the estimator from `half_factorial/scene_estimator.py` instead of defining it |
 | `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | **required by its Maintenance Contract**: §1a rows for the new bare-name/same-folder imports (`readouts.py` → its siblings; `lookalike_pilot/build_page.py` → `half_factorial/scene_estimator.py`; `eval_watch.py` → `rollout_blocks.py` if imported); §1c rows for the three new test files; §3 rows for every new file and the changed `run_sweep.py`; §4 a new cluster "half-factorial eval" (`eval_watch.py`, `rollout_blocks.py`, `half_factorial/*`, `run_sweep.py`, `traj_collect/collect_trajectories.py` as a subprocess callee, `scripts/lab/gpu_status.py` and `scripts/claude/diary_append.py` as subprocess callees) |
@@ -532,10 +561,10 @@ of the pass rule (experiment-analyzer reads the per-run JSON), any change to `wa
 | Rollouts, RTX 3090 GPU mode, ~460 episodes/s | 10,000 episodes ≈ 25 s + 5 collector start-ups × ~40 s ≈ **4 min** | 64,000 episodes ≈ 2.3 min + 32 start-ups ≈ **24 min** |
 | Store size (≈ 44 KB per episode, measured on the level-05 store) | ≈ 0.45 GB | ≈ 2.8 GB |
 | Extraction + minimum checks (CPU, 4 processes) | ≈ 2–5 min | ≈ 15 min |
-| Scene sweeps, ~50 checkpoints × the run's scene sets (world-1 pilot measured ≈ 108 core-seconds per checkpoint for the 30-scene injury grid at 30 episodes) | ≈ 3 core-hours if the designer's sets resemble the pilot's four → ≈ 45 min at 4 processes | scales with the designer's scene count |
-| **Card held per run** | **≈ 1 h** (hf and world-1 runs); **≈ 10 min** (fast-heal runs, no scenes) | ≈ 1.5–2 h |
+| Scene sweeps: ~50 checkpoints × 104 scenes × 30 episodes (world-1 pilot: 4 runs × 50 checkpoints × 30 scenes in 2 nodes × 18 processes × 600 s ≈ 3.6 core-seconds per scene-checkpoint) | ≈ 5.2 core-hours → **≈ 1.3 h at 4 processes** | the same (fixed by the scene count); more if B+ over-eating ends scenes late |
+| **Card held per run** | **≈ 1.5 h** (the 14 new runs); **≈ 10 min** (world-1 and fast-heal runs, rollouts only) | ≈ 2 h |
 
-All 24 manifest runs: about 18 card-hours typical, 40 worst case; disk about 11 GB typical, 67 GB
+All 24 manifest runs: about 23 card-hours typical, 32 worst case; disk about 11 GB typical, 67 GB
 worst case under `results/` (gitignored, NAS).
 
 ---
@@ -574,11 +603,15 @@ reload of the source that should produce them.
 - [ ] **C6 — Fast-heal configs load through the collector.** For each of the six fast-heal level-05
   runs, run `rollout_blocks.py` at the 2 M target only (one 2,000-episode block). All six stores
   validate. Fails on: the saved-config mandatory-key wall (KNOWN_BUGS row 123).
-- [ ] **C7 — Scene builder equivalence on world 1.** A world-1 spec (lookalike world, the four
-  frozen source folders, copy/override lists equivalent to the old generator's constants) written to a
-  temporary folder produces files that load (`load_env_params`) to the same params as the frozen
-  `configs/environment/experiment/behavior_probes/lookalike/` scenes, scene by scene (compare the
-  resolved env-params pytree leaves). Fails on: the builder silently missing a field the old one set.
+- [ ] **C7 — Scene builder equivalence.** (a) Built for world 1 (lookalike world, the four frozen
+  source folders, the `--follow` file) into a temporary folder: `--check --compare-to
+  configs/environment/experiment/behavior_probes/lookalike/<source>` passes for all 56 scenes (bodies
+  byte-identical, params identical). (b) Built for worlds 2 and 6 into temporary folders: the pair
+  compares identical, and world 2's predator ranges load as 2–3 / 2–3. (c) Built for world 3: food
+  loads as 9 bites and gain 16, and the `body:` block is the only non-animal, non-resource
+  difference from the source. (d) Mutation: editing one `from_world` value by hand in an output makes
+  `--check` fail. Fails on: the builder missing a field the old one set, or leaking a world value
+  into a pair that should be identical.
 - [ ] **C8 — Scene sweep path and estimator unchanged.** (a) `run_sweep.py` with `lineage: true` on
   world 1 seed 42 (one folder, so the lineage is trivial), the C7 scenes in a fresh output folder,
   `--max-checkpoints 3`: the CSV rows equal the pilot's rows in
@@ -588,7 +621,8 @@ reload of the source that should produce them.
   the estimator move. (c) A dry-run of a `lineage: true` spec for w7 ordinary lists worklist lines whose
   checkpoint paths switch folders at the seam.
 - [ ] **C9 — End-to-end on the world-1 seed 42 / 43 pair (the main acceptance test).** Run the full
-  job (rollouts at 2/4/6/8/10 M with extension, scene sweep, readouts) for the two seed-42 and two
+  job (rollouts at 2/4/6/8/10 M with extension, then readouts; readout (c) from the pilot's existing
+  sweep CSVs via `readouts.py --scenes`, since world 1 is not re-swept) for the two seed-42 and two
   seed-43 world-1 runs through `eval_watch.py --once` on a real freed card (or, if none is free yet,
   `rollout_blocks.py` + `readouts.py` by hand on a card that passes the same pre-flight). Then verify
   against ground truth, not re-derivation: (a) each store manifest's `resolved_env_config` world
