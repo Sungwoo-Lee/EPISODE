@@ -105,9 +105,43 @@ def logodds_table():
                     num=("alone", "lo0", "lo10", "dlo"), raw=("alone", "lo0", "lo10", "dlo"), min_width=760)
 
 
+SCENES = (("none", "no animal"), ("rabbitwander", "wandering rabbit"), ("rabbit", "chasing rabbit"),
+          ("pred", "predator"))
+
+
+def scene_dwell(group, agent, scene, inj):
+    """Healing off. Bush dwell (%) per checkpoint on the 2-10 M grid, averaged over checkpoints, then over seeds.
+    The chasing-rabbit test ran as its own injury grid (the gridchase folder beside grid)."""
+    vals = []
+    for s in LF.SEEDS[group]:
+        lf = LF.leaf(group, "off", agent, s)
+        if scene == "rabbit":
+            lf = lf.replace("/grid/", "/gridchase/")
+        vals.append(float(np.nanmean(LF.ser(lf, scene, inj))))
+    return float(np.mean(vals))
+
+
+def scene_table(group):
+    rows = []
+    for a in ("ordinary", "modulated"):
+        for sc, name in SCENES:
+            r = {"agent": f"{a} ({len(LF.SEEDS[group])} seeds)", "scene": name}
+            for k in LF.INJ:
+                r[k] = f"{scene_dwell(group, a, sc, k):.0f}"
+            rows.append(r)
+    D = pd.DataFrame(rows)
+    t = FB.table(D, ["agent", "scene"] + list(LF.INJ), ["agent", "scene"] + [str(int(k)) for k in LF.INJ],
+                 num=tuple(LF.INJ), min_width=600)
+    # bare injury numbers under one spanning header keep the ten columns narrow enough to fit the column
+    return t.replace("<thead><tr>", f'<thead><tr><th colspan="2"></th><th class="n" colspan="{len(LF.INJ)}">'
+                     "starting injury</th></tr><tr>", 1)
+
+
 def main():
     page = open(os.path.join(PAGE_DIR, "page_template.html")).read()
     tok = {"{{TABLE:contrast}}": contrast_table(), "{{TABLE:logodds}}": logodds_table()}
+    for g in GROUPS:
+        tok[f"{{{{TABLE:scenes_{g}}}}}"] = scene_table(g)
     curves_axes = ("Horizontal: starting injury of the test, 0 (unhurt) to 90 in steps of 10. Vertical: bush dwell, the "
                    "share of the test's 100 steps spent on the bush (%), 0&ndash;100 in every panel. Left column: the "
                    "test world with bush healing as in training; right column: the same scenes with healing switched off, "

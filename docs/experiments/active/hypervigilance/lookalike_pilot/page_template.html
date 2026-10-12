@@ -35,8 +35,9 @@ span.nw { white-space:nowrap; }
     <li><a href="#train">04 &middot; Figures 7&ndash;9: the injury-10 contrast across training</a></li>
     <li><a href="#numbers">05 &middot; All agents in numbers</a></li>
     <li><a href="#limits">06 &middot; What these results do not show</a></li>
-    <li><a href="#how">07 &middot; How it is computed</a></li>
-    <li><a href="#prov">08 &middot; Data, scenes and provenance</a></li>
+    <li><a href="#scenes">07 &middot; Hiding with each animal, healing off</a></li>
+    <li><a href="#how">08 &middot; How it is computed</a></li>
+    <li><a href="#prov">09 &middot; Data, scenes and provenance</a></li>
   </ul>
 </section>
 
@@ -158,8 +159,38 @@ span.nw { white-space:nowrap; }
   {{TABLE:logodds}}
 </section>
 
+<section class="col" id="scenes">
+  <h2><span class="num">07</span> Hiding with each animal, healing off</h2>
+  <p>An exploratory view, added after the analysis above, to look for settings that leave room for
+  hypervigilance. Each cell is bush dwell, the share of the test's 100 steps spent on the bush (%), with healing
+  switched off so the starting injury lasts the whole test. Rows: four scenes &mdash; no animal, the harmless
+  rabbit wandering, the rabbit chasing the agent, and the hunting predator. Columns: starting injury 0 (unhurt)
+  to 90. Each value is the mean over the checkpoints from 2 to 10 M training steps, then over seeds; no
+  intervals are shown. The chasing-rabbit scene was tested as a separate injury grid with the same settings.</p>
+  <div class="callout"><p><strong>Leads, not conclusions.</strong></p>
+  <ol style="margin:6px 0 0 0; padding-left:22px;">
+  <li style="margin:4px 0;">The level-05 agents hide from the chasing rabbit almost as much as from the predator
+  even when unhurt, although the two smell different, so the chasing rabbit has little room left to grow with
+  injury.</li>
+  <li style="margin:4px 0;">The lookalike-world agents rarely hide when unhurt with any animal; injury drives nearly
+  all their hiding, which leaves the most room for an animal's effect to grow with injury.</li>
+  <li style="margin:4px 0;">In the lookalike world the three animals give nearly the same hiding at every injury,
+  as designed.</li>
+  <li style="margin:4px 0;">Once any animal is present, every group is near its ceiling by injury 30, so a
+  hypervigilance signal has to be read at injury 0&ndash;20.</li>
+  <li style="margin:4px 0;">Modulated agents hide more than ordinary ones in every row, most of all with no
+  animal.</li>
+  </ol></div>
+  <h3>Lookalike-animals agents</h3>
+  {{TABLE:scenes_lookalike}}
+  <h3>Level-05 replication agents (random start temperature)</h3>
+  {{TABLE:scenes_replication}}
+  <h3>Level-05 fixed-start agents</h3>
+  {{TABLE:scenes_fixedstart}}
+</section>
+
 <section class="col" id="how">
-  <h2><span class="num">07</span> How it is computed</h2>
+  <h2><span class="num">08</span> How it is computed</h2>
   <p>Every saved checkpoint of each agent (one every 0.2 million training steps) was replayed in fixed test
   scenes, 30 episodes per checkpoint, scene and starting injury; bush dwell is the share of the 100 steps spent
   on the bush. For each checkpoint, the rabbit's extra hiding at a given injury is
@@ -178,13 +209,13 @@ span.nw { white-space:nowrap; }
 </section>
 
 <section class="col" id="prov">
-  <h2><span class="num">08</span> Data, scenes and provenance</h2>
+  <h2><span class="num">09</span> Data, scenes and provenance</h2>
   <p>Design: <code>docs/experiments/active/hypervigilance/LOOKALIKE_ANIMALS_CLOSE_POUNCE.md</code>. Training
   runs: <code>results/JAX_RecurrentPPO/20261009-1754*_rppo_lookalike_l05_*</code>. Scenes:
   <code>configs/environment/experiment/behavior_probes/lookalike/</code> (healing on) and
   <code>behavior_probes/no_healing/lookalike__*</code> (healing off) for the lookalike agents;
   <code>behavior_probes/injury_grid/neutral_clean</code> and <code>no_healing/injury_grid__neutral_clean</code>
-  for the level-05 agents. Test specs: <code>configs/eval_sweeps/lookalike/</code>,
+  for the level-05 agents. Chasing-rabbit injury grids: the <code>gridchase/</code> folders beside each <code>grid/</code>. Test specs: <code>configs/eval_sweeps/lookalike/</code>,
   <code>configs/eval_sweeps/healrep/</code>, <code>configs/eval_sweeps/healrep_noheal/</code>. Results:
   <code>results/eval/avoidance/metrics_history_rppo_lookalike/</code>, <code>&hellip;_lookalike_noheal/</code>,
   <code>&hellip;_healrep/</code>, <code>&hellip;_healrep_noheal/</code>. Figures:
