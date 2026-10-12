@@ -372,6 +372,34 @@ These definitions are shared by all readouts.
   within 20 steps) are counted and reported per world, as a number and a share. The response is
   computed on complete windows only, with the truncated-window version reported beside it.
 
+### Provisional definitions (pending plan review, 2026-10-13)
+
+The evaluation tooling plan ([[HALF_FACTORIAL_EVAL_TOOLING]]) had to fix three readings that the
+definitions above leave open. They change the numbers, so they are recorded here. They are
+**provisional until the plan review of that tooling plan**, and any change after review is recorded
+here, dated, before any result is read.
+
+- **(a) Timing of conditions.** Conditions used to classify a step or an event (injury, animal
+  distance) are read on the step **before** the outcome, not on the same step. The project's other
+  corrected analysis tools do the same.
+- **(b) Complete windows for rock hits.** A rock-hit event counts only if both the 20 steps before
+  it and the 20 steps after it lie inside the episode. Events that come too early for a full
+  "before" window are counted and reported, then left out. This adds a "before" requirement to the
+  rule above, which asked only about the "after" window (events cut short by death).
+- **(c) Trap-versus-rock difference-in-differences without the "unhurt before the hit" filter.**
+  The secondary trap-versus-rock comparison uses hazard-hit events **without** the filter that keeps
+  only hits on an unhurt agent. With that filter, a trap hit (25–60 or 15–45 damage) and a rock hit
+  (1–5 damage) would never land in the same 10-point injury bin, so the matched comparison would be
+  empty. The primary C readout keeps the filter (re-review R3).
+
+**Trap deaths are not predator deaths.** The tooling plan found that the gitignored script behind
+the 27 million-episode foraging analysis counted deaths from the hidden trap as predator deaths. The
+trap's resource type is named `hiding_predator`, and the script counted animal-pounce deaths, trap
+deaths and deaths where both hit together. So that analysis's "predator deaths while foraging" mix
+in trap deaths. Readout (a) uses **only deaths whose fatal hit came from the hunting animal**. Trap
+deaths are reported separately. The motivating claim in "Question" (agents die from the predator mostly
+while foraging) rests on the old count and has not been re-checked with trap deaths removed.
+
 ### Primary readouts, one per group (plan review C1)
 
 | Group | Primary readout | Why this one cannot be moved by the world change alone |
@@ -533,6 +561,10 @@ text is kept unchanged above; the consequences are in the next section.
 
 ### In short
 
+> **Updated 2026-10-13 (user decisions, see "Decisions on the scene questions" at the end of this
+> section):** scenes stay hazard-free, and the predator scenes keep world 1's fixed 3 / 3 in every
+> world. Only food (group B) reaches the scenes, so the sets hold two distinct contents.
+
 Each of worlds 2–8 gets its own copy of the four scene folders that world 1 was tested in, plus the
 no-healing copies of three of them. Everything about a scene stays as in world 1 (the 10×10 test
 field, the agent's start cell, the single bush, where the animal enters, the injury levels, the
@@ -627,6 +659,10 @@ evaluation seed 0. These are either the same in all eight training worlds or del
 the test scenes. Keeping them makes the eight sets comparable.
 
 ### What follows from each world's own config
+
+> **Updated 2026-10-13 (user decisions, see "Decisions on the scene questions" at the end of this
+> section):** scenes stay hazard-free, and the predator scenes keep world 1's fixed 3 / 3 in every
+> world. Only food (group B) reaches the scenes, so the sets hold two distinct contents.
 
 | World | Predator scenes: notices / pounces (cells) | Food item: bites | `body.food_nutrition_gain` | Hidden hazards, hazard counts and damage | Scenes that differ from world 1 |
 |---|---|---|---|---|---|
@@ -747,6 +783,37 @@ setting is marked.
 | d. Floor and ceiling rule | Pre-registered: a run and scene pair whose no-animal dwell (unhurt or injured) is above 90 % or below 5 % on the newest-20 mean is reported as "at ceiling" or "at floor" and left out of the group effect on (c), counted as missing (so the group can become unresolved, never a null). The 90 % bound is the lookalike design's existing ceiling rule; 5 % is new | Analysis only. It can turn a group "unresolved" | **Do** |
 | e. Cross-test in world 1's scenes | Every agent of worlds 2–8 is also tested in world 1's frozen set. All agents then meet the same scenes, so differences between worlds come only from training. It also shows how much the scene change itself moves (c) | One more full test sweep: about the same compute as the per-world sweeps (7 healing and no-healing specs × 14 runs). Can be cut to the newest 20 checkpoints (the estimator's window), about 40 % of that | **Do, newest 20 checkpoints only**, and report it as secondary. It cannot make a group pass. If (c) in the own-world and world-1 scenes disagree in sign for a group, flag the group as "scene-dependent" (Q3) |
 | f. Scene survival bound | The lookalike design's rule: a scene with newest-20 survival below 95 steps is reported, not interpreted. Applies to every world, including over-eating deaths in B+ worlds | None | **Keep** |
+
+### Decisions on the scene questions (user, 2026-10-13)
+
+The user answered the three questions raised by this specification. These decisions override the
+text above wherever they differ, and the text above is kept as written.
+
+1. **Scenes stay hazard-free in every world, as in world 1.** No rocks or traps are added to any
+   scene, including those of the hidden-hazard (C+) worlds.
+2. **The predator scenes use world 1's fixed values in every world:** it notices at 3 cells and
+   pounces from 3 cells. This replaces the "2–3 / 2–3" entries for worlds 2, 4, 6 and 8 in the table
+   above. As a result, **the only world setting that reaches the scenes is food (group B)**:
+   9 bites and nutrition gain 16 per bite in worlds 3, 4, 7 and 8. The seven sets therefore hold
+   **two** distinct contents, not three. Worlds 2, 5 and 6 equal world 1's frozen set, and worlds 3,
+   4, 7 and 8 equal one another. The builder's comparison check must confirm both groups. The
+   tooling plan's pairs (5/1, 6/2, 7/3, 8/4) become these two groups.
+3. **Cross-test in world 1's scenes: yes.** Every agent of worlds 2–8 is also tested in world 1's
+   frozen scene set, on its **newest 20 checkpoints** (the estimator's window). It is a secondary
+   result and cannot make a group pass. A group whose effect on (c) has opposite signs in its own
+   worlds' scenes and in world 1's scenes is flagged **"scene-dependent"**. Because of decision 2,
+   for worlds 2, 5 and 6 the cross-test repeats their own-scene test in identical scenes. Those runs
+   need no extra sweep: their own-scene results are used for both.
+
+**Reproduction check: header comments may differ.** The tooling plan
+([[HALF_FACTORIAL_EVAL_TOOLING]]) replaces the world-1 generator with a general builder. That
+builder reproduces world 1's frozen files byte for byte **after removing the leading `#` comment
+lines**, and it also checks that each file loads to identical simulator parameters. The header must
+differ, because the frozen files name the old generator and a new file claiming to come from it
+would misstate where it came from. This specification's reproduction check accepts that: the
+requirement is that **everything except leading comment lines** is byte-identical, and that the
+simulator's loader gives identical parameters. Literal byte identity including the header is not
+required.
 
 ## Failure modes, decided in advance
 
