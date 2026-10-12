@@ -534,20 +534,20 @@ type as the lookalike runs). Tag = WandB name, in the format
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | — | reused | w1 ordinary | `rppo_lookalike_l05_t1none_s42` | `lookalike_animals` | pilot | 42 | 110 | 0 | 2026-10-09T17:54:54 | 272ytkfm | logs/20261009_175454_rppo_lookalike_l05_t1none_s42.log |
 | — | reused | w1 modulated | `rppo_lookalike_l05_t16quad_s42` | `lookalike_animals` | pilot | 42 | 110 | 1 | 2026-10-09T17:54:57 | vthv4edn | logs/20261009_175457_rppo_lookalike_l05_t16quad_s42.log |
-| 1 | planned | w2 ordinary | `rppo_lookalike_hf_l05_w2_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 2 | planned | w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 3 | planned | w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 4 | planned | w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 5 | planned | w4 ordinary | `rppo_lookalike_hf_l05_w4_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 6 | planned | w4 modulated | `rppo_lookalike_hf_l05_w4_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 7 | planned | w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 8 | planned | w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 9 | planned | w6 ordinary | `rppo_lookalike_hf_l05_w6_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 10 | planned | w6 modulated | `rppo_lookalike_hf_l05_w6_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 11 | planned | w7 ordinary | `rppo_lookalike_hf_l05_w7_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 12 | planned | w7 modulated | `rppo_lookalike_hf_l05_w7_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 13 | planned | w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 14 | planned | w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 1 | running | w2 ordinary | `rppo_lookalike_hf_l05_w2_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 107 | cuda:0 | 2026-10-12T15:07:47 | hodrwsga | logs/20261012_150747_rppo_lookalike_hf_l05_w2_t1none_s42.log |
+| 2 | running | w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 107 | cuda:0 | 2026-10-12T15:08:06 | hzmjzl2n | logs/20261012_150806_rppo_lookalike_hf_l05_w2_t16quad_s42.log |
+| 3 | running | w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 114 | cuda:0 | 2026-10-12T15:13:10 | fp5elazc | logs/20261012_151310_rppo_lookalike_hf_l05_w3_t1none_s42.log |
+| 4 | running | w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 114 | cuda:0 | 2026-10-12T15:13:16 | mkeipck0 | logs/20261012_151316_rppo_lookalike_hf_l05_w3_t16quad_s42.log |
+| 5 | running | w4 ordinary | `rppo_lookalike_hf_l05_w4_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 114 | cuda:1 | 2026-10-12T15:13:22 | lwrw17zc | logs/20261012_151322_rppo_lookalike_hf_l05_w4_t1none_s42.log |
+| 6 | running | w4 modulated | `rppo_lookalike_hf_l05_w4_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 114 | cuda:1 | 2026-10-12T15:13:27 | wpnvxfoo | logs/20261012_151327_rppo_lookalike_hf_l05_w4_t16quad_s42.log |
+| 7 | running | w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 114 | cuda:2 | 2026-10-12T15:13:32 | 8c7yhm2p | logs/20261012_151332_rppo_lookalike_hf_l05_w5_t1none_s42.log |
+| 8 | running | w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 114 | cuda:3 | 2026-10-12T15:13:38 | 868ghfsm | logs/20261012_151338_rppo_lookalike_hf_l05_w5_t16quad_s42.log |
+| 9 | running | w6 ordinary | `rppo_lookalike_hf_l05_w6_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 107 | cuda:1 | 2026-10-12T15:13:43 | ii0erpbj | logs/20261012_151343_rppo_lookalike_hf_l05_w6_t1none_s42.log |
+| 10 | running | w6 modulated | `rppo_lookalike_hf_l05_w6_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 107 | cuda:1 | 2026-10-12T15:13:49 | kna2fm1p | logs/20261012_151349_rppo_lookalike_hf_l05_w6_t16quad_s42.log |
+| 11 | running | w7 ordinary | `rppo_lookalike_hf_l05_w7_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 112 | cuda:0 | 2026-10-12T15:08:55 | qs8mbvac | logs/20261012_150855_rppo_lookalike_hf_l05_w7_t1none_s42.log |
+| 12 | running | w7 modulated | `rppo_lookalike_hf_l05_w7_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 112 | cuda:0 | 2026-10-12T15:13:54 | jrkazhnc | logs/20261012_151354_rppo_lookalike_hf_l05_w7_t16quad_s42.log |
+| 13 | running | w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 112 | cuda:1 | 2026-10-12T15:09:06 | wsi9563u | logs/20261012_150906_rppo_lookalike_hf_l05_w8_t1none_s42.log |
+| 14 | running | w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 112 | cuda:1 | 2026-10-12T15:09:12 | plx8nfgr | logs/20261012_150912_rppo_lookalike_hf_l05_w8_t16quad_s42.log |
 
 The reused rows' result folders are `results/JAX_RecurrentPPO/20261009-175459_…_t1none_s42` and
 `20261009-175502_…_t16quad_s42`.
