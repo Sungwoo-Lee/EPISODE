@@ -1,0 +1,55 @@
+# Lookalike half-factorial: every agent (worlds 2-8, seed 42) tested in world 1's frozen lookalike scenes,
+# identical to the world-1 pilot spec lookalike_l05_neutral_rppo.yaml except name/output_dir/nodes/runs (user, 2026-10-13:
+# compare with the existing world-1 test results first). Design: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md
+# Resumed runs appear twice: <label> = original folder (checkpoints up to the stop), <label>_resumed = the resumed folder.
+name: lookalike_hf_l05_neutral
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_lookalike_hf/neutral
+probe: configs/environment/experiment/behavior_probes/lookalike/thermal__neutral_clean
+conditions: all
+episodes: 30
+nodes:
+- 107
+- 112
+- 113
+- 114
+npar: 12
+x_axis: steps
+plot_measures:
+- bush_hiding
+- survival_steps
+runs:
+- label: hf_w2_ordinary_s42
+  path: results/JAX_RecurrentPPO/20261012-150754_rppo_lookalike_hf_l05_w2_t1none_s42
+- label: hf_w2_modulated_s42
+  path: results/JAX_RecurrentPPO/20261012-150813_rppo_lookalike_hf_l05_w2_t16quad_s42
+- label: hf_w7_ordinary_s42
+  path: results/JAX_RecurrentPPO/20261012-150902_rppo_lookalike_hf_l05_w7_t1none_s42
+- label: hf_w8_ordinary_s42
+  path: results/JAX_RecurrentPPO/20261012-150913_rppo_lookalike_hf_l05_w8_t1none_s42
+- label: hf_w8_modulated_s42
+  path: results/JAX_RecurrentPPO/20261012-150919_rppo_lookalike_hf_l05_w8_t16quad_s42
+- label: hf_w3_ordinary_s42
+  path: results/JAX_RecurrentPPO/20261012-151315_rppo_lookalike_hf_l05_w3_t1none_s42
+- label: hf_w3_modulated_s42
+  path: results/JAX_RecurrentPPO/20261012-151320_rppo_lookalike_hf_l05_w3_t16quad_s42
+- label: hf_w4_ordinary_s42
+  path: results/JAX_RecurrentPPO/20261012-151326_rppo_lookalike_hf_l05_w4_t1none_s42
+- label: hf_w4_modulated_s42
+  path: results/JAX_RecurrentPPO/20261012-151331_rppo_lookalike_hf_l05_w4_t16quad_s42
+- label: hf_w5_ordinary_s42
+  path: results/JAX_RecurrentPPO/20261012-151336_rppo_lookalike_hf_l05_w5_t1none_s42
+- label: hf_w5_modulated_s42
+  path: results/JAX_RecurrentPPO/20261012-151342_rppo_lookalike_hf_l05_w5_t16quad_s42
+- label: hf_w6_ordinary_s42
+  path: results/JAX_RecurrentPPO/20261012-151350_rppo_lookalike_hf_l05_w6_t1none_s42
+- label: hf_w6_modulated_s42
+  path: results/JAX_RecurrentPPO/20261012-151355_rppo_lookalike_hf_l05_w6_t16quad_s42
+- label: hf_w7_modulated_s42
+  path: results/JAX_RecurrentPPO/20261012-151359_rppo_lookalike_hf_l05_w7_t16quad_s42
+- label: hf_w7_ordinary_s42_resumed
+  path: results/JAX_RecurrentPPO/20261012-203757_rppo_lookalike_hf_l05_w7_t1none_s42
+- label: hf_w8_modulated_s42_resumed
+  path: results/JAX_RecurrentPPO/20261012-203804_rppo_lookalike_hf_l05_w8_t16quad_s42
+- label: hf_w3_modulated_s42_resumed
+  path: results/JAX_RecurrentPPO/20261012-234627_rppo_lookalike_hf_l05_w3_t16quad_s42
