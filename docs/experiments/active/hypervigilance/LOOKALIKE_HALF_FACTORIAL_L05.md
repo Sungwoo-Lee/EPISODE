@@ -544,19 +544,38 @@ type as the lookalike runs). Tag = WandB name, in the format
 | — | reused | w1 ordinary | `rppo_lookalike_l05_t1none_s42` | `lookalike_animals` | pilot | 42 | 110 | 0 | 2026-10-09T17:54:54 | 272ytkfm | logs/20261009_175454_rppo_lookalike_l05_t1none_s42.log |
 | — | reused | w1 modulated | `rppo_lookalike_l05_t16quad_s42` | `lookalike_animals` | pilot | 42 | 110 | 1 | 2026-10-09T17:54:57 | vthv4edn | logs/20261009_175457_rppo_lookalike_l05_t16quad_s42.log |
 | 1 | running | w2 ordinary | `rppo_lookalike_hf_l05_w2_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 107 | cuda:0 | 2026-10-12T15:07:47 | hodrwsga | logs/20261012_150747_rppo_lookalike_hf_l05_w2_t1none_s42.log |
-| 2 | running | w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 107 | cuda:0 | 2026-10-12T15:08:06 | hzmjzl2n | logs/20261012_150806_rppo_lookalike_hf_l05_w2_t16quad_s42.log |
+| 2 | queued (stopped 19:48, waiting for a free card) | w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 107 | cuda:0 | 2026-10-12T15:08:06 | hzmjzl2n | logs/20261012_150806_rppo_lookalike_hf_l05_w2_t16quad_s42.log |
 | 3 | running | w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 114 | cuda:0 | 2026-10-12T15:13:10 | fp5elazc | logs/20261012_151310_rppo_lookalike_hf_l05_w3_t1none_s42.log |
-| 4 | running | w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 114 | cuda:0 | 2026-10-12T15:13:16 | mkeipck0 | logs/20261012_151316_rppo_lookalike_hf_l05_w3_t16quad_s42.log |
-| 5 | running | w4 ordinary | `rppo_lookalike_hf_l05_w4_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 114 | cuda:1 | 2026-10-12T15:13:22 | lwrw17zc | logs/20261012_151322_rppo_lookalike_hf_l05_w4_t1none_s42.log |
+| 4 | queued (stopped 19:47, waiting for a free card) | w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 114 | cuda:0 | 2026-10-12T15:13:16 | mkeipck0 | logs/20261012_151316_rppo_lookalike_hf_l05_w3_t16quad_s42.log |
+| 5 | queued (stopped 19:47, waiting for a free card) | w4 ordinary | `rppo_lookalike_hf_l05_w4_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 114 | cuda:1 | 2026-10-12T15:13:22 | lwrw17zc | logs/20261012_151322_rppo_lookalike_hf_l05_w4_t1none_s42.log |
 | 6 | running | w4 modulated | `rppo_lookalike_hf_l05_w4_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 114 | cuda:1 | 2026-10-12T15:13:27 | wpnvxfoo | logs/20261012_151327_rppo_lookalike_hf_l05_w4_t16quad_s42.log |
 | 7 | running | w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 114 | cuda:2 | 2026-10-12T15:13:32 | 8c7yhm2p | logs/20261012_151332_rppo_lookalike_hf_l05_w5_t1none_s42.log |
 | 8 | running | w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 114 | cuda:3 | 2026-10-12T15:13:38 | 868ghfsm | logs/20261012_151338_rppo_lookalike_hf_l05_w5_t16quad_s42.log |
 | 9 | running | w6 ordinary | `rppo_lookalike_hf_l05_w6_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 107 | cuda:1 | 2026-10-12T15:13:43 | ii0erpbj | logs/20261012_151343_rppo_lookalike_hf_l05_w6_t1none_s42.log |
-| 10 | running | w6 modulated | `rppo_lookalike_hf_l05_w6_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 107 | cuda:1 | 2026-10-12T15:13:49 | kna2fm1p | logs/20261012_151349_rppo_lookalike_hf_l05_w6_t16quad_s42.log |
-| 11 | running | w7 ordinary | `rppo_lookalike_hf_l05_w7_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 112 | cuda:0 | 2026-10-12T15:08:55 | qs8mbvac | logs/20261012_150855_rppo_lookalike_hf_l05_w7_t1none_s42.log |
+| 10 | queued (stopped 19:48, waiting for a free card) | w6 modulated | `rppo_lookalike_hf_l05_w6_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 107 | cuda:1 | 2026-10-12T15:13:49 | kna2fm1p | logs/20261012_151349_rppo_lookalike_hf_l05_w6_t16quad_s42.log |
+| 11 | running | w7 ordinary | `rppo_lookalike_hf_l05_w7_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 113 | cuda:0 | 2026-10-12T20:37:53 | qs8mbvac | logs/20261012_203753_rppo_lookalike_hf_l05_w7_t1none_s42.log |
 | 12 | running | w7 modulated | `rppo_lookalike_hf_l05_w7_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 112 | cuda:0 | 2026-10-12T15:13:54 | jrkazhnc | logs/20261012_151354_rppo_lookalike_hf_l05_w7_t16quad_s42.log |
 | 13 | running | w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 112 | cuda:1 | 2026-10-12T15:09:06 | wsi9563u | logs/20261012_150906_rppo_lookalike_hf_l05_w8_t1none_s42.log |
-| 14 | running | w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 112 | cuda:1 | 2026-10-12T15:09:12 | plx8nfgr | logs/20261012_150912_rppo_lookalike_hf_l05_w8_t16quad_s42.log |
+| 14 | running | w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 113 | cuda:1 | 2026-10-12T20:37:59 | plx8nfgr | logs/20261012_203759_rppo_lookalike_hf_l05_w8_t16quad_s42.log |
+
+
+**Card un-sharing, 2026-10-12 evening (user decision; reason: the RTX 4090s on 102 and 113 were free, and the goal is one run per card).**
+The six runs below were stopped with SIGINT at 19:47–19:48 (exact PID, clean exit). Training stops at the next
+iteration and SIGINT writes no final checkpoint. So a run resumes (`--load-checkpoint <original folder>/models
+--wandb-resume-id <original id>`, otherwise the same command line) from its last periodic checkpoint, and the
+episodes after that checkpoint are lost. The original results folders are kept, because they hold the checkpoints.
+
+| Run | Original folder (`results/JAX_RecurrentPPO/`) | Original log | WandB | Stopped at ep. | Resume ckpt | Now |
+|---|---|---|---|---|---|---|
+| 11 | `20261012-150902_rppo_lookalike_hf_l05_w7_t1none_s42` | `logs/20261012_150855_…w7_t1none_s42.log` | qs8mbvac | 2,324,843 | 2200046 | **resumed from checkpoint 2200046 on 113:0** at 20:37:53; new folder `20261012-203757_…w7_t1none_s42` |
+| 14 | `20261012-150919_rppo_lookalike_hf_l05_w8_t16quad_s42` | `logs/20261012_150912_…w8_t16quad_s42.log` | plx8nfgr | 1,803,024 | 1800048 | **resumed from checkpoint 1800048 on 113:1** at 20:37:59; new folder `20261012-203804_…w8_t16quad_s42` |
+| 4 | `20261012-151320_rppo_lookalike_hf_l05_w3_t16quad_s42` | `logs/20261012_151316_…w3_t16quad_s42.log` | mkeipck0 | 1,980,011 | 1800026 | queued. Planned for 102:0, but 102 picked up a foreign job (~4.7 GB, ~70 % util per card) just before launch. A resume attempt started there at 20:36:21 was stopped during startup. |
+| 5 | `20261012-151326_rppo_lookalike_hf_l05_w4_t1none_s42` | `logs/20261012_151322_…w4_t1none_s42.log` | lwrw17zc | 2,156,904 | 2000000 | queued (planned for 102:1, same reason; never launched) |
+| 2 | `20261012-150813_rppo_lookalike_hf_l05_w2_t16quad_s42` | `logs/20261012_150806_…w2_t16quad_s42.log` | hzmjzl2n | 2,201,668 | 2200035 | queued (user: one run per card; its partner w2 ordinary keeps 107:0) |
+| 10 | `20261012-151355_rppo_lookalike_hf_l05_w6_t16quad_s42` | `logs/20261012_151349_…w6_t16quad_s42.log` | kna2fm1p | 2,457,476 | 2400022 | queued (user: one run per card; its partner w6 ordinary keeps 107:1) |
+
+The queued rows keep their original node/GPU/launch/log columns until they are resumed. On WandB each resumed
+curve retraces the span between its checkpoint and its stop point, so two sets of points overlap there.
 
 The reused rows' result folders are `results/JAX_RecurrentPPO/20261009-175459_…_t1none_s42` and
 `20261009-175502_…_t16quad_s42`.
