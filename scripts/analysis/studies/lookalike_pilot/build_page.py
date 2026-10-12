@@ -133,8 +133,10 @@ def scene_table(group):
     t = FB.table(D, ["agent", "scene"] + list(LF.INJ), ["agent", "scene"] + [str(int(k)) for k in LF.INJ],
                  num=tuple(LF.INJ), min_width=600)
     # bare injury numbers under one spanning header keep the ten columns narrow enough to fit the column
-    return t.replace("<thead><tr>", f'<thead><tr><th colspan="2"></th><th class="n" colspan="{len(LF.INJ)}">'
-                     "starting injury</th></tr><tr>", 1)
+    # left-aligned so the label is visible at scroll position 0 on a phone; agent labels kept on one line
+    t = t.replace("<thead><tr>", f'<thead><tr><th colspan="2"></th><th colspan="{len(LF.INJ)}" '
+                  'style="text-align:left">starting injury &rarr;</th></tr><tr>', 1)
+    return t.replace("<tr><td>", '<tr><td style="white-space:nowrap">')
 
 
 def main():
