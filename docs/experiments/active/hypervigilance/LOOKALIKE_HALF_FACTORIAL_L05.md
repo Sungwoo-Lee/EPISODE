@@ -3,7 +3,7 @@ title: Lookalike half-factorial at level 05 — which world changes make hiding 
 topic: hypervigilance
 status: active
 created: 2026-10-11
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 wandb_tag: rppo_lookalike_hf_l05
 ---
 
@@ -511,6 +511,242 @@ tests on one readout, and a group could pass on (c) without changing its own tar
 Keeping it for D only leaves D with a readout that is not specific to D.
 
 Both choices are for the user; the design does not pick.
+
+**Decision (user, 2026-10-13, about 00:35): option 1, rebuild the test scenes for each world.**
+Seven new frozen scene sets are built, one for each of worlds 2–8, in exactly the same way as
+world 1's lookalike set (frozen 2026-10-10), so every agent is tested in scenes built on its own
+training world. World 1 keeps its existing frozen set. The specification is the next section.
+
+**The second, related choice is still open.** Whether the hypervigilance pattern (c) stays the
+primary readout for D only, or becomes primary for every group, has **not** been decided. Until the
+user decides, the design stands as written above: (c) is primary for D only.
+
+**Correction to the mismatch examples above (found while writing the specification, 2026-10-13).**
+World 1's test scenes contain **no rocks and no traps**. Every scene restates its own small list of
+obstacles (one bush, plus one campfire in the "training-like" set) and of resources (one food
+item), which replaces the training world's lists. So the first example (agents trained with hidden
+hazards "would suddenly see them as occupied cells") does not happen: no agent meets a rock or trap
+in any test scene. The other two examples (food size, predator settings) are real. The original
+text is kept unchanged above; the consequences are in the next section.
+
+## Per-world test scenes (specification, 2026-10-13)
+
+### In short
+
+Each of worlds 2–8 gets its own copy of the four scene folders that world 1 was tested in, plus the
+no-healing copies of three of them. Everything about a scene stays as in world 1 (the 10×10 test
+field, the agent's start cell, the single bush, where the animal enters, the injury levels, the
+100-step length, the rabbit-versus-no-animal conditions, the temperature handling). Only the
+settings that the world's own training config changes **and that appear in a scene** follow that
+world:
+
+- the hunting predator's noticing distance and pounce reach (group A), which appear only in the
+  predator scenes, the positive control;
+- the food item's size and the nutrition per bite (group B), which appear in every scene.
+
+Groups C (hidden hazards) and D (hazard counts and damage) change nothing in the scenes, because
+the scenes contain no hazards. Their effect on readout (c) can only come from what the agent
+learned in training. That is what D's readout was meant to measure, but it also means the scene
+sets of some worlds are identical in content (see "Which sets end up identical").
+
+### How world 1's set was built (reconstructed and reproduced 2026-10-13)
+
+**Step 1: the source scenes.** World 1's scenes are not built from the training-world config. They
+are copies of older, fixed test scenes used by the fast-bush-healing replication. Each is a
+10×10 field with the agent starting at the centre cell [5, 5], one hiding bush three cells to its
+left at [5, 2], the animal (if any) entering from the right at [5, 9], nutrition 100, a fixed start
+injury and 100 steps per episode. Four source folders were used:
+
+| Source folder (`configs/environment/experiment/behavior_probes/…`) | Name in the set | Temperature | Scenes kept |
+|---|---|---|---|
+| `thermal/neutral_clean` | "no-temperature" | neutralised: air 0 °C, body starts at 0 | none / predator / chasing harmless rabbit / wandering rabbit × injury 0 and 70 (8) |
+| `hvsmell/two_channel` | "training-like" | as in training (level 05 cold air), one campfire beside the bush at [5, 3] | the same 8 (the smell-variant scenes are left out, since smell no longer differs) |
+| `injury_grid/neutral_clean` | injury grid | neutralised | none / predator / wandering rabbit × injury 0, 10, …, 90 (30) |
+| `injury_grid/chase_neutral_clean` | injury grid, chasing rabbit | neutralised | chasing harmless rabbit × injury 0–90 (10) |
+
+The no-temperature and injury-grid sources extend `default.yaml`; the training-like source extends
+the level-05 control world of the single-channel smell study. In every case, the resolved body,
+sensory, observation-noise and water settings equal world 1's training values except the start
+state (fixed injury, fixed nutrition 100, fixed body temperature where neutralised). This was
+checked on 2026-10-13 by resolving one scene of each kind and comparing it with the resolved world-1
+training config.
+
+**Step 2: the lookalike copy.** `generate_lookalike_variants.py` (in
+`configs/environment/experiment/behavior_probes/lookalike/`) writes one file per source scene. Each
+file `extends:` its source and restates only the animal list and the resource list:
+
+- every animal smells `[0, 0.6, 0.6, 0, 0]` (spread 0), the lookalike smell;
+- the hunting predator (tag `pred`) notices at 3 cells, pounces from 3 cells, and pounces
+  successfully half the time. Its other settings come from the source: damage 15–45, stamina 30,
+  pounce cooldown 3 steps, one predator;
+- one food item of 6 bites at [2, 5]: three cells above the start, six steps from the bush, away
+  from where the animal enters. Eating therefore means leaving the bush.
+
+The generator's `--check` mode confirms that each copy differs from its source only in the animal
+and resource lists.
+
+**Step 3: the no-healing copies** (commit `e509d743`). `generate_no_healing_variants.py` (in
+`behavior_probes/no_healing/`) writes a copy of the no-temperature and both injury-grid folders
+with `body.recovery_base_rate` 0, so a start injury lasts the whole test. The training-like folder
+has no no-healing copy. Its `--check` confirms that each copy differs from its source only in that
+key.
+
+**Step 4: freeze and test specs** (commit `abd52e45`, 2026-10-10, before any checkpoint was tested).
+There are 56 scenes with healing and 48 without, and seven test specs in `configs/eval_sweeps/lookalike/`:
+four with healing (no-temperature, training-like, grid, grid-chase) and three without. Each spec
+runs 30 episodes × 100 steps per checkpoint and scene, with the test program's fixed seed 0, through
+`scripts/eval/dwell_sweep/run_sweep.py`. Results go to
+`results/eval/avoidance/metrics_history_rppo_lookalike{,_noheal}/`. The analysis reading those
+results is `scripts/analysis/studies/lookalike_pilot/figures.py`.
+
+**Reproduced.** Both generators, run on 2026-10-13 in `--check` mode with the invocations below,
+reproduce all 104 frozen files byte for byte, and the resolved-config checks pass. So the procedure
+above is complete, and the source scenes have not drifted since the freeze.
+
+```
+P=/home/vncuser/miniconda3/envs/grid_world_pain/bin/python
+$P configs/environment/experiment/behavior_probes/lookalike/generate_lookalike_variants.py \
+   --src behavior_probes/thermal/neutral_clean --src behavior_probes/hvsmell/two_channel \
+   --src behavior_probes/injury_grid/neutral_clean --src behavior_probes/injury_grid/chase_neutral_clean \
+   --keep avoid_none,avoid_pred,avoid_rabbit,avoid_rabbitwander [--check]
+$P configs/environment/experiment/behavior_probes/no_healing/generate_no_healing_variants.py \
+   --src behavior_probes/lookalike/thermal__neutral_clean \
+   --src behavior_probes/lookalike/injury_grid__neutral_clean \
+   --src behavior_probes/lookalike/injury_grid__chase_neutral_clean [--check]
+```
+
+### What is kept identical in every world's set
+
+The same four source folders and the same 56 scenes; the same three no-healing copies (48 scenes);
+the same field, start cell, bush, campfire (training-like set only), animal entry cell and paths;
+injury levels 0–90; nutrition 100; 100 steps; the same temperature handling per folder; the
+lookalike smell on every animal; the chasing and wandering rabbits unchanged; the predator's damage
+15–45, stamina 30, pounce cooldown 3 steps and success 0.5; one predator at most and one food item
+at [2, 5]; bush healing 25× (or 0 in the no-healing copies); 30 episodes per checkpoint and scene;
+evaluation seed 0. These are either the same in all eight training worlds or deliberate features of
+the test scenes. Keeping them makes the eight sets comparable.
+
+### What follows from each world's own config
+
+| World | Predator scenes: notices / pounces (cells) | Food item: bites | `body.food_nutrition_gain` | Hidden hazards, hazard counts and damage | Scenes that differ from world 1 |
+|---|---|---|---|---|---|
+| 1 | 3 / 3 | 6 | 6 | none in any scene | (reference, existing set) |
+| 2 (AD) | **2–3 / 2–3** | 6 | 6 | none in any scene | predator scenes only |
+| 3 (BD) | 3 / 3 | **9** | **16** | none in any scene | all scenes |
+| 4 (AB) | **2–3 / 2–3** | **9** | **16** | none in any scene | all scenes |
+| 5 (CD) | 3 / 3 | 6 | 6 | none in any scene | **none** |
+| 6 (AC) | **2–3 / 2–3** | 6 | 6 | none in any scene | predator scenes only |
+| 7 (BC) | 3 / 3 | **9** | **16** | none in any scene | all scenes |
+| 8 (ABCD) | **2–3 / 2–3** | **9** | **16** | none in any scene | all scenes |
+
+"2–3" means the noticing distance and the pounce reach are each drawn per test episode from {2, 3},
+independently, as in the world's training. That is the default the user's instruction implies; the
+alternative is open question Q2. A scene-level check on 2026-10-13 confirmed that the simulator's own
+loader turns a scene with these overrides into the intended values (noticing 2–3, reach 2–3, 9 bites,
+gain 16), and that the `body:` override keeps the scene's start injury and nutrition.
+
+The food count stays at one item in every world. That is inside every world's training range
+(1–4 or 1–3).
+
+### Things in world 1's procedure that do not carry over unchanged
+
+1. **Hidden hazards have nothing to act on.** The scenes contain no rocks or traps, so concealment
+   (C) and hazard load (D) change nothing in any scene, and the question of start cells on hidden
+   hazards does not arise. Adding hidden hazards to the C+ sets would break "built exactly the same
+   way", make those scenes differ from world 1's in a way only some worlds share, and add surprise
+   hits inside a test meant to hold injury fixed. **Recommendation: add none.** Open question Q1.
+2. **Over-eating becomes possible in B+ scenes.** At nutrition 100, one bite nets +14 in B+ worlds,
+   so eating 8 of the 9 bites in a row reaches 200 and kills. In world 1's scenes the whole item gives
+   only +24, so no scene death is possible from eating. This is the B+ worlds' own rule, so it stays.
+   Over-eating deaths are reported per scene, and a scene where they push newest-20 survival below
+   95 steps is reported, not interpreted (the lookalike design's existing rule).
+3. **The predator control in A+ worlds is noisier.** With four predator kinds drawn at random,
+   30 episodes per scene give about 7–8 of each kind. The predator scenes are only the positive
+   control ("does the agent hide from real danger at all"), not part of readout (c).
+4. **The generators are hard-wired to world 1 (task item 3).** `generate_lookalike_variants.py`
+   takes source folders (`--src`) but no world config. Its smell, food (6 bites), predator (3 / 3,
+   0.5) and output folder (`lookalike/…`) are constants, it cannot write a `body:` override, and its
+   `--check` would reject one (it allows differences only in the animal and resource lists). It
+   cannot produce any of the seven new sets as is. Running it for world 5 would overwrite world 1's
+   frozen folder. `generate_no_healing_variants.py` is world-agnostic: run unchanged on a new
+   folder, it writes `no_healing/<that folder's path with "/" → "__">/`. The generalisation is with
+   the parallel senior-developer plan. **No scene configs are produced here**, because the existing
+   tooling cannot produce them.
+
+### Which sets end up identical
+
+In content, world 5's set equals world 1's; world 6's equals world 2's; world 7's equals world 3's;
+world 8's equals world 4's. Each pair differs only in C and D, which the scenes do not contain. So
+seven folders hold three distinct contents. Building seven named folders anyway, as decided, keeps
+"world k's scenes" a fixed path for the analysis and costs only disk space. The builder's check must
+confirm these equalities (resolved scene configs identical within each pair). An inequality would
+mean a world config leaked into a scene where it should not.
+
+### What has to be produced (for the developer plan and the freeze)
+
+- **Scenes.** `configs/environment/experiment/behavior_probes/lookalike_hf/w<k>/<source>/` for
+  k = 2–8, with the same four `<source>` names as world 1 (`thermal__neutral_clean`,
+  `hvsmell__two_channel`, `injury_grid__neutral_clean`, `injury_grid__chase_neutral_clean`): 56
+  scenes per world. Each file `extends:` the same source scene as world 1's copy, carries the
+  lookalike changes, and adds the world's predator ranges, food bites and nutrition gain from the
+  table above.
+- **No-healing copies.** Run the existing no-healing generator unchanged on each world's three
+  folders: 48 scenes per world.
+- **Builder checks**, run with the simulator's loader (`load_env_params`), not only the YAML loader:
+  each new scene differs from its source only in the animal list, the resource list and (B+ worlds)
+  `body.food_nutrition_gain`; the loaded predator, food and gain values equal those of the world's
+  training config; observation width 58; the pairs listed above are identical; and running the
+  same procedure for world 1 reproduces the frozen world-1 set byte for byte.
+- **Test specs.** `configs/eval_sweeps/lookalike_hf/` with seven specs per world (four with
+  healing, three without), each listing that world's two runs, 30 episodes, results under
+  `results/eval/avoidance/metrics_history_rppo_lookalike_hf/w<k>/…`. These can be written once the
+  scene folders exist (the sweep tool refuses a spec whose scene folder is missing). The run paths
+  are in the launch manifest.
+- **Freeze.** One commit containing all seven sets, their checks' output and the specs, made before
+  any checkpoint of worlds 2–8 is tested. Its hash is recorded here. Any later change is a new,
+  separately named set.
+- Total: 728 scenes and 49 test specs. Test compute: 14 runs on 104 scenes each, about 3.5× the
+  lookalike pilot's test sweep (4 runs). World 1's two runs were already tested in its own set.
+
+### Difficulty across the scene sets (added at the user's request, 2026-10-13)
+
+**What differs in difficulty, given the scenes.** Because the scenes contain no hazards, the
+per-world scene sets differ in difficulty in only two ways: the predator's reach and noticing
+distance (A+; predator scenes only), and food size with over-eating risk (B+; every scene). Hidden
+rocks and traps, and hazard counts and damage (C, D), do not enter any scene. The agents, though,
+differ in what they learned. An agent from a harsh world may hide more in every scene. That
+difference is part of what the screen is meant to detect, not a scene artefact.
+
+**(1) What the readout (c) contrast cancels, and what it does not.**
+
+- *Cancelled by construction.* (c) compares the rabbit scene with the no-animal scene **inside one
+  world, at one injury level, for one agent**. Anything the two scenes share cancels: food size and
+  over-eating risk, the bush, temperature, the agent's general level of caution, and its general
+  skill in that world. That is most of the scene difficulty.
+- *Not cancelled.*
+  - Difficulty that changes **how much the rabbit itself matters**. Example: in B+ scenes the agent
+    may leave the bush once to eat a large item and then stay, giving the rabbit fewer chances to
+    interrupt eating than in 6-bite scenes. The rabbit's effect then differs for a reason unrelated
+    to hypervigilance. This is an interaction of difficulty with the animal, and no contrast inside
+    one world removes it.
+  - **Floor and ceiling.** Bush dwell is a share between 0 and 100 %. When the no-animal dwell is
+    already near 100 % (an agent that sits in the bush whatever happens) or near 0 %, the rabbit
+    cannot add or remove much, and the interaction shrinks for that reason alone. A world whose
+    agents are near a bound shows a smaller (c) without being less hypervigilant.
+  - The predator positive control in A+ worlds (four predator kinds) is not cancelled, but it is
+    not part of (c).
+
+**(2) Controls, their cost, and a recommendation for each.** The user decides; the recommended
+setting is marked.
+
+| Control | What it does | Cost | Recommendation |
+|---|---|---|---|
+| a. Identical scene geometry and seeds | Same field, bush, start cell, animal entry and paths, food cell, and the test program's seed 0 in every world | None: it is the specification above. The seed gives the same random draws at the start; trajectories still diverge once agents act differently | **Keep** (already in the spec) |
+| b. Keep hazards out of the scenes | No rocks or traps in any scene, as in world 1 | None (already the case). The alternative, adding hidden hazards in C+ worlds and keeping them away from the start cell and the bush–food path, costs a new scene design, breaks "same as world 1", and puts surprise injuries into a test that fixes injury | **Keep out** (Q1) |
+| c. Difficulty indicators per world | Report, per run and checkpoint: dwell in the unhurt no-animal scene (baseline), scene survival steps, deaths by cause (predator, over-eating, cold in the training-like set) and damage taken per episode | Analysis only. The test already records everything needed; the lookalike pilot's analysis script computes most of it | **Do** |
+| d. Floor and ceiling rule | Pre-registered: a run and scene pair whose no-animal dwell (unhurt or injured) is above 90 % or below 5 % on the newest-20 mean is reported as "at ceiling" or "at floor" and left out of the group effect on (c), counted as missing (so the group can become unresolved, never a null). The 90 % bound is the lookalike design's existing ceiling rule; 5 % is new | Analysis only. It can turn a group "unresolved" | **Do** |
+| e. Cross-test in world 1's scenes | Every agent of worlds 2–8 is also tested in world 1's frozen set. All agents then meet the same scenes, so differences between worlds come only from training. It also shows how much the scene change itself moves (c) | One more full test sweep: about the same compute as the per-world sweeps (7 healing and no-healing specs × 14 runs). Can be cut to the newest 20 checkpoints (the estimator's window), about 40 % of that | **Do, newest 20 checkpoints only**, and report it as secondary. It cannot make a group pass. If (c) in the own-world and world-1 scenes disagree in sign for a group, flag the group as "scene-dependent" (Q3) |
+| f. Scene survival bound | The lookalike design's rule: a scene with newest-20 survival below 95 steps is reported, not interpreted. Applies to every world, including over-eating deaths in B+ worlds | None | **Keep** |
 
 ## Failure modes, decided in advance
 
