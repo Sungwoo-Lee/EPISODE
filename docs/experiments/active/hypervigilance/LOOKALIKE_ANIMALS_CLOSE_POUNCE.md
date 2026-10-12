@@ -3,7 +3,7 @@ title: Lookalike animals, close pounce, small food — a world built to make inj
 topic: hypervigilance
 status: active
 created: 2026-10-09
-last_updated: 2026-10-09
+last_updated: 2026-10-11
 wandb_tag: rppo_lookalike_l05
 ---
 
@@ -422,6 +422,8 @@ To be filled after training and testing.
 
 ## Links
 
+- [[LOOKALIKE_HALF_FACTORIAL_L05]] — follow-up (2026-10-11): 8-world half-factorial rebalance built on
+  this world; this world's seed-42 runs are reused as its world 1.
 - [[FAST_HEAL_REPLICATION]] — the level-05 reference runs and agent settings.
 - [[NMN_INPUT_L05]], [[NMN_CAPACITY_GRID_L05]] — the other current level-05 hypervigilance follow-ups.
 - `docs/environment/CONFIG_CRITICAL_SETTINGS.md` — change-log entry of 2026-10-09 for this world.
