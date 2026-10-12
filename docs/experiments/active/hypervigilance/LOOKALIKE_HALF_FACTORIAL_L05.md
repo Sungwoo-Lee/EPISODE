@@ -557,7 +557,36 @@ hazards "would suddenly see them as occupied cells") does not happen: no agent m
 in any test scene. The other two examples (food size, predator settings) are real. The original
 text is kept unchanged above; the consequences are in the next section.
 
-## Per-world test scenes (specification, 2026-10-13)
+**Change of plan (user, 2026-10-13, later the same day): world 1's scenes first.** The user asked to
+"fix the test environment and see the results first". So **all 16 runs** (the 14 new runs and the two
+world-1 runs) are tested in **world 1's existing frozen scene set**, and the user looks at those
+hypervigilance results before anything else is built. For this first pass, the primary test for
+readout (c) is world 1's scenes for every world. That is **option 2** of the decision above (accept
+the mismatch), in place of option 1. The per-world scene sets are **deferred: decide after the
+world-1-scene results**. Their specification and the user's three answers on it are kept below,
+unchanged, for that later decision. So is the rest of the evaluation tooling.
+
+**Known limitation of this pass.** Agents from worlds 2–8 are tested in scenes built on a world they
+did not train in. The size of that mismatch is limited:
+
+- the scenes contain no rocks or traps, so hidden hazards (C) and hazard counts and damage (D) do not
+  appear in them at all;
+- food differs from training for worlds 3, 4, 7 and 8: 6-bite items with gain 6 per bite in the
+  scenes, against 9 bites and gain 16 in training;
+- the predator differs from training for worlds 2, 4, 6 and 8: it notices and pounces at a fixed 3
+  cells in the scenes, against a draw of 2–3 for each in training. Fixed 3 / 3 is one of the four
+  combinations those agents trained on, and it appears only in the predator scenes, which are the
+  positive control and not part of (c).
+
+A group effect on (c) from this pass is therefore read as "hypervigilance as measured in world 1's
+scenes". It is most exposed to the food mismatch in the B+ worlds.
+
+## Per-world test scenes (specification, 2026-10-13; deferred)
+
+> **Status: deferred (user, 2026-10-13). Decide after the world-1-scene results.** The first pass
+> tests every run in world 1's frozen scenes (see "Change of plan" in the open-decision section
+> above). Nothing in this section is to be built until the user has seen those results. The
+> specification and the user's three answers are kept for that decision.
 
 ### In short
 
