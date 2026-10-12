@@ -295,6 +295,15 @@ That is the commit that created the lookalike world. Reuse conditions, checked 2
 5. **Same class of card.** World 1 trained on node 110 (RTX 3090). The 14 new runs launch on
    RTX 3090-class nodes (106–112).
 
+   **Deviation at launch (2026-10-12, user decision).** Most 3090s were in use by another lab
+   member, so the runs went two per card: worlds 2, 6, 7 and 8 on RTX 3090s (nodes 107 and 112),
+   and worlds 3, 4 and 5 on RTX 6000 Ada cards (node 114). Both agents of a world share one card
+   type, so the within-world ordinary-versus-modulated comparison is not affected by the card. The
+   Ada set {w3, w4, w5} puts one or two of each group's four "new" worlds on Ada, so no group
+   contrast lies wholly on one card type. Card type can change floating-point results slightly. That
+   is expected to be far smaller than seed-to-seed variation, but it is listed here as one more
+   possible source of the offset δ described below.
+
 **Known limitation (plan review M4b): world 1 sits on the "old" side of every group contrast.**
 Any systematic difference between the two world-1 runs and the new batch moves all four group
 effects by the same amount. Possible sources are a different launch day and node, GPU
