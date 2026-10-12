@@ -5165,3 +5165,9 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # --- 2026-10-12 23:46: queued run resumed by the free-card watcher (tmp/20261012_hf_resume_watch/watch.py) ---
 # 114:2 freed when w5 t1none finished; free on two checks 10 min apart. Resumed from checkpoint 1800026 (mkeipck0).
 # [114:2] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w3_newBD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:2 --log-interval 10 --tag "rppo_lookalike_hf_l05_w3_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w3_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot" --load-checkpoint results/JAX_RecurrentPPO/20261012-151320_rppo_lookalike_hf_l05_w3_t16quad_s42/models --wandb-resume-id mkeipck0
+# --- 2026-10-13: node 113 outage (~01:26-01:43) stopped w7 t1none (ckpt 6200055) and w8 t16quad (ckpt 4800028); both queued ---
+# Resumed by the free-card watcher (tmp/20261012_hf_resume_watch/watch.py), each from its last checkpoint, same WandB id:
+# [113:0] 01:53 w4 t1none  from 2000000 (lwrw17zc) -- results/JAX_RecurrentPPO/20261012-151326_rppo_lookalike_hf_l05_w4_t1none_s42/models
+# [113:1] 01:54 w2 t16quad from 2200035 (hzmjzl2n) -- results/JAX_RecurrentPPO/20261012-150813_rppo_lookalike_hf_l05_w2_t16quad_s42/models
+# [114:3] 02:26 w6 t16quad from 2400022 (kna2fm1p) -- results/JAX_RecurrentPPO/20261012-151355_rppo_lookalike_hf_l05_w6_t16quad_s42/models
+# Full command lines: tmp/20261012_hf_resume_watch/launched_*.json
