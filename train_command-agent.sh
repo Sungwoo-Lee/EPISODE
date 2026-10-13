@@ -5170,4 +5170,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # [113:0] 01:53 w4 t1none  from 2000000 (lwrw17zc) -- results/JAX_RecurrentPPO/20261012-151326_rppo_lookalike_hf_l05_w4_t1none_s42/models
 # [113:1] 01:54 w2 t16quad from 2200035 (hzmjzl2n) -- results/JAX_RecurrentPPO/20261012-150813_rppo_lookalike_hf_l05_w2_t16quad_s42/models
 # [114:3] 02:26 w6 t16quad from 2400022 (kna2fm1p) -- results/JAX_RecurrentPPO/20261012-151355_rppo_lookalike_hf_l05_w6_t16quad_s42/models
+# [102:0] 05:29 w8 t16quad from 4800028 (plx8nfgr) -- results/JAX_RecurrentPPO/20261012-203804_rppo_lookalike_hf_l05_w8_t16quad_s42/models
+# [114:0] 06:02 w7 t1none  from 6200055 (qs8mbvac) -- results/JAX_RecurrentPPO/20261012-203757_rppo_lookalike_hf_l05_w7_t1none_s42/models
+# All 14 half-factorial runs reached 10M episodes; the watcher exited 2026-10-13 15:24.
 # Full command lines: tmp/20261012_hf_resume_watch/launched_*.json
