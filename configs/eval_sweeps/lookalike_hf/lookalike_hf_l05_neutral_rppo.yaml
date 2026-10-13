@@ -1,7 +1,7 @@
 # Lookalike half-factorial: every agent (worlds 2-8, seed 42) tested in world 1's frozen lookalike scenes,
 # identical to the world-1 pilot spec lookalike_l05_neutral_rppo.yaml except name/output_dir/nodes/runs (user, 2026-10-13:
 # compare with the existing world-1 test results first). Design: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md
-# Resumed runs appear twice: <label> = original folder (checkpoints up to the stop), <label>_resumed = the resumed folder.
+# Resumed runs appear once per session: <label> = original folder, <label>_resumed, <label>_resumed2 = later resumed folders.
 name: lookalike_hf_l05_neutral
 algo: rppo
 output_dir: results/eval/avoidance/metrics_history_rppo_lookalike_hf/neutral
@@ -53,3 +53,13 @@ runs:
   path: results/JAX_RecurrentPPO/20261012-203804_rppo_lookalike_hf_l05_w8_t16quad_s42
 - label: hf_w3_modulated_s42_resumed
   path: results/JAX_RecurrentPPO/20261012-234627_rppo_lookalike_hf_l05_w3_t16quad_s42
+- label: hf_w4_ordinary_s42_resumed
+  path: results/JAX_RecurrentPPO/20261013-015359_rppo_lookalike_hf_l05_w4_t1none_s42
+- label: hf_w2_modulated_s42_resumed
+  path: results/JAX_RecurrentPPO/20261013-015417_rppo_lookalike_hf_l05_w2_t16quad_s42
+- label: hf_w6_modulated_s42_resumed
+  path: results/JAX_RecurrentPPO/20261013-022644_rppo_lookalike_hf_l05_w6_t16quad_s42
+- label: hf_w8_modulated_s42_resumed2
+  path: results/JAX_RecurrentPPO/20261013-052940_rppo_lookalike_hf_l05_w8_t16quad_s42
+- label: hf_w7_ordinary_s42_resumed2
+  path: results/JAX_RecurrentPPO/20261013-060204_rppo_lookalike_hf_l05_w7_t1none_s42
