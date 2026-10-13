@@ -43,7 +43,7 @@ HEAL_NAME = {"on": "healing on (as in training)", "off": "healing off (test only
 HEALS = ("off", "on")
 # Figure 1's pass / no-pass marks: ink and light grey, so no hue there collides with the healing colours of
 # Figures 3-4 or the blue ramp of Figure 5 (format review 2026-10-13, register F11)
-STATUS_YES, STATUS_NO = H.INK, "#b4b9c0"   # healing off is the headline (user, 2026-10-13)
+STATUS_YES, STATUS_NO = H.INK, "#9aa0a8"   # healing off is the headline (user, 2026-10-13)
 
 
 def runs(world):
@@ -260,7 +260,7 @@ def fig_group():
         ge = D.group_effects(rt)
         y = np.arange(len(ge))[::-1]
         bar = ge["bar"].iloc[0]
-        ax.axvspan(-bar, bar, color=H.RULE, alpha=0.35, lw=0, zorder=0)
+        ax.axvspan(-bar, bar, color=H.RULE, alpha=0.2, lw=0, zorder=0)
         ax.axvline(0, color=H.INK_2, lw=0.8, zorder=1)
         for yy, (_, r) in zip(y, ge.iterrows()):
             passed = r["clears_bar"] and r["same_sign_6_8_10"]

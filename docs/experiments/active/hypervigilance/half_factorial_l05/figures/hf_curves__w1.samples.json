@@ -1,0 +1,9 @@
+[
+ {
+  "what": "16 series (agent x healing x animal), counted at injury 70",
+  "used": 320,
+  "total": 800,
+  "pct": 40.0,
+  "note": "newest 20 tested checkpoints of each run; 30 episodes each"
+ }
+]

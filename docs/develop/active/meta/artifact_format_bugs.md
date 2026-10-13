@@ -2556,3 +2556,20 @@ same figure has), never the length of the series found; any row below 100 % carr
 (e.g. "no tested checkpoint after 9.6 M"). Shared helper: `grid_row()` in
 `scripts/analysis/studies/f7b_across_runs/highlight.py`. **Check:** grep every `samples.json` for rows
 whose `used` equals `total` while the run's last checkpoint is before the grid end.
+
+### F84 — content in a non-default tab panel is never checked
+
+**What happened** (Predator, Food and Hazard Settings Screen, first review, 2026-10-13): 21 of the page's 26
+figures sit in seven hidden tab panels (one tab per training world). The layout checker's `--open-details`
+opens `<details>` but leaves `[role=tabpanel][hidden]` hidden, so those figures, their data panels and
+their width floors were never measured; the interaction checker timed out after 30 s clicking a data-panel
+summary inside a hidden panel and aborted the whole run. The page was in fact clean, which was only known
+after the reviewer patched both tools by hand. **Why both reviews miss it:** a static read sees the markup
+of every panel and assumes it renders like the first; the render tools see only the default tab, and a
+crash in the interaction run reads as a tool problem rather than as unchecked content. Sibling of F17 /
+F19 (content hidden in collapsed panels). **Rule.** On any page with a `[role=tablist]`, run the layout
+check once with every tab panel revealed (remove `hidden` from `[role=tabpanel]`), and have the interaction
+check select the owning tab (`el.closest('[role=tabpanel]')` → the tab whose `aria-controls` matches)
+before clicking anything inside a panel. **Check:** the number of figures measured equals the number of
+`<figure>` elements on the page. Tool fix pending: an `--open-tabs` flag in
+`scripts/claude/check_artifact_layout.py` and tab selection in `scripts/claude/check_artifact_interactions.py`.

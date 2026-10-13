@@ -1,0 +1,9 @@
+[
+ {
+  "what": "3 group tests (one per panel)",
+  "used": 960,
+  "total": 2424,
+  "pct": 39.603960396039604,
+  "note": "16 screen runs (8 worlds x 2 agents), newest 20 tested checkpoints each; world 1's seed-43 pair is not part of the test"
+ }
+]

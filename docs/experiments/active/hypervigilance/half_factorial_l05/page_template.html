@@ -1,0 +1,207 @@
+<title>Predator, Food and Hazard Settings Screen</title>
+{{HOUSE_STYLE}}
+<style>
+/* hue is spent on data; chrome goes to ink (register F11 amendment) */
+:root { --accent:var(--ink); --accent-text:var(--ink); --warn:var(--ink-2); }
+.wrap > .col { max-width:880px; }
+.wrap > #numbers.col { max-width:1040px; }
+#numbers > p, #numbers > ul { max-width:880px; }
+.fh { margin:0 0 2px; }
+.fh .n { font-family:var(--f-head); font-weight:600; color:var(--ink-3); margin-right:8px; }
+.toc ul { margin:0; padding-left:22px; display:flex; flex-direction:column; gap:6px; }
+details.bb-data > summary { cursor:pointer; color:var(--ink-2); font-size:14.5px; }
+details.bb-data[open] > summary { margin-bottom:8px; }
+span.ci { color:var(--ink-3); font-size:0.88em; white-space:nowrap; }
+span.nw { white-space:nowrap; }
+p.wname { margin:4px 0 0; }
+#numbers th, #group th { vertical-align:bottom; }
+.tablist { flex-wrap:nowrap; overflow-x:auto; }
+.tab { white-space:nowrap; }
+</style>
+<div class="wrap">
+
+<header class="col">
+  <p class="eyebrow">grid_world_pain &middot; hypervigilance &middot; level-05 half-factorial screen &middot; 8 training worlds &times; 2 agents, seed 42, plus world 1 at seed 43</p>
+  <h1>Predator, Food and Hazard Settings Screen</h1>
+  <p class="lede">Agents were trained in eight versions of the lookalike-animals world, each changing a
+  different mix of four settings: how the predator threatens, how food comes, whether hazards can be seen,
+  and how many hazards there are and how hard they hit. Every agent was then put through the same fixed
+  test scenes from the original world, injured or unhurt, with a harmless rabbit or no animal. The question
+  is which settings make an injured agent hide more when the rabbit is around.</p>
+</header>
+
+<section class="col toc">
+  <h4>On this page</h4>
+  <ul>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#setup">01 &middot; What was tested</a></li>
+    <li><a href="#group">02 &middot; Each setting change against the bar (Figure 1)</a></li>
+    <li><a href="#numbers">03 &middot; Every run in numbers</a></li>
+    <li><a href="#worlds">04 &middot; Each world in detail (Figures 2&ndash;4)</a></li>
+    <li><a href="#animals">05 &middot; Hiding with each animal (Figure 5)</a></li>
+    <li><a href="#limits">06 &middot; What these results do not show</a></li>
+    <li><a href="#how">07 &middot; How it is computed</a></li>
+    <li><a href="#prov">08 &middot; Data, scenes and provenance</a></li>
+  </ul>
+</section>
+
+<section class="col" id="summary">
+  <h2><span class="num">SUMMARY</span></h2>
+  {{SUMMARY}}
+</section>
+
+<section class="col" id="setup">
+  <h2><span class="num">01</span> What was tested</h2>
+  <p><strong>What we are looking for.</strong> <em>Hypervigilance</em> here means: an injured agent hides more
+  when a harmless rabbit is around than when no animal is around, by more than an unhurt agent does. Hiding is
+  measured as <strong>bush dwell</strong>, the share of a 100-step test episode the agent spends on a bush.
+  The rabbit on its own should barely move an unhurt agent.</p>
+  <p><strong>The starting world (world 1).</strong> The lookalike-animals world: level 05 of the training
+  curriculum (a cold 10&times;10 map with campfires, bushes, predators and rabbits) where the predator and the
+  harmless rabbit smell the same, the predator gives no warning before it pounces, and food items are small.
+  Earlier analysis found these agents die mostly while out foraging, which leaves little room for caution.</p>
+  <p><strong>The four setting changes.</strong> Each is either kept as in world 1 or changed:</p>
+  <ul>
+    <li><strong>A, predator threat:</strong> always exactly one predator (instead of 0&ndash;2), which notices
+    the agent and pounces from 2&ndash;3 cells instead of always 3.</li>
+    <li><strong>B, food economy:</strong> fewer but much bigger food items, so a meal takes about 7 eating
+    steps instead of about 25.</li>
+    <li><strong>C, hazard concealment:</strong> rocks and the hidden trap become invisible, so a hit is a true
+    surprise (and the map looks less cluttered).</li>
+    <li><strong>D, hazard load:</strong> fewer rocks and traps, but traps hurt more.</li>
+  </ul>
+  <p><strong>Eight worlds instead of sixteen.</strong> Trying every combination would take 16 worlds. A
+  standard <em>half factorial</em> uses 8, chosen so that each change is present in exactly 4 of them;
+  each change's effect is the average of its 4 worlds minus the average of the other 4. The price is that
+  the effects of two-way combinations come in pairs that cannot be told apart (for example, &ldquo;A with
+  B&rdquo; and &ldquo;C with D&rdquo; are measured as one sum). The worlds: 1 (nothing changed), 2 (A and
+  D), 3 (B and D), 4 (A and B), 5 (C and D), 6 (A and C), 7 (B and C), 8 (all four).</p>
+  <p><strong>Agents.</strong> In each world an ordinary agent and a modulated agent (the same network plus a
+  small neuromodulator network that rescales its activity), seed 42, trained for 10 million steps. World 1
+  also has a second seed (43) of each agent, shown as a guide to how much two seeds of the same agent
+  differ.</p>
+  <p><strong>Tests.</strong> At every saved checkpoint, 30 episodes of 100 steps in world 1's fixed scenes:
+  the agent in the middle of the map, one bush three cells away, no campfire, so only injury and animals can
+  drive hiding. The agent starts at injury 0, 10, 20 &hellip; 90, with no animal, a wandering rabbit, a
+  chasing rabbit or a predator. Each scene is run with <strong>healing off</strong> (the healing rate set to
+  zero in the test scene only, so the starting injury lasts the whole episode) and with <strong>healing
+  on</strong>, as in training. Agents of worlds 2&ndash;8 meet world 1's food and visible obstacles here,
+  not their own world's.</p>
+  <p><strong>The number that matters.</strong> The <strong>injury contrast</strong> is the rabbit's extra bush
+  dwell (with rabbit minus with no animal) at a given injury, minus the same for an unhurt agent. Above zero
+  means injury makes the rabbit matter more. Injury 70 is the level fixed in the design and is the
+  headline; injury 10 is shown beside it.</p>
+  <div class="callout"><p><strong>This page decides nothing.</strong> The design tests each world's agents in
+  scenes built from <em>their own</em> world and uses those results for the decision. Testing every agent in
+  world 1's scenes, as here, is the design's secondary cross-test: it can flag a change as interesting but
+  cannot make it &ldquo;worth replicating&rdquo;. The own-world scenes for worlds 3, 4, 7 and 8 (the ones
+  with bigger food) are not built yet; worlds 2, 5 and 6 share world 1's scenes, so their results here are
+  already their own-world results.</p></div>
+</section>
+
+<section class="col" id="group">
+  <h2><span class="num">02</span> Each setting change against the bar</h2>
+  <p>For each setting change, the injury contrast averaged over the 4 worlds with the change minus the 4
+  without it, then averaged over the two agents. The <strong>bar</strong> is the size such a difference
+  would reach by chance about one time in twenty from seed-to-seed variation and the run's own
+  checkpoint-to-checkpoint noise (section 07). A change &ldquo;clears the bar&rdquo; when its effect is
+  larger than the bar <em>and</em> has the same sign at the 6, 8 and 10 million-step checkpoints.</p>
+  {{FIG:group}}
+  <p><strong>Table 1.</strong> The same effects in percentage points of bush dwell, with the bar below each.
+  <strong>Bold</strong>: clears the bar with the same sign at 6, 8 and 10 M steps. &dagger;: the sign is not
+  the same at all three of those checkpoints.</p>
+  {{TABLE:group}}
+</section>
+
+<section class="col" id="numbers">
+  <h2><span class="num">03</span> Every run in numbers</h2>
+  <p><strong>Table 2.</strong> Each injury-contrast cell is in percentage points of bush dwell: the mean over
+  the run's newest 20 tested checkpoints, with its 95&nbsp;% interval in brackets, and below it the share of
+  <em>all</em> tested checkpoints where the contrast is above zero. <strong>Bold</strong> cells have an
+  interval that excludes zero. &ldquo;Rabbit alone, unhurt&rdquo; is how much the rabbit adds to an unhurt
+  agent's bush dwell; it is the same with healing on and off, since healing changes nothing for an unhurt
+  agent. &ldquo;Pattern&rdquo; is the design's check for hypervigilance at healing off, injury 70: the
+  interval lies above zero, the mean exceeds 1.4 points, and the rabbit alone moves an unhurt agent less
+  than injury changes the rabbit's effect.</p>
+  {{TABLE:runs}}
+</section>
+
+<section class="col" id="worlds">
+  <h2><span class="num">04</span> Each world in detail</h2>
+  <p>One tab per training world; the tab names the setting changes that world carries. Figure 2 shows
+  hiding against injury, Figure 3 the rabbit's extra hiding at each injury (the gap between the two lines of
+  Figure 2), and Figure 4 the injury contrast at every checkpoint across training.</p>
+  {{WORLD_TABS}}
+</section>
+
+<section class="col" id="animals">
+  <h2><span class="num">05</span> Hiding with each animal</h2>
+  <p>A descriptive view: how much each run hides with each animal, unhurt and at injury 70, with healing
+  off. A run that already hides nearly all the time with no animal at injury 70 leaves the rabbit no room to
+  add more, so its injury contrast cannot be large whatever the agent has learned.</p>
+  {{FIG:animals}}
+</section>
+
+<section class="col" id="limits">
+  <h2><span class="num">06</span> What these results do not show</h2>
+  <ul>
+    <li><strong>One seed per world.</strong> Each of the 16 screen runs is a single training run. The bar
+    allows for seed-to-seed variation as measured in earlier runs, but a world can still look different only
+    because of its seed.</li>
+    <li><strong>Unfamiliar scenes for some agents.</strong> Agents from worlds with big food (3, 4, 7, 8) or
+    invisible hazards (5, 6, 7, 8) meet world 1's small food and visible obstacles in these tests. A difference
+    between worlds may partly reflect how each agent copes with a world it was not trained in.</li>
+    <li><strong>A and C are not the changes this measure was assigned to.</strong> The design gives each
+    change its own deciding measure; this injury contrast belongs to D. A and C clearing the bar here is a
+    secondary result.</li>
+    <li><strong>A large contrast can come from an unusual unhurt baseline.</strong> The contrast subtracts
+    the unhurt values. World 2's modulated agent hides about 23 % of the time with no animal even when unhurt,
+    and that value swings widely from checkpoint to checkpoint; much of its large contrast comes from this
+    baseline rather than from the rabbit adding hiding when injured (Figure 2, world 2 tab).</li>
+    <li><strong>The rabbit alone moves some agents a lot.</strong> In two modulated runs (worlds 2 and 4)
+    the rabbit lowers an unhurt agent's hiding by about 20 points, and in world 5's ordinary run it raises it
+    by about 20. The pattern check only asks that this is smaller than the injury contrast.</li>
+    <li><strong>Healing off is a test-only change.</strong> The agents were trained with healing; an injury that
+    never heals is a situation they never met in training.</li>
+    <li><strong>Pairs of changes cannot be separated.</strong> A pair such as &ldquo;AB+CD&rdquo; is the sum
+    of two two-way interactions; the design cannot say which one carries it.</li>
+  </ul>
+</section>
+
+<section class="col" id="how">
+  <h2><span class="num">07</span> How it is computed</h2>
+  <p>Every saved checkpoint of each run (one every 0.2 million training steps) was replayed in world 1's fixed
+  test scenes, 30 episodes per checkpoint, scene and starting injury; bush dwell is the share of the 100 steps
+  spent on the bush. A run stopped and resumed partway writes its checkpoints into two or three folders;
+  these are joined into one series. For each checkpoint, the injury contrast is (bush dwell with the rabbit
+  minus with no animal) at the chosen injury, minus the same at injury 0. Each run is summarised by the mean
+  over its newest 20 tested checkpoints (about the last 4 million steps), with a 95&nbsp;% interval that allows
+  for neighbouring checkpoints being alike: it uses an <em>effective</em> number of checkpoints, reduced
+  according to the lag-1 autocorrelation (how strongly each checkpoint's value predicts the next one's). For
+  a setting change, each agent's mean over the 4 worlds with the change minus the 4 without is computed,
+  and the two agents are averaged. The bar is twice the expected standard deviation of that difference:
+  the square root of (&sigma;&sup2;/4 + the sum of the 16 runs' squared standard errors / 64), where
+  &sigma; = 2.67 points is the seed-to-seed spread of this test measure recorded in the project's
+  critical-settings registry, and a run's standard error is the uncertainty of its 20-checkpoint mean.
+  The sign check repeats the difference using the single tested checkpoint nearest 6, 8 and 10 million
+  steps.</p>
+</section>
+
+<section class="col" id="prov">
+  <h2><span class="num">08</span> Data, scenes and provenance</h2>
+  <ul>
+    <li>Design: <code>docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md</code></li>
+    <li>World configs: <code>configs/environment/experiment/basic/lookalike_hf_w*_new*_10x10.yaml</code></li>
+    <li>Training runs, worlds 2&ndash;8: <code>results/JAX_RecurrentPPO/2026101*_rppo_lookalike_hf_l05_w*</code></li>
+    <li>Training runs, world 1: <code>results/JAX_RecurrentPPO/20261009-175*_rppo_lookalike_l05_*</code></li>
+    <li>Scenes, healing on: <code>configs/environment/experiment/behavior_probes/lookalike/</code></li>
+    <li>Scenes, healing off: <code>configs/environment/experiment/behavior_probes/no_healing/lookalike__*</code></li>
+    <li>Test specs: <code>configs/eval_sweeps/lookalike_hf/</code> and <code>configs/eval_sweeps/lookalike/</code></li>
+    <li>Results: <code>results/eval/avoidance/metrics_history_rppo_lookalike_hf/</code>, <code>metrics_history_rppo_lookalike_hf_noheal/</code>, <code>metrics_history_rppo_lookalike/</code>, <code>metrics_history_rppo_lookalike_noheal/</code></li>
+    <li>Scripts: <code>scripts/analysis/studies/half_factorial_l05/</code> &mdash; <code>data.py</code> (numbers), <code>figures.py</code>, <code>build_page.py</code></li>
+  </ul>
+  <p>Built {{BUILT}}.</p>
+</section>
+
+</div>
+{{LIGHTBOX}}

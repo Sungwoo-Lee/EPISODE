@@ -106,8 +106,8 @@ TRAIN_AXES = ("Horizontal: training, in million steps (0&ndash;10); the shaded p
 GROUP_AXES = ("Horizontal: the effect of one setting change on the injury contrast, in percentage points of bush dwell: "
               "the mean over the 4 worlds with the change minus the mean over the 4 without it, averaged over the two "
               "agents. Vertical: the four setting changes A&ndash;D and the three pairs of two-way interactions the design "
-              "cannot separate. Filled diamond: both agents averaged (blue if it clears the bar and keeps its sign at "
-              "6, 8 and 10 M steps, grey otherwise); open circle: ordinary agent; open square: modulated agent. Shaded "
+              "cannot separate. Filled diamond: both agents averaged (black if it clears the bar and keeps its sign at "
+              "6, 8 and 10 M steps, light grey otherwise); open circle: ordinary agent; open square: modulated agent. Shaded "
               "band: inside the bar, &plusmn;2 times the expected noise of such a contrast. Panels: healing off at injury "
               "70 (the headline), healing off at injury 10, healing on at injury 70.")
 ANIMAL_AXES = ("Columns: four test scenes &mdash; no animal, the harmless rabbit wandering, the rabbit chasing the agent, "
@@ -139,7 +139,8 @@ def world_tabs():
                                   f"{FIG} --figure {kind} --world {w}", title=f"Figure {k} &mdash; world {w}"))
         panels.append(f'<div class="tabpanel" role="tabpanel" id="panel-w{w}" aria-labelledby="tab-w{w}" tabindex="0"'
                       + ("" if w == 1 else " hidden") + ">" + "\n".join(body) + "</div>")
-    return ('<div class="tabs" data-tabs><div class="tablist" role="tablist" aria-label="Training world">'
+    return ('<div class="tabs" data-tabs><p class="cue" hidden>&larr; more worlds &mdash; scroll the tabs sideways</p>'
+            '<div class="tablist" role="tablist" aria-label="Training world">'
             + "".join(tl) + "</div>" + "\n".join(panels) + "</div>")
 
 
