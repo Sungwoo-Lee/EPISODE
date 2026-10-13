@@ -912,6 +912,46 @@ curve retraces the span between its checkpoint and its stop point, so two sets o
 The reused rows' result folders are `results/JAX_RecurrentPPO/20261009-175459_…_t1none_s42` and
 `20261009-175502_…_t16quad_s42`.
 
+### Seed 43 and 44 replication (launched 2026-10-13)
+
+User decisions, 2026-10-13: train seeds 43 and 44 of all 14 runs; **one run per card**; worlds 4, 6, 7 and 8 first.
+Departure from the "3090-class" note above: the user chose to also use RTX 2080 Ti cards (nodes 101, 103, 104, 105).
+The first 14 were launched by the training-runner; their logs are node-local (`/home/vncuser/logs/` on the node shown),
+because the `--log` path was relative. The other 14 are queued in `tmp/20261013_hf_seeds_watch/` (`queue.json`, `watch.py`),
+which starts each on the next card free on two checks 15 min apart (order: w8 s44, then w2/w3/w5 s43, then s44) and
+resumes any run that stops. Command line identical to seed 42 except `--seed`, `--device` and the tag.
+
+| Cell | Tag (= wandb-name) | Seed | Node:GPU | Launched at | WandB run ID | Status |
+|---|---|---|---|---|---|---|
+| w4 ordinary | `rppo_lookalike_hf_l05_w4_t1none_s43` | 43 | 114:0 | 2026-10-13T23:28:03 | jbosyem7 | running |
+| w4 modulated | `rppo_lookalike_hf_l05_w4_t16quad_s43` | 43 | 114:1 | 2026-10-13T23:28:24 | u9yxm5ot | running |
+| w6 ordinary | `rppo_lookalike_hf_l05_w6_t1none_s43` | 43 | 114:2 | 2026-10-13T23:28:44 | 31ve5q96 | running |
+| w6 modulated | `rppo_lookalike_hf_l05_w6_t16quad_s43` | 43 | 114:3 | 2026-10-13T23:29:05 | kh6ity00 | running |
+| w7 ordinary | `rppo_lookalike_hf_l05_w7_t1none_s43` | 43 | 113:0 | 2026-10-13T23:29:26 | 3kmi8i82 | running |
+| w7 modulated | `rppo_lookalike_hf_l05_w7_t16quad_s43` | 43 | 113:1 | 2026-10-13T23:29:46 | g86nmpp5 | running |
+| w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s43` | 43 | 105:0 | 2026-10-13T23:30:07 | 9sef1pks | running |
+| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s43` | 43 | 105:1 | 2026-10-13T23:30:28 | dafbu78p | running |
+| w4 ordinary | `rppo_lookalike_hf_l05_w4_t1none_s44` | 44 | 101:0 | 2026-10-13T23:30:50 | ph6q6a72 | running |
+| w4 modulated | `rppo_lookalike_hf_l05_w4_t16quad_s44` | 44 | 101:1 | 2026-10-13T23:31:10 | qgt9l0ne | running |
+| w6 ordinary | `rppo_lookalike_hf_l05_w6_t1none_s44` | 44 | 103:0 | 2026-10-13T23:31:31 | d6ho30qy | running |
+| w6 modulated | `rppo_lookalike_hf_l05_w6_t16quad_s44` | 44 | 103:1 | 2026-10-13T23:31:52 | 774mpxfv | running |
+| w7 ordinary | `rppo_lookalike_hf_l05_w7_t1none_s44` | 44 | 104:0 | 2026-10-13T23:32:13 | t1emm55h | running |
+| w7 modulated | `rppo_lookalike_hf_l05_w7_t16quad_s44` | 44 | 104:1 | 2026-10-13T23:32:34 | msskvxt5 | running |
+| w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s44` | 44 | — | — | — | queued |
+| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s44` | 44 | — | — | — | queued |
+| w2 ordinary | `rppo_lookalike_hf_l05_w2_t1none_s43` | 43 | — | — | — | queued |
+| w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s43` | 43 | — | — | — | queued |
+| w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s43` | 43 | — | — | — | queued |
+| w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s43` | 43 | — | — | — | queued |
+| w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s43` | 43 | — | — | — | queued |
+| w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s43` | 43 | — | — | — | queued |
+| w2 ordinary | `rppo_lookalike_hf_l05_w2_t1none_s44` | 44 | — | — | — | queued |
+| w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s44` | 44 | — | — | — | queued |
+| w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s44` | 44 | — | — | — | queued |
+| w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s44` | 44 | — | — | — | queued |
+| w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s44` | 44 | — | — | — | queued |
+| w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s44` | 44 | — | — | — | queued |
+
 ### Configs to produce
 
 | Runs | Env config (`configs/environment/experiment/basic/`) | Agent config (`configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/`) |
