@@ -48,7 +48,7 @@ And **optionally** (when launching part of a planned experiment):
 
 If `plan_doc` is supplied, you **must** use the manifest's planned values for that row. Do NOT re-derive Tag or wandb-name from the §3a default convention — the convention only applies to one-off launches without a plan.
 
-If `plan_doc` is supplied but `run_id` is missing, halt and ask. If `plan_doc` is supplied but the row's `Status` is already `running` or `completed`, halt and ask the user whether to re-launch (which means a duplicate WandB run).
+If `plan_doc` is supplied but `run_id` is missing, halt and ask. If `plan_doc` is supplied but the row's `Status` is already `running` or `completed`, halt and ask the user whether to re-launch (which means a duplicate WandB run). A **resume** of a stopped row (§4d: `--load-checkpoint` + `--wandb-resume-id` with the row's recorded id) is not a re-launch and creates no new WandB run.
 
 If node + GPU is missing, **halt immediately** and ask the caller. Do **not** try to discover free GPUs yourself — there is no monitoring source available to you. The caller is expected to know the cluster's current load and tell you where to launch.
 
@@ -299,7 +299,7 @@ A run that stopped early (SIGINT to free a card, node outage, crash) is **resume
 
 - **`--load-checkpoint`** restores weights, optimizer, recurrent state, PRNG key and the episode counter from the newest checkpoint in that `models/` folder, so the progress bar starts at e.g. `2000052/10000000`, not 0. Keep `--episodes` at the original total (10M), not the remainder.
 - **`--wandb-resume-id`** makes `train.py` call `wandb.init(id=<id>, resume="allow")`, so logging appends to the existing run: same name, same chart, no new row in the dashboard. Charts use `timesteps` as their x-axis, so the curve continues where it left off.
-- **Finding the id:** the original log prints `wandb: 🚀 View run at https://wandb.ai/.../runs/<id>` (also the suffix of `wandb/run-<date>-<id>`). Record it in the manifest at first launch so a resume never has to search for it.
+- **Finding the id:** read it from where it was recorded at first launch — the `WandB run ID` column of the design doc's Launch Manifest (§5, plan-driven launches) or the comment above the command in `train_command-agent.sh` (one-off launches: always add `# WandB id: <id>` there after §4b). Fallback: the original log prints `wandb: 🚀 View run at https://wandb.ai/.../runs/<id>` (also the suffix of `wandb/run-<date>-<id>`).
 - **Which checkpoint folder:** a resumed run writes a **new** timestamped results dir, so after two stops the checkpoints are split across folders. Point `--load-checkpoint` at the folder holding the **highest** checkpoint number (`ls results/JAX_RecurrentPPO/*_<TAG>/models/`), and give downstream evaluation both folders.
 - **What is lost:** SIGINT writes no final checkpoint, so training since the last periodic checkpoint (`checkpoint_frequency`, 200k episodes for rPPO) is redone. That stretch is logged twice in WandB over the same `timesteps`; it is small and harmless.
 - **Verify** (in addition to §4b): the first non-zero progress count in the new log equals the checkpoint number (not 0), and the log's `View run at` URL ends in the original id. If either fails, kill the run before it writes a checkpoint into the new folder and report it.
@@ -315,7 +315,7 @@ If the launch was plan-driven, edit the `## 3. Launch Manifest` row matching `ru
 | `Node` | the supplied node integer |
 | `GPU` | the supplied GPU index (e.g., `cuda:0`) |
 | `Launched at` | ISO-format local time, e.g. `2026-05-07T15:30:10` |
-| `WandB run ID` | the WandB run id parsed from `wandb.init()` stdout (look for `Run ID: <id>` or `wandb: Syncing run … with run id <id>`); if not visible, leave `pending` and surface to the user |
+| `WandB run ID` | the 8-character WandB run id from the log line `wandb: 🚀 View run at https://wandb.ai/<entity>/<project>/runs/<id>` (or the `wandb/run-<date>-<id>` folder it names); if not visible, leave `pending` and surface to the user. **Required, not optional:** it is what §4d needs to resume the run into the same WandB run |
 | `Log path` | `logs/<ts>_<tag>.log` (the actual log file path) |
 
 Use `Edit` on the doc with a tightly-scoped `old_string` covering just that row. **Bump the doc's frontmatter `last_updated` to today** in the same edit.
