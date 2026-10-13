@@ -299,11 +299,18 @@ A run that stopped early (SIGINT to free a card, node outage, crash) is **resume
 
 - **`--load-checkpoint`** restores weights, optimizer, recurrent state, PRNG key and the episode counter from the newest checkpoint in that `models/` folder, so the progress bar starts at e.g. `2000052/10000000`, not 0. Keep `--episodes` at the original total (10M), not the remainder.
 - **`--wandb-resume-id`** makes `train.py` call `wandb.init(id=<id>, resume="allow")`, so logging appends to the existing run: same name, same chart, no new row in the dashboard. Charts use `timesteps` as their x-axis, so the curve continues where it left off.
-- **Finding the id:** read it from where it was recorded at first launch — the `WandB run ID` column of the design doc's Launch Manifest (§5, plan-driven launches) or the comment above the command in `train_command-agent.sh` (one-off launches: always add `# WandB id: <id>` there after §4b). Fallback: the original log prints `wandb: 🚀 View run at https://wandb.ai/.../runs/<id>` (also the suffix of `wandb/run-<date>-<id>`).
+- **Finding the id and the checkpoint folder:** `scripts/lab/run_registry.py resume <run name or WandB id>` prints both resume flags (newest checkpoint across all of the run's sessions, the original WandB id) and the full original command; set `--device` for the new card. The registry ([docs/experiments/run_registry/](../../docs/experiments/run_registry/README.md)) lists every WandB training run, one row per session; rebuild it first (`run_registry.py build --live`) so the status is current and it does not offer a run that is still alive. Fallbacks: the design doc's Launch Manifest `WandB run ID` column, then the original log line `wandb: 🚀 View run at https://wandb.ai/.../runs/<id>`.
 - **Which checkpoint folder:** a resumed run writes a **new** timestamped results dir, so after two stops the checkpoints are split across folders. Point `--load-checkpoint` at the folder holding the **highest** checkpoint number (`ls results/JAX_RecurrentPPO/*_<TAG>/models/`), and give downstream evaluation both folders.
 - **What is lost:** SIGINT writes no final checkpoint, so training since the last periodic checkpoint (`checkpoint_frequency`, 200k episodes for rPPO) is redone. That stretch is logged twice in WandB over the same `timesteps`; it is small and harmless.
 - **Verify** (in addition to §4b): the first non-zero progress count in the new log equals the checkpoint number (not 0), and the log's `View run at` URL ends in the original id. If either fails, kill the run before it writes a checkpoint into the new folder and report it.
 - Bookkeeping: manifest row → `running (resumed from checkpoint N, <time>)` with the new node/GPU/log; a comment + the full command in `train_command-agent.sh`; a diary `training-start` row.
+
+### 4e. Rebuild the run registry (every launch and resume)
+
+After §4b confirms the process is alive and its log shows the WandB `View run at` line, run
+`/home/vncuser/miniconda3/envs/grid_world_pain/bin/python scripts/lab/run_registry.py build` and commit
+`docs/experiments/run_registry/runs.csv` with the rest of the launch bookkeeping. The build reads WandB's local
+records, so it never needs the id typed in; about 20 s (up to 2 min on a cold NAS cache). Never edit `runs.csv` by hand.
 
 ### 5. Update the manifest (Path A only)
 
