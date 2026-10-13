@@ -287,6 +287,24 @@ For graceful kill of runaway / duplicate / abandoned training processes. **You c
 - Never use `terminate_command.py` for anything other than rogue/duplicate/abandoned processes — it is not a launch tool, not a general process-management tool.
 - Never use `--yes` without first showing the user the scanned output and getting approval to proceed (unless explicitly authorized for autonomous duplicate-kill in this turn).
 
+### 4d. Resuming a stopped run — continue the checkpoint AND the same WandB run
+
+A run that stopped early (SIGINT to free a card, node outage, crash) is **resumed, never restarted from zero, and never given a new WandB run**. Two flags on the original command line do this (Path A, `train.py`):
+
+```
+<original command, unchanged> \
+  --load-checkpoint results/JAX_RecurrentPPO/<ORIGINAL results dir>/models \
+  --wandb-resume-id <ORIGINAL 8-char WandB run id>
+```
+
+- **`--load-checkpoint`** restores weights, optimizer, recurrent state, PRNG key and the episode counter from the newest checkpoint in that `models/` folder, so the progress bar starts at e.g. `2000052/10000000`, not 0. Keep `--episodes` at the original total (10M), not the remainder.
+- **`--wandb-resume-id`** makes `train.py` call `wandb.init(id=<id>, resume="allow")`, so logging appends to the existing run: same name, same chart, no new row in the dashboard. Charts use `timesteps` as their x-axis, so the curve continues where it left off.
+- **Finding the id:** the original log prints `wandb: 🚀 View run at https://wandb.ai/.../runs/<id>` (also the suffix of `wandb/run-<date>-<id>`). Record it in the manifest at first launch so a resume never has to search for it.
+- **Which checkpoint folder:** a resumed run writes a **new** timestamped results dir, so after two stops the checkpoints are split across folders. Point `--load-checkpoint` at the folder holding the **highest** checkpoint number (`ls results/JAX_RecurrentPPO/*_<TAG>/models/`), and give downstream evaluation both folders.
+- **What is lost:** SIGINT writes no final checkpoint, so training since the last periodic checkpoint (`checkpoint_frequency`, 200k episodes for rPPO) is redone. That stretch is logged twice in WandB over the same `timesteps`; it is small and harmless.
+- **Verify** (in addition to §4b): the first non-zero progress count in the new log equals the checkpoint number (not 0), and the log's `View run at` URL ends in the original id. If either fails, kill the run before it writes a checkpoint into the new folder and report it.
+- Bookkeeping: manifest row → `running (resumed from checkpoint N, <time>)` with the new node/GPU/log; a comment + the full command in `train_command-agent.sh`; a diary `training-start` row.
+
 ### 5. Update the manifest (Path A only)
 
 If the launch was plan-driven, edit the `## 3. Launch Manifest` row matching `run_id` in `plan_doc`:
