@@ -921,35 +921,42 @@ because the `--log` path was relative. The other 14 are queued in `tmp/20261013_
 which starts each on the next card free on two checks 15 min apart (order: w8 s44, then w2/w3/w5 s43, then s44) and
 resumes any run that stops. Command line identical to seed 42 except `--seed`, `--device` and the tag.
 
+**Node 112 kept free (user, 2026-10-14 15:35):** a lab member needs a node, so node 112 (2 × RTX 3090) was taken
+out of the queue program's card list. Its run still in progress, w8 modulated s44, is moved off when a card frees
+elsewhere (stopped right after its next checkpoint, resumed there under the same WandB run, before the last queued
+run starts); w8 ordinary s44 finishes on 112:0 itself. A moved run shows its cards as `112:1 → <new card>`.
+The table below is refreshed from the logs by `tmp/20261014_hf_seed_tests/update_run_table.py` (status: training
+progress in episodes, or finished and tested in world 1's scenes).
+
 | Cell | Tag (= wandb-name) | Seed | Node:GPU | Launched at | WandB run ID | Status |
 |---|---|---|---|---|---|---|
-| w4 ordinary | `rppo_lookalike_hf_l05_w4_t1none_s43` | 43 | 114:0 | 2026-10-13T23:28:03 | jbosyem7 | running |
-| w4 modulated | `rppo_lookalike_hf_l05_w4_t16quad_s43` | 43 | 114:1 | 2026-10-13T23:28:24 | u9yxm5ot | running |
-| w6 ordinary | `rppo_lookalike_hf_l05_w6_t1none_s43` | 43 | 114:2 | 2026-10-13T23:28:44 | 31ve5q96 | running |
-| w6 modulated | `rppo_lookalike_hf_l05_w6_t16quad_s43` | 43 | 114:3 | 2026-10-13T23:29:05 | kh6ity00 | running |
-| w7 ordinary | `rppo_lookalike_hf_l05_w7_t1none_s43` | 43 | 113:0 | 2026-10-13T23:29:26 | 3kmi8i82 | running |
-| w7 modulated | `rppo_lookalike_hf_l05_w7_t16quad_s43` | 43 | 113:1 | 2026-10-13T23:29:46 | g86nmpp5 | running |
-| w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s43` | 43 | 105:0 | 2026-10-13T23:30:07 | 9sef1pks | running |
-| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s43` | 43 | 105:1 | 2026-10-13T23:30:28 | dafbu78p | running |
-| w4 ordinary | `rppo_lookalike_hf_l05_w4_t1none_s44` | 44 | 101:0 | 2026-10-13T23:30:50 | ph6q6a72 | running |
-| w4 modulated | `rppo_lookalike_hf_l05_w4_t16quad_s44` | 44 | 101:1 | 2026-10-13T23:31:10 | qgt9l0ne | running |
-| w6 ordinary | `rppo_lookalike_hf_l05_w6_t1none_s44` | 44 | 103:0 | 2026-10-13T23:31:31 | d6ho30qy | running |
-| w6 modulated | `rppo_lookalike_hf_l05_w6_t16quad_s44` | 44 | 103:1 | 2026-10-13T23:31:52 | 774mpxfv | running |
-| w7 ordinary | `rppo_lookalike_hf_l05_w7_t1none_s44` | 44 | 104:0 | 2026-10-13T23:32:13 | t1emm55h | running |
-| w7 modulated | `rppo_lookalike_hf_l05_w7_t16quad_s44` | 44 | 104:1 | 2026-10-13T23:32:34 | msskvxt5 | running |
-| w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s44` | 44 | — | — | — | queued |
-| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s44` | 44 | — | — | — | queued |
-| w2 ordinary | `rppo_lookalike_hf_l05_w2_t1none_s43` | 43 | — | — | — | queued |
-| w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s43` | 43 | — | — | — | queued |
-| w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s43` | 43 | — | — | — | queued |
-| w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s43` | 43 | — | — | — | queued |
-| w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s43` | 43 | — | — | — | queued |
-| w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s43` | 43 | — | — | — | queued |
-| w2 ordinary | `rppo_lookalike_hf_l05_w2_t1none_s44` | 44 | — | — | — | queued |
-| w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s44` | 44 | — | — | — | queued |
-| w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s44` | 44 | — | — | — | queued |
-| w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s44` | 44 | — | — | — | queued |
-| w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s44` | 44 | — | — | — | queued |
+| w4 ordinary | `rppo_lookalike_hf_l05_w4_t1none_s43` | 43 | 114:0 | 2026-10-13T23:28:03 | jbosyem7 | finished, tested |
+| w4 modulated | `rppo_lookalike_hf_l05_w4_t16quad_s43` | 43 | 114:1 | 2026-10-13T23:28:24 | u9yxm5ot | training (8.6 M) |
+| w6 ordinary | `rppo_lookalike_hf_l05_w6_t1none_s43` | 43 | 114:2 | 2026-10-13T23:28:44 | 31ve5q96 | finished, tested |
+| w6 modulated | `rppo_lookalike_hf_l05_w6_t16quad_s43` | 43 | 114:3 | 2026-10-13T23:29:05 | kh6ity00 | finished, tested |
+| w7 ordinary | `rppo_lookalike_hf_l05_w7_t1none_s43` | 43 | 113:0 | 2026-10-13T23:29:26 | 3kmi8i82 | finished, tested |
+| w7 modulated | `rppo_lookalike_hf_l05_w7_t16quad_s43` | 43 | 113:1 | 2026-10-13T23:29:46 | g86nmpp5 | finished, tested |
+| w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s43` | 43 | 105:0 | 2026-10-13T23:30:07 | 9sef1pks | training (8.0 M) |
+| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s43` | 43 | 105:1 | 2026-10-13T23:30:28 | dafbu78p | training (6.0 M) |
+| w4 ordinary | `rppo_lookalike_hf_l05_w4_t1none_s44` | 44 | 101:0 | 2026-10-13T23:30:50 | ph6q6a72 | training (6.8 M) |
+| w4 modulated | `rppo_lookalike_hf_l05_w4_t16quad_s44` | 44 | 101:1 | 2026-10-13T23:31:10 | qgt9l0ne | training (5.2 M) |
+| w6 ordinary | `rppo_lookalike_hf_l05_w6_t1none_s44` | 44 | 103:0 | 2026-10-13T23:31:31 | d6ho30qy | finished, tested |
+| w6 modulated | `rppo_lookalike_hf_l05_w6_t16quad_s44` | 44 | 103:1 | 2026-10-13T23:31:52 | 774mpxfv | training (7.8 M) |
+| w7 ordinary | `rppo_lookalike_hf_l05_w7_t1none_s44` | 44 | 104:0 | 2026-10-13T23:32:13 | t1emm55h | training (8.8 M) |
+| w7 modulated | `rppo_lookalike_hf_l05_w7_t16quad_s44` | 44 | 104:1 | 2026-10-13T23:32:34 | msskvxt5 | training (6.8 M) |
+| w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s44` | 44 | 112:0 | 2026-10-14T01:08:40 | 1u6r6qmv | training (9.6 M) |
+| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s44` | 44 | 112:1 | 2026-10-14T01:09:00 | zu54un6n | training (7.4 M) |
+| w2 ordinary | `rppo_lookalike_hf_l05_w2_t1none_s43` | 43 | 102:0 | 2026-10-14T01:42:14 | kwcnjojc | finished, tested |
+| w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s43` | 43 | 107:0 | 2026-10-14T01:42:36 | o6ammaq7 | training (7.8 M) |
+| w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s43` | 43 | 107:1 | 2026-10-14T01:42:56 | ahfv4r0j | training (8.2 M) |
+| w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s43` | 43 | 102:1 | 2026-10-14T02:16:45 | 045e3jpn | training (8.4 M) |
+| w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s43` | 43 | 114:2 | 2026-10-14T09:11:55 | hbj7v855 | training (8.2 M) |
+| w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s43` | 43 | 113:0 | 2026-10-14T10:31:27 | h5aerd6t | training (5.6 M) |
+| w2 ordinary | `rppo_lookalike_hf_l05_w2_t1none_s44` | 44 | 114:3 | 2026-10-14T11:50:31 | vtu6ryat | training (4.2 M) |
+| w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s44` | 44 | 102:0 | 2026-10-14T13:24:34 | 58s13gbi | training (2.2 M) |
+| w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s44` | 44 | 113:1 | 2026-10-14T13:24:54 | 388uegdg | training (2.2 M) |
+| w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s44` | 44 | 114:0 | 2026-10-14T14:13:12 | o8p3r8ue | training (1.2 M) |
+| w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s44` | 44 | 103:0 | 2026-10-14T15:32:14 | s3aoryo4 | training (0.2 M) |
 | w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s44` | 44 | — | — | — | queued |
 
 ### Configs to produce
