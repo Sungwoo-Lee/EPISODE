@@ -5303,6 +5303,17 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # [114:0] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w8_newABCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 45 --device cuda:0 --log-interval 10 --tag "rppo_lookalike_hf_l05_w8_t1none_s45" --wandb-name "rppo_lookalike_hf_l05_w8_t1none_s45" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
 
 # ---------------------------------------------------------------------------
+# 2026-10-14 — NEW RUN (second run of the careful node-114 test, ~24 min after the first): w8 modulated s45, WandB id: srfs0e56
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Seed 43 and 44 replication", world 8 extra seeds).
+# Same command as the other seeds of this cell except --seed / --device / --tag (--seed 45 is the planned per-row seed).
+# Node 114 uptime before launch: 42 min; only the w8 ordinary s45 run (114:0, PID 1329) on the node; cards 1-3 idle.
+# Launched 2026-10-14T22:26:39, PID 10753 on node 114; one process confirmed; counts advancing (14097 at 22:28);
+#   https://wandb.ai/sungwoolee/grid_world_pain/runs/srfs0e56
+# Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261014_222638_rppo_lookalike_hf_l05_w8_t16quad_s45.log
+# Commented out: running this file must not relaunch it.
+# [114:1] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w8_newABCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 45 --device cuda:1 --log-interval 10 --tag "rppo_lookalike_hf_l05_w8_t16quad_s45" --wandb-name "rppo_lookalike_hf_l05_w8_t16quad_s45" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+
+# ---------------------------------------------------------------------------
 # 2026-10-14 — RESUME (move off node 114 after crashes at 20:38 and 21:43): w2 ordinary s44, WandB id: vtu6ryat
 # Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Seed 43 and 44 replication").
 # Newest checkpoint 8200036 (results/JAX_RecurrentPPO/20261014-115036_rppo_lookalike_hf_l05_w2_t1none_s44/models).

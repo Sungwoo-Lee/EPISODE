@@ -998,7 +998,7 @@ progress in episodes, or finished and tested in world 1's scenes).
 | w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s44` | 44 | 103:0 | 2026-10-14T15:32:14 | s3aoryo4 | training (0.2 M) |
 | w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s44` | 44 | 114:1 → 107:0 | 2026-10-14T18:26:15 | iiuwsiv9 | training (resumed from 2600027 after node 114 crashes, 2026-10-14T21:48:10) |
 | w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s45` | 45 | 114:0 | 2026-10-14T22:02:47 | asluo6n1 | training (log `logs/20261014_220244_rppo_lookalike_hf_l05_w8_t1none_s45.log`; first run on 114 after its crashes) |
-| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s45` | 45 | — | — | — | queued |
+| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s45` | 45 | 114:1 | 2026-10-14T22:26:39 | srfs0e56 | training (log `logs/20261014_222638_rppo_lookalike_hf_l05_w8_t16quad_s45.log`; second run on 114 after its crashes) |
 | w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s46` | 46 | — | — | — | queued |
 | w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s46` | 46 | — | — | — | queued |
 
