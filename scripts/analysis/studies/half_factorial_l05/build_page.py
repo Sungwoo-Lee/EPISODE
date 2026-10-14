@@ -86,6 +86,37 @@ def run_table():
                     min_width=880)
 
 
+def seed_cell(w, a, seed):
+    if seed == 42 or w == 1 or D.seed_status(w, a, seed)[0] == "tested":
+        x = D.run_row(w, a, "off", "70", seed)
+        return ci_cell(x["inter"], x["inter_lo"], x["inter_hi"]) + \
+            f'<br><span class="ci nw">pattern: {"yes" if x["signature"] else "no"}</span>'
+    st, ck = D.seed_status(w, a, seed)
+    return {"testing": "finished, tests running", "queued": "queued for training",
+            "training": f"training, {ck / 1e6:.1f} M of 10 M"}[st]
+
+
+def seed_table():
+    rows = []
+    for w in D.WORLDS:
+        for a in D.AGENTS:
+            r = {"world": f"{w}" + ("" if w > 1 else " (base)"), "changed": D.NEW[w] or "&mdash;", "agent": a,
+                 "s42": seed_cell(w, a, 42)}
+            for s_ in D.EXTRA_SEEDS:
+                r[f"s{s_}"] = seed_cell(w, a, s_) if (w > 1 or s_ == 43) else "&mdash;"
+            rows.append(r)
+    cols = ["world", "changed", "agent", "s42", "s43", "s44"]
+    return FB.table(pd.DataFrame(rows), cols, ["world", "changed", "agent", "seed 42", "seed 43", "seed 44"],
+                    num=("s42", "s43", "s44"), raw=("changed", "s42", "s43", "s44"), min_width=760)
+
+
+def seed_count():
+    st = [D.seed_status(w, a, s_)[0] for w in D.WORLDS[1:] for a in D.AGENTS for s_ in D.EXTRA_SEEDS]
+    n = {k: st.count(k) for k in ("tested", "testing", "training", "queued")}
+    return (f"{n['tested']} of {len(st)} replication runs are finished and tested; {n['testing']} finished and "
+            f"being tested; {n['training']} training; {n['queued']} queued")
+
+
 CURVES_AXES = ("Horizontal: starting injury of the test, 0 (unhurt) to 90 in steps of 10. Vertical: bush dwell, the "
                "share of the test's 100 steps spent on the bush (%), 0&ndash;100 in every panel. Left column: healing "
                "switched off in the test scene, so the starting injury lasts the whole test; right column: healing on, as "
@@ -115,6 +146,21 @@ ANIMAL_AXES = ("Columns: four test scenes &mdash; no animal, the harmless rabbit
                "(both seeds) first, then worlds 2&ndash;8, ordinary above modulated. Colour and number: bush dwell, the "
                "share of the test's 100 steps spent on the bush (%), mean over the newest 20 tested checkpoints, healing "
                "off in the test scene. No intervals are shown.")
+
+
+SEEDS_AXES = ("Horizontal: the injury contrast at injury 70, in percentage points of bush dwell &mdash; the rabbit's "
+              "extra bush dwell when injured minus the same when unhurt, mean over the run's newest 20 tested "
+              "checkpoints; the line through each mark is its 95&nbsp;% interval. Vertical: the eight training worlds, "
+              "world 1 (no change) on top, then worlds 2&ndash;8 with the setting groups they change. Within a world, one "
+              "mark per seed: black filled circle seed 42 (the screen), purple open square seed 43, ochre open triangle "
+              "seed 44; world 1 shows its two existing seeds. Columns: ordinary and modulated agent. Rows: healing off in "
+              "the test scene (top, the headline) and healing on (bottom). A seed appears once its run has finished "
+              "training and been tested. Purple and ochre are outside the house series colours on purpose: blue and green "
+              "already mean healing off and on on this page.")
+SEEDTRAIN_AXES = ("Horizontal: training, in million steps (0&ndash;10). Vertical: the injury contrast at injury 70 "
+                  "with healing off, in percentage points, as a 5-checkpoint moving average. One panel per world (rows) "
+                  "and agent (columns). Solid black: seed 42; purple dashed: seed 43; ochre dotted: seed 44. All panels "
+                  "share one vertical range, which differs from Figure 4's because these lines are averaged.")
 
 
 def world_tabs():
@@ -155,6 +201,16 @@ def main():
         "hf_animals", "Heat map of bush dwell per run and test scene, healing off.", ANIMAL_AXES,
         "How much each run hides with each animal, unhurt and injured; how much room is left for the rabbit to add.",
         f"{FIG} --figure animals", title="Figure 5 &mdash; hiding with each animal")
+    tok["{{TABLE:seeds}}"] = seed_table()
+    tok["{{SEED_COUNT}}"] = seed_count()
+    tok["{{FIG:seeds}}"] = FB.figure(
+        "hf_seeds", "Dot plot of the injury contrast per world and agent, one mark per seed.", SEEDS_AXES,
+        "Whether a world's injury contrast in seed 42 is repeated by seeds 43 and 44, or moves by as much as world 1's "
+        "two seeds differ.", f"{FIG} --figure seeds", title="Figure 6 &mdash; the injury contrast, seed by seed")
+    tok["{{FIG:seedtrain}}"] = FB.figure(
+        "hf_seedtrain", "Panels of the injury contrast across training, seeds overlaid.", SEEDTRAIN_AXES,
+        "Whether the seeds agree over the whole of training or only at its end.",
+        f"{FIG} --figure seedtrain", title="Figure 7 &mdash; the seeds across training")
     tok["{{BUILT}}"] = datetime.date.today().isoformat()
     house = open(BB.HOUSE).read()
     m = re.search(r'(<link rel="stylesheet".*?</style>)', house, re.S)

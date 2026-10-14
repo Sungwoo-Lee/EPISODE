@@ -157,27 +157,84 @@ def at_step(v, millions):
     return float(v.iloc[j]), int(v.index[j])
 
 
+def run_row(w, a, heal, inj, seed):
+    """Readout (c) and its checks for one run."""
+    it = contrast(w, a, heal, "interaction", inj, seed)
+    ru = contrast(w, a, heal, "rabbit_unhurt", inj, seed)
+    ni, nr = newest(it), newest(ru)
+    wt = whole_training(it)
+    row = {"world": w, "agent": a, "seed": seed, "new": NEW[w] or "-", "heal": heal, "inj": inj,
+           "inter": ni["mean"], "inter_lo": ni["lo"], "inter_hi": ni["hi"], "inter_se": ni["se"],
+           "inter_neff": ni["neff"], "rabbit": nr["mean"], "rabbit_lo": nr["lo"], "rabbit_hi": nr["hi"],
+           "inj_none": newest(contrast(w, a, heal, "injury_none", inj, seed))["mean"],
+           "inj_rabbit": newest(contrast(w, a, heal, "injury_rabbit", inj, seed))["mean"],
+           **wt, "first_step": ni["first_step"], "last_step": ni["last_step"],
+           "episodes": n_episodes(w, a, heal, "grid", seed)}
+    for m in (6, 8, 10):
+        row[f"inter_{m}M"], row[f"step_{m}M"] = at_step(it, m)
+    row["signature"] = bool(row["inter_lo"] > 0 and row["inter"] > 1.4 and abs(row["rabbit"]) < abs(row["inter"]))
+    return row
+
+
 def run_table(heal, inj="70"):
     """One row per run (16 screen runs + world 1's seed-43 pair): readout (c) and its checks."""
+    return pd.DataFrame([run_row(w, a, heal, inj, seed) for w in WORLDS for a in AGENTS
+                         for seed in ((42, 43) if w == 1 else (42,))])
+
+
+# Replication seeds of worlds 2-8 (design, "Seed 43 and 44 replication"). A run enters the page only when it has
+# finished training and every one of its seven test folders holds the final checkpoint; until then it is listed
+# with its training state. Read straight from disk (never from the cache) so a half-written test is not frozen.
+EXTRA_SEEDS = (43, 44)
+FOLDER_SETS = [("on", st) for st in SETS] + [("off", st) for st in SETS if st != "own"]
+TRAIN_ROOT = os.path.join(ROOT, "results", "JAX_RecurrentPPO")
+AGENT_TAG = {"ordinary": "t1none", "modulated": "t16quad"}
+
+
+def newest_checkpoint(world, agent, seed):
+    best = 0
+    for d in glob.glob(os.path.join(TRAIN_ROOT, f"*_rppo_lookalike_hf_l05_w{world}_{AGENT_TAG[agent]}_s{seed}")):
+        md = os.path.join(d, "models")
+        best = max([best] + [int(c) for c in (os.listdir(md) if os.path.isdir(md) else []) if c.isdigit()])
+    return best
+
+
+def tested_complete(world, agent, seed):
+    for heal, st in FOLDER_SETS:
+        fs = folders(world, agent, heal, st, seed)
+        ref = folders(world, agent, heal, st, 42)
+        if not fs or not os.path.isdir(fs[-1]) or not ref:
+            return False
+        want = {f for f in os.listdir(ref[0]) if f.endswith(".csv")}
+        have = {f for f in os.listdir(fs[-1]) if f.endswith(".csv")}
+        if not want <= have:
+            return False
+        for f in want:
+            if pd.read_csv(os.path.join(fs[-1], f), usecols=["step"])["step"].max() < 9_990_000:
+                return False
+    return True
+
+
+@functools.lru_cache(maxsize=None)
+def seed_status(world, agent, seed):
+    """'tested' (finished and every test folder complete), 'testing', 'training' (with steps) or 'queued'."""
+    ck = newest_checkpoint(world, agent, seed)
+    if ck >= 9_990_000:
+        return ("tested" if tested_complete(world, agent, seed) else "testing"), ck
+    return ("training" if ck > 0 else "queued"), ck
+
+
+def tested_seeds(world, agent):
+    return [s for s in EXTRA_SEEDS if world > 1 and seed_status(world, agent, s)[0] == "tested"]
+
+
+def seed_table(heal="off", inj="70"):
+    """Seed 42 and every tested replication seed, worlds 2-8, plus world 1's seed pair as the reference."""
     rows = []
     for w in WORLDS:
         for a in AGENTS:
-            for seed in ((42, 43) if w == 1 else (42,)):
-                it = contrast(w, a, heal, "interaction", inj, seed)
-                ru = contrast(w, a, heal, "rabbit_unhurt", inj, seed)
-                ni, nr = newest(it), newest(ru)
-                wt = whole_training(it)
-                row = {"world": w, "agent": a, "seed": seed, "new": NEW[w] or "-", "heal": heal, "inj": inj,
-                       "inter": ni["mean"], "inter_lo": ni["lo"], "inter_hi": ni["hi"], "inter_se": ni["se"],
-                       "inter_neff": ni["neff"], "rabbit": nr["mean"], "rabbit_lo": nr["lo"], "rabbit_hi": nr["hi"],
-                       "inj_none": newest(contrast(w, a, heal, "injury_none", inj, seed))["mean"],
-                       "inj_rabbit": newest(contrast(w, a, heal, "injury_rabbit", inj, seed))["mean"],
-                       **wt, "first_step": ni["first_step"], "last_step": ni["last_step"],
-                       "episodes": n_episodes(w, a, heal, "grid", seed)}
-                for m in (6, 8, 10):
-                    row[f"inter_{m}M"], row[f"step_{m}M"] = at_step(it, m)
-                row["signature"] = bool(row["inter_lo"] > 0 and row["inter"] > 1.4 and abs(row["rabbit"]) < abs(row["inter"]))
-                rows.append(row)
+            for seed in ((42, 43) if w == 1 else (42, *tested_seeds(w, a))):
+                rows.append(run_row(w, a, heal, inj, seed))
     return pd.DataFrame(rows)
 
 

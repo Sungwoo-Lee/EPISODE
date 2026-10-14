@@ -13,10 +13,12 @@ checkpoints with a 95 % interval, as in the pre-registered readout.
   animals            healing off: bush dwell per run with no animal / wandering rabbit / chasing rabbit /
                      predator, unhurt and at injury 70 (a heat map, one row per run)
   group              the pre-registered group test: each setting group's effect against the bar
+  seeds              the injury contrast of every world and agent, seed 42 beside each tested replication seed
+  seedtrain          the injury contrast across training, healing off, injury 70, the seeds overlaid
 --world all draws the eight worlds in one process (the CSVs are read once).
 
     $P scripts/analysis/studies/half_factorial_l05/figures.py --fig-dir <dir> --figure curves|extra|train --world N|all
-    $P scripts/analysis/studies/half_factorial_l05/figures.py --fig-dir <dir> --figure animals|group
+    $P scripts/analysis/studies/half_factorial_l05/figures.py --fig-dir <dir> --figure animals|group|seeds|seedtrain
 """
 from __future__ import annotations
 
@@ -293,6 +295,91 @@ def fig_group():
     return fig, rows
 
 
+# replication seeds: hues outside the healing (blue / green) and animal (grey / orange) colours used above
+SEED_COL = {42: H.INK, 43: "#7b5ea7", 44: "#b8860b"}
+SEED_MK = {42: "o", 43: "s", 44: "^"}
+
+
+def seed_runs(w, a):
+    return (42, 43) if w == 1 else (42, *D.tested_seeds(w, a))
+
+
+def fig_seeds():
+    import matplotlib.pyplot as plt
+    fig, axs = plt.subplots(2, 2, figsize=(8.4, 8.2), sharex=True, sharey=True)
+    rows = []
+    ys = np.arange(len(D.WORLDS))[::-1]
+    for r_, heal in enumerate(HEALS):
+        for c_, a in enumerate(D.AGENTS):
+            ax = axs[r_, c_]
+            ax.axvline(0, color=H.INK_2, lw=0.8, zorder=1)
+            for y, w in zip(ys, D.WORLDS):
+                ss = seed_runs(w, a)
+                for k, s in enumerate(ss):
+                    v = D.contrast(w, a, heal, "interaction", "70", s)
+                    m, lo, hi = summ(v)
+                    yy = y + (k - (len(ss) - 1) / 2) * 0.22
+                    ax.plot([lo, hi], [yy, yy], color=SEED_COL[s], lw=1.3, zorder=2)
+                    ax.plot(m, yy, marker=SEED_MK[s], ms=5.5, color=SEED_COL[s], mfc=SEED_COL[s] if s == 42 else H.PAPER,
+                            mew=1.3, ls="none", zorder=3)
+                    rows.append(used_row("", v, w, a, s, heal))
+            ax.set_yticks(ys, ["w1 (base)"] + [f"w{w} {'+'.join(D.NEW[w])}" for w in D.WORLDS[1:]], fontsize=H.FS_LABEL)
+            ax.axhline(ys[0] - 0.5, color=H.RULE, lw=0.8)
+            if r_ == 0:
+                ax.set_title(f"{a} agent", loc="left", fontsize=H.FS_BODY)
+            if c_ == 0:
+                ax.set_ylabel(HEAL_NAME[heal], fontsize=H.FS_LABEL)
+            if r_ == 1:
+                ax.set_xlabel("injury contrast at injury 70 (points)", fontsize=H.FS_LABEL)
+    lim = max(abs(x) for ax in axs.flat for x in ax.get_xlim())
+    lim = 10 * np.ceil(lim / 10)
+    axs[0, 0].set_xlim(-lim, lim)
+    axs[0, 0].set_xticks([-lim / 2, 0, lim / 2])   # no end ticks: the two columns' end labels would touch
+    from matplotlib.lines import Line2D
+    hs = [Line2D([], [], color=SEED_COL[s], marker=SEED_MK[s], mfc=SEED_COL[s] if s == 42 else H.PAPER, mew=1.3, lw=1.3,
+                 label=f"seed {s}") for s in (42, 43, 44)]
+    hs.append(Line2D([], [], color=H.INK_2, lw=1.3, label="line: 95 % interval"))
+    fig.legend(handles=hs, loc="lower center", ncol=4, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.005))
+    fig.subplots_adjust(left=0.17, right=0.98, top=0.96, bottom=0.11, hspace=0.12, wspace=0.08)
+    return fig, rows
+
+
+def fig_seedtrain():
+    import matplotlib.pyplot as plt
+    ws = D.WORLDS
+    fig, axs = plt.subplots(len(ws), 2, figsize=(8.4, 1.55 * len(ws) + 1.2), sharex=True, sharey=True, squeeze=False)
+    rows, ext = [], []
+    for r_, w in enumerate(ws):
+        for c_, a in enumerate(D.AGENTS):
+            ax = axs[r_, c_]
+            ax.axhline(0, color=H.RULE, lw=0.8, zorder=0)
+            for s in seed_runs(w, a):
+                d = D.contrast(w, a, "off", "interaction", "70", s)
+                x = d.index.to_numpy() / 1e6
+                sm = d.rolling(5, center=True, min_periods=3).mean().to_numpy()
+                ext += [np.nanmin(sm), np.nanmax(sm)]
+                ax.plot(x, sm, color=SEED_COL[s], lw=1.7,
+                        ls="-" if s == 42 else (0, (4, 1.5)) if s == 43 else (0, (1.5, 1.2)))
+                rows.append({"what": "", "used": len(d), "total": len(g(w, a, "off", "none", "00", s)),
+                             "note": "every tested checkpoint with all four tests (no animal and rabbit, unhurt and "
+                                     f"injury 70); {D.n_episodes(w, a, 'off', 'grid', s)} episodes each"})
+            if r_ == 0:
+                ax.set_title(f"{a} agent", loc="left", fontsize=H.FS_BODY)
+            if c_ == 0:
+                ax.set_ylabel("w1 (base)" if w == 1 else f"w{w} {'+'.join(D.NEW[w])}", fontsize=H.FS_LABEL)
+            if r_ == len(ws) - 1:
+                ax.set_xlabel("training (million steps)", fontsize=H.FS_LABEL)
+    lo, hi = padded(min(ext), max(ext), 20)   # its own range: smoothed lines only, every seed drawn
+    axs[0, 0].set_xlim(-0.2, 10.3); axs[0, 0].set_xticks([0, 2, 4, 6, 8, 10]); axs[0, 0].set_ylim(lo, hi)
+    axs[0, 0].set_yticks(np.arange(lo, hi + 1, 40 if hi - lo > 80 else 20))
+    from matplotlib.lines import Line2D
+    hs = [Line2D([], [], color=SEED_COL[s], lw=1.7, ls="-" if s == 42 else (0, (4, 1.5)) if s == 43 else (0, (1.5, 1.2)),
+                 label=f"seed {s}") for s in (42, 43, 44)]
+    fig.legend(handles=hs, loc="lower center", ncol=3, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.003))
+    fig.subplots_adjust(left=0.11, right=0.99, top=0.97, bottom=0.62 / (1.55 * len(ws) + 1.2) + 0.02, hspace=0.18, wspace=0.06)
+    return fig, rows
+
+
 def collapse(rows, what):
     """One data-statement row per figure when every series shares one coverage note (the per-run step range
     is dropped from the note, since it differs only by when testing started)."""
@@ -307,7 +394,9 @@ WHAT = {"curves": "series (agent x healing x animal), counted at injury 70",
         "extra": "series (agent x healing), counted at injury 70",
         "train": "series (agent x healing), whole training",
         "animals": "runs, healing off, 8 scenes each",
-        "group": "group tests (one per panel)"}
+        "group": "group tests (one per panel)",
+        "seeds": "series (run x healing), counted at injury 70",
+        "seedtrain": "series (run), healing off, injury 70, whole training"}
 
 
 def main(argv=None):
@@ -318,8 +407,9 @@ def main(argv=None):
     a = ap.parse_args(argv)
     H.apply()
     d = os.path.abspath(a.fig_dir)
-    if a.figure in ("animals", "group"):
-        jobs = [(f"hf_{a.figure}", {"animals": fig_animals, "group": fig_group}[a.figure])]
+    if a.figure in ("animals", "group", "seeds", "seedtrain"):
+        jobs = [(f"hf_{a.figure}", {"animals": fig_animals, "group": fig_group, "seeds": fig_seeds,
+                                    "seedtrain": fig_seedtrain}[a.figure])]
     else:
         ws = D.WORLDS if a.world == "all" else [int(a.world)]
         f = {"curves": fig_curves, "extra": fig_extra, "train": fig_train}[a.figure]

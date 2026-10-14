@@ -21,7 +21,7 @@ p.wname { margin:4px 0 0; }
 <div class="wrap">
 
 <header class="col">
-  <p class="eyebrow">grid_world_pain &middot; hypervigilance &middot; level-05 half-factorial screen &middot; 8 training worlds &times; 2 agents, seed 42, plus world 1 at seed 43</p>
+  <p class="eyebrow">grid_world_pain &middot; hypervigilance &middot; level-05 half-factorial screen &middot; 8 training worlds &times; 2 agents, seed 42, plus world 1 at seed 43; repeat seeds 43 and 44 as they finish</p>
   <h1>Predator, Food and Hazard Settings Screen</h1>
   <p class="lede">Agents were trained in eight versions of the lookalike-animals world, each changing a
   different mix of four settings: how the predator threatens, how food comes, whether hazards can be seen,
@@ -39,9 +39,10 @@ p.wname { margin:4px 0 0; }
     <li><a href="#numbers">03 &middot; Every run in numbers</a></li>
     <li><a href="#worlds">04 &middot; Each world in detail (Figures 2&ndash;4)</a></li>
     <li><a href="#animals">05 &middot; Hiding with each animal (Figure 5)</a></li>
-    <li><a href="#limits">06 &middot; What these results do not show</a></li>
-    <li><a href="#how">07 &middot; How it is computed</a></li>
-    <li><a href="#prov">08 &middot; Data, scenes and provenance</a></li>
+    <li><a href="#seeds">06 &middot; Repeat runs, seeds 43 and 44 (Figures 6&ndash;7)</a></li>
+    <li><a href="#limits">07 &middot; What these results do not show</a></li>
+    <li><a href="#how">08 &middot; How it is computed</a></li>
+    <li><a href="#prov">09 &middot; Data, scenes and provenance</a></li>
   </ul>
 </section>
 
@@ -104,7 +105,7 @@ p.wname { margin:4px 0 0; }
   <p>For each setting change, the injury contrast averaged over the 4 worlds with the change minus the 4
   without it, then averaged over the two agents. The <strong>bar</strong> is the size such a difference
   would reach by chance about one time in twenty from seed-to-seed variation and the run's own
-  checkpoint-to-checkpoint noise (section 07). A change &ldquo;clears the bar&rdquo; when its effect is
+  checkpoint-to-checkpoint noise (section 08). A change &ldquo;clears the bar&rdquo; when its effect is
   larger than the bar <em>and</em> has the same sign at the 6, 8 and 10 million-step checkpoints.</p>
   {{FIG:group}}
   <p><strong>Table 1.</strong> The same effects in percentage points of bush dwell, with the bar below each.
@@ -142,8 +143,25 @@ p.wname { margin:4px 0 0; }
   {{FIG:animals}}
 </section>
 
+<section class="col" id="seeds">
+  <h2><span class="num">06</span> Repeat runs, seeds 43 and 44</h2>
+  <p>Every world and agent of the screen is being trained again from two new random starting points
+  (seeds 43 and 44), to see which of the results above repeat. Each new run is tested in the same world-1
+  scenes, with the same 30 episodes per checkpoint, once it has finished its 10 million training steps, and
+  appears here only then. Status now: {{SEED_COUNT}}. Sections 01&ndash;05 still show seed 42 only, and the
+  group test in section 02 is redone only when all 28 repeat runs are tested, since it needs a full set of
+  eight worlds per seed.</p>
+  {{FIG:seeds}}
+  {{FIG:seedtrain}}
+  <p><strong>Table 3.</strong> The injury contrast at healing off, injury 70, for every seed, in percentage
+  points of bush dwell: the mean over the newest 20 tested checkpoints, its 95&nbsp;% interval in brackets
+  (<strong>bold</strong> when it excludes zero), and the design's pattern check below (defined at Table 2).
+  Runs not yet tested show their training state instead.</p>
+  {{TABLE:seeds}}
+</section>
+
 <section class="col" id="limits">
-  <h2><span class="num">06</span> What these results do not show</h2>
+  <h2><span class="num">07</span> What these results do not show</h2>
   <ul>
     <li><strong>One seed per world.</strong> Each of the 16 screen runs is a single training run. The bar
     allows for seed-to-seed variation as measured in earlier runs, but a world can still look different only
@@ -169,7 +187,7 @@ p.wname { margin:4px 0 0; }
 </section>
 
 <section class="col" id="how">
-  <h2><span class="num">07</span> How it is computed</h2>
+  <h2><span class="num">08</span> How it is computed</h2>
   <p>Every saved checkpoint of each run (one every 0.2 million training steps) was replayed in world 1's fixed
   test scenes, 30 episodes per checkpoint, scene and starting injury; bush dwell is the share of the 100 steps
   spent on the bush. A run stopped and resumed partway writes its checkpoints into two or three folders;
@@ -188,7 +206,7 @@ p.wname { margin:4px 0 0; }
 </section>
 
 <section class="col" id="prov">
-  <h2><span class="num">08</span> Data, scenes and provenance</h2>
+  <h2><span class="num">09</span> Data, scenes and provenance</h2>
   <ul>
     <li>Design: <code>docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md</code></li>
     <li>World configs: <code>configs/environment/experiment/basic/lookalike_hf_w*_new*_10x10.yaml</code></li>
