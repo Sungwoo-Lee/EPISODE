@@ -5211,3 +5211,12 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Resumed on 114:2 (freed when w5 t1none s43 finished at 10M). Same command + --load-checkpoint + --wandb-resume-id.
 # Commented out: running this file must not relaunch it.
 # [114:2] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w8_newABCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 44 --device cuda:2 --log-interval 10 --tag "rppo_lookalike_hf_l05_w8_t16quad_s44" --wandb-name "rppo_lookalike_hf_l05_w8_t16quad_s44" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot" --load-checkpoint results/JAX_RecurrentPPO/20261014-010906_rppo_lookalike_hf_l05_w8_t16quad_s44/models --wandb-resume-id zu54un6n
+
+# ---------------------------------------------------------------------------
+# 2026-10-14 — LAUNCH (fresh): w5 modulated s44, the last queued run of the seed 43/44 replication. WandB id: iiuwsiv9
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Seed 43 and 44 replication").
+# Card 114:1, freed when w4 modulated s43 finished at 10M. Command identical to seed 42 of this cell except seed/device/tag.
+# Launched 2026-10-14T18:26:15, PID 3343166 on node 114; one process confirmed; https://wandb.ai/sungwoolee/grid_world_pain/runs/iiuwsiv9
+# Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261014_182611_rppo_lookalike_hf_l05_w5_t16quad_s44.log
+# Commented out: running this file must not relaunch it.
+# [114:1] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w5_newCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 44 --device cuda:1 --log-interval 10 --tag "rppo_lookalike_hf_l05_w5_t16quad_s44" --wandb-name "rppo_lookalike_hf_l05_w5_t16quad_s44" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"

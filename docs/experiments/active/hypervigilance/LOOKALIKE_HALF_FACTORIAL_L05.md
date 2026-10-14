@@ -957,7 +957,7 @@ progress in episodes, or finished and tested in world 1's scenes).
 | w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s44` | 44 | 113:1 | 2026-10-14T13:24:54 | 388uegdg | training (2.2 M) |
 | w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s44` | 44 | 114:0 | 2026-10-14T14:13:12 | o8p3r8ue | training (1.2 M) |
 | w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s44` | 44 | 103:0 | 2026-10-14T15:32:14 | s3aoryo4 | training (0.2 M) |
-| w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s44` | 44 | — | — | — | queued |
+| w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s44` | 44 | 114:1 | 2026-10-14T18:26:15 | iiuwsiv9 | training |
 
 ### Configs to produce
 
