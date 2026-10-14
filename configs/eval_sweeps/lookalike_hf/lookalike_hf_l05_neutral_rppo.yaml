@@ -73,3 +73,5 @@ runs:
   path: results/JAX_RecurrentPPO/20261013-232950_rppo_lookalike_hf_l05_w7_t16quad_s43
 - label: hf_w2_ordinary_s43
   path: results/JAX_RecurrentPPO/20261014-014226_rppo_lookalike_hf_l05_w2_t1none_s43
+- label: hf_w4_ordinary_s43
+  path: results/JAX_RecurrentPPO/20261013-232808_rppo_lookalike_hf_l05_w4_t1none_s43
