@@ -1,0 +1,27 @@
+# GENERATED for the level-ladder heat map (Visualization: Recording session, 2026-10-14; user decision:
+# every test scene holds ONLY the agent, one bush and the animal). Do not hand-edit.
+# Source scene: behavior_probes/no_healing/injury_grid__neutral_clean/avoid_rabbitwander_inj00.yaml (level-05 test scene: comfortable air, no fire, healing OFF).
+# Adds ONLY the water block the level-06 thirst agent needs to be loadable: water.enabled true keeps its
+# 59th input (Hydration). Water-on always places a pond (no zero-pond option yet; TODO handed to the
+# Behavior session), so the pond is made INERT: one fixed 2x2 pond in the far corner (config [8, 8], away
+# from the bush [5, 2], the agent start [5, 5] and the animal entry [5, 9]); zero smell, zero visibility;
+# start hydration fixed at 180 of 200 (drains 0.625/step -> ~118 after the 100-step test), so the agent
+# can neither sense nor need it.
+extends: environment/experiment/behavior_probes/no_healing/injury_grid__neutral_clean/avoid_rabbitwander_inj00
+
+water:
+  enabled: true
+  placement: list
+  size: [2, 2]
+  candidates: [[8, 8]]
+  edge_margin: 1
+  max_hydration: 200.0
+  hydration_setpoint: 100.0
+  start_hydration: 180.0
+  random_start_hydration: false
+  start_hydration_low: 0.0
+  start_hydration_high: 200.0
+  drain_per_step: 0.625
+  drink_gain_per_step: 5.625
+  properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+  visual_properties: [0.0]
