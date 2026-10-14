@@ -844,6 +844,45 @@ requirement is that **everything except leading comment lines** is byte-identica
 simulator's loader gives identical parameters. Literal byte identity including the header is not
 required.
 
+## Food-free test scenes, 2026-10-14
+
+**What this is.** The test scenes used so far for this study (world 1's frozen lookalike scenes,
+in which every agent is tested) contain **one food item of 6 bites**, placed three cells above the
+agent's start. That food item was added when the scenes were written on 2026-10-10 **without the
+user deciding it**. So every lookalike and half-factorial test result recorded up to today comes from
+scenes with food in them, and an agent's hiding, approach or survival in those scenes may partly reflect
+whether it went to eat. On 2026-10-14 the user decided: "Also test without food." A **food-free copy**
+of the injury-grid scenes (no animal, hunting predator, wandering rabbit; start injury 0 to 90) now
+exists so that every run can be re-tested without the food item and compared with the with-food
+results. The original scenes, their results and their sweep specs are **unchanged**.
+
+**What differs.** Only the food item. Each food-free scene is the with-food scene minus the food: the
+same shared animal smell, the same predator (notices at 3 cells, pounces from 3 cells, 50% success),
+the same bush, injury levels and everything else inherited from the source scene. The source
+injury-grid scenes have no resources of their own, so the food-free scenes have none.
+
+**Files.**
+- Scenes: `configs/environment/experiment/behavior_probes/lookalike_nofood/injury_grid__neutral_clean/`
+  (30 scenes), written by `generate_lookalike_variants.py --no-food`; no-healing copies (healing rate
+  0) in `behavior_probes/no_healing/lookalike_nofood__injury_grid__neutral_clean/`.
+- Sweep specs (copies of the with-food grid specs, changing only name, scene folder and output folder):
+  half-factorial `configs/eval_sweeps/lookalike_hf_nofood/lookalike_hf_nofood_l05_grid_rppo.yaml` and
+  `lookalike_hf_nofood_noheal_l05_grid_rppo.yaml` (35 run rows, as in the with-food specs on
+  2026-10-14); world 1 `configs/eval_sweeps/lookalike_nofood/lookalike_nofood_l05_grid_rppo.yaml` and
+  `lookalike_nofood_noheal_l05_grid_rppo.yaml` (4 run rows). Outputs under
+  `results/eval/avoidance/metrics_history_rppo_lookalike_hf_nofood{,_noheal}/grid` and
+  `..._lookalike_nofood{,_noheal}/grid`. Only the injury grid is copied; the chasing-rabbit, neutral
+  and own-world scene sets are not.
+- When a run row is added to a with-food half-factorial spec, add the same row to its food-free copy.
+
+**Checks run (2026-10-14).** The generator's `--check --no-food` confirms every food-free scene
+differs from its with-food sibling only in the resources list, that the removed resource is exactly the
+6-bite food item, and that the remaining resources equal the source scene's own (empty). The
+no-healing generator's `--check` confirms each no-healing copy differs only in the healing rate. Each
+new spec passes `run_sweep.py --dry-run` (30 scenes per run), and every scene its worklists name loads
+through the eval script's loader (`load_env_config` + `load_env_params`) with no resources, the bush
+present, the shared smell and the 3 / 3 / 0.5 predator. The sweeps have not been run.
+
 ## Failure modes, decided in advance
 
 - **A run diverges or collapses** (NaN, or episode length collapses) in one world. That is a run

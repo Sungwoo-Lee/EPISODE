@@ -1,0 +1,28 @@
+# FOOD-FREE re-test (user, 2026-10-14: "Also test without food"): identical to configs/eval_sweeps/lookalike/lookalike_l05_grid_rppo.yaml except name, probe
+# (behavior_probes/lookalike_nofood/injury_grid__neutral_clean -- the same scenes WITHOUT the 6-bite food item, which was added on
+# 2026-10-10 without the user's decision) and output_dir. Record: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md
+# Lookalike-animals pilot tests (design: docs/experiments/active/hypervigilance/LOOKALIKE_ANIMALS_CLOSE_POUNCE.md).
+# Scenes: behavior_probes/lookalike/ (copies of the replication scenes with the shared smell, the 3-cell
+# pouncing predator and one 6-bite food item). Same episodes/conditions as the healrep specs.
+name: lookalike_nofood_l05_grid
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_lookalike_nofood/grid
+probe: configs/environment/experiment/behavior_probes/lookalike_nofood/injury_grid__neutral_clean
+conditions: all
+episodes: 30
+nodes:
+- 108
+- 110
+x_axis: steps
+plot_measures:
+- bush_hiding
+- survival_steps
+runs:
+- label: lookalike_ordinary_s42
+  path: results/JAX_RecurrentPPO/20261009-175459_rppo_lookalike_l05_t1none_s42
+- label: lookalike_modulated_s42
+  path: results/JAX_RecurrentPPO/20261009-175502_rppo_lookalike_l05_t16quad_s42
+- label: lookalike_ordinary_s43
+  path: results/JAX_RecurrentPPO/20261009-175506_rppo_lookalike_l05_t1none_s43
+- label: lookalike_modulated_s43
+  path: results/JAX_RecurrentPPO/20261009-175510_rppo_lookalike_l05_t16quad_s43

@@ -3,7 +3,7 @@ title: Lookalike animals, close pounce, small food — a world built to make inj
 topic: hypervigilance
 status: active
 created: 2026-10-09
-last_updated: 2026-10-11
+last_updated: 2026-10-14
 wandb_tag: rppo_lookalike_l05
 ---
 
@@ -295,6 +295,9 @@ meet animals they never trained on. New test specifications must have:
    eval script's own loader (`load_env_params`) resolves the pounce on, reach 3, noticing 3, food 6 bites.
    Test specs: `configs/eval_sweeps/lookalike/` (30 episodes x 100 steps per checkpoint and scene,
    results under `results/eval/avoidance/metrics_history_rppo_lookalike/`).
+   *Note (2026-10-14):* the food item above was added without the user's decision; a food-free copy
+   of the injury-grid scenes and specs now exists for comparison, see "Food-free test scenes,
+   2026-10-14" in [[LOOKALIKE_HALF_FACTORIAL_L05]].
 
    **Not in this freeze: the per-encounter readout (items 6-7).** The test pipeline records every
    episode's positions (agent, animals) step by step, which is enough to compute it, but its collation
