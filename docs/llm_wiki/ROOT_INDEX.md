@@ -5,8 +5,8 @@
 > Read this file before classifying a new insight. Folder definitions here are the matching surface — if a new insight does not match any definition verbatim, the new-folder justification protocol applies (see CLAUDE.md, "Fragmentation safeguards").
 
 **Last updated**: 2026-10-14
-**Active folders**: 11
-**Total insights**: 240
+**Active folders**: 12
+**Total insights**: 243
 **Last audit**: (none)
 
 ---
@@ -17,15 +17,16 @@
 |---|---|---|---|---|
 | `wiki_system_design` | Claude LLM Wiki's own design decisions | 15 | 2026-09-09 | [wiki, design, decision, skill, meta, learned_lesson] |
 | `subagent_engineering` | Subagent + worktree usage gotchas | 24 | 2026-10-03 | [meta, learned_lesson, worktree, subagent, decision, design, refutation] |
-| `nmn_diagnosis` | NMN performance diagnosis findings | 23 | 2026-10-07 | [nmn, hypervigilance, film, learned_lesson, design, meta, training_runner, refutation, decision, config] |
+| `nmn_diagnosis` | NMN performance diagnosis findings | 24 | 2026-10-14 | [nmn, hypervigilance, film, learned_lesson, design, meta, training_runner, refutation, decision, config] |
 | `dreamer_diagnosis` | DreamerV3 failure investigation | 30 | 2026-08-06 | [dreamer, decision, learned_lesson, refutation, meta, design, rl] |
-| `cluster_ops` | Lab cluster ops and env mgmt | 52 | 2026-10-14 | [meta, training_runner, learned_lesson, decision, design, dreamer, wandb, testing, tradeoff] |
-| `hypervigilance` | Hypervigilance experiments | 30 | 2026-10-14 | [hypervigilance, dreamer, design, learned_lesson, decision, refutation, meta, noise, rl] |
+| `cluster_ops` | Lab cluster ops and env mgmt | 55 | 2026-10-14 | [meta, training_runner, learned_lesson, decision, design, dreamer, wandb, testing, tradeoff] |
+| `hypervigilance` | Hypervigilance experiments | 32 | 2026-10-14 | [hypervigilance, dreamer, design, learned_lesson, decision, refutation, meta, noise, rl, wandb] |
 | `env_entities` | Env entity architecture decisions | 22 | 2026-09-09 | [design, decision, learned_lesson, meta, config, hypervigilance, dreamer, refutation, testing] |
 | `config_system` | Config loader/layering/schema | 12 | 2026-10-03 | [config, design, decision, meta, learned_lesson] |
 | `curriculum_learning` | Curriculum/continual training | 3 | 2026-06-24 | [learned_lesson, decision, refutation] |
 | `behavior_measures` | Behavior-measure platform & probes | 23 | 2026-10-06 | [design, decision, meta, learned_lesson, hypervigilance, refutation, noise, dreamer, nmn, testing] |
 | `episode_renderer` | Episode video renderer | 6 | 2026-09-22 | [learned_lesson, design, decision, testing, meta, wandb, tradeoff] |
+| `claude_tooling` | Claude skills, sessions, artifacts | 1 | 2026-10-14 | [skill, design, decision] |
 
 ---
 
@@ -57,6 +58,8 @@ Surface a merge proposal to the user when:
 
 ## Change history
 
+- 2026-10-14: Captured 4 insights from the Admin session: 3 into `cluster_ops` (`20261014_1625_nas_raid_rebuild_session_hold`, `20261014_1626_self_matching_wait_loops_broad_kill`, `20261014_1628_git_refs_delete_pending_nas_incident`), 1 into the new `claude_tooling` folder (`20261014_1627_takeaway_skill_format_design`). No new tags.
+- 2026-10-14: Captured 3 insights: 2 into `hypervigilance` (level-05 training death balance — injury 40%, starvation 26%; injury does not raise threat cost, rebalancing on hold), 1 into `nmn_diagnosis` (felt-injury modulator acts as an on/off switch).
 - 2026-10-14: Captured 5 insights: 3 into `cluster_ops` (launches only via training-runner; run registry stale because its rebuild is instruction-only; training ETA method), 2 into `hypervigilance` (first half-factorial repeat seeds — world 6 repeats; world 1 fixed predator range kept).
 - 2026-10-07: Captured 2 insights into `nmn_diagnosis`: `20261007_1142_fast_heal_replication_modulator_effect_not_replicated` (modulator's larger injury effect not replicated, 4 of 9 pairs), `20261007_1143_modulation_type_only_changes_encoder_site` (type switch starts GRU/actor/critic at 3x gain).
 - 2026-10-06: Captured 1 insight into `behavior_measures`: `20261006_0758_test_scene_confound_level05_modulator_gap` (the 22-Sep level-05 modulator gap came mostly from the thermal neutral test scenes; compare runs only within one scene set). No new folders or tags.

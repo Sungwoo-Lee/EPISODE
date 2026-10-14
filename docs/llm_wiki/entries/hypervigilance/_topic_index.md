@@ -6,7 +6,7 @@
 > To improve a row, set a `headline:` field on the entry itself.
 
 **Folder definition**: Hypervigilance experiments
-**Insights**: 30
+**Insights**: 32
 **Last updated**: 2026-10-14
 
 ---
@@ -15,6 +15,8 @@
 
 | Date | Time | ID | Summary |
 |---|---|---|---|
+| 2026-10-14 | 16:26 | [20261014_1626_injury_does_not_raise_threat_cost](20261014_1626_injury_does_not_raise_threat_cost.md) | Extra bush time when injured is mostly healing time (0.17 vs 0.20 pp per injury point predicted). |
+| 2026-10-14 | 16:25 | [20261014_1625_l05_training_deaths_injury_starvation_balance](20261014_1625_l05_training_deaths_injury_starvation_balance.md) | Level-05 training logs (WandB, 10 runs, last 20% of training): about 40% of episodes end in injury death, 26% in starvation, 32% at the 500… |
 | 2026-10-14 | 16:12 | [20261014_1612_hf_world1_fixed_predator_range_kept](20261014_1612_hf_world1_fixed_predator_range_kept.md) | The half-factorial screen's base (world 1) is the lookalike world, not plain level 05: its predator notices and pounces at a fixed 3 cells… |
 | 2026-10-14 | 16:11 | [20261014_1611_hf_first_repeat_seeds_world6_repeats](20261014_1611_hf_first_repeat_seeds_world6_repeats.md) | First repeat-seed results of the level-05 half-factorial screen (5 of 28 runs, tested in world 1's scenes): world 6 (predator threat + hidd… |
 | 2026-07-27 | 05:40 | [20260727_0540_rppo_gamma095_myopic_survival_surrogate](20260727_0540_rppo_gamma095_myopic_survival_surrogate.md) | All live rPPO baselines train at gamma=0.95 (verified from a run's SAVED config): a death 40 steps out is worth 0.13/100, so rPPO optimizes… |
