@@ -5336,3 +5336,17 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261014_223617_rppo_lookalike_hf_l05_w8_t1none_s46.log
 # Commented out: running this file must not relaunch it.
 # [114:2] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w8_newABCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 46 --device cuda:2 --log-interval 10 --tag "rppo_lookalike_hf_l05_w8_t1none_s46" --wandb-name "rppo_lookalike_hf_l05_w8_t1none_s46" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+
+# ---------------------------------------------------------------------------
+# 2026-10-14 — NEW RUN (fourth and last run of the careful node-114 test, ~15 min after the third): w8 modulated s46, WandB id: o8m7w6k2
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Seed 43 and 44 replication", world 8 extra seeds; user request).
+# Same command as the other seeds of this cell except --seed / --device / --tag (--seed 46 is the planned per-row seed).
+# Node 114 uptime before launch: 1:07 (22:51); on the node: w8 ordinary s45 (114:0, PID 1329), w8 modulated s45 (114:1, PID 10753),
+#   w8 ordinary s46 (114:2, PID 17730); card 3 idle. Card temps before launch: 78 / 85 / 83 / 72 C.
+#   At 22:54 (3 min in): 78 / 88 / 82 / 86 C, all 4 cards at 90-97 %, uptime 1:11.
+#   At 23:00 (8 min in): 78 / 87 / 82 / 84 C, 90-100 %, 154-176 W, uptime 1:16; count 315747.
+# Launched 2026-10-14T22:51:28, PID 32366 on node 114; one process confirmed; counts advancing (111665 at 22:54);
+#   https://wandb.ai/sungwoolee/grid_world_pain/runs/o8m7w6k2
+# Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261014_225128_rppo_lookalike_hf_l05_w8_t16quad_s46.log
+# Commented out: running this file must not relaunch it.
+# [114:3] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w8_newABCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 46 --device cuda:3 --log-interval 10 --tag "rppo_lookalike_hf_l05_w8_t16quad_s46" --wandb-name "rppo_lookalike_hf_l05_w8_t16quad_s46" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"

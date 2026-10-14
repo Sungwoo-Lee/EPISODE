@@ -1000,7 +1000,7 @@ progress in episodes, or finished and tested in world 1's scenes).
 | w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s45` | 45 | 114:0 | 2026-10-14T22:02:47 | asluo6n1 | training (log `logs/20261014_220244_rppo_lookalike_hf_l05_w8_t1none_s45.log`; first run on 114 after its crashes) |
 | w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s45` | 45 | 114:1 | 2026-10-14T22:26:39 | srfs0e56 | training (log `logs/20261014_222638_rppo_lookalike_hf_l05_w8_t16quad_s45.log`; second run on 114 after its crashes) |
 | w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s46` | 46 | 114:2 | 2026-10-14T22:36:17 | owkti0xt | training (log `logs/20261014_223617_rppo_lookalike_hf_l05_w8_t1none_s46.log`; third run on 114 after its crashes) |
-| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s46` | 46 | — | — | — | queued |
+| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s46` | 46 | 114:3 | 2026-10-14T22:51:28 | o8m7w6k2 | training (log `logs/20261014_225128_rppo_lookalike_hf_l05_w8_t16quad_s46.log`; fourth and last run on 114 after its crashes) |
 
 **World 8 extra seeds 45 and 46 (user, 2026-10-14 ~22:00):** both agents, same command as the other seeds
 except `--seed`; the user wants more seeds for world 8. Placed on node 114 (four free cards) one run at a time,
