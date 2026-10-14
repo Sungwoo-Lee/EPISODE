@@ -5203,3 +5203,11 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # WandB ids (needed for --wandb-resume-id): w4_t1none_s43 jbosyem7 | w4_t16quad_s43 u9yxm5ot | w6_t1none_s43 31ve5q96 |
 #   w6_t16quad_s43 kh6ity00 | w7_t1none_s43 3kmi8i82 | w7_t16quad_s43 g86nmpp5 | w8_t1none_s43 9sef1pks | w8_t16quad_s43 dafbu78p |
 #   w4_t1none_s44 ph6q6a72 | w4_t16quad_s44 qgt9l0ne | w6_t1none_s44 d6ho30qy | w6_t16quad_s44 774mpxfv | w7_t1none_s44 t1emm55h | w7_t16quad_s44 msskvxt5
+
+# ---------------------------------------------------------------------------
+# 2026-10-14 — RESUME (move off reserved node 112): w8 modulated s44, WandB id: zu54un6n
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Seed 43 and 44 replication").
+# Stopped on purpose 17:47 on 112:1 (SIGINT right after checkpoint 8400000; node 112 reserved, TRAINING_OPERATIONS §7).
+# Resumed on 114:2 (freed when w5 t1none s43 finished at 10M). Same command + --load-checkpoint + --wandb-resume-id.
+# Commented out: running this file must not relaunch it.
+# [114:2] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w8_newABCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 44 --device cuda:2 --log-interval 10 --tag "rppo_lookalike_hf_l05_w8_t16quad_s44" --wandb-name "rppo_lookalike_hf_l05_w8_t16quad_s44" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot" --load-checkpoint results/JAX_RecurrentPPO/20261014-010906_rppo_lookalike_hf_l05_w8_t16quad_s44/models --wandb-resume-id zu54un6n

@@ -3,7 +3,7 @@ title: Lookalike half-factorial at level 05 — which world changes make hiding 
 topic: hypervigilance
 status: active
 created: 2026-10-11
-last_updated: 2026-10-13
+last_updated: 2026-10-14
 wandb_tag: rppo_lookalike_hf_l05
 ---
 
@@ -945,7 +945,7 @@ progress in episodes, or finished and tested in world 1's scenes).
 | w7 ordinary | `rppo_lookalike_hf_l05_w7_t1none_s44` | 44 | 104:0 | 2026-10-13T23:32:13 | t1emm55h | training (8.8 M) |
 | w7 modulated | `rppo_lookalike_hf_l05_w7_t16quad_s44` | 44 | 104:1 | 2026-10-13T23:32:34 | msskvxt5 | training (6.8 M) |
 | w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s44` | 44 | 112:0 | 2026-10-14T01:08:40 | 1u6r6qmv | training (9.6 M) |
-| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s44` | 44 | 112:1 | 2026-10-14T01:09:00 | zu54un6n | training (7.4 M) |
+| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s44` | 44 | 112:1 → 114:2 | 2026-10-14T01:09:00 | zu54un6n | training (resumed from checkpoint 8400000, 2026-10-14T17:54:45) |
 | w2 ordinary | `rppo_lookalike_hf_l05_w2_t1none_s43` | 43 | 102:0 | 2026-10-14T01:42:14 | kwcnjojc | finished, tested |
 | w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s43` | 43 | 107:0 | 2026-10-14T01:42:36 | o6ammaq7 | training (7.8 M) |
 | w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s43` | 43 | 107:1 | 2026-10-14T01:42:56 | ahfv4r0j | training (8.2 M) |
