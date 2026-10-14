@@ -86,6 +86,10 @@ Do **not** attempt to run the bootstrap script yourself — it requires interact
 
 ## Launch Workflow
 
+**Read [docs/environment/TRAINING_OPERATIONS.md](../../docs/environment/TRAINING_OPERATIONS.md) before every launch or resume** —
+§2 (is the card really free), §6 (past launch mistakes) and §7 (live lab constraints such as reserved nodes). If you
+hit a launch problem that is not in §6, add a row there in the same change, and say so in your report.
+
 ### 1. Pre-flight config check (READ-ONLY)
 
 Before touching `train_command-agent.sh`:

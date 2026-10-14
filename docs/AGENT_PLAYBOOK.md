@@ -101,18 +101,11 @@ The Launch Manifest is the **authoritative record** binding experimental cells t
 
 #### Queued launches, resumes and moves (when runs wait for cards)
 
-When there are more runs than free cards, or a run has to be resumed or moved, the split is the same: **top-level
-Claude orchestrates, `training-runner` launches.** No script, watcher or loop body starts a training process itself.
-
-| Who | Does |
-|---|---|
-| Top-level Claude, usually from a `/loop` tick (≈ 15 min) | Checks free cards (`scripts/lab/gpu_status.py --free` plus a `pgrep train.py` on the node, since a run's CPU start-up is invisible to `nvidia-smi`); applies the placement rules (one run per card, excluded nodes, pack node first); picks the next planned run; checks every running log still advances; for a move, stops the run right after its next checkpoint (`terminate_command.py`) |
-| `training-runner`, one spawn per run, several in parallel when several cards are free | Launches (or resumes with `--load-checkpoint` + `--wandb-resume-id`, §4d) on the node + GPU it is given, verifies, and does all the bookkeeping: launch file, manifest row, run registry rebuild, diary row |
-
-A script may **detect and report** (free cards, a log that stopped advancing); it never launches, because the
-runner's checks and bookkeeping are then skipped. On 2026-10-14 a queue watcher launched 13 runs with only diary rows:
-no registry rebuild, no manifest row, no launch-file entry. The one cost of this rule is that queued launches only
-happen while a session is alive to orchestrate them; say so to the user when runs will wait overnight.
+The same split holds when runs wait for cards, or a run is resumed or moved: **top-level Claude orchestrates**
+(free-card checks, placement, stopping a run at a checkpoint; usually from a `/loop` tick), **`training-runner`
+launches**, one spawn per run, several in parallel when several cards are free. Scripts detect and report; they
+never launch. Details, the run records and the incident log:
+[TRAINING_OPERATIONS](environment/TRAINING_OPERATIONS.md).
 
 For **one-off launches with no plan doc** (ad-hoc / debugging), the runner falls back to its default tag/wandb-name convention (see its profile §3a Path B). The convention is parallel to (and consistent with) the designer's manifest convention, so ad-hoc and planned runs interleave cleanly in WandB.
 
