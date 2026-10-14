@@ -63,3 +63,9 @@ runs:
   path: results/JAX_RecurrentPPO/20261013-052940_rppo_lookalike_hf_l05_w8_t16quad_s42
 - label: hf_w7_ordinary_s42_resumed2
   path: results/JAX_RecurrentPPO/20261013-060204_rppo_lookalike_hf_l05_w7_t1none_s42
+- label: hf_w6_ordinary_s43
+  path: results/JAX_RecurrentPPO/20261013-232848_rppo_lookalike_hf_l05_w6_t1none_s43
+- label: hf_w6_modulated_s43
+  path: results/JAX_RecurrentPPO/20261013-232909_rppo_lookalike_hf_l05_w6_t16quad_s43
+- label: hf_w7_ordinary_s43
+  path: results/JAX_RecurrentPPO/20261013-232929_rppo_lookalike_hf_l05_w7_t1none_s43
