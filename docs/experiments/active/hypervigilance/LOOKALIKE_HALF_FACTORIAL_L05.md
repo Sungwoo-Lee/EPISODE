@@ -1072,6 +1072,13 @@ If accepted, route these through `feature-workflow` before the analysis phase. T
 needed for launch, but the σ measurement on the fast-heal runs needs them, and that comes before
 any contrast is read.
 
+## Open question for later: food and bush placement in the test scenes (user, 2026-10-14)
+
+To discuss before any further testing with food. In the with-food test scenes the food item sits at [2, 5]
+(three cells above the agent's start [5, 5]), the bush at [5, 2], and the animal enters at [5, 9]. Where
+the food and the bush sit relative to each other, and to the animal's entry, may change how much an agent
+hides, and so the readout. Decide the placement (or several placements) with the user first.
+
 ## Level 06 follow-up (not now)
 
 The same eight-world design will be repeated at level 06 (level 05 plus thirst and a pond,
