@@ -6,8 +6,8 @@
 > To improve a row, set a `headline:` field on the entry itself.
 
 **Folder definition**: Lab cluster ops and env mgmt
-**Insights**: 49
-**Last updated**: 2026-10-03
+**Insights**: 52
+**Last updated**: 2026-10-14
 
 ---
 
@@ -15,6 +15,9 @@
 
 | Date | Time | ID | Summary |
 |---|---|---|---|
+| 2026-10-14 | 16:13 | [20261014_1613_training_eta_estimation_method](20261014_1613_training_eta_estimation_method.md) | Estimate a 10M-episode rPPO run's end from its own last-20-min pace (from tqdm elapsed in the log) plus a late-training slowdown, not from… |
+| 2026-10-14 | 16:10 | [20261014_1610_run_registry_stale_instruction_only_rebuild](20261014_1610_run_registry_stale_instruction_only_rebuild.md) | The run registry (runs.csv) went stale for 16 h because its rebuild existed only as an instruction in the training-runner profile; launches… |
+| 2026-10-14 | 16:09 | [20261014_1609_launches_only_via_training_runner](20261014_1609_launches_only_via_training_runner.md) | A queue watcher that launched 13 training runs itself skipped the training-runner's bookkeeping (registry, design-doc row, launch file); si… |
 | 2026-10-03 | 08:00 | [20261003_0800_collection_failed_cells_counted_as_claimed](20261003_0800_collection_failed_cells_counted_as_claimed.md) | Two trajectory-collection cells failed on node 114 because its conda env lacks pyarrow, and launch_collection.py then counted them as finis… |
 | 2026-10-03 | 07:54 | [20261003_0754_nas_read_throughput_full_store_validation_infeasible](20261003_0754_nas_read_throughput_full_store_validation_infeasible.md) | Reading the 18 thirst trajectory stores (~700 GB) from this container ran at only 5–10 MB/s per process, so the collection tool's full vali… |
 | 2026-10-03 | 07:52 | [20261003_0752_nas_slow_commit_breaks_stale_lock_rule](20261003_0752_nas_slow_commit_breaks_stale_lock_rule.md) | On a heavily loaded NAS a live git commit held index.lock for over 25 minutes, so the project's 'empty and older than 10 minutes means stal… |

@@ -4,9 +4,9 @@
 >
 > Read this file before classifying a new insight. Folder definitions here are the matching surface — if a new insight does not match any definition verbatim, the new-folder justification protocol applies (see CLAUDE.md, "Fragmentation safeguards").
 
-**Last updated**: 2026-10-07
+**Last updated**: 2026-10-14
 **Active folders**: 11
-**Total insights**: 235
+**Total insights**: 240
 **Last audit**: (none)
 
 ---
@@ -19,8 +19,8 @@
 | `subagent_engineering` | Subagent + worktree usage gotchas | 24 | 2026-10-03 | [meta, learned_lesson, worktree, subagent, decision, design, refutation] |
 | `nmn_diagnosis` | NMN performance diagnosis findings | 23 | 2026-10-07 | [nmn, hypervigilance, film, learned_lesson, design, meta, training_runner, refutation, decision, config] |
 | `dreamer_diagnosis` | DreamerV3 failure investigation | 30 | 2026-08-06 | [dreamer, decision, learned_lesson, refutation, meta, design, rl] |
-| `cluster_ops` | Lab cluster ops and env mgmt | 49 | 2026-10-03 | [meta, training_runner, learned_lesson, decision, design, dreamer, wandb, testing, tradeoff] |
-| `hypervigilance` | Hypervigilance experiments | 28 | 2026-07-27 | [hypervigilance, dreamer, design, learned_lesson, decision, refutation, meta, noise, rl] |
+| `cluster_ops` | Lab cluster ops and env mgmt | 52 | 2026-10-14 | [meta, training_runner, learned_lesson, decision, design, dreamer, wandb, testing, tradeoff] |
+| `hypervigilance` | Hypervigilance experiments | 30 | 2026-10-14 | [hypervigilance, dreamer, design, learned_lesson, decision, refutation, meta, noise, rl] |
 | `env_entities` | Env entity architecture decisions | 22 | 2026-09-09 | [design, decision, learned_lesson, meta, config, hypervigilance, dreamer, refutation, testing] |
 | `config_system` | Config loader/layering/schema | 12 | 2026-10-03 | [config, design, decision, meta, learned_lesson] |
 | `curriculum_learning` | Curriculum/continual training | 3 | 2026-06-24 | [learned_lesson, decision, refutation] |
@@ -57,6 +57,7 @@ Surface a merge proposal to the user when:
 
 ## Change history
 
+- 2026-10-14: Captured 5 insights: 3 into `cluster_ops` (launches only via training-runner; run registry stale because its rebuild is instruction-only; training ETA method), 2 into `hypervigilance` (first half-factorial repeat seeds — world 6 repeats; world 1 fixed predator range kept).
 - 2026-10-07: Captured 2 insights into `nmn_diagnosis`: `20261007_1142_fast_heal_replication_modulator_effect_not_replicated` (modulator's larger injury effect not replicated, 4 of 9 pairs), `20261007_1143_modulation_type_only_changes_encoder_site` (type switch starts GRU/actor/critic at 3x gain).
 - 2026-10-06: Captured 1 insight into `behavior_measures`: `20261006_0758_test_scene_confound_level05_modulator_gap` (the 22-Sep level-05 modulator gap came mostly from the thermal neutral test scenes; compare runs only within one scene set). No new folders or tags.
 

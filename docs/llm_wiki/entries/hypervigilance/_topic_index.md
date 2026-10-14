@@ -6,8 +6,8 @@
 > To improve a row, set a `headline:` field on the entry itself.
 
 **Folder definition**: Hypervigilance experiments
-**Insights**: 28
-**Last updated**: 2026-07-27
+**Insights**: 30
+**Last updated**: 2026-10-14
 
 ---
 
@@ -15,6 +15,8 @@
 
 | Date | Time | ID | Summary |
 |---|---|---|---|
+| 2026-10-14 | 16:12 | [20261014_1612_hf_world1_fixed_predator_range_kept](20261014_1612_hf_world1_fixed_predator_range_kept.md) | The half-factorial screen's base (world 1) is the lookalike world, not plain level 05: its predator notices and pounces at a fixed 3 cells… |
+| 2026-10-14 | 16:11 | [20261014_1611_hf_first_repeat_seeds_world6_repeats](20261014_1611_hf_first_repeat_seeds_world6_repeats.md) | First repeat-seed results of the level-05 half-factorial screen (5 of 28 runs, tested in world 1's scenes): world 6 (predator threat + hidd… |
 | 2026-07-27 | 05:40 | [20260727_0540_rppo_gamma095_myopic_survival_surrogate](20260727_0540_rppo_gamma095_myopic_survival_surrogate.md) | All live rPPO baselines train at gamma=0.95 (verified from a run's SAVED config): a death 40 steps out is worth 0.13/100, so rPPO optimizes… |
 | 2026-06-30 | 16:29 | [20260630_1629_injury_gated_olfactory_noise_hypervig](20260630_1629_injury_gated_olfactory_noise_hypervig.md) | Basic level 06 design: induce hypervigilance via INJURY-GATED OLFACTORY perceptual noise (precision-weighting). |
 | 2026-06-24 | 05:17 | [20260624_0517_indist_random_init_reverses_hypervig](20260624_0517_indist_random_init_reverses_hypervig.md) | **[expired 2026-08-31]** Re-running the probes on the IN-DISTRIBUTION model (random-init hg10, trained on random nutrition[10,100]/injury[0,80], decay 2.0, 10M) REV… |

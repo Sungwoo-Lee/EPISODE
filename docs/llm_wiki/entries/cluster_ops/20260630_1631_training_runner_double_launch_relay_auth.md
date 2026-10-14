@@ -44,4 +44,5 @@ Launching `rppo_basic05_randpred_n110` produced TWO live training processes on n
 ## Backlinks
 - [[20260703_0342_lab_gpu_heterogeneous_probe_contamination]] (cluster_ops, 2026-07-03) — The lab cluster is HETEROGENEOUS (2080 Ti 11GB nodes 101/103/104/105, 3090 24GB 
 - [[20260703_0353_wandb_log_code_hang_progress_recheck]] (cluster_ops, 2026-07-03) — Lab nodes (seen on 108/109/110/113) intermittently hit a ~8-minute WandB run.log
+- [[20261014_1609_launches_only_via_training_runner]] (cluster_ops, 2026-10-14) — A queue watcher that launched 13 training runs itself skipped the training-runne
 <!-- END BACKLINKS -->

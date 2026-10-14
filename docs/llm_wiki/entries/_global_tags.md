@@ -3,7 +3,7 @@
 > Check this file before inventing a new tag. If a suitable tag already exists, use it exactly as written.
 > Tag drift leads to missed recall — use the canonical form.
 
-**Last updated**: 2026-10-06
+**Last updated**: 2026-10-14
 
 ---
 
@@ -58,6 +58,7 @@ These are not yet active — they become active when first used in an insight. R
 ---
 
 ## Change history
+- 2026-10-14: 5 insights from the half-factorial seed-launch session (`20261014_1609_launches_only_via_training_runner`, `20261014_1610_run_registry_stale_instruction_only_rebuild`, `20261014_1613_training_eta_estimation_method` cluster_ops; `20261014_1611_hf_first_repeat_seeds_world6_repeats`, `20261014_1612_hf_world1_fixed_predator_range_kept` hypervigilance) reused existing tags `training_runner`, `decision`, `learned_lesson`, `meta`, `wandb`, `design`, `hypervigilance`, `nmn`, `config` — no new tags promoted.
 - 2026-10-07: 2 insights (`20261007_1142_fast_heal_replication_modulator_effect_not_replicated`, `20261007_1143_modulation_type_only_changes_encoder_site`) into nmn_diagnosis reused existing tags `nmn`, `film`, `hypervigilance`, `refutation`, `learned_lesson`, `config` — no new tags promoted.
 - 2026-09-22: 3 insights into `episode_renderer` (`20260922_1558_shadowed_guards_one_constant`, `20260922_1559_six_more_checks_that_cannot_fail`, `20260922_1600_vision_slots_legibility_over_anchor`) reused existing tags `learned_lesson`, `design`, `decision`, `testing`, `meta` and **promoted `tradeoff`** from starter-candidate to active (first use: the vision slot-count trade, where the rejected alternative and its cost are both named). Added `tradeoff` to episode_renderer top-tags.
 - 2026-08-20: 1 insight into `env_entities` (`20260820_1606_reset_ulp_divergence_is_compiler_fusion`) reused existing tags `learned_lesson`, `refutation`, `meta` — no new tags promoted. Added `refutation` to env_entities top-tags.
