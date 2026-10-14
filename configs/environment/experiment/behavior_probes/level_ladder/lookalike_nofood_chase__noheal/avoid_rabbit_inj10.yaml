@@ -1,0 +1,35 @@
+# GENERATED for the level-ladder heat map (Visualization: Recording session, 2026-10-14). Do not hand-edit.
+# Food-free, healing-off copy of behavior_probes/lookalike/injury_grid__chase_neutral_clean/avoid_rabbit_inj10.yaml:
+# the same lookalike chasing rabbit (same smell as every animal), WITHOUT the added 6-bite food item (the
+# resources are the source scene's own: none), and body.recovery_base_rate -> 0.0 (no healing).
+# Kept in a separate folder so the Behavior session's lookalike_nofood/ folders stay its own.
+extends: environment/experiment/behavior_probes/injury_grid/chase_neutral_clean/avoid_rabbit_inj10
+
+environment:
+  entities:
+  - class: neutral
+    behaviour: hunt
+    tag: rabbit
+    count: 1
+    properties: [0.0, 0.6, 0.6, 0.0, 0.0]
+    properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+    visual_properties: [1.0]
+    visual_properties_std: [0.0]
+    move_interval: 1
+    damage: [0.0, 0.0]
+    nociception_intensity: 0.1
+    spawn_area:
+    - [5, 9]
+    - [5, 9]
+    patrol_area:
+    - [1, 1]
+    - [10, 10]
+    detection_range: 12
+    max_stamina: 30
+    stamina_recovery_rate: 1
+    hunt_stamina_threshold: 0.7
+    lose_interest_multiplier: 1.5
+    attack_delay: 3
+
+body:
+  recovery_base_rate: 0.0
