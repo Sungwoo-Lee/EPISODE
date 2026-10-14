@@ -55,11 +55,16 @@ def sign(world, group):
 
 
 def folders(world, agent, heal, scene_set, seed=42):
-    """Every result folder of one run (one per training session), oldest first."""
+    """Every result folder of one run (one per training session), oldest first. A scene set ending in
+    '_nofood' (e.g. 'grid_nofood') reads the food-free copy of the scenes (user, 2026-10-14): the original
+    lookalike test scenes carry one 6-bite food item that was added without the user's decision."""
+    nofood = scene_set.endswith("_nofood")
+    scene_set = scene_set[:-len("_nofood")] if nofood else scene_set
+    tail = ("_nofood" if nofood else "") + ("_noheal" if heal == "off" else "")
     if world == 1:
-        base = "metrics_history_rppo_lookalike" + ("_noheal" if heal == "off" else "")
+        base = "metrics_history_rppo_lookalike" + tail
         return [os.path.join(AV, base, scene_set, f"lookalike_{agent}_s{seed}")]
-    base = "metrics_history_rppo_lookalike_hf" + ("_noheal" if heal == "off" else "")
+    base = "metrics_history_rppo_lookalike_hf" + tail
     lab = f"hf_w{world}_{agent}_s{seed}"
     fs = sorted(glob.glob(os.path.join(AV, base, scene_set, lab + "*")),
                 key=lambda p: (len(os.path.basename(p)), p))   # <label>, <label>_resumed, <label>_resumed2
@@ -118,9 +123,10 @@ def n_episodes(world, agent, heal, scene_set, seed=42):
     return int(d["n_episodes"].iloc[0]) if "n_episodes" in d.columns else 30
 
 
-def contrast(world, agent, heal, kind, inj="70", seed=42):
-    """Per-checkpoint contrast (percentage points of bush dwell) in the injury-grid scenes."""
-    g = lambda sc, i: dwell(world, agent, heal, "grid", sc, i, seed)
+def contrast(world, agent, heal, kind, inj="70", seed=42, grid="grid"):
+    """Per-checkpoint contrast (percentage points of bush dwell) in the injury-grid scenes ('grid', or the
+    food-free copy 'grid_nofood')."""
+    g = lambda sc, i: dwell(world, agent, heal, grid, sc, i, seed)
     if kind == "interaction":
         v = (g("rabbitwander", inj) - g("rabbitwander", "00")) - (g("none", inj) - g("none", "00"))
     elif kind == "rabbit_unhurt":
@@ -157,28 +163,28 @@ def at_step(v, millions):
     return float(v.iloc[j]), int(v.index[j])
 
 
-def run_row(w, a, heal, inj, seed):
+def run_row(w, a, heal, inj, seed, grid="grid"):
     """Readout (c) and its checks for one run."""
-    it = contrast(w, a, heal, "interaction", inj, seed)
-    ru = contrast(w, a, heal, "rabbit_unhurt", inj, seed)
+    it = contrast(w, a, heal, "interaction", inj, seed, grid)
+    ru = contrast(w, a, heal, "rabbit_unhurt", inj, seed, grid)
     ni, nr = newest(it), newest(ru)
     wt = whole_training(it)
     row = {"world": w, "agent": a, "seed": seed, "new": NEW[w] or "-", "heal": heal, "inj": inj,
            "inter": ni["mean"], "inter_lo": ni["lo"], "inter_hi": ni["hi"], "inter_se": ni["se"],
            "inter_neff": ni["neff"], "rabbit": nr["mean"], "rabbit_lo": nr["lo"], "rabbit_hi": nr["hi"],
-           "inj_none": newest(contrast(w, a, heal, "injury_none", inj, seed))["mean"],
-           "inj_rabbit": newest(contrast(w, a, heal, "injury_rabbit", inj, seed))["mean"],
+           "inj_none": newest(contrast(w, a, heal, "injury_none", inj, seed, grid))["mean"],
+           "inj_rabbit": newest(contrast(w, a, heal, "injury_rabbit", inj, seed, grid))["mean"],
            **wt, "first_step": ni["first_step"], "last_step": ni["last_step"],
-           "episodes": n_episodes(w, a, heal, "grid", seed)}
+           "episodes": n_episodes(w, a, heal, grid, seed)}
     for m in (6, 8, 10):
         row[f"inter_{m}M"], row[f"step_{m}M"] = at_step(it, m)
     row["signature"] = bool(row["inter_lo"] > 0 and row["inter"] > 1.4 and abs(row["rabbit"]) < abs(row["inter"]))
     return row
 
 
-def run_table(heal, inj="70"):
+def run_table(heal, inj="70", grid="grid"):
     """One row per run (16 screen runs + world 1's seed-43 pair): readout (c) and its checks."""
-    return pd.DataFrame([run_row(w, a, heal, inj, seed) for w in WORLDS for a in AGENTS
+    return pd.DataFrame([run_row(w, a, heal, inj, seed, grid) for w in WORLDS for a in AGENTS
                          for seed in ((42, 43) if w == 1 else (42,))])
 
 
@@ -269,6 +275,18 @@ def group_effects(rt):
         rec["verdict"] = "clears the bar" if rec["clears_bar"] and same_sign else "does not clear the bar"
         out.append(rec)
     return pd.DataFrame(out)
+
+
+def has_nofood(world, agent, seed):
+    """True when the food-free test of this run is complete (both healing settings, final checkpoint)."""
+    for heal in ("on", "off"):
+        fs = folders(world, agent, heal, "grid_nofood", seed)
+        if not fs or not os.path.isdir(fs[-1]):
+            return False
+        p = os.path.join(fs[-1], "avoid_none_inj00.csv")
+        if not os.path.exists(p) or pd.read_csv(p, usecols=["step"])["step"].max() < 9_990_000:
+            return False
+    return True
 
 
 if __name__ == "__main__":

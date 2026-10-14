@@ -15,10 +15,11 @@ checkpoints with a 95 % interval, as in the pre-registered readout.
   group              the pre-registered group test: each setting group's effect against the bar
   seeds              the injury contrast of every world and agent, seed 42 beside each tested replication seed
   seedtrain          the injury contrast across training, healing off, injury 70, the seeds overlaid
+  food               each run's injury contrast with the food item (x) against the food-free scenes (y)
 --world all draws the eight worlds in one process (the CSVs are read once).
 
     $P scripts/analysis/studies/half_factorial_l05/figures.py --fig-dir <dir> --figure curves|extra|train --world N|all
-    $P scripts/analysis/studies/half_factorial_l05/figures.py --fig-dir <dir> --figure animals|group|seeds|seedtrain
+    $P scripts/analysis/studies/half_factorial_l05/figures.py --fig-dir <dir> --figure animals|group|seeds|seedtrain|food
 """
 from __future__ import annotations
 
@@ -96,6 +97,10 @@ def fig_curves(w):
                 st = [summ(g(w, a, heal, sc, i, s)) for i in D.INJ]
                 band(ax, X, *zip(*st), col, mk, filled=filled)
                 rows.append(used_row("", g(w, a, heal, sc, "70", s), w, a, s, heal))
+                if D.has_nofood(w, a, s):   # food-free scenes (user, 2026-10-14): dotted, no band
+                    nf = [summ(D.dwell(w, a, heal, "grid_nofood", sc, i, s))[0] for i in D.INJ]
+                    ax.plot(X, nf, color=col, lw=1.5, ls=(0, (1.2, 1.4)), marker=mk, ms=3.2, mfc=H.PAPER, mew=1.0, zorder=4)
+                    rows.append(used_row("", D.dwell(w, a, heal, "grid_nofood", sc, "70", s), w, a, s, heal))
             if r_ == 0:
                 ax.set_title(HEAL_NAME[heal], loc="left", fontsize=H.FS_BODY)
             if c_ == 0:
@@ -107,7 +112,10 @@ def fig_curves(w):
     hs = [Line2D([], [], color=NONE_COL, marker="o", mfc=H.PAPER, mew=1.3, lw=2, label="no animal"),
           Line2D([], [], color=RABBIT_COL, marker="s", mfc=RABBIT_COL, lw=2, label="wandering rabbit"),
           Line2D([], [], color=H.INK_2, lw=0.7, ls=(0, (3, 2)), label="dashed edges: 95 % interval")]
-    fig.legend(handles=hs, loc="lower center", ncol=3, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.005))
+    if any(D.has_nofood(w, a, s) for a, s in rr):
+        hs.append(Line2D([], [], color=H.INK_2, lw=1.5, ls=(0, (1.2, 1.4)), marker="o", ms=3.2, mfc=H.PAPER,
+                         label="dotted: food-free scenes"))
+    fig.legend(handles=hs, loc="lower center", ncol=4 if len(hs) == 4 else 3, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.005))
     fig.subplots_adjust(left=0.13, right=0.99, top=0.95 if len(rr) == 2 else 0.96,
                         bottom=0.6 / (2.35 * len(rr) + 1.0) + 0.04, hspace=0.28, wspace=0.08)
     return fig, rows
@@ -403,6 +411,58 @@ def world_runs_row(w):
             else "every planned run of this world is drawn"}
 
 
+FOOD_MK = {"ordinary": "o", "modulated": "s"}
+
+
+def food_runs():
+    """Every run whose food-free test is complete: (world, agent, seed)."""
+    out = []
+    for w in D.WORLDS:
+        for a in D.AGENTS:
+            for s in ((42, 43) if w == 1 else (42, *D.tested_seeds(w, a))):
+                if D.has_nofood(w, a, s):
+                    out.append((w, a, s))
+    return out
+
+
+def fig_food():
+    import matplotlib.pyplot as plt
+    rr = food_runs()
+    fig, axs = plt.subplots(1, 2, figsize=(8.4, 4.9), sharex=True, sharey=True)
+    rows, ext = [], []
+    for ax, heal in zip(axs, HEALS):
+        for w, a, s in rr:
+            v1 = D.contrast(w, a, heal, "interaction", "70", s, "grid")
+            v0 = D.contrast(w, a, heal, "interaction", "70", s, "grid_nofood")
+            m1, lo1, hi1 = summ(v1)
+            m0, lo0, hi0 = summ(v0)
+            ext += [lo1, hi1, lo0, hi0]
+            ax.plot([lo1, hi1], [m0, m0], color=SEED_COL[s], lw=0.8, alpha=0.6, zorder=2)
+            ax.plot([m1, m1], [lo0, hi0], color=SEED_COL[s], lw=0.8, alpha=0.6, zorder=2)
+            ax.plot(m1, m0, marker=FOOD_MK[a], ms=5.5, color=SEED_COL[s], mfc=SEED_COL[s] if a == "ordinary" else H.PAPER,
+                    mew=1.3, ls="none", zorder=3)
+            if abs(m0 - m1) > 15:   # label only runs the food moved by more than 15 points
+                ax.annotate(f"w{w}", (m1, m0), xytext=(4, 3), textcoords="offset points", fontsize=H.FS_LABEL - 1,
+                            color=H.INK_2)
+            rows.append(used_row("", v0, w, a, s, heal))
+        ax.set_title(HEAL_NAME[heal], loc="left", fontsize=H.FS_BODY)
+        ax.set_xlabel("with the food item (points)", fontsize=H.FS_LABEL)
+    lim = 20 * np.ceil(max(abs(x) for x in ext) / 20)
+    for ax in axs:
+        ax.plot([-lim, lim], [-lim, lim], color=H.INK_2, lw=0.8, ls=(0, (4, 2)), zorder=1)
+        ax.axhline(0, color=H.RULE, lw=0.8, zorder=0); ax.axvline(0, color=H.RULE, lw=0.8, zorder=0)
+    axs[0].set_xlim(-lim, lim); axs[0].set_ylim(-lim, lim); axs[0].set_aspect("equal")
+    axs[0].set_ylabel("food-free scenes (points)", fontsize=H.FS_LABEL)
+    from matplotlib.lines import Line2D
+    hs = [Line2D([], [], marker="o", color=H.INK_2, ls="none", label="ordinary agent"),
+          Line2D([], [], marker="s", color=H.INK_2, mfc=H.PAPER, mew=1.3, ls="none", label="modulated agent")]
+    hs += [Line2D([], [], marker="o", color=SEED_COL[s], ls="none", label=f"seed {s}") for s in (42, 43, 44)]
+    hs.append(Line2D([], [], color=H.INK_2, lw=0.8, ls=(0, (4, 2)), label="dashed: same value in both"))
+    fig.legend(handles=hs, loc="lower center", ncol=3, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.01))
+    fig.subplots_adjust(left=0.1, right=0.98, top=0.93, bottom=0.27, wspace=0.08)
+    return fig, rows
+
+
 def collapse(rows, what):
     """One data-statement row per figure when every series shares one coverage note (the per-run step range
     is dropped from the note, since it differs only by when testing started)."""
@@ -413,13 +473,14 @@ def collapse(rows, what):
              "note": notes.pop()}]
 
 
-WHAT = {"curves": "series (agent \u00d7 seed \u00d7 healing \u00d7 animal), counted at injury 70",
+WHAT = {"curves": "series (agent \u00d7 seed \u00d7 healing \u00d7 animal \u00d7 with or without food), counted at injury 70",
         "extra": "series (agent x healing), counted at injury 70",
         "train": "series (agent x healing), whole training",
         "animals": "runs, healing off, 8 scenes each",
         "group": "group tests (one per panel)",
         "seeds": "series (run \u00d7 healing), counted at injury 70",
-        "seedtrain": "series (run), healing off, injury 70, whole training"}
+        "seedtrain": "series (run), healing off, injury 70, whole training",
+        "food": "series (run \u00d7 healing), food-free scenes, counted at injury 70"}
 
 
 def main(argv=None):
@@ -430,9 +491,9 @@ def main(argv=None):
     a = ap.parse_args(argv)
     H.apply()
     d = os.path.abspath(a.fig_dir)
-    if a.figure in ("animals", "group", "seeds", "seedtrain"):
+    if a.figure in ("animals", "group", "seeds", "seedtrain", "food"):
         jobs = [(f"hf_{a.figure}", {"animals": fig_animals, "group": fig_group, "seeds": fig_seeds,
-                                    "seedtrain": fig_seedtrain}[a.figure])]
+                                    "seedtrain": fig_seedtrain, "food": fig_food}[a.figure])]
     else:
         ws = D.WORLDS if a.world == "all" else [int(a.world)]
         f = {"curves": fig_curves, "extra": fig_extra, "train": fig_train}[a.figure]
@@ -442,6 +503,11 @@ def main(argv=None):
         rows = collapse(rows, f"{len(rows)} {WHAT[a.figure]}")
         if a.figure in ("seeds", "seedtrain"):
             rows.append(planned_runs_row())
+        if a.figure == "food":
+            n = len(food_runs())
+            rows.append({"what": "runs drawn, of all tested with food", "used": n, "total": 18 + sum(
+                D.seed_status(w, ag, s)[0] == "tested" for w in D.WORLDS[1:] for ag in D.AGENTS for s in D.EXTRA_SEEDS),
+                "note": "a run is drawn once its food-free test holds its final checkpoint, healing on and off"})
         if a.figure == "curves":
             rows.append(world_runs_row(int(stem.rsplit("w", 1)[1])))
         FG.record_samples(d, stem, rows)

@@ -113,6 +113,37 @@ def seed_table():
                     num=("s42", "s43", "s44"), raw=("changed", "s42", "s43", "s44"), min_width=740)
 
 
+def food_cell(g):
+    txt = f'<span class="nw">{pp(g["effect"])}</span><br><span class="ci nw">bar {g["bar"]:.1f}' \
+          f'{" &dagger;" if not g["same_sign_6_8_10"] else ""}</span>'
+    return f"<strong>{txt}</strong>" if g["verdict"] == "clears the bar" else txt
+
+
+def food_table():
+    """Group test (seed 42) with the food item and in the food-free scenes, side by side."""
+    ready = all(D.has_nofood(w, a, s) for w in D.WORLDS for a in D.AGENTS for s in ((42, 43) if w == 1 else (42,)))
+    rows = []
+    for t in ("A", "B", "C", "D", "AB+CD", "AC+BD", "AD+BC"):
+        r = {"term": f"{t}: {D.GROUPS[t]}" if t in D.GROUPS else f"pair {t}"}
+        for c in CASES:
+            r["f_" + "_".join(c)] = food_cell(D.group_effects(rt(*c)).set_index("term").loc[t])
+            r["n_" + "_".join(c)] = (food_cell(D.group_effects(D.run_table(*c, grid="grid_nofood")).set_index("term").loc[t])
+                                     if ready else "pending")
+        rows.append(r)
+    cols = ["term"] + [k + "_".join(c) for c in CASES for k in ("f_", "n_")]
+    heads = ["setting change"] + [f"{CASE_NAME[c]}, {k}" for c in CASES for k in ("with food", "food-free")]
+    return FB.table(pd.DataFrame(rows), cols, heads, num=tuple(cols[1:]), raw=tuple(cols[1:]), min_width=900)
+
+
+def food_count():
+    spec = importlib.util.spec_from_file_location("hf_figures", os.path.join(HERE, "figures.py"))
+    FG_ = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(FG_)   # by path: another 'figures' module is already on sys.path
+    n = len(FG_.food_runs())
+    tot = 18 + sum(D.seed_status(w, a, s)[0] == "tested" for w in D.WORLDS[1:] for a in D.AGENTS for s in D.EXTRA_SEEDS)
+    return f"{n} of the {tot} runs tested with the food item also have their food-free test complete"
+
+
 def seed_count():
     st = [D.seed_status(w, a, s_)[0] for w in D.WORLDS[1:] for a in D.AGENTS for s_ in D.EXTRA_SEEDS]
     n = {k: st.count(k) for k in ("tested", "testing", "training", "queued")}
@@ -127,7 +158,10 @@ CURVES_AXES = ("Horizontal: starting injury of the test, 0 (unhurt) to 90 in ste
                "switched off in the test scene, so the starting injury lasts the whole test; right column: healing on, as "
                "in training. Grey open circles: no animal; orange squares: a harmless wandering rabbit. Each point is the "
                "mean over the run's newest 20 tested checkpoints; dashed edges and shading: 95&nbsp;% interval. One row per agent "
-               "and seed: seed 42, then each repeat seed (43, 44) once its run is finished and tested (section 06).")
+               "and seed: seed 42, then each repeat seed (43, 44) once its run is finished and tested (section 06). "
+               "Solid lines with shading: the test scenes with one food item (as everywhere on this page); dotted lines "
+               "in the same colours, without shading: the same run in the food-free copy of the scenes, "
+               "drawn once that test is complete.")
 EXTRA_AXES = ("Horizontal: starting injury of the test, 0 to 90. Vertical: the rabbit's extra bush dwell &mdash; bush "
               "dwell with the wandering rabbit minus bush dwell with no animal, in percentage points (pp), mean over the "
               "newest 20 tested checkpoints, with a 95&nbsp;% interval (dashed edges, shading). Blue diamonds: healing off; "
@@ -167,6 +201,15 @@ SEEDTRAIN_AXES = ("Horizontal: training, in million steps (0&ndash;10). Vertical
                   "with healing off, in percentage points, as a 5-checkpoint moving average. One panel per world (rows) "
                   "and agent (columns). Solid black: seed 42; purple dashed: seed 43; ochre dotted: seed 44. All panels "
                   "share one vertical range, which differs from Figure 4's because these lines are averaged.")
+
+
+FOOD_AXES = ("Horizontal: a run's injury contrast at injury 70 in the scenes with the food item (as in sections "
+             "02&ndash;06); vertical: the same run's injury contrast in the food-free copy of the scenes. Both in "
+             "percentage points of bush dwell, mean over the newest 20 tested checkpoints, with the 95&nbsp;% interval "
+             "as thin lines. One mark per run: circle ordinary agent, open square modulated agent; colour by seed "
+             "(black 42, purple 43, ochre 44). Left: healing off in the test scene; right: healing on. The dashed "
+             "diagonal is &ldquo;same value with and without food&rdquo;; marks above it hide more near the rabbit when "
+             "there is no food to leave for. Runs more than 15 points off the diagonal carry their world number.")
 
 
 def world_tabs():
