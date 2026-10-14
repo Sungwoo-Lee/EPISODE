@@ -112,6 +112,7 @@ Newest first. Each row: what happened, why, and the rule that now prevents it.
 
 | Date | What happened | Cause | Rule now |
 |---|---|---|---|
+| 2026-10-14 | Nodes 113 and 114 crashed together twice (20:38, 21:43; no clean shutdown in the boot log) and killed 6 training runs plus test workers; 6 resumes on the same nodes died in the second crash ~2 min after starting | Unknown hardware fault, both times under full load (training on every card + CPU test workers; second time 6 runs starting at once) | Do not place runs or test workers on 113/114 until checked (§7); after a node crash, resume elsewhere; check `uptime` before re-using a node; never start many runs on one node at the same moment |
 | 2026-10-14 | 13 seed runs launched by a queue watcher had no registry entry, no design-doc row and no launch-file entry | The watcher called `run_command.py` itself and copied only the diary step of the runner's checklist | Scripts never launch; the orchestrator spawns `training-runner` per run (§1) |
 | 2026-10-14 | Registry status said 18 running, live check 20 | Plain build judges "running" by recent WandB writes | Rebuild with `--live` before trusting status (§4) |
 | 2026-10-13 | 14 launches wrote their logs to each node's home folder | Relative `--log` path | Absolute `--log` (§3) |
@@ -128,6 +129,7 @@ Newest first. Each row: what happened, why, and the rule that now prevents it.
 
 | Since | Constraint | Until |
 |---|---|---|
+| 2026-10-14 21:43 | **Nodes 113 and 114 unreliable**: crashed twice under load (§6). No training or test workers there, except: the user allowed (22:00) a careful test of 114, one run first, the next only after ~20 min up, a few minutes apart | Someone checks power / cooling and the user clears them |
 | 2026-10-14 15:35 | **Node 112 reserved for another lab member.** Launch nothing there; the half-factorial run still on 112:1 is moved off at its next checkpoint once a card frees elsewhere | The user releases it |
 | 2026-09-09 | Node 102 sometimes carries another lab member's job | Check its processes at every launch |
 

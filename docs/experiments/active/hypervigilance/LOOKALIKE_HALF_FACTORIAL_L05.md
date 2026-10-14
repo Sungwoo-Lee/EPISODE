@@ -984,19 +984,28 @@ progress in episodes, or finished and tested in world 1's scenes).
 | w7 ordinary | `rppo_lookalike_hf_l05_w7_t1none_s44` | 44 | 104:0 | 2026-10-13T23:32:13 | t1emm55h | training (8.8 M) |
 | w7 modulated | `rppo_lookalike_hf_l05_w7_t16quad_s44` | 44 | 104:1 | 2026-10-13T23:32:34 | msskvxt5 | training (6.8 M) |
 | w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s44` | 44 | 112:0 | 2026-10-14T01:08:40 | 1u6r6qmv | training (9.6 M) |
-| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s44` | 44 | 112:1 → 114:2 | 2026-10-14T01:09:00 | zu54un6n | training (resumed from checkpoint 8400000, 2026-10-14T17:54:45) |
+| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s44` | 44 | 112:1 → 114:2 → 105:0 | 2026-10-14T01:09:00 | zu54un6n | training (resumed from 9800009 after node 114 crashes, 2026-10-14T21:52:11) |
 | w2 ordinary | `rppo_lookalike_hf_l05_w2_t1none_s43` | 43 | 102:0 | 2026-10-14T01:42:14 | kwcnjojc | finished, tested |
 | w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s43` | 43 | 107:0 | 2026-10-14T01:42:36 | o6ammaq7 | training (7.8 M) |
 | w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s43` | 43 | 107:1 | 2026-10-14T01:42:56 | ahfv4r0j | training (8.2 M) |
 | w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s43` | 43 | 102:1 | 2026-10-14T02:16:45 | 045e3jpn | training (8.4 M) |
 | w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s43` | 43 | 114:2 | 2026-10-14T09:11:55 | hbj7v855 | training (8.2 M) |
-| w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s43` | 43 | 113:0 | 2026-10-14T10:31:27 | h5aerd6t | training (5.6 M) |
-| w2 ordinary | `rppo_lookalike_hf_l05_w2_t1none_s44` | 44 | 114:3 | 2026-10-14T11:50:31 | vtu6ryat | training (4.2 M) |
+| w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s43` | 43 | 113:0 → 104:0 | 2026-10-14T10:31:27 | h5aerd6t | training (resumed from 9600020 after node 113 crashes, 2026-10-14T21:48:40) |
+| w2 ordinary | `rppo_lookalike_hf_l05_w2_t1none_s44` | 44 | 114:3 → 103:1 | 2026-10-14T11:50:31 | vtu6ryat | training (resumed from 8200036 after node 114 crashes, 2026-10-14T21:49:04) |
 | w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s44` | 44 | 102:0 | 2026-10-14T13:24:34 | 58s13gbi | training (2.2 M) |
-| w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s44` | 44 | 113:1 | 2026-10-14T13:24:54 | 388uegdg | training (2.2 M) |
-| w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s44` | 44 | 114:0 | 2026-10-14T14:13:12 | o8p3r8ue | training (1.2 M) |
+| w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s44` | 44 | 113:1 → 107:1 | 2026-10-14T13:24:54 | 388uegdg | training (resumed from 6400016 after node 113 crashes, 2026-10-14T21:50:14) |
+| w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s44` | 44 | 114:0 → 102:1 | 2026-10-14T14:13:12 | o8p3r8ue | training (resumed from 4400031 after node 114 crashes, 2026-10-14T21:48:07; log `logs/20261014_214807_rppo_lookalike_hf_l05_w3_t16quad_s44.log`) |
 | w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s44` | 44 | 103:0 | 2026-10-14T15:32:14 | s3aoryo4 | training (0.2 M) |
-| w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s44` | 44 | 114:1 | 2026-10-14T18:26:15 | iiuwsiv9 | training |
+| w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s44` | 44 | 114:1 → 107:0 | 2026-10-14T18:26:15 | iiuwsiv9 | training (resumed from 2600027 after node 114 crashes, 2026-10-14T21:48:10) |
+| w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s45` | 45 | 114:0 | 2026-10-14T22:02:47 | asluo6n1 | training (log `logs/20261014_220244_rppo_lookalike_hf_l05_w8_t1none_s45.log`; first run on 114 after its crashes) |
+| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s45` | 45 | — | — | — | queued |
+| w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s46` | 46 | — | — | — | queued |
+| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s46` | 46 | — | — | — | queued |
+
+**World 8 extra seeds 45 and 46 (user, 2026-10-14 ~22:00):** both agents, same command as the other seeds
+except `--seed`; the user wants more seeds for world 8. Placed on node 114 (four free cards) one run at a time,
+starting with w8 ordinary s45 and adding the next only after ~20 min with the node up, because 113/114 crashed
+twice that evening (see docs/environment/TRAINING_OPERATIONS.md §6-7).
 
 ### Configs to produce
 
