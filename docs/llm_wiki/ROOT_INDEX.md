@@ -6,7 +6,7 @@
 
 **Last updated**: 2026-10-14
 **Active folders**: 12
-**Total insights**: 243
+**Total insights**: 247
 **Last audit**: (none)
 
 ---

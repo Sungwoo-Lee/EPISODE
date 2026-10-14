@@ -6,7 +6,7 @@
 > To improve a row, set a `headline:` field on the entry itself.
 
 **Folder definition**: Lab cluster ops and env mgmt
-**Insights**: 52
+**Insights**: 55
 **Last updated**: 2026-10-14
 
 ---
@@ -15,6 +15,9 @@
 
 | Date | Time | ID | Summary |
 |---|---|---|---|
+| 2026-10-14 | 16:28 | [20261014_1628_git_refs_delete_pending_nas_incident](20261014_1628_git_refs_delete_pending_nas_incident.md) | On 2026-10-07 the SMB NAS left `.git/refs/heads/v5.0` and `.git/packed-refs` 'delete pending': each was listed in the folder but couldn't b… |
+| 2026-10-14 | 16:26 | [20261014_1626_self_matching_wait_loops_broad_kill](20261014_1626_self_matching_wait_loops_broad_kill.md) | A wait loop like `until ! pgrep -f \"git commit ... $FILE\"` never ends, because its own shell command line contains the pattern it searche… |
+| 2026-10-14 | 16:25 | [20261014_1625_nas_raid_rebuild_session_hold](20261014_1625_nas_raid_rebuild_session_hold.md) | During a NAS disk rebuild (one drive failed, hot spare resyncing for ~20 h), the lab asked us to minimise NAS I/O. |
 | 2026-10-14 | 16:13 | [20261014_1613_training_eta_estimation_method](20261014_1613_training_eta_estimation_method.md) | Estimate a 10M-episode rPPO run's end from its own last-20-min pace (from tqdm elapsed in the log) plus a late-training slowdown, not from… |
 | 2026-10-14 | 16:10 | [20261014_1610_run_registry_stale_instruction_only_rebuild](20261014_1610_run_registry_stale_instruction_only_rebuild.md) | The run registry (runs.csv) went stale for 16 h because its rebuild existed only as an instruction in the training-runner profile; launches… |
 | 2026-10-14 | 16:09 | [20261014_1609_launches_only_via_training_runner](20261014_1609_launches_only_via_training_runner.md) | A queue watcher that launched 13 training runs itself skipped the training-runner's bookkeeping (registry, design-doc row, launch file); si… |
