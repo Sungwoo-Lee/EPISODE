@@ -297,7 +297,7 @@ def fig_group():
 
 # replication seeds: hues outside the healing (blue / green) and animal (grey / orange) colours used above
 SEED_COL = {42: H.INK, 43: "#7b5ea7", 44: "#b8860b"}
-SEED_MK = {42: "o", 43: "s", 44: "^"}
+SEED_MK = {42: "o", 43: "P", 44: "X"}   # shapes used nowhere else on the page (format review, F11)
 
 
 def seed_runs(w, a):
@@ -320,7 +320,7 @@ def fig_seeds():
                     m, lo, hi = summ(v)
                     yy = y + (k - (len(ss) - 1) / 2) * 0.22
                     ax.plot([lo, hi], [yy, yy], color=SEED_COL[s], lw=1.3, zorder=2)
-                    ax.plot(m, yy, marker=SEED_MK[s], ms=5.5, color=SEED_COL[s], mfc=SEED_COL[s] if s == 42 else H.PAPER,
+                    ax.plot(m, yy, marker=SEED_MK[s], ms=5.5, color=SEED_COL[s], mfc=SEED_COL[s],
                             mew=1.3, ls="none", zorder=3)
                     rows.append(used_row("", v, w, a, s, heal))
             ax.set_yticks(ys, ["w1 (base)"] + [f"w{w} {'+'.join(D.NEW[w])}" for w in D.WORLDS[1:]], fontsize=H.FS_LABEL)
@@ -336,7 +336,7 @@ def fig_seeds():
     axs[0, 0].set_xlim(-lim, lim)
     axs[0, 0].set_xticks([-lim / 2, 0, lim / 2])   # no end ticks: the two columns' end labels would touch
     from matplotlib.lines import Line2D
-    hs = [Line2D([], [], color=SEED_COL[s], marker=SEED_MK[s], mfc=SEED_COL[s] if s == 42 else H.PAPER, mew=1.3, lw=1.3,
+    hs = [Line2D([], [], color=SEED_COL[s], marker=SEED_MK[s], mfc=SEED_COL[s], mew=1.3, lw=1.3,
                  label=f"seed {s}") for s in (42, 43, 44)]
     hs.append(Line2D([], [], color=H.INK_2, lw=1.3, label="line: 95 % interval"))
     fig.legend(handles=hs, loc="lower center", ncol=4, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.005))
@@ -380,6 +380,17 @@ def fig_seedtrain():
     return fig, rows
 
 
+def planned_runs_row():
+    """Run-level coverage against the planned set (format review F83): the 16 screen runs, world 1's seed-43
+    pair and the 28 repeat runs; every repeat run not yet tested is named as missing, with its state."""
+    st = [D.seed_status(w, a, s)[0] for w in D.WORLDS[1:] for a in D.AGENTS for s in D.EXTRA_SEEDS]
+    shown = 18 + st.count("tested")
+    n = {k: st.count(k) for k in ("testing", "training", "queued")}
+    left = ", ".join(f"{v} {k if k != 'testing' else 'being tested'}" for k, v in n.items() if v)
+    return {"what": "runs drawn, of all planned", "used": shown, "total": 18 + len(st),
+            "note": f"{len(st) - st.count('tested')} repeat runs not yet tested ({left}); shown once finished and tested"}
+
+
 def collapse(rows, what):
     """One data-statement row per figure when every series shares one coverage note (the per-run step range
     is dropped from the note, since it differs only by when testing started)."""
@@ -395,7 +406,7 @@ WHAT = {"curves": "series (agent x healing x animal), counted at injury 70",
         "train": "series (agent x healing), whole training",
         "animals": "runs, healing off, 8 scenes each",
         "group": "group tests (one per panel)",
-        "seeds": "series (run x healing), counted at injury 70",
+        "seeds": "series (run \u00d7 healing), counted at injury 70",
         "seedtrain": "series (run), healing off, injury 70, whole training"}
 
 
@@ -416,7 +427,10 @@ def main(argv=None):
         jobs = [(f"hf_{a.figure}__w{w}", functools.partial(f, w)) for w in ws]
     for stem, f in jobs:
         fig, rows = f()
-        FG.record_samples(d, stem, collapse(rows, f"{len(rows)} {WHAT[a.figure]}"))
+        rows = collapse(rows, f"{len(rows)} {WHAT[a.figure]}")
+        if a.figure in ("seeds", "seedtrain"):
+            rows.append(planned_runs_row())
+        FG.record_samples(d, stem, rows)
         FG.save(fig, d, stem)
         print("saved", stem, flush=True)
 

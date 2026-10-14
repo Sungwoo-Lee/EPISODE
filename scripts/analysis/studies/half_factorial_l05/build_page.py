@@ -92,8 +92,11 @@ def seed_cell(w, a, seed):
         return ci_cell(x["inter"], x["inter_lo"], x["inter_hi"]) + \
             f'<br><span class="ci nw">pattern: {"yes" if x["signature"] else "no"}</span>'
     st, ck = D.seed_status(w, a, seed)
-    return {"testing": "finished, tests running", "queued": "queued for training",
-            "training": f"training, {ck / 1e6:.1f} M of 10 M"}[st]
+    txt = {"testing": "finished, tests running", "queued": "queued for training",
+           "training": f"training, {ck / 1e6:.1f} M of 10 M"}[st]
+    # status text in a number column: body font, wraps, left-aligned (format review F22/F35)
+    return (f'<span style="display:block;white-space:normal;text-align:left;font-family:var(--f-body);'
+            f'font-variant-numeric:normal">{txt}</span>')
 
 
 def seed_table():
@@ -107,14 +110,16 @@ def seed_table():
             rows.append(r)
     cols = ["world", "changed", "agent", "s42", "s43", "s44"]
     return FB.table(pd.DataFrame(rows), cols, ["world", "changed", "agent", "seed 42", "seed 43", "seed 44"],
-                    num=("s42", "s43", "s44"), raw=("changed", "s42", "s43", "s44"), min_width=760)
+                    num=("s42", "s43", "s44"), raw=("changed", "s42", "s43", "s44"), min_width=740)
 
 
 def seed_count():
     st = [D.seed_status(w, a, s_)[0] for w in D.WORLDS[1:] for a in D.AGENTS for s_ in D.EXTRA_SEEDS]
     n = {k: st.count(k) for k in ("tested", "testing", "training", "queued")}
-    return (f"{n['tested']} of {len(st)} replication runs are finished and tested; {n['testing']} finished and "
-            f"being tested; {n['training']} training; {n['queued']} queued")
+    parts = [f"{n['tested']} of {len(st)} repeat runs are finished and tested"]
+    parts += [f"{n[k]} {txt}" for k, txt in (("testing", "finished and being tested"), ("training", "training"),
+                                             ("queued", "queued")) if n[k]]
+    return "; ".join(parts)
 
 
 CURVES_AXES = ("Horizontal: starting injury of the test, 0 (unhurt) to 90 in steps of 10. Vertical: bush dwell, the "
@@ -152,7 +157,7 @@ SEEDS_AXES = ("Horizontal: the injury contrast at injury 70, in percentage point
               "extra bush dwell when injured minus the same when unhurt, mean over the run's newest 20 tested "
               "checkpoints; the line through each mark is its 95&nbsp;% interval. Vertical: the eight training worlds, "
               "world 1 (no change) on top, then worlds 2&ndash;8 with the setting groups they change. Within a world, one "
-              "mark per seed: black filled circle seed 42 (the screen), purple open square seed 43, ochre open triangle "
+              "mark per seed: black circle seed 42 (the screen), purple plus sign seed 43, ochre cross "
               "seed 44; world 1 shows its two existing seeds. Columns: ordinary and modulated agent. Rows: healing off in "
               "the test scene (top, the headline) and healing on (bottom). A seed appears once its run has finished "
               "training and been tested. Purple and ochre are outside the house series colours on purpose: blue and green "

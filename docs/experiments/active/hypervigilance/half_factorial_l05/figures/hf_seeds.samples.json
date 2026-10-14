@@ -1,0 +1,16 @@
+[
+ {
+  "what": "42 series (run \u00d7 healing), counted at injury 70",
+  "used": 840,
+  "total": 2116,
+  "pct": 39.69754253308128,
+  "note": "newest 20 tested checkpoints of each run; 30 episodes each"
+ },
+ {
+  "what": "runs drawn, of all planned",
+  "used": 21,
+  "total": 46,
+  "pct": 45.65217391304348,
+  "note": "25 repeat runs not yet tested (20 training, 5 queued); shown once finished and tested"
+ }
+]
