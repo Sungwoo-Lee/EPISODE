@@ -126,7 +126,8 @@ CURVES_AXES = ("Horizontal: starting injury of the test, 0 (unhurt) to 90 in ste
                "share of the test's 100 steps spent on the bush (%), 0&ndash;100 in every panel. Left column: healing "
                "switched off in the test scene, so the starting injury lasts the whole test; right column: healing on, as "
                "in training. Grey open circles: no animal; orange squares: a harmless wandering rabbit. Each point is the "
-               "mean over the run's newest 20 tested checkpoints; dashed edges and shading: 95&nbsp;% interval. One row per agent.")
+               "mean over the run's newest 20 tested checkpoints; dashed edges and shading: 95&nbsp;% interval. One row per agent "
+               "and seed: seed 42, then each repeat seed (43, 44) once its run is finished and tested (section 06).")
 EXTRA_AXES = ("Horizontal: starting injury of the test, 0 to 90. Vertical: the rabbit's extra bush dwell &mdash; bush "
               "dwell with the wandering rabbit minus bush dwell with no animal, in percentage points (pp), mean over the "
               "newest 20 tested checkpoints, with a 95&nbsp;% interval (dashed edges, shading). Blue diamonds: healing off; "

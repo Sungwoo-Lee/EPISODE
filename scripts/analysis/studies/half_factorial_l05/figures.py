@@ -85,7 +85,7 @@ def extra(w, a, heal, inj, s):
 
 def fig_curves(w):
     import matplotlib.pyplot as plt
-    rr = runs(w)
+    rr = [(a, s) for a in D.AGENTS for s in seed_runs(w, a)]   # every tested seed (user, 2026-10-14)
     fig, axs = plt.subplots(len(rr), 2, figsize=(8.4, 2.35 * len(rr) + 1.0), sharex=True, sharey=True, squeeze=False)
     rows = []
     for r_, (a, s) in enumerate(rr):
@@ -391,6 +391,18 @@ def planned_runs_row():
             "note": f"{len(st) - st.count('tested')} repeat runs not yet tested ({left}); shown once finished and tested"}
 
 
+def world_runs_row(w):
+    """Figure 2's run-level coverage for one world: drawn (agent, seed) runs of all planned (format review F83)."""
+    plan = [(a, s) for a in D.AGENTS for s in ((42, 43) if w == 1 else (42, *D.EXTRA_SEEDS))]
+    drawn = sum(1 for a, s in plan if s in seed_runs(w, a))
+    st = [D.seed_status(w, a, s)[0] for a, s in plan if s != 42 and w > 1 and s not in seed_runs(w, a)]
+    left = ", ".join(f"{st.count(k)} {k if k != 'testing' else 'being tested'}" for k in ("testing", "training", "queued")
+                     if st.count(k))
+    return {"what": "runs drawn, of all planned", "used": drawn, "total": len(plan),
+            "note": (f"{len(st)} repeat runs not yet tested ({left}); shown once finished and tested") if st
+            else "every planned run of this world is drawn"}
+
+
 def collapse(rows, what):
     """One data-statement row per figure when every series shares one coverage note (the per-run step range
     is dropped from the note, since it differs only by when testing started)."""
@@ -401,7 +413,7 @@ def collapse(rows, what):
              "note": notes.pop()}]
 
 
-WHAT = {"curves": "series (agent x healing x animal), counted at injury 70",
+WHAT = {"curves": "series (agent \u00d7 seed \u00d7 healing \u00d7 animal), counted at injury 70",
         "extra": "series (agent x healing), counted at injury 70",
         "train": "series (agent x healing), whole training",
         "animals": "runs, healing off, 8 scenes each",
@@ -430,6 +442,8 @@ def main(argv=None):
         rows = collapse(rows, f"{len(rows)} {WHAT[a.figure]}")
         if a.figure in ("seeds", "seedtrain"):
             rows.append(planned_runs_row())
+        if a.figure == "curves":
+            rows.append(world_runs_row(int(stem.rsplit("w", 1)[1])))
         FG.record_samples(d, stem, rows)
         FG.save(fig, d, stem)
         print("saved", stem, flush=True)

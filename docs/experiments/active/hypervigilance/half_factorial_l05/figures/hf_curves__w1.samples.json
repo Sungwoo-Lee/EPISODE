@@ -1,9 +1,16 @@
 [
  {
-  "what": "16 series (agent x healing x animal), counted at injury 70",
+  "what": "16 series (agent \u00d7 seed \u00d7 healing \u00d7 animal), counted at injury 70",
   "used": 320,
   "total": 800,
   "pct": 40.0,
   "note": "newest 20 tested checkpoints of each run; 30 episodes each"
+ },
+ {
+  "what": "runs drawn, of all planned",
+  "used": 4,
+  "total": 4,
+  "pct": 100.0,
+  "note": "every planned run of this world is drawn"
  }
 ]
