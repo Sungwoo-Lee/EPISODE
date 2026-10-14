@@ -19,7 +19,7 @@ Delegate to the matching agent — read its profile in `.claude/agents/` for ful
 | [experiment-analyzer](.claude/agents/experiment-analyzer.md) | opus | Post-hoc training-result analysis (WandB, run comparisons) | `docs/experiments/active/<topic>/` |
 | [training-runner](.claude/agents/training-runner.md) | opus | Pre-flight check + launch **and resume** training on lab nodes (101–114) via `run_command.py`; configs are read-only | `train_command-agent.sh` (never the user's `train_command-new.sh`) |
 
-**Training work starts by reading [TRAINING_OPERATIONS](docs/environment/TRAINING_OPERATIONS.md)** — for the top-level session *and* `training-runner`, whenever a task launches, resumes, moves, places or monitors training runs. Only `training-runner` launches, resumes or moves runs; the top-level session orchestrates (free cards, placement, stopping at a checkpoint). Record any new launch problem, and any change to the training tooling (e.g. the run registry), in that document in the same change, so every session sees it.
+**Training work** (launch, resume, move, monitor runs): read [TRAINING_OPERATIONS](docs/environment/TRAINING_OPERATIONS.md) first. Only `training-runner` launches; you orchestrate.
 
 For known-bug context ("is this a known issue in X?"), **consult `bug-curator`** — it returns only the matching rows — rather than reading the full `docs/develop/active/issues/KNOWN_BUGS.md` into context.
 
