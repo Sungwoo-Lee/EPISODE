@@ -7,8 +7,16 @@ about *operations*: which card, which command, which records. What a run should 
 design doc's job, and the config itself is checked against
 [CONFIG_CRITICAL_SETTINGS](CONFIG_CRITICAL_SETTINGS.md).
 
-**When you hit a new launch problem, add a row to §6 in the same change that works around it.** A mistake that
-is only in a chat transcript will be made again.
+**Who reads it:** every session whose task launches, resumes, moves, places or monitors training runs — the
+top-level session before it orchestrates, and `training-runner` before every launch (CLAUDE.md rule).
+
+**Keeping it current, in the same change as the event:**
+- a new launch problem or bug → a row in §6;
+- a change to the training tooling (a new script, a new flag, a changed record such as the run registry) → update
+  the section it affects and add a dated line to §8;
+- a change in what the lab allows (a reserved node, a foreign tenant) → §7.
+
+A mistake or a tool change that is only in a chat transcript is invisible to the next session.
 
 Related: [LAB_NODE_GPU_SPEC](LAB_NODE_GPU_SPEC.md) (cards per node) ·
 [training-runner profile](../../.claude/agents/training-runner.md) (the step-by-step launch protocol) ·
@@ -122,3 +130,14 @@ Newest first. Each row: what happened, why, and the rule that now prevents it.
 |---|---|---|
 | 2026-10-14 15:35 | **Node 112 reserved for another lab member.** Launch nothing there; the half-factorial run still on 112:1 is moved off at its next checkpoint once a card frees elsewhere | The user releases it |
 | 2026-09-09 | Node 102 sometimes carries another lab member's job | Check its processes at every launch |
+
+## 8. Changes to the training tooling
+
+Newest first. One line per change, with where it is documented.
+
+| Date | Change | Where |
+|---|---|---|
+| 2026-10-14 | This guide created; CLAUDE.md makes it required reading for training work, for the top-level session and `training-runner` | this file |
+| 2026-10-14 | Launches, resumes and moves go only through `training-runner`; queue watchers may only detect and report | §1, [AGENT_PLAYBOOK](../AGENT_PLAYBOOK.md) |
+| 2026-10-13 | Run registry: `scripts/lab/run_registry.py` (`build [--live]`, `find`, `resume`) writes `docs/experiments/run_registry/runs.csv`; rebuilt by `training-runner` after every launch and resume. Not rebuilt automatically otherwise (open question, 2026-10-14) | §4, [README](../experiments/run_registry/README.md) |
+| 2026-10-13 | `training-runner` records the WandB id at every launch and resumes a stopped run into its own WandB run (`--wandb-resume-id`) | §5, runner profile §4d |
