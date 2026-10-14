@@ -1,16 +1,16 @@
 [
  {
-  "what": "26 series (run), healing off, injury 70, whole training",
-  "used": 1308,
-  "total": 1308,
+  "what": "31 series (run), healing off, injury 70, whole training",
+  "used": 1558,
+  "total": 1558,
   "pct": 100.0,
   "note": "every tested checkpoint with all four tests (no animal and rabbit, unhurt and injury 70); 30 episodes each"
  },
  {
   "what": "runs drawn, of all planned",
-  "used": 26,
+  "used": 31,
   "total": 46,
-  "pct": 56.52173913043478,
-  "note": "20 repeat runs not yet tested (19 training, 1 queued); shown once finished and tested"
+  "pct": 67.3913043478261,
+  "note": "15 repeat runs not yet tested (15 training); shown once finished and tested"
  }
 ]

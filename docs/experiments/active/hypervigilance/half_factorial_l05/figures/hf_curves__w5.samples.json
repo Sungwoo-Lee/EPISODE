@@ -1,16 +1,16 @@
 [
  {
-  "what": "8 series (agent \u00d7 seed \u00d7 healing \u00d7 animal), counted at injury 70",
-  "used": 160,
-  "total": 400,
+  "what": "12 series (agent \u00d7 seed \u00d7 healing \u00d7 animal), counted at injury 70",
+  "used": 240,
+  "total": 600,
   "pct": 40.0,
   "note": "newest 20 tested checkpoints of each run; 30 episodes each"
  },
  {
   "what": "runs drawn, of all planned",
-  "used": 2,
+  "used": 3,
   "total": 6,
-  "pct": 33.333333333333336,
-  "note": "4 repeat runs not yet tested (2 training, 2 queued); shown once finished and tested"
+  "pct": 50.0,
+  "note": "3 repeat runs not yet tested (3 training); shown once finished and tested"
  }
 ]
