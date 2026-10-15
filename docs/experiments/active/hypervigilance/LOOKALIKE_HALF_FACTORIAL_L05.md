@@ -1300,14 +1300,14 @@ fills the empty columns, and the GPU column names the card model (for example `1
 
 | Run | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 15 | planned | w9 ordinary | `rppo_lookalike_hf_l05_w9_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 16 | planned | w9 modulated | `rppo_lookalike_hf_l05_w9_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 17 | planned | w10 ordinary | `rppo_lookalike_hf_l05_w10_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 18 | planned | w10 modulated | `rppo_lookalike_hf_l05_w10_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 15 | running | w9 ordinary | `rppo_lookalike_hf_l05_w9_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 102 | `102:0 (4090)` | 2026-10-15T19:44:28 | `nhzf0g38` | `/media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_194428_rppo_lookalike_hf_l05_w9_t1none_s42.log` |
+| 16 | running | w9 modulated | `rppo_lookalike_hf_l05_w9_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 102 | `102:1 (4090)` | 2026-10-15T19:44:32 | `bm4f7ip1` | `/media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_194432_rppo_lookalike_hf_l05_w9_t16quad_s42.log` |
+| 17 | running | w10 ordinary | `rppo_lookalike_hf_l05_w10_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 107 | `107:0 (3090)` | 2026-10-15T19:44:29 | `j4c5pule` | `/media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_194429_rppo_lookalike_hf_l05_w10_t1none_s42.log` |
+| 18 | running | w10 modulated | `rppo_lookalike_hf_l05_w10_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 107 | 107:1 (3090) | 2026-10-15T19:44:36 | `2r7kmtm8` | `/media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_194435_rppo_lookalike_hf_l05_w10_t16quad_s42.log` |
 | 19 | running | w11 ordinary | `rppo_lookalike_hf_l05_w11_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 106 | `106:1 (3090)` | 2026-10-15T19:44:29 | `wnchg7l6` | `logs/20261015_194429_rppo_lookalike_hf_l05_w11_t1none_s42.log` |
-| 20 | planned | w11 modulated | `rppo_lookalike_hf_l05_w11_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 21 | planned | w12 ordinary | `rppo_lookalike_hf_l05_w12_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 22 | planned | w12 modulated | `rppo_lookalike_hf_l05_w12_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 20 | running | w11 modulated | `rppo_lookalike_hf_l05_w11_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 109 | `109:1 (3090)` | 2026-10-15T19:44:37 | `6sd1wrp6` | `/media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_194436_rppo_lookalike_hf_l05_w11_t16quad_s42.log` |
+| 21 | running | w12 ordinary | `rppo_lookalike_hf_l05_w12_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 110 | `110:1 (3090)` | 2026-10-15T19:44:44 | `tj7mrstm` | `/media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_194443_rppo_lookalike_hf_l05_w12_t1none_s42.log` |
+| 22 | running | w12 modulated | `rppo_lookalike_hf_l05_w12_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 111 | `111:1 (3090)` | 2026-10-15T19:44:49 | `xtubdd4o` | `/media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_194449_rppo_lookalike_hf_l05_w12_t16quad_s42.log` |
 | 23 | planned | w13 ordinary | `rppo_lookalike_hf_l05_w13_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
 | 24 | planned | w13 modulated | `rppo_lookalike_hf_l05_w13_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
 | 25 | planned | w14 ordinary | `rppo_lookalike_hf_l05_w14_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |

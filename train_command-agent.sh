@@ -5352,6 +5352,47 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # [114:3] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w8_newABCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 46 --device cuda:3 --log-interval 10 --tag "rppo_lookalike_hf_l05_w8_t16quad_s46" --wandb-name "rppo_lookalike_hf_l05_w8_t16quad_s46" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
 
 # ---------------------------------------------------------------------------
+# 2026-10-15 — NEW RUN (complementary half, worlds 9-16, seed 42; run 18): w10 modulated s42, WandB id: 2r7kmtm8
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Complementary half: worlds 9-16", launch manifest run 18).
+# Card: 107:1 (RTX 3090, TF32). Launch-morning re-check clean (git log 1f1b7b26..HEAD / status on item-4 paths empty;
+#   git diff bf48ba07 -- lookalike_hf_* empty). Node 107 NAS mounted; card idle; no train.py on node.
+# Launched 2026-10-15T19:44:36, PID 3301617 on node 107; one process confirmed; counts advancing (9615 at 19:46, 85047 at 19:48);
+#   https://wandb.ai/sungwoolee/grid_world_pain/runs/2r7kmtm8
+# Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_194435_rppo_lookalike_hf_l05_w10_t16quad_s42.log
+# Commented out: running this file must not relaunch it.
+# [107:1] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w10_newB_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:1 --log-interval 10 --tag "rppo_lookalike_hf_l05_w10_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w10_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+
+# ---------------------------------------------------------------------------
+# 2026-10-15 — NEW RUN (complementary half, run 21): w12 ordinary s42, WandB id: tj7mrstm
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Complementary half: worlds 9-16", run 21).
+# Node 110:1 (RTX 3090). Launch-morning re-check clean (git log/status on item-4 paths empty; git diff bf48ba07 -- lookalike_hf_* empty).
+# Launched 2026-10-15T19:44:44, PID 2182994 on node 110; one process confirmed; counts advancing (91075 at 19:47:36);
+#   https://wandb.ai/sungwoolee/grid_world_pain/runs/tj7mrstm
+# Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_194443_rppo_lookalike_hf_l05_w12_t1none_s42.log
+# Commented out: running this file must not relaunch it.
+# [110:1] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w12_newD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 42 --device cuda:1 --log-interval 10 --tag "rppo_lookalike_hf_l05_w12_t1none_s42" --wandb-name "rppo_lookalike_hf_l05_w12_t1none_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+
+# ---------------------------------------------------------------------------
+# 2026-10-15 — NEW RUN (complementary half, run 16): w9 modulated s42, WandB id: bm4f7ip1
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Complementary half: worlds 9-16", run 16).
+# Card: node 102 GPU 1, RTX 4090 (TF32). Launch-morning re-check (World 1 reuse, item 4) empty; git diff bf48ba07 on lookalike_hf_* empty; HEAD 0aa62cce.
+# Launched 2026-10-15T19:44:32, PID 3676511 on node 102; one process confirmed; counts advancing (4015 at 19:46); https://wandb.ai/sungwoolee/grid_world_pain/runs/bm4f7ip1
+# Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_194432_rppo_lookalike_hf_l05_w9_t16quad_s42.log
+# Commented out: running this file must not relaunch it.
+# [102:1] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w9_newA_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:1 --log-interval 10 --tag "rppo_lookalike_hf_l05_w9_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w9_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+
+# ---------------------------------------------------------------------------
+# 2026-10-15 — NEW RUN (complementary half, run 22): w12 modulated s42, WandB id: xtubdd4o
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Complementary half: worlds 9-16", launch manifest run 22).
+# Launch-morning re-check: git log 1f1b7b26..HEAD and git status on the listed paths empty; git diff bf48ba07 on lookalike_hf_* empty.
+# Card: 111:1 (RTX 3090, TF32). 111:0 carries a foreign 13 GB job (no train.py on the node).
+# Launched 2026-10-15T19:44:49, PID 2482919 on node 111; one process confirmed; counts advancing (5827 at 19:46:10, 66129 at 19:47:50);
+#   https://wandb.ai/sungwoolee/grid_world_pain/runs/xtubdd4o
+# Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_194449_rppo_lookalike_hf_l05_w12_t16quad_s42.log
+# Commented out: running this file must not relaunch it.
+# [111:1] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w12_newD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:1 --log-interval 10 --tag "rppo_lookalike_hf_l05_w12_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w12_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+
+# ---------------------------------------------------------------------------
 # 2026-10-15 — NEW RUN (complementary half, run 19): w11 (C only) ordinary s42, WandB id: wnchg7l6
 # Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Complementary half: worlds 9-16").
 # Card: 106:1 (RTX 3090, TF32). Launch-morning re-check clean (only c4c358fe/bf48ba07 world-file commits; git diff bf48ba07 lookalike_hf_* empty).
@@ -5360,3 +5401,37 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_194429_rppo_lookalike_hf_l05_w11_t1none_s42.log
 # Commented out: running this file must not relaunch it.
 # [106:1] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w11_newC_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 42 --device cuda:1 --log-interval 10 --tag "rppo_lookalike_hf_l05_w11_t1none_s42" --wandb-name "rppo_lookalike_hf_l05_w11_t1none_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+
+# ---------------------------------------------------------------------------
+# 2026-10-15 — NEW RUN (complementary half, run 15): w9 ordinary s42, WandB id: nhzf0g38
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Complementary half: worlds 9-16").
+# Card: 102:0 (RTX 4090, TF32). Launch-morning re-check: git log 1f1b7b26..HEAD on the listed paths shows only
+#   bf48ba07 (adds the world 9-16 configs); git status clean; git diff bf48ba07 -- lookalike_hf_* empty.
+# Launched 2026-10-15T19:44:28, PID 3676292 on node 102; one process confirmed; counts advancing (18407 at 19:46);
+#   https://wandb.ai/sungwoolee/grid_world_pain/runs/nhzf0g38
+# Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_194428_rppo_lookalike_hf_l05_w9_t1none_s42.log
+# Commented out: running this file must not relaunch it.
+# [102:0] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w9_newA_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 42 --device cuda:0 --log-interval 10 --tag "rppo_lookalike_hf_l05_w9_t1none_s42" --wandb-name "rppo_lookalike_hf_l05_w9_t1none_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+
+# ---------------------------------------------------------------------------
+# 2026-10-15 — NEW RUN (complementary half, run 17): w10 ordinary s42 (world 10 = B only), WandB id: j4c5pule
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Complementary half: worlds 9-16", launch block).
+# Launch-morning re-check: git log 1f1b7b26..HEAD + git status on the item-4 paths empty; git diff bf48ba07 -- lookalike_hf_* empty.
+# Node 107 NAS mounted, card 107:0 RTX 3090 (TF32) idle; previous 107 runs (w5 t16quad s44, w3 t1none s44) had finished at 10M.
+# Launched 2026-10-15T19:44:29, PID 3301381 on node 107; one process confirmed; counts advancing (58170 at ~19:46:30);
+#   https://wandb.ai/sungwoolee/grid_world_pain/runs/j4c5pule
+# Results: results/JAX_RecurrentPPO/20261015-194434_rppo_lookalike_hf_l05_w10_t1none_s42
+# Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_194429_rppo_lookalike_hf_l05_w10_t1none_s42.log
+# Commented out: running this file must not relaunch it.
+# [107:0] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w10_newB_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 42 --device cuda:0 --log-interval 10 --tag "rppo_lookalike_hf_l05_w10_t1none_s42" --wandb-name "rppo_lookalike_hf_l05_w10_t1none_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+
+# ---------------------------------------------------------------------------
+# 2026-10-15 — NEW RUN (complementary half, run 20): w11 (C only) modulated s42, WandB id: 6sd1wrp6
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Complementary half: worlds 9-16").
+# Card: 109:1 RTX 3090 (TF32). Launch-morning re-check passed (git log 1f1b7b26..HEAD + git status on the item-4 paths empty;
+#   git diff bf48ba07 -- configs/environment/experiment/basic/lookalike_hf_* empty). Node 109: NAS mounted, JAX 0.9.0.1 GPU compile OK.
+# Launched 2026-10-15T19:44:37, PID 2503966 on node 109; one process confirmed; counts advancing (15293 at 19:46:58, 43646 at 19:47:30);
+#   https://wandb.ai/sungwoolee/grid_world_pain/runs/6sd1wrp6
+# Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_194436_rppo_lookalike_hf_l05_w11_t16quad_s42.log
+# Commented out: running this file must not relaunch it.
+# [109:1] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w11_newC_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:1 --log-interval 10 --tag "rppo_lookalike_hf_l05_w11_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w11_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
