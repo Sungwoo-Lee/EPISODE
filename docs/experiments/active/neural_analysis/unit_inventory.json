@@ -1,0 +1,342 @@
+{
+ "ordinary": {
+  "run": "results/JAX_RecurrentPPO/20261012-150754_rppo_lookalike_hf_l05_w2_t1none_s42",
+  "checkpoint": 10000033,
+  "obs_dim": 58,
+  "obs_groups": {
+   "Satiation": 1,
+   "Body Temperature": 1,
+   "Interoceptive Nociception": 1,
+   "Extero Nociception": 1,
+   "Thermoception": 5,
+   "Olfaction": 25,
+   "Collision": 5,
+   "Proprioception": 6,
+   "Visual": 13
+  },
+  "action_dim": 6,
+  "acts": [
+   {
+    "key": "enc.uni.raw",
+    "shape": [
+     9,
+     128
+    ],
+    "n": 1152
+   },
+   {
+    "key": "enc.uni.out",
+    "shape": [
+     9,
+     128
+    ],
+    "n": 1152
+   },
+   {
+    "key": "enc.raw",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "enc.out",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "rnn.state",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "rnn.raw",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "rnn.out",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "actor.raw",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "actor.out",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "critic.raw",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "critic.out",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "logits",
+    "shape": [
+     6
+    ],
+    "n": 6
+   },
+   {
+    "key": "value",
+    "shape": [
+     1
+    ],
+    "n": 1
+   }
+  ],
+  "film": [],
+  "carry_sizes": [
+   128
+  ]
+ },
+ "modulated": {
+  "run": "results/JAX_RecurrentPPO/20261012-150813_rppo_lookalike_hf_l05_w2_t16quad_s42",
+  "checkpoint": 2200035,
+  "obs_dim": 58,
+  "obs_groups": {
+   "Satiation": 1,
+   "Body Temperature": 1,
+   "Interoceptive Nociception": 1,
+   "Extero Nociception": 1,
+   "Thermoception": 5,
+   "Olfaction": 25,
+   "Collision": 5,
+   "Proprioception": 6,
+   "Visual": 13
+  },
+  "action_dim": 6,
+  "acts": [
+   {
+    "key": "enc.uni.raw",
+    "shape": [
+     9,
+     128
+    ],
+    "n": 1152
+   },
+   {
+    "key": "enc.uni.mod",
+    "shape": [
+     9,
+     128
+    ],
+    "n": 1152
+   },
+   {
+    "key": "enc.uni.out",
+    "shape": [
+     9,
+     128
+    ],
+    "n": 1152
+   },
+   {
+    "key": "enc.raw",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "enc.mod",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "enc.out",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "rnn.raw",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "rnn.mod",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "rnn.state",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "rnn.out",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "actor.raw",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "actor.mod",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "actor.out",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "critic.raw",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "critic.mod",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "critic.out",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "logits",
+    "shape": [
+     6
+    ],
+    "n": 6
+   },
+   {
+    "key": "value",
+    "shape": [
+     1
+    ],
+    "n": 1
+   }
+  ],
+  "film": [
+   {
+    "key": "film.z_unimodal",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "film.z_unimodal_add",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "film.z_multimodal",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "film.z_multimodal_add",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "film.z_rnn",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "film.z_rnn_add",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "film.z_actor",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "film.z_actor_add",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "film.z_critic",
+    "shape": [
+     128
+    ],
+    "n": 128
+   },
+   {
+    "key": "film.z_critic_add",
+    "shape": [
+     128
+    ],
+    "n": 128
+   }
+  ],
+  "carry_sizes": [
+   128,
+   16
+  ]
+ }
+}

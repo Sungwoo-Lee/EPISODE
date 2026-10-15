@@ -1,0 +1,378 @@
+<title>Neural Recording Pipeline</title>
+{{HOUSE_STYLE}}
+<style>
+/* hue is spent on data; chrome goes to ink (register F11 amendment) */
+:root { --accent:var(--ink); --accent-text:var(--ink); --warn:var(--ink-2); }
+.wrap > .col { max-width:880px; }
+.toc ul { margin:0; padding-left:22px; display:flex; flex-direction:column; gap:6px; }
+details.bb-data > summary { cursor:pointer; color:var(--ink-2); font-size:14.5px; }
+details.bb-data[open] > summary { margin-bottom:8px; }
+pre.tree { background:var(--surface); padding:14px 16px; border-radius:6px; overflow-x:auto;
+  font-family:var(--f-mono); font-size:13px; line-height:1.55; margin:12px 0; }
+p.refs { font-size:14.5px; color:var(--ink-2); }
+ol.refs { padding-left:22px; display:flex; flex-direction:column; gap:6px; font-size:14.5px; color:var(--ink-2); }
+h3.fh { margin:28px 0 6px; }
+td code { overflow-wrap:normal; white-space:nowrap; }   /* a capture key is one token (register F69) */
+</style>
+<div class="wrap">
+
+<header class="col">
+  <p class="eyebrow">grid_world_pain &middot; neural analysis &middot; plan, before any recording &middot; figures use simulated numbers</p>
+  <h1>Neural Recording Pipeline</h1>
+  <p class="lede">So far every result in this project has come from the agents' behaviour. This plan adds the
+  other half of a neuroscience experiment: recording the activity of every unit in the agents' networks while
+  they act, and analysing it with the standard methods of systems neuroscience. The first analysis is the
+  encoding model (a general linear model, GLM) that asks which experimental variables each unit represents.</p>
+</header>
+
+<section class="col toc">
+  <h4>On this page</h4>
+  <ul>
+    <li><a href="#purpose">Purpose</a></li>
+    <li><a href="#what">01 &middot; What is recorded</a></li>
+    <li><a href="#episodes">02 &middot; Which episodes</a></li>
+    <li><a href="#structure">03 &middot; Data structure</a></li>
+    <li><a href="#pipeline">04 &middot; Collection pipeline</a></li>
+    <li><a href="#glm">05 &middot; First analysis: the encoding model</a></li>
+    <li><a href="#figures">06 &middot; Figures, with simulated numbers (Figures 1&ndash;8, A1)</a></li>
+    <li><a href="#open">07 &middot; Open points</a></li>
+    <li><a href="#refs">08 &middot; References</a></li>
+    <li><a href="#prov">09 &middot; Provenance</a></li>
+  </ul>
+</section>
+
+<section class="col" id="purpose">
+  <h2><span class="num">PURPOSE</span></h2>
+  <p>The behaviour studies found that, in some training worlds, an injured agent hides more when a harmless
+  rabbit is near than an unhurt agent does &mdash; the hypervigilance pattern. Behaviour alone cannot say
+  <em>how</em> the network produces it: whether injury is represented at all beyond the injury signal the agent
+  receives as input, where in the network it meets the information about the animal, and whether the
+  neuromodulator changes that. Those are questions about the network's activity.</p>
+  <p>The data are organised as in a Neuropixels or fMRI study: each <strong>unit</strong> (one artificial
+  neuron) is a channel with a full time series over each episode, and time-aligned records of the
+  experimental variables sit beside it. Any standard method &mdash; encoding models first, dynamical-systems
+  analyses later &mdash; then reads the same files. <strong>Nothing has been recorded yet</strong>: the figures
+  in section 06 are drawn from simulated numbers to fix how results will be shown. They will be redrawn from
+  a pilot run's real recordings.</p>
+  <div class="callout"><p><strong>Decided with the user (2026-10-15).</strong> Record every unit, not
+  selected layers; record two conditions &mdash; episodes in the agent's own training world and the frozen
+  behaviour test scenes &mdash; and test whether the encoding found in one holds in the other; one file per unit of collection work, so files
+  stay few but collection runs in parallel; use the terms of the neuroscience literature; the unit map of
+  Figure 2 is the main figure, the per-regressor maps an appendix.</p></div>
+</section>
+
+<section class="col" id="what">
+  <h2><span class="num">01</span> What is recorded</h2>
+  <p>Every value the network computes at each step, for both agents of the level-05 lookalike study: the
+  ordinary agent and the modulated agent (the same network plus a 16-unit recurrent modulator that rescales
+  four of its layers through FiLM, feature-wise linear modulation: <code>&gamma; &middot; x + &beta;</code>,
+  a per-unit gain &gamma; and bias &beta;). Feed-forward layers are recorded both before the activation
+  function (<em>pre-activation</em>, the analogue of input current) and after it (<em>post-activation</em>,
+  the analogue of a firing rate), and, in the modulated agent, also right after FiLM. The recurrent layer is a
+  gated recurrent unit (GRU), whose hidden state is both its memory and its output.</p>
+  <p><strong>Table 1.</strong> Values per step, by layer, counted from trained models by
+  <code>unit_inventory.py</code> (world-2 runs, seed 42, final checkpoint); none typed by hand.</p>
+  {{TABLE:units}}
+  <p>{{UNIT_TOTALS}} The encoder's first stage has one small network per sensor group ({{N_GROUPS}} groups,
+  e.g. olfaction, vision, nociception). Its outputs are recorded; the hidden layers <em>inside</em> each
+  encoder network are not yet returned by the model's capture function, so adding them is step 0 of the
+  pipeline (section 04). The FiLM outputs for the encoder's first stage are one 128-wide gain and bias shared by all
+  sensor groups.</p>
+</section>
+
+<section class="col" id="episodes">
+  <h2><span class="num">02</span> Which episodes</h2>
+  <p>The networks learned their activity patterns in their training worlds, while the behaviour test scenes are
+  deliberately unlike training. An encoding model fitted only in the test scenes would describe the network in an
+  unfamiliar, controlled situation, which need not match how it represents the same variables in normal behaviour
+  (a <em>distribution shift</em>). The networks are therefore recorded in two conditions, as a free-behaviour
+  session and a controlled task are in neurophysiology:</p>
+  <p><strong>Condition 1, training world (free behaviour).</strong> Episodes played in the run's own training world,
+  from fixed seeds, until death or the episode limit, so their lengths vary. This is the distribution the network
+  was trained on and the more varied data set, used as the main fitting set. 500 episodes per run and checkpoint
+  are proposed; their size is measured on the pilot, because episode lengths are not known in advance.</p>
+  <p><strong>Condition 2, test scenes (controlled task).</strong> The <strong>frozen test scenes</strong> already
+  used for the behaviour results: the agent in the middle of the map, one bush three cells away, no campfire; a starting
+  injury from 0 to 90; no animal, a wandering rabbit, a chasing rabbit or a predator; healing off (test only)
+  or on. Each scene has 30 episodes of 100 steps, from fixed seeds. Recording the same episodes as the
+  behaviour results makes the two directly comparable: in neuroscience terms these are <em>trials</em> of a
+  controlled task, where injury and the animal are set exactly.</p>
+  <p>The encoding model is fitted in each condition and scored in the other (<strong>cross-condition
+  generalisation</strong>, section 05). Tuning that holds in both is a robust property of the network; tuning that
+  appears in only one shows that the representation depends on the context.</p>
+  <p>The agents have no sensory noise in either condition, so replaying the same checkpoint, scene and seed gives
+  exactly the same activity. A recording can therefore be deleted and regenerated identically; it is a cache,
+  not an irreplaceable dataset.</p>
+  <p><strong>Table 2.</strong> Planned recording sets. Sizes are uncompressed, at half precision (2 bytes per
+  value); compression will be measured on the pilot, not assumed.</p>
+  {{TABLE:sizes}}
+</section>
+
+<section class="col" id="structure">
+  <h2><span class="num">03</span> Data structure</h2>
+  <p>One HDF5 file per <em>collection job</em>: for the test scenes, one run, one checkpoint and one
+  starting-injury level (all its animal and healing conditions); for the training world, one run, one checkpoint
+  and a block of episodes sized to a similar file size. The <code>trials</code> table records each episode's
+  condition, so both conditions share one layout. That is the unit of parallel work &mdash; one worker writes one file &mdash;
+  so the number of files equals the number of jobs that can run at once (a few hundred), never one file per
+  episode. HDF5 holds many arrays in a single file and reads a slice without loading the rest. The layout
+  follows the conventions of Neurodata Without Borders (NWB), the standard format for neurophysiology
+  data:</p>
+<p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>
+<pre class="tree">&lt;run&gt;__ckpt&lt;step&gt;__inj&lt;level&gt;.h5
+├── activity/                 one array per recorded quantity, float16 [episode × time × unit]
+│   ├── rnn.state             GRU hidden state                    [E × 100 × 128]
+│   ├── enc.uni.out           encoder stage 1, post-activation    [E × 100 × 9·128]
+│   ├── actor.raw, actor.out  …every key of Table 1
+│   └── film.z_actor, …       FiLM gain γ and bias β per site     (modulated agent)
+├── units                     table: unit id, layer, site, sensor group, pre/post activation
+├── trials                    table: episode id, scene, starting injury, animal, healing, seed, length
+├── regressors                table, one row per (episode, step): the design-matrix variables
+│                             injury, observed injury, satiation, body temperature, animal class and
+│                             distance per animal, animal in view, on bush, action, alive, time
+├── events                    table: episode, step, event (animal enters view, predator hit,
+│                             bush entry, bush exit, injury onset, eating), animal class
+└── meta                      run, checkpoint, git commit, scene files and hashes, collector version,
+                              replay-parity check against the behaviour sweep</pre>
+  <p>Episodes that end early (the agent dies) keep a full 100-step array, padded with NaN after the last step;
+  <code>trials.length</code> says where each one ends. A small index file per study lists every recording file
+  with its job and validation status.</p>
+</section>
+
+<section class="col" id="pipeline">
+  <h2><span class="num">04</span> Collection pipeline</h2>
+</section>
+<section class="col stages">
+  <div class="stage"><div class="s">STEP 0</div><div class="b">
+    <div class="t">Complete the capture</div>
+    <div class="d">Extend the model's capture function to also return the hidden layers inside the two
+    encoder networks, so every unit is recorded. A code change, reviewed by <code>code-reviewer</code>;
+    an existing test already checks that every captured layer recomputes from its upstream neighbour.</div></div></div>
+  <div class="stage"><div class="s">STEP 1</div><div class="b">
+    <div class="t">Run manifest</div>
+    <div class="d">An explicit list of runs and checkpoints (YAML), not a name pattern: the existing analysis
+    tools find runs by patterns that skip the lookalike runs, and resumed runs have several folders.</div></div></div>
+  <div class="stage"><div class="s">STEP 2</div><div class="b">
+    <div class="t">Replay and capture</div>
+    <div class="d">Test scenes: each job replays its scenes with the existing exact-replay path
+    (<code>scripts/analysis/obs_manipulation/run.py</code>, live mode, no manipulation) with capture on. Training
+    world: each job plays fixed-seed episodes in the run's own world with the existing replay tool
+    (<code>scripts/analysis/nmn/replay.py</code>) and capture on. Both record activity plus the environment state
+    that the regressors are computed from.</div></div></div>
+  <div class="stage"><div class="s">STEP 3</div><div class="b">
+    <div class="t">Write one file, in parallel</div>
+    <div class="d">One worker per job across the lab nodes; a job that finds a valid file skips it, so a
+    stopped collection resumes.</div></div></div>
+  <div class="stage"><div class="s">STEP 4</div><div class="b">
+    <div class="t">Validate</div>
+    <div class="d">The replay must reproduce the behaviour sweep's actions and positions step for step
+    (parity); shapes and NaN padding must match <code>trials.length</code>; each layer must recompute from its
+    upstream neighbour. A file that fails is deleted and its job rerun.</div></div></div>
+  <div class="stage"><div class="s">STEP 5</div><div class="b">
+    <div class="t">Pilot, then scale</div>
+    <div class="d">Record the pilot set first, measure file size, speed and compression, and redraw this
+    page's figures from it. Only then record the final checkpoint of every run.</div></div></div>
+</section>
+
+<section class="col" id="glm">
+  <h2><span class="num">05</span> First analysis: the encoding model</h2>
+  <p>An <strong>encoding model</strong> predicts each unit's activity from the experimental variables, as is
+  done for recorded neurons (Pillow et al. 2008; Park et al. 2014; Musall et al. 2019). One model is fitted per
+  unit:</p>
+  <p style="text-align:center"><code>y<sub>u</sub>(t) = &Sigma;<sub>k</sub> &beta;<sub>u,k</sub> &middot; x<sub>k</sub>(t) + &epsilon;<sub>u</sub>(t)</code></p>
+  <p>where <code>y<sub>u</sub>(t)</code> is unit u's activity at step t, each <code>x<sub>k</sub>(t)</code> is a
+  regressor and <code>&beta;<sub>u,k</sub></code> its coefficient. The terms used below:</p>
+  <dl>
+    <dt>regressor</dt><dd>One experimental variable used as a predictor: injury, observed injury, satiation,
+    rabbit present, predator present, nearest-animal distance, on bush, action, time in episode.</dd>
+    <dt>design matrix</dt><dd>All regressors stacked as columns, one row per time step.</dd>
+    <dt>dummy variable</dt><dd>A 0/1 column coding a category, e.g. "rabbit present".</dd>
+    <dt>interaction term</dt><dd>The product of two regressors (injury &times; rabbit present). Its
+    coefficient measures how much one variable changes the effect of the other.</dd>
+    <dt>event regressor</dt><dd>Time-shifted copies of an event indicator (e.g. the rabbit entering the field
+    of view), one per lag; their coefficients form the unit's response <em>kernel</em>. Negative lags capture
+    activity before the event.</dd>
+    <dt>FIR basis</dt><dd>Finite impulse response: one free coefficient per lag, so the kernel's shape is not
+    constrained (Figure 1).</dd>
+    <dt>parametric modulation</dt><dd>An event block multiplied by a continuous variable (here injury), so the
+    event's kernel may scale with that variable.</dd>
+    <dt>boxcar regressor</dt><dd>A 0/1 column that is 1 for as long as a state lasts, e.g. on the bush.</dd>
+    <dt>ridge regression</dt><dd>Linear regression with an L2 penalty on the coefficients, which keeps
+    estimates stable when regressors are correlated (Hoerl &amp; Kennard 1970).</dd>
+    <dt>cross-validation</dt><dd>Fitting on some episodes and scoring on held-out ones. Whole episodes are
+    held out, because steps within an episode are correlated.</dd>
+    <dt>cvR&sup2;</dt><dd>Cross-validated R&sup2;: the share of a unit's variance predicted on held-out
+    episodes.</dd>
+    <dt>unique explained variance (&Delta;R&sup2;)</dt><dd>The drop in cvR&sup2; when one regressor is
+    removed and the model refitted: the variance only that regressor explains (variance partitioning; Musall
+    et al. 2019).</dd>
+    <dt>selectivity</dt><dd>A unit is selective (tuned) for a variable if that variable explains its
+    activity; <strong>mixed selectivity</strong> means one unit encodes several variables (Rigotti et al.
+    2013).</dd>
+    <dt>permutation null</dt><dd>The distribution of &Delta;R&sup2; when the link between regressor and
+    activity is broken, here by circularly shifting the regressor in time within each episode, which keeps its
+    own time structure.</dd>
+    <dt>false discovery rate</dt><dd>The expected share of false positives among units called significant;
+    controlled with the Benjamini&ndash;Hochberg procedure across the many units tested.</dd>
+  </dl>
+  <p><strong>Cross-condition generalisation.</strong> A model fitted on training-world episodes is scored, without
+  refitting, on the test scenes, and the reverse. The drop in cvR&sup2; from the fitting condition to the other one
+  measures how much of a unit's encoding is specific to that condition. The regressors are defined identically in
+  both conditions so the same coefficients apply.</p>
+  <p>Statistics across agents use the <strong>seed</strong> (an independently trained network) as the unit of
+  replication, never the unit: units within one network are not independent.</p>
+</section>
+
+<section class="col" id="figures">
+  <h2><span class="num">06</span> Figures, with simulated numbers</h2>
+  <div class="callout warn"><p><strong>Every figure in this section is drawn from made-up numbers</strong>
+  (each is stamped &ldquo;MOCK-UP&rdquo;). They show how results will be presented, not any result. The unit
+  maps draw 128 units per layer and 16 FiLM outputs per site to stay readable; real maps draw every unit
+  (Table 1), the encoder's first stage as one block per sensor group. Each figure carries a short
+  &ldquo;Analysis&rdquo; note instead of the full &ldquo;How it is computed&rdquo; block of 150&ndash;250 words that
+  results pages carry (generation guide &sect;11c): there are no results to compute yet, and the full blocks come
+  with the first real recordings.</p></div>
+
+  <h3 class="fh">Figure 1 &mdash; the design matrix and its event regressors</h3>
+  <p><strong>Analysis.</strong> The design matrix of one episode. Time runs left to right, regressors down the
+  rows &mdash; transposed from the usual neuroimaging (SPM) convention, so the episode's event strip and the matrix
+  share one time axis. Continuous regressors (injury, observed injury, satiation,
+  nearest-animal distance) and state regressors (rabbit present, predator present, on bush, a 0/1 &ldquo;boxcar&rdquo;
+  that is 1 for as long as the state lasts) are single columns; the injury &times; rabbit interaction is their
+  product. Each <strong>event</strong> is a block of time-shifted indicator columns, one per lag &mdash; a
+  finite-impulse-response (FIR) basis &mdash; which appears as a diagonal band; the fitted coefficients of one block
+  are that event's kernel (Figure 4). The events planned are: <em>bush entry</em>, with lags from 10 steps before
+  (the approach, when the agent is moving to hide) to 10 after; <em>bush exit</em>, ending a hiding and resting
+  period; <em>injury onset</em> (a predator attack or a hazard hit, 0 to +20 steps); <em>animal enters the field of
+  view</em>, separately for rabbit and predator (&minus;5 to +20); and <em>eating</em> (each bite, 0 to +5). Time
+  spent in the bush enters both as the state column and through the entry and exit kernels. Negative lags let a
+  unit respond <em>before</em> an event the agent itself causes, such as entering the bush, which is how
+  preparatory activity is detected. The FIR basis assumes no response shape, which suits units whose responses
+  are not known in advance (unlike the BOLD signal, whose slow haemodynamic response justifies a canonical shape in
+  fMRI); its cost is many coefficients and noisier kernels. The alternative is a small set of smooth basis functions
+  (raised cosines; Pillow et al. 2008; Park et al. 2014). <strong>Pilot decision:</strong> both are fitted on the pilot
+  recordings and the basis with the higher held-out cvR&sup2; is kept, checking that the kernel shapes agree. Event
+  colours follow the regressor palette: each event takes the colour of the state it belongs to (bush entry and exit
+  that of <em>on bush</em>, eating that of satiation).</p>
+  <p><strong>Variable onsets and durations.</strong> Events happen at different times, and states last different
+  lengths of time, in every episode and in both conditions. The design matrix is built per episode from that
+  episode's own event times, and the coefficients are shared across episodes, so each kernel is the response
+  time-locked to its event wherever the event falls (as in event-related fMRI with jittered onsets); timing that varies
+  also decorrelates the lagged columns of different events, which helps separate overlapping responses
+  (deconvolution). A period of variable length is modelled by three parts: an <em>entry</em> kernel (the transient at
+  its start, including the approach before it), a <em>boxcar</em> state column for the sustained response however
+  long it lasts, and an <em>exit</em> kernel. Lags are never carried across episodes. The model assumes an event's
+  response has the same shape each time (linear, time-invariant); where the response may depend on the agent's state,
+  a second copy of the event block multiplied by that state is added &mdash; <strong>parametric modulation</strong>.
+  The planned case is <em>rabbit enters view &times; injury</em>, whose kernel is how injury scales the event-locked
+  response to the rabbit.</p>
+  {{FIG:np_design_matrix}}
+
+  <h3 class="fh">Figure 2 &mdash; unit map of the encoding model</h3>
+  <p><strong>Analysis.</strong> For every unit and regressor, the unique explained variance &Delta;R&sup2;.
+  Each unit is drawn as one dot at a fixed position, grouped by layer, so the same position means the same
+  unit in every figure, run and agent. The dot's colour is the unit's <em>preferred regressor</em> (largest
+  &Delta;R&sup2;) and its area is that &Delta;R&sup2;. The modulator column shows its recurrent hidden state
+  on top and, below, its FiLM outputs (&gamma; and &beta;) grouped by the layer they act on. This shows each
+  unit's dominant selectivity; mixed selectivity is in Figure A1.</p>
+  {{FIG:np_unitmap}}
+
+  <h3 class="fh">Figure 3 &mdash; proportion of tuned units per layer</h3>
+  <p><strong>Analysis.</strong> For each layer and regressor, the proportion of units whose &Delta;R&sup2;
+  exceeds the permutation null at a false discovery rate of 5&nbsp;%. This is the counterpart of the
+  &ldquo;fraction of selective neurons per brain region&rdquo; in large-scale recordings (Steinmetz et al.
+  2019). Comparing <em>observed injury</em> (the input) with <em>injury</em> (the body state) per layer shows
+  where the network carries injury beyond its input.</p>
+  {{FIG:np_tuned_share}}
+
+  <h3 class="fh">Figure 4 &mdash; event kernels</h3>
+  <p><strong>Analysis.</strong> The event regressors' coefficients give each unit's temporal response
+  kernel around an event (here the rabbit entering the field of view; Pillow et al. 2008; Park et al. 2014).
+  Units are sorted by <em>peak latency</em>, the lag at which their kernel peaks; the top trace is the mean
+  absolute kernel over units. It is the GLM counterpart of the peri-event time histogram (PETH), with
+  overlapping events and the other regressors controlled for.</p>
+  {{FIG:np_kernels}}
+
+  <h3 class="fh">Figure 5 &mdash; tuning curves</h3>
+  <p><strong>Analysis.</strong> A tuning curve is mean activity as a function of a variable, here the
+  starting injury, separately with no animal and with the rabbit present. A constant gap between the curves
+  is an <em>additive</em> effect; a gap that grows with injury is a <em>multiplicative interaction</em>, or
+  <em>gain modulation</em> (Salinas &amp; Thier 2000): injury scales the response to the rabbit, the neural
+  counterpart of the hypervigilance pattern. The right panel averages the units tuned to the interaction.</p>
+  {{FIG:np_tuning}}
+
+  <h3 class="fh">Figure 6 &mdash; nested model comparison</h3>
+  <p><strong>Analysis.</strong> Regressor groups are added one at a time &mdash; time only, then the sensory
+  inputs, injury, animal identity, injury &times; animal &mdash; and each step's gain in cvR&sup2;, averaged
+  over a layer's units, is how much that group adds beyond the previous ones. Entering the sensory inputs
+  before injury separates the <em>representation of an internal variable</em> from a response driven by the
+  injury signal in the input.</p>
+  {{FIG:np_models}}
+
+  <h3 class="fh">Figure 7 &mdash; map of interaction coefficients</h3>
+  <p><strong>Analysis.</strong> The unit map of Figure 2, coloured by the standardised (z-scored) coefficient
+  of the injury &times; rabbit interaction term: orange where injury increases the unit's response to the
+  rabbit, blue where it decreases it. It shows where in the network the interaction is encoded, and with
+  which sign.</p>
+  {{FIG:np_interaction_map}}
+
+  <h3 class="fh">Figure 8 &mdash; comparison across worlds and agents</h3>
+  <p><strong>Analysis.</strong> The proportion of recurrent units tuned to the interaction, per training
+  world, for the ordinary and the modulated agent. Small marks are single seeds, large marks their mean.
+  Agents and worlds are compared across seeds; this is where the neural measure meets the factorial design
+  of the behaviour study.</p>
+  {{FIG:np_worlds}}
+
+  <h3 class="fh">Appendix A1 &mdash; unique explained variance, one map per regressor</h3>
+  <p><strong>Analysis.</strong> The per-regressor &Delta;R&sup2; maps behind Figure 2, in the same unit
+  layout. A unit with mixed selectivity appears in several maps, which Figure 2, showing only the preferred
+  regressor, cannot show.</p>
+  {{FIG:np_unitmap_per_regressor}}
+</section>
+
+<section class="col" id="open">
+  <h2><span class="num">07</span> Open points</h2>
+  <ul>
+    <li><strong>Pilot runs and checkpoints.</strong> Proposed: two worlds with the clearest behavioural
+    effect, both agents, about ten checkpoints across training.</li>
+    <li><strong>Encoder sensor groups.</strong> A known bug (registry: alphabetical group order inside jit)
+    means a stage-1 group's name does not match the sensor it reads; group labels must come from the true
+    order before any per-sensor statement.</li>
+    <li><strong>Dynamical-systems analyses</strong> (population trajectories, fixed points of the recurrent
+    layer, how injury moves its operating point) read the same files and get their own section once the
+    encoding model is running.</li>
+    <li><strong>Training-world episode count.</strong> 500 episodes per run is a starting proposal; the pilot
+    measures episode length and file size, and the count is fixed so the encoding model's held-out score is stable.</li>
+  </ul>
+</section>
+
+<section class="col" id="refs">
+  <h2><span class="num">08</span> References</h2>
+  <ol class="refs">
+    <li>Benjamini Y, Hochberg Y (1995). Controlling the false discovery rate: a practical and powerful approach to multiple testing. <em>J R Stat Soc B</em> 57:289&ndash;300.</li>
+    <li>Cho K et al. (2014). Learning phrase representations using RNN encoder&ndash;decoder for statistical machine translation. <em>EMNLP</em>. (GRU)</li>
+    <li>Hoerl AE, Kennard RW (1970). Ridge regression: biased estimation for nonorthogonal problems. <em>Technometrics</em> 12:55&ndash;67.</li>
+    <li>Musall S, Kaufman MT, Juavinett AL, Gluf S, Churchland AK (2019). Single-trial neural dynamics are dominated by richly varied movements. <em>Nat Neurosci</em> 22:1677&ndash;1686.</li>
+    <li>Park IM, Meister MLR, Huk AC, Pillow JW (2014). Encoding and decoding in parietal cortex during sensorimotor decision-making. <em>Nat Neurosci</em> 17:1395&ndash;1403.</li>
+    <li>Perez E, Strub F, de Vries H, Dumoulin V, Courville A (2018). FiLM: visual reasoning with a general conditioning layer. <em>AAAI</em>.</li>
+    <li>Pillow JW et al. (2008). Spatio-temporal correlations and visual signalling in a complete neuronal population. <em>Nature</em> 454:995&ndash;999.</li>
+    <li>Rigotti M et al. (2013). The importance of mixed selectivity in complex cognitive tasks. <em>Nature</em> 497:585&ndash;590.</li>
+    <li>R&uuml;bel O et al. (2022). The Neurodata Without Borders ecosystem for neurophysiological data science. <em>eLife</em> 11:e78362.</li>
+    <li>Salinas E, Thier P (2000). Gain modulation: a major computational principle of the central nervous system. <em>Neuron</em> 27:15&ndash;21.</li>
+    <li>Steinmetz NA, Zatka-Haas P, Carandini M, Harris KD (2019). Distributed coding of choice, action and engagement across the mouse brain. <em>Nature</em> 576:266&ndash;273.</li>
+  </ol>
+</section>
+
+<section class="col" id="prov">
+  <h2><span class="num">09</span> Provenance</h2>
+  <ul>
+    <li>Unit counts: <code>scripts/analysis/studies/neural_pipeline/unit_inventory.py</code> &rarr; <code>docs/experiments/active/neural_analysis/unit_inventory.json</code></li>
+    <li>Figures (simulated numbers): <code>scripts/analysis/studies/neural_pipeline/mockups.py</code></li>
+    <li>Page: <code>scripts/analysis/studies/neural_pipeline/build_page.py</code></li>
+    <li>Behaviour study the recordings pair with: <code>docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md</code></li>
+  </ul>
+  <p>Built {{BUILT}}.</p>
+</section>
+
+</div>
+{{LIGHTBOX}}

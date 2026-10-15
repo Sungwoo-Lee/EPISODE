@@ -159,13 +159,17 @@ def data_table(stem, rows):
     merged = merge_rows(rows)
     out = []
     for r in merged:
+        share = f'{r["pct"]:.1f}%' if r["total"] else "&mdash;"   # 0 of 0 has no percentage
         out.append(f'<tr><td>{wrap_cell(r["what"])}</td><td class="n">{r["used"]:,}</td>'
-                   f'<td class="n">{r["total"]:,}</td><td class="n">{r["pct"]:.1f}%</td>'
+                   f'<td class="n">{r["total"]:,}</td><td class="n">{share}</td>'
                    f'<td>{wrap_cell(r["note"])}</td></tr>')
     pcts = [r["pct"] for r in merged if r["total"]]
     lo_, hi_ = (f"{min(pcts):.0f}", f"{max(pcts):.0f}") if pcts else ("", "")
     span = ("n/a" if not pcts else f"{lo_}%" if lo_ == hi_ else f"{lo_}&ndash;{hi_}%")   # "100%", never "100–100%"
-    summary = (f"<b>Data.</b> {len(merged)} subset{'s' if len(merged) != 1 else ''} "
+    if not any(r["total"] for r in merged):   # illustration: nothing recorded was available or used
+        summary = "<b>Data.</b> Illustration only &mdash; simulated numbers, no recorded data used; open for the note"
+    else:
+      summary = (f"<b>Data.</b> {len(merged)} subset{'s' if len(merged) != 1 else ''} "
                + (f"({len(rows)} rows before merging identical ones), " if len(rows) != len(merged) else "") + f"using {span} of what was available "
                f"&mdash; open for the counts, emitted by the figure script")
     return (f'<details class="bb-data"><summary>{summary}</summary>'
