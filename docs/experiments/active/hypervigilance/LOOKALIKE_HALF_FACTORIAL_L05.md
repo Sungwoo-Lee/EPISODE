@@ -1185,6 +1185,10 @@ bookkeeping", folder placement).
   and wait until the node has stayed up (it crashed twice on 2026-10-14). **A run never moves
   between card types:** a resume goes to a TF32 card as well. The card of every run segment is
   recorded in the run table.
+  - **Exception (user, 2026-10-15 ~20:08):** the user approved RTX 2080 Ti cards (nodes 101–105)
+    for the four seed-42 runs of worlds 15 and 16 (runs 27–30). So worlds 15 and 16 are flagged
+    card-dependent in the seed-42 analysis, like the first half's mixed-card repeats. The
+    "restart from scratch on a TF32 card" failure mode does not apply to these four runs.
 - **Compute:** about 12.7 h (ordinary) and 16.7 h (modulated) per run on an RTX 3090. That is
   ≈ 235 GPU-hours for seed 42 (≈ 17 h of wall time per 8-run wave), ≈ 470 GPU-hours more for
   seeds 43 and 44, and ≈ 30 GPU-hours for world 1 at seed 44.
@@ -1313,7 +1317,7 @@ fills the empty columns, and the GPU column names the card model (for example `1
 | 25 | planned | w14 ordinary | `rppo_lookalike_hf_l05_w14_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
 | 26 | planned | w14 modulated | `rppo_lookalike_hf_l05_w14_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
 | 27 | running | w15 ordinary | `rppo_lookalike_hf_l05_w15_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 101 | `101:0 (2080 Ti, user-approved)` | 2026-10-15T20:09:52 | `5qe5vgcq` | `/media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_200951_rppo_lookalike_hf_l05_w15_t1none_s42.log` |
-| 28 | planned | w15 modulated | `rppo_lookalike_hf_l05_w15_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 28 | running | w15 modulated | `rppo_lookalike_hf_l05_w15_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 101 | `101:1 (2080 Ti, user-approved)` | 2026-10-15T20:10:03 | `9pkqdsyb` | `/media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_201002_rppo_lookalike_hf_l05_w15_t16quad_s42.log` |
 | 29 | running | w16 ordinary | `rppo_lookalike_hf_l05_w16_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 103 | `103:0 (2080 Ti, user-approved)` | 2026-10-15T20:10:15 | `v60ekjt5` | `/media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_201014_rppo_lookalike_hf_l05_w16_t1none_s42.log` |
 | 30 | running | w16 modulated | `rppo_lookalike_hf_l05_w16_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 103 | `103:1 (2080 Ti, user-approved)` | 2026-10-15T20:10:22 | `v1sg3xfk` | `/media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_201021_rppo_lookalike_hf_l05_w16_t16quad_s42.log` |
 
