@@ -137,15 +137,21 @@ p.wname { margin:4px 0 0; }
   <h2><span class="num">04</span> Each world in detail</h2>
   <p>One tab per training world; the tab names the setting changes that world carries. Figure 2 shows
   hiding against injury, Figure 3 the rabbit's extra hiding at each injury (the gap between the two lines of
-  Figure 2), and Figure 4 the injury contrast at every checkpoint across training.</p>
+  Figure 2), and Figure 4 the injury contrast at every checkpoint across training. The last tab,
+  <strong>Level 05 &middot; reference</strong>, is not one of the eight design worlds: it holds the same two agents
+  trained on plain level 05, before the lookalike world's three changes (the predator and rabbit smell the same,
+  the predator pounces at 3 cells, food items are half size), at seeds 42, 43 and 44, tested in the same scenes. It
+  shows what the agents do without any of this study's changes.</p>
   {{WORLD_TABS}}
 </section>
 
 <section class="col" id="animals">
   <h2><span class="num">05</span> Hiding with each animal</h2>
-  <p>A descriptive view: how much each run hides with each animal, unhurt and at injury 70, with healing
-  off. A run that already hides nearly all the time with no animal at injury 70 leaves the rabbit no room to
-  add more, so its injury contrast cannot be large whatever the agent has learned.</p>
+  <p>A descriptive view: how much each run hides with each animal, unhurt and at one starting injury, with
+  healing off. Pick the injury with the tabs (10 to 90); the page opens at injury 20. At injury 70 most runs
+  already hide nearly all the time even with no animal, which leaves the rabbit no room to add more, so the
+  differences between runs and animals show best at low injuries. The top rows are the plain level-05
+  reference.</p>
   {{FIG:animals}}
 </section>
 

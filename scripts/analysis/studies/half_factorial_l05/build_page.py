@@ -171,7 +171,7 @@ EXTRA_AXES = ("Horizontal: starting injury of the test, 0 to 90. Vertical: the r
 TRAIN_AXES = ("Horizontal: training, in million steps (0&ndash;10); the shaded part is the newest 20 tested checkpoints, "
               "the window every summary on this page uses. Vertical: the injury contrast in percentage points &mdash; the "
               "rabbit's extra bush dwell at the injury named above the column minus the same when unhurt. Above zero: "
-              "injury makes the rabbit matter more. Left column: injury 70 (fixed in the design); right: injury 10. "
+              "injury makes the rabbit matter more. Left column: injury 70 (the design's headline injury); right: injury 10. "
               "Blue: healing off; green: healing on. Thin lines: single checkpoints; thick lines: the average of 5 "
               "neighbouring checkpoints. Every world's figure uses the same vertical range.")
 GROUP_AXES = ("Horizontal: the effect of one setting change on the injury contrast, in percentage points of bush dwell: "
@@ -182,8 +182,9 @@ GROUP_AXES = ("Horizontal: the effect of one setting change on the injury contra
               "band: inside the bar, &plusmn;2 times the expected noise of such a contrast. Panels: healing off at injury "
               "70 (the headline), healing off at injury 10, healing on at injury 70.")
 ANIMAL_AXES = ("Columns: four test scenes &mdash; no animal, the harmless rabbit wandering, the rabbit chasing the agent, "
-               "and the hunting predator &mdash; first unhurt (injury 0), then at injury 70. Rows: one per run, world 1 "
-               "(both seeds) first, then worlds 2&ndash;8, ordinary above modulated. Colour and number: bush dwell, the "
+               "and the hunting predator &mdash; first unhurt (injury 0), then at injury {INJ}. Rows: one per run, "
+               "the plain level-05 reference (seeds 42&ndash;44) first, then world 1 (both seeds), then worlds 2&ndash;8 "
+               "(seed 42), ordinary above modulated. Colour and number: bush dwell, the "
                "share of the test's 100 steps spent on the bush (%), mean over the newest 20 tested checkpoints, healing "
                "off in the test scene. No intervals are shown.")
 
@@ -214,13 +215,20 @@ FOOD_AXES = ("Horizontal: a run's injury contrast at injury 70 in the scenes wit
 
 def world_tabs():
     tl, panels = [], []
-    for w in D.WORLDS:
+    # the plain level-05 reference tab comes last, once its runs are tested (user, 2026-10-15)
+    ws = list(D.WORLDS) + ([D.REF] if any(D.ref_seeds(a) for a in D.AGENTS) else [])
+    for w in ws:
         sel = "true" if w == 1 else "false"
-        lab = "W1" if w == 1 else f"W{w} &middot; {'+'.join(D.NEW[w])}"
+        lab = ("W1" if w == 1 else "Level 05 &middot; reference" if w == D.REF
+               else f"W{w} &middot; {'+'.join(D.NEW[w])}")
         tl.append(f'<button class="tab" role="tab" id="tab-w{w}" aria-controls="panel-w{w}" aria-selected="{sel}"'
                   + ("" if w == 1 else ' tabindex="-1"') + f">{lab}</button>")
         name = ("world 1, the lookalike world (no change)" if w == 1 else
+                "plain level 05, the reference: the same two agents trained 10 million steps on level 05 itself, "
+                "without the lookalike world's three changes (same smell for predator and rabbit, pounce at 3 cells, "
+                "half-size food), seeds 42, 43 and 44, tested in the same world-1 scenes" if w == D.REF else
                 f"world {w}, changed: " + "; ".join(f"{g} {D.GROUP_PLAIN[g]}" for g in D.NEW[w]))
+        where = "level 05" if w == D.REF else f"world {w}"
         body = [f'<p class="wname"><strong>{name[0].upper() + name[1:]}.</strong></p>']
         for k, (kind, axes, shows, alt) in enumerate((
                 ("curves", CURVES_AXES, "Whether hiding rises with injury, and whether the rabbit line separates from "
@@ -230,13 +238,38 @@ def world_tabs():
                  "agent.", "Panels of the rabbit's extra bush dwell against starting injury, healing off and on"),
                 ("train", TRAIN_AXES, "Whether the injury contrast is steady across training or rises and falls.",
                  "Panels of the injury contrast across training, injury 70 and 10, healing off and on")), start=2):
-            body.append(FB.figure(f"hf_{kind}__w{w}", alt + f", world {w}.", axes, shows,
-                                  f"{FIG} --figure {kind} --world {w}", title=f"Figure {k} &mdash; world {w}"))
+            body.append(FB.figure(f"hf_{kind}__w{w}", alt + f", {where}.", axes, shows,
+                                  f"{FIG} --figure {kind} --world {w}", title=f"Figure {k} &mdash; {where}"))
         panels.append(f'<div class="tabpanel" role="tabpanel" id="panel-w{w}" aria-labelledby="tab-w{w}" tabindex="0"'
                       + ("" if w == 1 else " hidden") + ">" + "\n".join(body) + "</div>")
-    return ('<div class="tabs" data-tabs><p class="cue" hidden>&larr; more worlds &mdash; scroll the tabs sideways</p>'
+    return ('<div class="tabs" data-tabs><p class="cue" hidden>more worlds &mdash; scroll the tabs sideways &rarr;</p>'
             '<div class="tablist" role="tablist" aria-label="Training world">'
             + "".join(tl) + "</div>" + "\n".join(panels) + "</div>")
+
+
+ANIMAL_DEFAULT = "20"   # injury 20 keeps hiding off the ceiling (Visualization session, 2026-10-15)
+
+
+def animal_tabs():
+    """Figure 5, one heat map per injury level 10-90 behind tabs, as Figure 2's world tabs (user, 2026-10-15)."""
+    tl, panels = [], []
+    for i in FG_ANIMAL_INJ:
+        on = i == ANIMAL_DEFAULT
+        tl.append(f'<button class="tab" role="tab" id="tab-i{i}" aria-controls="panel-i{i}" aria-selected="{str(on).lower()}"'
+                  + ("" if on else ' tabindex="-1"') + f">Injury {i}</button>")
+        fig = FB.figure(
+            f"hf_animals__i{i}", f"Heat map of bush dwell per run and test scene, unhurt and at injury {i}, healing off.",
+            ANIMAL_AXES.replace("{INJ}", i),
+            f"How much each run hides with each animal, unhurt and at injury {i}; how much room is left for the rabbit to add.",
+            f"{FIG} --figure animals", title=f"Figure 5 &mdash; hiding with each animal, injury {i}")
+        panels.append(f'<div class="tabpanel" role="tabpanel" id="panel-i{i}" aria-labelledby="tab-i{i}" tabindex="0"'
+                      + ("" if on else " hidden") + ">" + fig + "</div>")
+    return ('<div class="tabs" data-tabs><p class="cue" hidden>more injury levels &mdash; scroll the tabs sideways &rarr;</p>'
+            '<div class="tablist" role="tablist" aria-label="Starting injury">'
+            + "".join(tl) + "</div>" + "\n".join(panels) + "</div>")
+
+
+FG_ANIMAL_INJ = [f"{i}" for i in range(10, 100, 10)]
 
 
 def main():
@@ -246,10 +279,7 @@ def main():
         "hf_group", "Three panels of setting-change effects against the bar.", GROUP_AXES,
         "Which setting changes move the injury contrast by more than seed-to-seed noise would, in world 1's scenes.",
         f"{FIG} --figure group", title="Figure 1 &mdash; the setting changes against the bar")
-    tok["{{FIG:animals}}"] = FB.figure(
-        "hf_animals", "Heat map of bush dwell per run and test scene, healing off.", ANIMAL_AXES,
-        "How much each run hides with each animal, unhurt and injured; how much room is left for the rabbit to add.",
-        f"{FIG} --figure animals", title="Figure 5 &mdash; hiding with each animal")
+    tok["{{FIG:animals}}"] = animal_tabs()
     tok["{{TABLE:seeds}}"] = seed_table()
     tok["{{SEED_COUNT}}"] = seed_count()
     tok["{{FIG:seeds}}"] = FB.figure(
@@ -267,7 +297,13 @@ def main():
     vs = re.search(r"(\(function \(\) \{\s*// full-size figure viewer.*?\}\)\(\);)", house, re.S)
     sc = re.search(r"(function updateCues\(\).*?)</script>", house, re.S)
     tok["{{HOUSE_STYLE}}"] = m.group(1)
-    tok["{{LIGHTBOX}}"] = vm.group(1) + "\n<script>\n" + vs.group(1) + "\n" + sc.group(1) + "</script>"
+    tabjs = sc.group(1)
+    # a selected tab half outside its sideways-scrolling strip stays cut off: focus() does not scroll it
+    # (format review 2026-10-15, at 834 px with two overflowing strips)
+    assert tabjs.count("if (focus) t.focus();") == 1
+    tabjs = tabjs.replace("if (focus) t.focus();",
+                          "if (focus) t.focus();\n    t.scrollIntoView({block: 'nearest', inline: 'nearest'});")
+    tok["{{LIGHTBOX}}"] = vm.group(1) + "\n<script>\n" + vs.group(1) + "\n" + tabjs + "</script>"
     tok["{{SUMMARY}}"] = open(os.path.join(PAGE_DIR, "summary_note.html")).read()
     for k, v in tok.items():
         page = page.replace(k, v)

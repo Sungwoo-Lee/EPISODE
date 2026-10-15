@@ -2573,3 +2573,17 @@ check select the owning tab (`el.closest('[role=tabpanel]')` → the tab whose `
 before clicking anything inside a panel. **Check:** the number of figures measured equals the number of
 `<figure>` elements on the page. Tool fix pending: an `--open-tabs` flag in
 `scripts/claude/check_artifact_layout.py` and tab selection in `scripts/claude/check_artifact_interactions.py`.
+
+### F85 — a selected tab stays half hidden in a sideways-scrolling tab strip
+
+**What happened** (Predator, Food and Hazard Settings Screen, 2026-10-15): with a ninth world tab and a
+second tab group (injury 10–90), both strips overflowed at 834 px. Pressing End, or wrapping round with
+the arrow keys, selected the last tab but left it cut off ("LEVEL 05 · REF…", "I" of "INJURY 90"),
+because `focus()` does not scroll a partly visible element into view inside an `overflow-x` box. At 390 px
+it happened to scroll correctly. **Why both reviews miss it:** the markup and the selection state are
+right, and the phone-width render (the usual narrow check) looks fine; it only shows at a width where the
+strip just overflows, with a keyboard route. **Rule.** Every tab script calls
+`scrollIntoView({block: 'nearest', inline: 'nearest'})` on the tab it selects (the half-factorial page
+patches the house tab script in `build_page.py`; the house sheet itself still lacks it). **Check:** at a
+width where the strip just overflows (try 834 px), press End and Home in every tab group and confirm the
+selected tab lies fully inside its strip.

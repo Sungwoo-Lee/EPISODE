@@ -1,0 +1,9 @@
+[
+ {
+  "what": "12 series (agent x healing), counted at injury 70",
+  "used": 240,
+  "total": 600,
+  "pct": 40.0,
+  "note": "newest 20 tested checkpoints of each run; 30 episodes each"
+ }
+]

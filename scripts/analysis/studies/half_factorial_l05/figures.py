@@ -50,11 +50,20 @@ STATUS_YES, STATUS_NO = H.INK, "#9aa0a8"   # healing off is the headline (user, 
 
 
 def runs(world):
+    if world == D.REF:
+        return [(a, s) for a in D.AGENTS for s in D.ref_seeds(a)]
     return [(a, s) for a in D.AGENTS for s in ((42, 43) if world == 1 else (42,))]
 
 
 def world_title(w):
+    if w == D.REF:
+        return "plain level 05 (reference, no lookalike change)"
     return "world 1 (the lookalike world)" if w == 1 else f"world {w} (changed: {', '.join(D.NEW[w])})"
+
+
+def ref_worlds():
+    """The plain level-05 reference, once any of its runs is tested, then the design's eight worlds."""
+    return ([D.REF] if any(D.ref_seeds(a) for a in D.AGENTS) else []) + list(D.WORLDS)
 
 
 def summ(v):
@@ -147,6 +156,8 @@ def fig_extra(w):
         if k // nc == axs.shape[0] - 1:
             ax.set_xlabel("starting injury", fontsize=H.FS_LABEL)
     axs[0, 0].set_xticks([0, 30, 60, 90]); axs[0, 0].set_xlim(-4, 94); axs[0, 0].set_ylim(*extra_ylim())
+    lo, hi = extra_ylim()
+    axs[0, 0].set_yticks(np.arange(np.ceil(lo / 20) * 20, hi + 1, 20))   # same ticks in every world's figure (format review 2026-10-15)
     from matplotlib.lines import Line2D
     hs = [Line2D([], [], color=HEAL_COL["off"], marker=HEAL_MK["off"], lw=2, label=HEAL_NAME["off"]),
           Line2D([], [], color=HEAL_COL["on"], marker=HEAL_MK["on"], mfc=H.PAPER, mew=1.3, lw=2, label=HEAL_NAME["on"]),
@@ -162,7 +173,7 @@ def padded(lo, hi, step):
 
 
 def all_runs():
-    return [(w, a, s) for w in D.WORLDS for a, s in runs(w)]
+    return [(w, a, s) for w in ref_worlds() for a, s in runs(w)]
 
 
 @functools.lru_cache(maxsize=None)
@@ -223,10 +234,15 @@ ANIMALS = (("grid", "none", "no animal"), ("grid", "rabbitwander", "wandering ra
            ("gridchase", "rabbit", "chasing rabbit"), ("grid", "pred", "predator"))
 
 
-def fig_animals():
+ANIMAL_INJ = [f"{i}" for i in range(10, 100, 10)]
+
+
+def fig_animals(injury="70"):
+    """One heat map per injury level (user, 2026-10-15: the page lets the reader pick 10-90, as Figure 2's tabs do);
+    each compares that injury with unhurt. Lower injuries keep hiding off the 100 % ceiling (Visualization session)."""
     import matplotlib.pyplot as plt
     rr = [(w, a, s) for w, a, s in all_runs()]
-    cols = [(st, sc, name, inj) for inj in ("00", "70") for st, sc, name in ANIMALS]
+    cols = [(st, sc, name, inj) for inj in ("00", injury) for st, sc, name in ANIMALS]
     M = np.full((len(rr), len(cols)), np.nan)
     rows = []
     for i, (w, a, s) in enumerate(rr):
@@ -242,13 +258,14 @@ def fig_animals():
         for j in range(M.shape[1]):
             ax.text(j, i, f"{M[i, j]:.0f}", ha="center", va="center", fontsize=H.FS_LABEL - 1,
                     color=H.PAPER if M[i, j] > 60 else H.INK)
-    ax.set_xticks(range(len(cols)), [f"{name}, " + ("unhurt" if inj == "00" else "injury 70") for _, _, name, inj in cols],
+    ax.set_xticks(range(len(cols)), [f"{name}, " + ("unhurt" if inj == "00" else f"injury {int(inj)}") for _, _, name, inj in cols],
                   rotation=35, ha="right", fontsize=H.FS_LABEL)
-    ax.set_yticks(range(len(rr)), [f"w{w} {a}" + (f" s{s}" if w == 1 else "") for w, a, s in rr], fontsize=H.FS_LABEL)
+    ax.set_yticks(range(len(rr)), [("level 05" if w == D.REF else f"w{w}") + f" {a}" + (f" s{s}" if w in (1, D.REF) else "")
+                                   for w, a, s in rr], fontsize=H.FS_LABEL)
     ax.axvline(len(ANIMALS) - 0.5, color=H.PAPER, lw=3)
-    for k in range(1, len(D.WORLDS)):
-        ax.axhline(2 + 2 * k - 0.5, color=H.PAPER, lw=2)
-    ax.axhline(3.5, color=H.PAPER, lw=2)
+    for i in range(1, len(rr)):
+        if rr[i][0] != rr[i - 1][0]:   # a white rule between worlds
+            ax.axhline(i - 0.5, color=H.PAPER, lw=2)
     for sp in ax.spines.values():
         sp.set_visible(False)
     ax.tick_params(length=0)
@@ -309,6 +326,8 @@ SEED_MK = {42: "o", 43: "P", 44: "X"}   # shapes used nowhere else on the page (
 
 
 def seed_runs(w, a):
+    if w == D.REF:
+        return tuple(D.ref_seeds(a))
     return (42, 43) if w == 1 else (42, *D.tested_seeds(w, a))
 
 
@@ -402,7 +421,7 @@ def planned_runs_row():
 
 def world_runs_row(w):
     """Figure 2's run-level coverage for one world: drawn (agent, seed) runs of all planned (format review F83)."""
-    plan = [(a, s) for a in D.AGENTS for s in ((42, 43) if w == 1 else (42, *D.EXTRA_SEEDS))]
+    plan = [(a, s) for a in D.AGENTS for s in (D.REF_SEEDS if w == D.REF else (42, 43) if w == 1 else (42, *D.EXTRA_SEEDS))]
     drawn = sum(1 for a, s in plan if s in seed_runs(w, a))
     st = [D.seed_status(w, a, s)[0] for a, s in plan if s != 42 and w > 1 and s not in seed_runs(w, a)]
     left = ", ".join(f"{st.count(k)} {k if k != 'testing' else 'being tested'}" for k in ("testing", "training", "queued")
@@ -492,11 +511,13 @@ def main(argv=None):
     a = ap.parse_args(argv)
     H.apply()
     d = os.path.abspath(a.fig_dir)
-    if a.figure in ("animals", "group", "seeds", "seedtrain", "food"):
-        jobs = [(f"hf_{a.figure}", {"animals": fig_animals, "group": fig_group, "seeds": fig_seeds,
+    if a.figure == "animals":
+        jobs = [(f"hf_animals__i{i}", functools.partial(fig_animals, i)) for i in ANIMAL_INJ]
+    elif a.figure in ("group", "seeds", "seedtrain", "food"):
+        jobs = [(f"hf_{a.figure}", {"group": fig_group, "seeds": fig_seeds,
                                     "seedtrain": fig_seedtrain, "food": fig_food}[a.figure])]
     else:
-        ws = D.WORLDS if a.world == "all" else [int(a.world)]
+        ws = ref_worlds() if a.world == "all" else [int(a.world)]
         f = {"curves": fig_curves, "extra": fig_extra, "train": fig_train}[a.figure]
         jobs = [(f"hf_{a.figure}__w{w}", functools.partial(f, w)) for w in ws]
     for stem, f in jobs:

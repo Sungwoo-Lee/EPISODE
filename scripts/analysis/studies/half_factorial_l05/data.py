@@ -47,6 +47,11 @@ PAIRS = {"AB+CD": ("A", "B"), "AC+BD": ("A", "C"), "AD+BC": ("A", "D")}
 SETS = ("grid", "gridchase", "neutral", "own")   # own = cold level-05 air, healing on only
 INJ = [f"{i:02d}" for i in range(0, 100, 10)]
 NEWEST = 20
+# Reference "world": plain level 05 without the lookalike changes, i.e. the six heal-replication runs (same agent
+# configs, 10 M steps, seeds 42-44) tested in world 1's scenes (user, 2026-10-15). Not part of the design's 8 worlds,
+# so WORLDS and every group test leave it out; figures show it as a reference.
+REF = 0
+REF_SEEDS = (42, 43, 44)
 SIGMA_C = 2.67   # registry spread of the injury-driven test measure, upper end (design, pass rule item 1)
 
 
@@ -64,6 +69,9 @@ def folders(world, agent, heal, scene_set, seed=42):
     if world == 1:
         base = "metrics_history_rppo_lookalike" + tail
         return [os.path.join(AV, base, scene_set, f"lookalike_{agent}_s{seed}")]
+    if world == REF:   # plain level 05 (heal-replication runs), tested in the same scenes (user, 2026-10-15)
+        base = "metrics_history_rppo_lookalike_l05ref" + tail
+        return [os.path.join(AV, base, scene_set, f"l05ref_{agent}_s{seed}")]
     base = "metrics_history_rppo_lookalike_hf" + tail
     lab = f"hf_w{world}_{agent}_s{seed}"
     fs = sorted(glob.glob(os.path.join(AV, base, scene_set, lab + "*")),
@@ -199,7 +207,9 @@ AGENT_TAG = {"ordinary": "t1none", "modulated": "t16quad"}
 
 def newest_checkpoint(world, agent, seed):
     best = 0
-    for d in glob.glob(os.path.join(TRAIN_ROOT, f"*_rppo_lookalike_hf_l05_w{world}_{AGENT_TAG[agent]}_s{seed}")):
+    pat = (f"*_rppo_healrep_l05_{AGENT_TAG[agent]}_s{seed}" if world == REF
+           else f"*_rppo_lookalike_hf_l05_w{world}_{AGENT_TAG[agent]}_s{seed}")
+    for d in glob.glob(os.path.join(TRAIN_ROOT, pat)):
         md = os.path.join(d, "models")
         best = max([best] + [int(c) for c in (os.listdir(md) if os.path.isdir(md) else []) if c.isdigit()])
     return best
@@ -208,7 +218,7 @@ def newest_checkpoint(world, agent, seed):
 def tested_complete(world, agent, seed):
     for heal, st in FOLDER_SETS:
         fs = folders(world, agent, heal, st, seed)
-        ref = folders(world, agent, heal, st, 42)
+        ref = folders(1 if world == REF else world, agent, heal, st, 42)   # the reference runs need world 1's file set
         if not fs or not os.path.isdir(fs[-1]) or not ref:
             return False
         want = {f for f in os.listdir(ref[0]) if f.endswith(".csv")}
@@ -228,6 +238,11 @@ def seed_status(world, agent, seed):
     if ck >= 9_990_000:
         return ("tested" if tested_complete(world, agent, seed) else "testing"), ck
     return ("training" if ck > 0 else "queued"), ck
+
+
+def ref_seeds(agent):
+    """Seeds of the plain level-05 reference whose tests (with food, every folder) are complete."""
+    return [s for s in REF_SEEDS if seed_status(REF, agent, s)[0] == "tested"]
 
 
 def tested_seeds(world, agent):
