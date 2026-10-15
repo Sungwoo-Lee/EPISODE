@@ -145,3 +145,11 @@ runs:
   path: results/JAX_RecurrentPPO/20261014-214129_rppo_lookalike_hf_l05_w5_t16quad_s44
 - label: hf_w5_modulated_s44_resumed2
   path: results/JAX_RecurrentPPO/20261014-214819_rppo_lookalike_hf_l05_w5_t16quad_s44
+- label: hf_w8_ordinary_s45
+  path: results/JAX_RecurrentPPO/20261014-220251_rppo_lookalike_hf_l05_w8_t1none_s45
+- label: hf_w8_modulated_s45
+  path: results/JAX_RecurrentPPO/20261014-222643_rppo_lookalike_hf_l05_w8_t16quad_s45
+- label: hf_w8_ordinary_s46
+  path: results/JAX_RecurrentPPO/20261014-223621_rppo_lookalike_hf_l05_w8_t1none_s46
+- label: hf_w8_modulated_s46
+  path: results/JAX_RecurrentPPO/20261014-225133_rppo_lookalike_hf_l05_w8_t16quad_s46
