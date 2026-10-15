@@ -3,7 +3,7 @@ title: Lookalike half-factorial at level 05 — which world changes make hiding 
 topic: hypervigilance
 status: active
 created: 2026-10-11
-last_updated: 2026-10-14
+last_updated: 2026-10-15
 wandb_tag: rppo_lookalike_hf_l05
 ---
 
@@ -52,6 +52,12 @@ It is a **screen**: one seed, eight worlds. It picks the groups worth replicatin
 It confirms nothing on its own. Level 06 (level 05 plus thirst and a pond) follows later with the
 same design.
 
+**Update 2026-10-15: the other half.** The user approved training the eight remaining
+combinations (worlds 9–16, each changing one or three groups), so that the two halves together
+cover all 16. That separates the effects the half could only read in pairs, for example "bigger
+food matters more when hazards are hidden" from "the new predator matters more when hazards are
+fewer". Design, configs, checks and run table: "Complementary half: worlds 9–16" below.
+
 ## The eight worlds
 
 | World | A threat | B food | C concealment | D hazard load | Config | Trained? |
@@ -70,6 +76,7 @@ All files live in `configs/environment/experiment/basic/` and extend the lookali
 (`lookalike_animals_close_pounce_small_food_10x10.yaml`, design in [[LOOKALIKE_ANIMALS_CLOSE_POUNCE]]).
 D's sign is set by the rule D = A × B × C (the product of the other three signs). That rule is
 what makes this the standard 2⁴⁻¹ half factorial.
+Worlds 9–16, the other half (D = −A × B × C), are listed in "Complementary half: worlds 9–16".
 
 ### Exact values
 
@@ -1046,6 +1053,237 @@ config-owned. Run the launch-morning re-check (World 1 reuse, item 4) first.
 # [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w7_newBC_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w7_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w7_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
 # [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w8_newABCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w8_t1none_s42" --wandb-name "rppo_lookalike_hf_l05_w8_t1none_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
 # [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w8_newABCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w8_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w8_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+```
+
+## Complementary half: worlds 9–16 (added 2026-10-15)
+
+**What this is.** The first eight worlds each switch an **even** number of groups to their new
+value (none, two, or all four). That is what made them a half: with 8 of the 16 combinations, some
+effects cannot be told apart. For example, "bigger food matters more when hazards are hidden"
+(B × C) looks exactly like "the new predator matters more when hazards are fewer and heavier"
+(A × D). On 2026-10-15 the user approved training the **other eight combinations**, every world
+that switches an **odd** number of groups (one or three). For example, world 9 changes only the
+predator (A), and world 16 changes everything except the predator (B, C and D). Together, the two
+halves are the **full factorial**: all 16 combinations of the four groups. Each world is trained
+with both agents (ordinary and modulated): 16 runs at seed 42 now, then 32 more at seeds 43 and 44
+as cards free. Nothing else changes: same group values, agents, training command and tests.
+
+| World | A threat | B food | C concealment | D hazard load | Config (`configs/environment/experiment/basic/`) |
+|---|---|---|---|---|---|
+| 9 | + | − | − | − | `lookalike_hf_w9_newA_10x10.yaml` |
+| 10 | − | + | − | − | `lookalike_hf_w10_newB_10x10.yaml` |
+| 11 | − | − | + | − | `lookalike_hf_w11_newC_10x10.yaml` |
+| 12 | − | − | − | + | `lookalike_hf_w12_newD_10x10.yaml` |
+| 13 | + | + | + | − | `lookalike_hf_w13_newABC_10x10.yaml` |
+| 14 | + | + | − | + | `lookalike_hf_w14_newABD_10x10.yaml` |
+| 15 | + | − | + | + | `lookalike_hf_w15_newACD_10x10.yaml` |
+| 16 | − | + | + | + | `lookalike_hf_w16_newBCD_10x10.yaml` |
+
+### Defining relation, and what the two halves together allow
+
+- **First half (worlds 1–8):** D = A × B × C, defining relation **I = +ABCD**. Every world has an
+  even number of "+" signs.
+- **This half (worlds 9–16):** D = −A × B × C, defining relation **I = −ABCD**. Every world has an
+  odd number of "+" signs. On its own it is also a resolution-IV half fraction. Its alias pairs are
+  the same as the first half's, with the opposite sign: there, the A × B contrast estimates
+  AB + CD; here it estimates AB − CD. Main effects are aliased with three-group interactions
+  (A with −BCD here, +BCD there).
+- **Both halves together: the full 2⁴ factorial.** Its 15 contrasts are 4 main effects,
+  **6 two-group interactions, each now estimated on its own** (A×B, A×C, A×D, B×C, B×D, C×D), 4
+  three-group interactions and the four-group interaction. Averaging the two halves' estimates
+  cancels the alias: ((AB + CD) + (AB − CD)) / 2 = AB. Each main effect and each interaction
+  becomes a comparison of **8 worlds against 8**, not 4 against 4.
+- **Batch effect lands on the four-group interaction only.** The two halves are trained in
+  separate batches (different days and card mix). Any systematic difference between the batches
+  shows up only in the ABCD contrast, because ABCD is the contrast that separates the halves. It
+  does not touch any main effect or two-group interaction. That holds only if the code and every
+  shared config layer are identical across the batches. **Checked 2026-10-15:** the world-1 reuse
+  re-check (item 4, all listed paths) prints no commit since `1f1b7b26` and no uncommitted
+  change. The four-group interaction is therefore **not interpreted**. The check is repeated on
+  launch morning, and a behaviour-changing commit stops the launch.
+- **World 1's offset shrinks.** The world-1 runs are reused from 2026-10-09 (see "World 1 reuse").
+  In the full factorial, world 1 is one world of 16, so a shift δ in it moves every contrast by
+  ±δ/8 instead of δ/4.
+
+### Exact values: byte-identical to the first half
+
+Each new world sets exactly the keys the first half sets for each group, with the same values and
+the same comments ("Exact values" table above). A world redeclares only the lists its new groups
+touch, as in the first half: the resource list for B, C or D, the animal list for A, the obstacle
+list for C or D, and `body:` for B. Each redeclared list is restated in full.
+
+**How they were made.** A generator (session scratchpad, not committed) starts from world 8 (all
+groups new). For each group at its current value, it drops that group's tagged lines (C) or
+replaces them with the current-value line taken from an existing first-half world. It leaves out
+lists no new group touches. Run on the first half, it **reproduces worlds 2–8 byte for byte**, so
+the new files follow the first half's construction exactly.
+
+**Verification (2026-10-15, CPU, working tree at `4b4898f4` plus the eight new files).**
+Configs were assembled in `train.py`'s own order (default → train defaults → rPPO train defaults →
+evaluation defaults → logger → visualization → `load_env_config(--config)` → ordinary-agent
+config).
+
+1. **The assembly matches what the trainer saved.** For worlds 1–8, the world-side sections
+   (`environment`, `body`, `sensory`, `thermal`, `water`, `perceptual_noise`) of today's
+   assembly equal the `models/config.yaml` saved by every seed-42 ordinary-agent run folder
+   (11 folders including resumes): 309–311 leaf keys, **0 differ**.
+2. **Every leaf in all 16 worlds is as intended.** Each world-side leaf equals world 1's value,
+   except the leaves of groups at their new level, which equal world 8's value. Result: **0
+   unexpected leaves in all 16 worlds**. Worlds 9–16 differ from world 1 in 4 (A), 3 (B), 2 (C),
+   5 (D), 9 (ABC), 12 (ABD), 11 (ACD) and 10 (BCD) leaves, which is exactly the sum of their
+   groups' key counts (A 4, B 3, C 2, D 5). So each group's level is identical in both halves.
+3. **The simulator's parameters agree.** For each group, the eight (new world, old world) pairs
+   that differ only in that group differ in **the same set of simulator fields**
+   (`load_env_params`). C changes only `res_visual_mask` and `obs_visual_mask`. A, B and D also
+   change the slot arrays, because the simulator sizes those by the entity counts.
+4. **Every world loads, resets and steps.** `jax_reset` and 5 × `jax_step` run without error.
+   The observation is **58 numbers wide** in all 16 worlds. Over 300 starts, A+ worlds always have
+   exactly 1 predator, and A− worlds have 0/1/2 predators in 118/100/82 starts, the same as world 1.
+   The loaded values match the "Exact values" table in every world: noticing distance and pounce
+   reach 2–3 (A+); 1–3 food items, 9 bites, gain 16 (B+); traps and rocks with visual mask 2,
+   meaning never visible (C+); 4–8 rocks, 3–6 traps, trap damage 25–60 (D+).
+
+**Critical-settings registry:** no registry setting changes value. As in the first half, no
+change-log entry is required. **No new keys.** `default.yaml` is untouched. The maintained
+`basic/` folder now holds 15 screen worlds that every schema change must carry (see "Config-system
+bookkeeping", folder placement).
+
+### Run plan
+
+- **Seed 42 now:** 8 worlds × 2 agents = **16 runs** (manifest below).
+- **Seeds 43 and 44 next:** 32 more runs, queued as cards free, with a command line identical
+  except `--seed`, `--device` and the tag (`..._s43`, `..._s44`). Order: by world number,
+  both agents of a world together.
+- **Agents, flags, horizon:** the same as the first half. Ordinary agent `nmngaenorm_t1none.yaml`,
+  modulated agent `nmngaenorm_t16quad_ALL.yaml`. `--episodes 10000000` (10 M steps),
+  `--log-interval 10`. `--num-envs` and `--checkpoint-frequency` stay config-owned. WandB group
+  `lookalike_half_factorial`, job type `pilot`.
+- **Open decision: world 1 at seed 44.** World 1 has seeds 42 and 43 only (the 2026-10-09
+  lookalike pilot); no seed-44 run exists. The balanced 3-seed analysis below needs both world-1
+  seed-44 runs: 2 extra runs on the lookalike world config, same flags. Proposed tags
+  `rppo_lookalike_l05_t1none_s44` and `rppo_lookalike_l05_t16quad_s44` in WandB group
+  `lookalike_animals`, matching world 1's seeds 42 and 43. Not in the manifest until the user
+  decides. Without them, the balanced contrasts stop at seeds 42–43.
+- **Cards:** one run per card (user rule). Any card class; card type is recorded per run.
+- **Compute:** about 12.7 h (ordinary) and 16.7 h (modulated) per run on an RTX 3090. That is
+  ≈ 235 GPU-hours for seed 42, or ≈ 17 h of wall time on 16 cards, and ≈ 470 GPU-hours more for
+  seeds 43 and 44.
+
+### Tests: the same as the first half
+
+Every new run is tested exactly like the first half's runs: in **world 1's frozen test scenes**,
+with food and without food, with healing and without, at every saved checkpoint. Concretely, each
+run gets a row (label `hf_w<k>_<ordinary|modulated>_s<seed>`, path = its results folder) in all
+nine first-half test specs:
+
+- with food, healing on: `configs/eval_sweeps/lookalike_hf/lookalike_hf_l05_{grid,gridchase,neutral,own}_rppo.yaml`
+- with food, healing off: `configs/eval_sweeps/lookalike_hf/lookalike_hf_noheal_l05_{grid,gridchase,neutral}_rppo.yaml`
+- without food: `configs/eval_sweeps/lookalike_hf_nofood/lookalike_hf_nofood_l05_grid_rppo.yaml` and
+  `lookalike_hf_nofood_noheal_l05_grid_rppo.yaml`
+
+The rows can only be written once a run's results folder exists, because the folder name carries the
+launch time. They are added at launch, as for seeds 43–46, and not here. The per-world scene sets
+stay deferred for all 16 worlds. Recorded evaluation rollouts in each run's own training world
+(readouts (a), (b) and the surprise response) follow "Data" above unchanged.
+
+### Analysis of the full factorial (pre-specified)
+
+The first half's pass rule stands, as written, for the first half's own read. The full-factorial
+read uses the same readouts, data rules, minimums, checkpoint rules (6, 8 and 10 M sign agreement;
+whole-training view) and agent rule. It changes four items:
+
+1. **Seeds.** Contrasts use the seeds present in **all 16 worlds and both agents**: seed 42 alone
+   at first, then 42–44. World 8's extra seeds 45 and 46 are reported beside it, but kept out of
+   the balanced contrasts. Within each agent, a world's value is the mean over those seeds.
+2. **Noise from the experiment itself.** With 3 seeds in every world, σ is the pooled
+   within-world standard deviation across seeds: 16 worlds × 2 degrees of freedom = 32 per agent.
+   This replaces the borrowed fast-heal σ, but is reported beside it. Until all 16 worlds have 3
+   seeds, the first half's σ rule (item 1 of the pass rule) applies.
+3. **Bar.** A contrast is the mean, over the two agents, of (mean of the 8 "+" worlds − mean of the
+   8 "−" worlds). With n seeds per world and per-run bootstrap errors SE_i over the 32n runs:
+
+   $$
+   \mathrm{SD}_{\text{contrast}} = \sqrt{\frac{\sigma^2}{8n} + \frac{1}{(16n)^2}\sum_{i=1}^{32n} SE_i^2}
+   $$
+
+   The bar is 2 × SD_contrast, as before. At n = 1 with negligible sampling error, this is
+   0.71σ (the first half's bar was σ). At n = 3 it is 0.41σ.
+4. **Interactions.** The six two-group interactions are each reported against the same bar, under
+   their own names. Three-group interactions are descriptive only. The four-group interaction is
+   not interpreted (batch effect, see above). Interactions are a secondary result and cannot make
+   a group "worth replicating".
+
+### Failure modes specific to this half
+
+- A new world whose run collapses twice (first-half rule) is reported as untrainable. The full
+  factorial is then **not** analysed as a balanced design. The first half's analysis stands, and
+  the user decides how to proceed.
+- If the launch-morning re-check finds a behaviour-changing commit, the batch effect is no longer
+  limited to GPU nondeterminism and card type. Do not launch: ask the user.
+
+### Launch manifest (worlds 9–16, seed 42)
+
+Tag = WandB name, same format as the first half. Runs are numbered on from the first half (1–14).
+Odd-numbered runs use the ordinary agent, even-numbered runs the modulated agent. The
+training-runner fills the empty columns.
+
+| Run | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 15 | planned | w9 ordinary | `rppo_lookalike_hf_l05_w9_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 16 | planned | w9 modulated | `rppo_lookalike_hf_l05_w9_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 17 | planned | w10 ordinary | `rppo_lookalike_hf_l05_w10_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 18 | planned | w10 modulated | `rppo_lookalike_hf_l05_w10_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 19 | planned | w11 ordinary | `rppo_lookalike_hf_l05_w11_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 20 | planned | w11 modulated | `rppo_lookalike_hf_l05_w11_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 21 | planned | w12 ordinary | `rppo_lookalike_hf_l05_w12_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 22 | planned | w12 modulated | `rppo_lookalike_hf_l05_w12_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 23 | planned | w13 ordinary | `rppo_lookalike_hf_l05_w13_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 24 | planned | w13 modulated | `rppo_lookalike_hf_l05_w13_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 25 | planned | w14 ordinary | `rppo_lookalike_hf_l05_w14_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 26 | planned | w14 modulated | `rppo_lookalike_hf_l05_w14_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 27 | planned | w15 ordinary | `rppo_lookalike_hf_l05_w15_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 28 | planned | w15 modulated | `rppo_lookalike_hf_l05_w15_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 29 | planned | w16 ordinary | `rppo_lookalike_hf_l05_w16_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 30 | planned | w16 modulated | `rppo_lookalike_hf_l05_w16_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+
+#### Configs to produce (worlds 9–16)
+
+| Runs | Env config (`configs/environment/experiment/basic/`) | Agent config (`configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/`) |
+|---|---|---|
+| 15, 16 | `lookalike_hf_w9_newA_10x10.yaml` | `nmngaenorm_t1none.yaml` / `nmngaenorm_t16quad_ALL.yaml` |
+| 17, 18 | `lookalike_hf_w10_newB_10x10.yaml` | same pair |
+| 19, 20 | `lookalike_hf_w11_newC_10x10.yaml` | same pair |
+| 21, 22 | `lookalike_hf_w12_newD_10x10.yaml` | same pair |
+| 23, 24 | `lookalike_hf_w13_newABC_10x10.yaml` | same pair |
+| 25, 26 | `lookalike_hf_w14_newABD_10x10.yaml` | same pair |
+| 27, 28 | `lookalike_hf_w15_newACD_10x10.yaml` | same pair |
+| 29, 30 | `lookalike_hf_w16_newBCD_10x10.yaml` | same pair |
+
+#### Launch block (for `train_command-agent.sh`; the training-runner adds it and fills in `[node:GPU]`)
+
+Run the launch-morning re-check (World 1 reuse, item 4) first. Use absolute log paths, so logs land
+on the NAS (the first seed-43/44 launches used a relative path, and their logs stayed on the nodes).
+
+```
+# ---------------------------------------------------------------------------
+# lookalike half-factorial, COMPLEMENTARY half: worlds 9-16 x 2 agents at level 05, seed 42 (16 runs)
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Complementary half: worlds 9-16").
+# [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w9_newA_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w9_t1none_s42" --wandb-name "rppo_lookalike_hf_l05_w9_t1none_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w9_newA_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w9_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w9_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w10_newB_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w10_t1none_s42" --wandb-name "rppo_lookalike_hf_l05_w10_t1none_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w10_newB_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w10_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w10_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w11_newC_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w11_t1none_s42" --wandb-name "rppo_lookalike_hf_l05_w11_t1none_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w11_newC_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w11_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w11_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w12_newD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w12_t1none_s42" --wandb-name "rppo_lookalike_hf_l05_w12_t1none_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w12_newD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w12_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w12_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w13_newABC_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w13_t1none_s42" --wandb-name "rppo_lookalike_hf_l05_w13_t1none_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w13_newABC_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w13_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w13_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w14_newABD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w14_t1none_s42" --wandb-name "rppo_lookalike_hf_l05_w14_t1none_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w14_newABD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w14_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w14_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w15_newACD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w15_t1none_s42" --wandb-name "rppo_lookalike_hf_l05_w15_t1none_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w15_newACD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w15_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w15_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w16_newBCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w16_t1none_s42" --wandb-name "rppo_lookalike_hf_l05_w16_t1none_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w16_newBCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w16_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w16_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
 ```
 
 ## Config-system bookkeeping

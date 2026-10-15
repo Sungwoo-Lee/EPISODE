@@ -1,0 +1,163 @@
+# Basic world — lookalike_hf_w13_newABC_10x10  (half-factorial world 13 of 16: A+ B+ C+ D-)
+# ---------------------------------------------------------------------------
+# PURPOSE (plain language): the lookalike-animals world (level 05 with same-smelling predator and
+# rabbit, close pounce and 6-bite food; lookalike_animals_close_pounce_small_food_10x10.yaml) with
+# parameter group(s) A, B, C switched to their NEW values. It is one of the eight worlds (9-16) of
+# the COMPLEMENTARY half of a half-factorial screen of four groups of world parameters, built so
+# that hiding is affordable and an injury can come without warning. Worlds 9-16 have an ODD number
+# of groups new (defining relation I = -ABCD); worlds 1-8 have an even number (I = +ABCD).
+# Together they form the full 2^4 factorial. Design: docs/experiments/active/hypervigilance/
+# LOOKALIKE_HALF_FACTORIAL_L05.md (created 2026-10-11; complementary half added 2026-10-15).
+#
+# Groups at their NEW value in this world:
+#   A  PREDATOR THREAT    new: predator notices at 2-3 cells and pounces from 2-3 (each drawn per predator per
+#                           episode; base world: both fixed at 3); EXACTLY 1 predator every episode (base: 0-2,
+#                           same mean of 1 — A changes the spread of the count, not its mean).
+#   B  FOOD ECONOMY       new: 1-3 food items (base 1-4), each lasting 9 bites (base 6), and
+#                           body.food_nutrition_gain 16 (base 6): an eating step nets +14 nutrition (16 gain - 1 eating
+#                           cost - 1 metabolic cost; base +4), so a full item is ~126 (base ~24). This
+#                           shortens refills (~7 eating steps vs ~25) and cuts trips; it does NOT raise the
+#                           reserve after a meal, because the reward pulls nutrition toward 100 and 200 kills.
+#   C  HAZARD CONCEALMENT new: the hidden trap (`hiding_predator`) and the rock are NEVER visible
+#                           (`visual_mask: all`; base: both visible). Neither smells (unchanged), so the trap
+#                           gives no cue at all before contact, and the rock (1-5 damage, same 0.9 pain signal)
+#                           becomes its invisible decoy.
+#
+# Groups at their CURRENT (lookalike-world) value: D.
+#   (A predator threat, B food economy, C hazard concealment, D hazard load.)
+#
+# Bush healing is UNCHANGED (body.recovery_in_bush_multiplier 25, from default.yaml). Grid 10x10,
+# max_steps 500, the lookalike smells, thermal/campfires, random start state: all unchanged.
+#
+# LIST-REPLACE FOOTGUN (CONFIG_GUIDE §1): every list redeclared below is restated IN FULL. `entities`
+# = the lookalike world's two entries verbatim except keys marked CHANGED; `resources` = its food and
+# hiding_predator entries verbatim except keys marked CHANGED; `obstacles` = level 05's four entries
+# (campfire, rock, tree, bush, incl. bush blocks_animals: true) verbatim except keys marked CHANGED.
+# Lists not redeclared here are inherited from the lookalike world unchanged.
+#
+# No critical-settings registry value changes (docs/environment/CONFIG_CRITICAL_SETTINGS.md).
+extends: environment/experiment/basic/lookalike_animals_close_pounce_small_food_10x10
+
+environment:
+  resources:
+    - name: "food"
+      type: "food"
+      count_low: 1
+      count_high: 3            # CHANGED (B; base 4)
+      spawn_area: [[1, 1], [10, 10]]
+      properties: [1.0, 0.0, 0.0, 0.0, 0.0]
+      properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      max_consumption: 9      # CHANGED (B; base 6) — bigger food items
+      regeneration_delay: 0
+      damage: [0.0, 0.0]
+      nociception_intensity: 0.0
+    - name: "hiding_predator"
+      type: "hiding_predator"
+      count_low: 2
+      count_high: 12
+      spawn_area: [[1, 1], [10, 10]]
+      properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+      properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      visual_mask: all           # CHANGED (C; base absent = visible) — never visible
+      max_consumption: -1
+      regeneration_delay: 20
+      damage: [15.0, 45.0]
+      nociception_intensity: 0.9
+  entities:
+    - class: "predator"
+      behaviour: "hunt"
+      tag: "pred"
+      count_low: 1                  # CHANGED (A; base 0)
+      count_high: 1                 # CHANGED (A; base 2) — exactly one predator, same mean
+      properties: [0.0, 0.6, 0.6, 0.0, 0.0]       # lookalike smell, same as rabbit (unchanged)
+      properties_std: [0.0, 0.3, 0.3, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      move_interval: [1, 1]
+      damage: [15.0, 120.0]
+      attack_delay: [1, 3]
+      nociception_intensity: 0.9
+      spawn_area: [[1, 1], [10, 10]]
+      patrol_area: [[1, 1], [10, 10]]
+      detection_range: [2, 3]       # CHANGED (A; base [3, 3]) — notices at 2 or 3 cells
+      max_stamina: [30, 150]
+      stamina_recovery_rate: [1, 1]
+      hunt_stamina_threshold: [0.7, 0.7]
+      lose_interest_multiplier: [1.5, 1.5]
+      attack_range: [2, 3]          # CHANGED (A; base [3, 3]) — drawn independently of detection_range
+      attack_success_rate: 0.5
+    - class: "neutral"
+      behaviour: "wander"
+      tag: "rabbit"
+      count_low: 0
+      count_high: 2
+      properties: [0.0, 0.6, 0.6, 0.0, 0.0]       # lookalike smell, same as predator (unchanged)
+      properties_std: [0.0, 0.3, 0.3, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      move_interval: [1, 1]
+      damage: [0.0, 0.0]
+      attack_delay: [0, 0]
+      nociception_intensity: 0.1    # read only for damaging animals (sensor.py), so inert here
+      spawn_area: [[1, 1], [10, 10]]
+      patrol_area: [[1, 1], [10, 10]]
+  obstacles:
+    - name: "campfire"
+      count_low: 1
+      count_high: 3
+      area: [[1, 1], [10, 10]]
+      edge_margin: 2
+      temperature_ratio: [11, 11]
+      blocking: false
+      blocks_sight: false
+      damage: [0.0, 0.0]
+      nociception_intensity: 0.0
+      properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+      properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+    - name: "rock"
+      count_low: 6
+      count_high: 12
+      area: [[1, 1], [10, 10]]
+      blocking: false
+      damage: [1, 5]
+      nociception_intensity: 0.9
+      properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+      properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      visual_mask: all   # CHANGED (C; base absent = visible) — never visible
+    - name: "tree"
+      count: 0
+      area: [[5, 15], [5, 15]]
+      blocking: true
+      damage: [0.1, 0.5]
+      nociception_intensity: 0.1
+      properties: [0.0, 0.0, 0.0, 0.0, 1.0]
+      properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+    - name: "bush"
+      count_low: 4
+      count_high: 10
+      area: [[1, 1], [10, 10]]
+      blocking: false
+      damage: [0.0, 0.0]
+      nociception_intensity: 0.0
+      hides_agent: true
+      blocks_animals: true
+      properties: [0.0, 0.0, 0.0, 1.0, 0.0]
+      properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+
+body:
+  food_nutrition_gain: 16      # CHANGED (B; base 6 from default.yaml). eating_nutrition_cost stays 1.0 and the
+                                # metabolic cost (1.0) is also charged on an eating step (core.py:266, :321),
+                                # so an eating step nets +14; overeating_death stays true (death at >= 200,
+                                # so one bite kills from nutrition >= 186)
