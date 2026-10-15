@@ -1375,6 +1375,42 @@ were returned inline. All responses are doc-only, and no config changed.
 | R8 | The sign check across checkpoints was too loose | The sign must agree at 6 M, 8 M and 10 M | §Pass rule item 3 |
 | Open assumption (KNOWN_BUGS row: saved run configs stop loading once a key becomes mandatory) | The noise measurement needs the fast-heal level-05 runs to load at current code | Checked 2026-10-12 on one run (`20261005-160124_rppo_healrep_l05_t1none_s42`): its saved `models/config.yaml`, loaded with a plain `Config.load_yaml` and `load_env_params`, builds without any compatibility step, resets and steps. It shows level 05's own values (predator notices at 1–7, 12-bite food). The other five fast-heal level-05 runs were saved the same day from the same code, so they are expected to load too. They were not each checked, and the evaluation tool's own loading path was not exercised | — |
 
+## Feedback from plan-reviewer: complementary half, worlds 9–16 (2026-10-15)
+
+**Verdict: SOUND WITH CONCERNS.** The worlds are built correctly and checked against what the
+trainer actually saved; code and the conda environment have not changed since the first half. The
+main risk is not time but **card type**. The claim that a batch difference lands only on the
+four-group interaction needs every first-half run of a seed to share one condition and every
+second-half run another. Card type breaks that. On an RTX 2080 Ti, JAX computes in full 32-bit
+precision. On RTX 3090/4090/6000 Ada cards it uses the lower-precision TF32 format by default
+(KNOWN_BUGS, "A trajectory store replays exactly only under the matmul precision mode it was
+collected in"). The first half's seed-42 runs were all on TF32 cards. Of the cards usable today
+(excluding 112, 113 and 114), 8 of 16 are 2080 Tis. Assigning them in world order will put an
+uneven share of some groups' "+" worlds on 2080 Tis. Any precision effect then moves those main
+effects, not only ABCD. Nobody has measured how large that effect is (§World 1 reuse, item 5,
+assumes it is small).
+
+| Sev. | Where | Issue | Suggested fix | Owner |
+|---|---|---|---|---|
+| Moderate | §Run plan "Cards" | Card class (full 32-bit on 2080 Ti vs TF32 elsewhere) is not balanced across groups within the half, so it can leak into main effects | Either (a) seed 42 on TF32 cards only, matching the first half's seed 42 (8 now, 8 later); or (b) pin the 2080 Ti set to worlds {9, 10, 15, 16}. Each group then has exactly 2 of its 4 "+" worlds on 2080 Tis, and card class is aliased only with the C×D / A×B pair. For seeds 43/44, rotate the pinned set to alias a different pair each seed. Never move a run across card class mid-training. Record the card per run segment | experiment-designer, then training-runner |
+| Moderate | §Analysis item 2 | If world 1 seed 44 is declined, "all 16 worlds have 3 seeds" never happens, and the 4-degree-of-freedom borrowed σ is kept even though 2 seeds per world would give 16 degrees of freedom per agent | Switch to the pooled within-world σ once every world has 2 or more seeds, n = seeds in all 16 | experiment-designer |
+| Moderate | §Analysis (whole) | No precedence rule if the first-half read and the full-factorial read disagree. The full-factorial rules were written after first-half seeds 42–44 had been tested and published (page v8–v11) | State which read decides, and list which first-half results had been seen when this section was written | experiment-designer |
+| Moderate | §Run plan "Seeds 43 and 44 next" | The queue mechanism is not named. If the 10-13 `watch.py` is reused, it launches outside the training-runner (relative logs last time) | Name the mechanism; a watcher must carry the runner checklist (launch file, doc table, diary, absolute log path) | training-runner |
+| Low | §Analysis item 4 | 6 two-group interactions + 4 main effects against a 2-SD bar: about 0.4 false crossings expected under no effect | Say so beside the interaction table; keep interactions descriptive unless the 6/8/10 M sign check also holds | experiment-designer |
+| Low | §World 1 reuse item 4 | The launch-morning path list does not cover the world configs themselves (w2–w16) | Add `git diff bf48ba07 -- configs/environment/experiment/basic/lookalike_hf_*` must be empty | training-runner |
+
+**Unverified assumptions:** the effect of TF32 vs full 32-bit on behaviour is small next to
+seed-to-seed variation; it is also additive, not dependent on the world (the environment's vision
+matmuls run in TF32 too, and group C changes what vision sees). Resumed runs (6 of the 14 seed-42
+first-half runs; the single-config resume restores memory with fresh worlds, KNOWN_BUGS B5) behave
+like uninterrupted ones. Node 107's NAS mount is live at launch.
+
+**Cost of being wrong:** at worst, about 235 GPU-hours (seed 42) and then 470 more (seeds 43/44)
+produce main effects with an unmeasured hardware offset that cannot be removed afterwards.
+Balancing the cards before launch costs nothing.
+
+Reviewed by: plan-reviewer
+
 ## Results / Conclusions
 
 To be filled in after training and evaluation.
