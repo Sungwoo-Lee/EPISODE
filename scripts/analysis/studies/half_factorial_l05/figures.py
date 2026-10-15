@@ -396,7 +396,8 @@ def planned_runs_row():
     n = {k: st.count(k) for k in ("testing", "training", "queued")}
     left = ", ".join(f"{v} {k if k != 'testing' else 'being tested'}" for k, v in n.items() if v)
     return {"what": "runs drawn, of all planned", "used": shown, "total": 18 + len(st),
-            "note": f"{len(st) - st.count('tested')} repeat run{'s' if len(st) - st.count('tested') != 1 else ''} not yet tested ({left}); shown once finished and tested"}
+            "note": (f"{len(st) - st.count('tested')} repeat run{'s' if len(st) - st.count('tested') != 1 else ''} not yet tested ({left}); shown once finished and tested")
+            if left else "every planned run is drawn"}
 
 
 def world_runs_row(w):

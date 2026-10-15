@@ -21,7 +21,7 @@ p.wname { margin:4px 0 0; }
 <div class="wrap">
 
 <header class="col">
-  <p class="eyebrow">grid_world_pain &middot; hypervigilance &middot; level-05 half-factorial screen &middot; 8 training worlds &times; 2 agents, seed 42, plus world 1 at seed 43; repeat seeds 43 and 44 as they finish</p>
+  <p class="eyebrow">grid_world_pain &middot; hypervigilance &middot; level-05 half-factorial screen &middot; 8 training worlds &times; 2 agents, seed 42, plus world 1 at seed 43; repeat seeds 43 and 44</p>
   <h1>Predator, Food and Hazard Settings Screen</h1>
   <p class="lede">Agents were trained in eight versions of the lookalike-animals world, each changing a
   different mix of four settings: how the predator threatens, how food comes, whether hazards can be seen,
@@ -154,9 +154,9 @@ p.wname { margin:4px 0 0; }
   <p>Every world and agent of the screen is being trained again from two new random starting points
   (seeds 43 and 44), to see which of the results above repeat. Each new run is tested in the same world-1
   scenes, with the same 30 episodes per checkpoint, once it has finished its 10 million training steps, and
-  appears here only then. Status now: {{SEED_COUNT}}. Sections 01&ndash;05 still show seed 42 only, and the
-  group test in section 02 is redone only when all 28 repeat runs are tested, since it needs a full set of
-  eight worlds per seed.</p>
+  appears here only then. Status now: {{SEED_COUNT}}. Figure 2 (in each world's tab) shows every tested seed;
+  the other figures and tables in sections 01&ndash;05 show seed 42 only. The group test in section 02 has not yet
+  been redone with the repeat runs.</p>
   {{FIG:seeds}}
   {{FIG:seedtrain}}
   <p><strong>Table 3.</strong> The injury contrast at healing off, injury 70, for every seed, in percentage
@@ -171,7 +171,7 @@ p.wname { margin:4px 0 0; }
   <ul>
     <li><strong>One seed per world.</strong> Each of the 16 screen runs is a single training run. The bar
     allows for seed-to-seed variation as measured in earlier runs, but a world can still look different only
-    because of its seed. Repeat seeds are coming in; see section 06.</li>
+    because of its seed. Repeat seeds 43 and 44 are now trained and tested; see section 06 and Figure 2.</li>
     <li><strong>Unfamiliar scenes for some agents.</strong> Agents from worlds with big food (3, 4, 7, 8) or
     invisible hazards (5, 6, 7, 8) meet world 1's small food and visible obstacles in these tests. A difference
     between worlds may partly reflect how each agent copes with a world it was not trained in.</li>

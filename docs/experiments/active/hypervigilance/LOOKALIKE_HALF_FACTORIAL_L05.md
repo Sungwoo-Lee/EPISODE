@@ -970,37 +970,37 @@ progress in episodes, or finished and tested in world 1's scenes).
 | Cell | Tag (= wandb-name) | Seed | Node:GPU | Launched at | WandB run ID | Status |
 |---|---|---|---|---|---|---|
 | w4 ordinary | `rppo_lookalike_hf_l05_w4_t1none_s43` | 43 | 114:0 | 2026-10-13T23:28:03 | jbosyem7 | finished, tested |
-| w4 modulated | `rppo_lookalike_hf_l05_w4_t16quad_s43` | 43 | 114:1 | 2026-10-13T23:28:24 | u9yxm5ot | training (8.6 M) |
+| w4 modulated | `rppo_lookalike_hf_l05_w4_t16quad_s43` | 43 | 114:1 | 2026-10-13T23:28:24 | u9yxm5ot | finished, tested |
 | w6 ordinary | `rppo_lookalike_hf_l05_w6_t1none_s43` | 43 | 114:2 | 2026-10-13T23:28:44 | 31ve5q96 | finished, tested |
 | w6 modulated | `rppo_lookalike_hf_l05_w6_t16quad_s43` | 43 | 114:3 | 2026-10-13T23:29:05 | kh6ity00 | finished, tested |
 | w7 ordinary | `rppo_lookalike_hf_l05_w7_t1none_s43` | 43 | 113:0 | 2026-10-13T23:29:26 | 3kmi8i82 | finished, tested |
 | w7 modulated | `rppo_lookalike_hf_l05_w7_t16quad_s43` | 43 | 113:1 | 2026-10-13T23:29:46 | g86nmpp5 | finished, tested |
-| w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s43` | 43 | 105:0 | 2026-10-13T23:30:07 | 9sef1pks | training (8.0 M) |
-| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s43` | 43 | 105:1 | 2026-10-13T23:30:28 | dafbu78p | training (6.0 M) |
-| w4 ordinary | `rppo_lookalike_hf_l05_w4_t1none_s44` | 44 | 101:0 | 2026-10-13T23:30:50 | ph6q6a72 | training (6.8 M) |
-| w4 modulated | `rppo_lookalike_hf_l05_w4_t16quad_s44` | 44 | 101:1 | 2026-10-13T23:31:10 | qgt9l0ne | training (5.2 M) |
+| w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s43` | 43 | 105:0 | 2026-10-13T23:30:07 | 9sef1pks | finished, tested |
+| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s43` | 43 | 105:1 | 2026-10-13T23:30:28 | dafbu78p | finished, tested |
+| w4 ordinary | `rppo_lookalike_hf_l05_w4_t1none_s44` | 44 | 101:0 | 2026-10-13T23:30:50 | ph6q6a72 | finished, tested |
+| w4 modulated | `rppo_lookalike_hf_l05_w4_t16quad_s44` | 44 | 101:1 | 2026-10-13T23:31:10 | qgt9l0ne | finished, tested |
 | w6 ordinary | `rppo_lookalike_hf_l05_w6_t1none_s44` | 44 | 103:0 | 2026-10-13T23:31:31 | d6ho30qy | finished, tested |
-| w6 modulated | `rppo_lookalike_hf_l05_w6_t16quad_s44` | 44 | 103:1 | 2026-10-13T23:31:52 | 774mpxfv | training (7.8 M) |
-| w7 ordinary | `rppo_lookalike_hf_l05_w7_t1none_s44` | 44 | 104:0 | 2026-10-13T23:32:13 | t1emm55h | training (8.8 M) |
-| w7 modulated | `rppo_lookalike_hf_l05_w7_t16quad_s44` | 44 | 104:1 | 2026-10-13T23:32:34 | msskvxt5 | training (6.8 M) |
-| w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s44` | 44 | 112:0 | 2026-10-14T01:08:40 | 1u6r6qmv | training (9.6 M) |
-| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s44` | 44 | 112:1 → 114:2 → 105:0 | 2026-10-14T01:09:00 | zu54un6n | training (resumed from 9800009 after node 114 crashes, 2026-10-14T21:52:11) |
+| w6 modulated | `rppo_lookalike_hf_l05_w6_t16quad_s44` | 44 | 103:1 | 2026-10-13T23:31:52 | 774mpxfv | finished, tested |
+| w7 ordinary | `rppo_lookalike_hf_l05_w7_t1none_s44` | 44 | 104:0 | 2026-10-13T23:32:13 | t1emm55h | finished, tested |
+| w7 modulated | `rppo_lookalike_hf_l05_w7_t16quad_s44` | 44 | 104:1 | 2026-10-13T23:32:34 | msskvxt5 | finished, tested |
+| w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s44` | 44 | 112:0 | 2026-10-14T01:08:40 | 1u6r6qmv | finished, tested |
+| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s44` | 44 | 112:1 → 114:2 → 105:0 | 2026-10-14T01:09:00 | zu54un6n | finished, tested |
 | w2 ordinary | `rppo_lookalike_hf_l05_w2_t1none_s43` | 43 | 102:0 | 2026-10-14T01:42:14 | kwcnjojc | finished, tested |
-| w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s43` | 43 | 107:0 | 2026-10-14T01:42:36 | o6ammaq7 | training (7.8 M) |
-| w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s43` | 43 | 107:1 | 2026-10-14T01:42:56 | ahfv4r0j | training (8.2 M) |
-| w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s43` | 43 | 102:1 | 2026-10-14T02:16:45 | 045e3jpn | training (8.4 M) |
-| w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s43` | 43 | 114:2 | 2026-10-14T09:11:55 | hbj7v855 | training (8.2 M) |
-| w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s43` | 43 | 113:0 → 104:0 | 2026-10-14T10:31:27 | h5aerd6t | training (resumed from 9600020 after node 113 crashes, 2026-10-14T21:48:40) |
-| w2 ordinary | `rppo_lookalike_hf_l05_w2_t1none_s44` | 44 | 114:3 → 103:1 | 2026-10-14T11:50:31 | vtu6ryat | training (resumed from 8200036 after node 114 crashes, 2026-10-14T21:49:04) |
-| w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s44` | 44 | 102:0 | 2026-10-14T13:24:34 | 58s13gbi | training (2.2 M) |
-| w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s44` | 44 | 113:1 → 107:1 | 2026-10-14T13:24:54 | 388uegdg | training (resumed from 6400016 after node 113 crashes, 2026-10-14T21:50:14) |
-| w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s44` | 44 | 114:0 → 102:1 | 2026-10-14T14:13:12 | o8p3r8ue | training (resumed from 4400031 after node 114 crashes, 2026-10-14T21:48:07; log `logs/20261014_214807_rppo_lookalike_hf_l05_w3_t16quad_s44.log`) |
-| w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s44` | 44 | 103:0 | 2026-10-14T15:32:14 | s3aoryo4 | training (0.2 M) |
-| w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s44` | 44 | 114:1 → 107:0 | 2026-10-14T18:26:15 | iiuwsiv9 | training (resumed from 2600027 after node 114 crashes, 2026-10-14T21:48:10) |
-| w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s45` | 45 | 114:0 | 2026-10-14T22:02:47 | asluo6n1 | training (log `logs/20261014_220244_rppo_lookalike_hf_l05_w8_t1none_s45.log`; first run on 114 after its crashes) |
-| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s45` | 45 | 114:1 | 2026-10-14T22:26:39 | srfs0e56 | training (log `logs/20261014_222638_rppo_lookalike_hf_l05_w8_t16quad_s45.log`; second run on 114 after its crashes) |
-| w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s46` | 46 | 114:2 | 2026-10-14T22:36:17 | owkti0xt | training (log `logs/20261014_223617_rppo_lookalike_hf_l05_w8_t1none_s46.log`; third run on 114 after its crashes) |
-| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s46` | 46 | 114:3 | 2026-10-14T22:51:28 | o8m7w6k2 | training (log `logs/20261014_225128_rppo_lookalike_hf_l05_w8_t16quad_s46.log`; fourth and last run on 114 after its crashes) |
+| w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s43` | 43 | 107:0 | 2026-10-14T01:42:36 | o6ammaq7 | finished, tested |
+| w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s43` | 43 | 107:1 | 2026-10-14T01:42:56 | ahfv4r0j | finished, tested |
+| w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s43` | 43 | 102:1 | 2026-10-14T02:16:45 | 045e3jpn | finished, tested |
+| w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s43` | 43 | 114:2 | 2026-10-14T09:11:55 | hbj7v855 | finished, tested |
+| w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s43` | 43 | 113:0 → 104:0 | 2026-10-14T10:31:27 | h5aerd6t | finished, tested |
+| w2 ordinary | `rppo_lookalike_hf_l05_w2_t1none_s44` | 44 | 114:3 → 103:1 | 2026-10-14T11:50:31 | vtu6ryat | finished, tested |
+| w2 modulated | `rppo_lookalike_hf_l05_w2_t16quad_s44` | 44 | 102:0 | 2026-10-14T13:24:34 | 58s13gbi | finished, tested |
+| w3 ordinary | `rppo_lookalike_hf_l05_w3_t1none_s44` | 44 | 113:1 → 107:1 | 2026-10-14T13:24:54 | 388uegdg | finished, tested |
+| w3 modulated | `rppo_lookalike_hf_l05_w3_t16quad_s44` | 44 | 114:0 → 102:1 | 2026-10-14T14:13:12 | o8p3r8ue | finished, tested |
+| w5 ordinary | `rppo_lookalike_hf_l05_w5_t1none_s44` | 44 | 103:0 | 2026-10-14T15:32:14 | s3aoryo4 | finished, tested |
+| w5 modulated | `rppo_lookalike_hf_l05_w5_t16quad_s44` | 44 | 114:1 → 107:0 | 2026-10-14T18:26:15 | iiuwsiv9 | finished, tested |
+| w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s45` | 45 | 114:0 | 2026-10-14T22:02:47 | asluo6n1 | finished, not yet tested (seeds 45/46 not yet in the test lists) |
+| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s45` | 45 | 114:1 | 2026-10-14T22:26:39 | srfs0e56 | training (8.8 M) |
+| w8 ordinary | `rppo_lookalike_hf_l05_w8_t1none_s46` | 46 | 114:2 | 2026-10-14T22:36:17 | owkti0xt | finished, not yet tested (seeds 45/46 not yet in the test lists) |
+| w8 modulated | `rppo_lookalike_hf_l05_w8_t16quad_s46` | 46 | 114:3 | 2026-10-14T22:51:28 | o8m7w6k2 | training (8.8 M) |
 
 **World 8 extra seeds 45 and 46 (user, 2026-10-14 ~22:00):** both agents, same command as the other seeds
 except `--seed`; the user wants more seeds for world 8. Placed on node 114 (four free cards) one run at a time,
