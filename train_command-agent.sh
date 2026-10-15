@@ -5461,3 +5461,16 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #   git diff bf48ba07 -- configs/environment/experiment/basic/lookalike_hf_* empty). Node 103: NAS mounted, JAX 0.9.0.1 GPU compile OK.
 # Commented out: running this file must not relaunch it.
 # [103:0] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w16_newBCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 42 --device cuda:0 --log-interval 10 --tag "rppo_lookalike_hf_l05_w16_t1none_s42" --wandb-name "rppo_lookalike_hf_l05_w16_t1none_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+
+# ---------------------------------------------------------------------------
+# 2026-10-15 — NEW RUN (complementary half, run 30): w16 (B+C+D) modulated s42, WandB id: v1sg3xfk
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Complementary half: worlds 9-16", launch manifest run 30).
+# Card: 103:1 RTX 2080 Ti (full FP32) — USER-APPROVED deviation (2026-10-15 ~20:08) from the doc's "TF32 cards only" rule for worlds 15/16 seed 42.
+# Launch-morning re-check passed (git log 1f1b7b26..HEAD + git status on the item-4 paths empty;
+#   git diff bf48ba07 -- configs/environment/experiment/basic/lookalike_hf_* empty). Node 103: NAS mounted, JAX 0.9.0.1 GPU compile OK.
+# Launched 2026-10-15T20:10:22, PID 3533303 on node 103; one process confirmed; counts advancing (3055 at 20:12:16, 28940 at 20:12:49);
+#   https://wandb.ai/sungwoolee/grid_world_pain/runs/v1sg3xfk
+# Results: results/JAX_RecurrentPPO/20261015-201028_rppo_lookalike_hf_l05_w16_t16quad_s42
+# Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_201021_rppo_lookalike_hf_l05_w16_t16quad_s42.log
+# Commented out: running this file must not relaunch it.
+# [103:1] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w16_newBCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:1 --log-interval 10 --tag "rppo_lookalike_hf_l05_w16_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w16_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"

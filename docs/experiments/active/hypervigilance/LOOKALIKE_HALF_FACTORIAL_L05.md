@@ -1315,7 +1315,7 @@ fills the empty columns, and the GPU column names the card model (for example `1
 | 27 | planned | w15 ordinary | `rppo_lookalike_hf_l05_w15_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
 | 28 | planned | w15 modulated | `rppo_lookalike_hf_l05_w15_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
 | 29 | running | w16 ordinary | `rppo_lookalike_hf_l05_w16_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 103 | `103:0 (2080 Ti, user-approved)` | 2026-10-15T20:10:15 | `v60ekjt5` | `/media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_201014_rppo_lookalike_hf_l05_w16_t1none_s42.log` |
-| 30 | planned | w16 modulated | `rppo_lookalike_hf_l05_w16_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 30 | running | w16 modulated | `rppo_lookalike_hf_l05_w16_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | 103 | `103:1 (2080 Ti, user-approved)` | 2026-10-15T20:10:22 | `v1sg3xfk` | `/media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_201021_rppo_lookalike_hf_l05_w16_t16quad_s42.log` |
 
 #### Configs to produce (worlds 9–16)
 
