@@ -5350,3 +5350,13 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261014_225128_rppo_lookalike_hf_l05_w8_t16quad_s46.log
 # Commented out: running this file must not relaunch it.
 # [114:3] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w8_newABCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 46 --device cuda:3 --log-interval 10 --tag "rppo_lookalike_hf_l05_w8_t16quad_s46" --wandb-name "rppo_lookalike_hf_l05_w8_t16quad_s46" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+
+# ---------------------------------------------------------------------------
+# 2026-10-15 — NEW RUN (complementary half, run 19): w11 (C only) ordinary s42, WandB id: wnchg7l6
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Complementary half: worlds 9-16").
+# Card: 106:1 (RTX 3090, TF32). Launch-morning re-check clean (only c4c358fe/bf48ba07 world-file commits; git diff bf48ba07 lookalike_hf_* empty).
+# Launched 2026-10-15T19:44:29, PID 3614474 on node 106; one process confirmed; counts advancing (17202 at 19:46);
+#   https://wandb.ai/sungwoolee/grid_world_pain/runs/wnchg7l6
+# Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261015_194429_rppo_lookalike_hf_l05_w11_t1none_s42.log
+# Commented out: running this file must not relaunch it.
+# [106:1] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w11_newC_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 42 --device cuda:1 --log-interval 10 --tag "rppo_lookalike_hf_l05_w11_t1none_s42" --wandb-name "rppo_lookalike_hf_l05_w11_t1none_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"

@@ -1304,7 +1304,7 @@ fills the empty columns, and the GPU column names the card model (for example `1
 | 16 | planned | w9 modulated | `rppo_lookalike_hf_l05_w9_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
 | 17 | planned | w10 ordinary | `rppo_lookalike_hf_l05_w10_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
 | 18 | planned | w10 modulated | `rppo_lookalike_hf_l05_w10_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
-| 19 | planned | w11 ordinary | `rppo_lookalike_hf_l05_w11_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
+| 19 | running | w11 ordinary | `rppo_lookalike_hf_l05_w11_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | 106 | `106:1 (3090)` | 2026-10-15T19:44:29 | `wnchg7l6` | `logs/20261015_194429_rppo_lookalike_hf_l05_w11_t1none_s42.log` |
 | 20 | planned | w11 modulated | `rppo_lookalike_hf_l05_w11_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
 | 21 | planned | w12 ordinary | `rppo_lookalike_hf_l05_w12_t1none_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
 | 22 | planned | w12 modulated | `rppo_lookalike_hf_l05_w12_t16quad_s42` | `lookalike_half_factorial` | pilot | 42 | — | — | — | — | — |
