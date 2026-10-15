@@ -157,8 +157,9 @@ p.wname { margin:4px 0 0; }
 
 <section class="col" id="animals">
   <h2><span class="num">05</span> Hiding with each animal</h2>
-  <p>A descriptive view: how much each run hides with each animal, unhurt and at one starting injury, with
-  healing off. Pick the injury with the tabs (10 to 90); the page opens at injury 20. At injury 70 most runs
+  <p>A descriptive view: how much each world and agent hides with each animal, unhurt and at one starting injury, with
+  healing off. Each cell pools every tested seed: the colour and upper number are the mean over seeds, the lower
+  number the seed-to-seed standard deviation, so a cell with a large spread is one the seeds disagree on. Pick the injury with the tabs (10 to 90); the page opens at injury 20. At injury 70 most runs
   already hide nearly all the time even with no animal, which leaves the rabbit no room to add more, so the
   differences between runs and animals show best at low injuries. The top rows are the plain level-05
   reference.</p>
@@ -172,7 +173,7 @@ p.wname { margin:4px 0 0; }
   so it has five runs per agent. Each new run is tested in the same world-1
   scenes, with the same 30 episodes per checkpoint, once it has finished its 10 million training steps, and
   appears here only then. Status now: {{SEED_COUNT}}. Figure 2 (in each world's tab) shows every tested seed;
-  the other figures and tables in sections 01&ndash;05 show seed 42 only. The group test in section 02 has not yet
+  Figure 5 pools every tested seed; the other figures and tables in sections 01&ndash;04 show seed 42 only. The group test in section 02 has not yet
   been redone with the repeat runs.</p>
   {{FIG:seeds}}
   {{FIG:seedtrain}}

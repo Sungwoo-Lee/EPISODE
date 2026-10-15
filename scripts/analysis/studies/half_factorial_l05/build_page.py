@@ -192,11 +192,12 @@ GROUP_AXES = ("Horizontal: the effect of one setting change on the injury contra
               "band: inside the bar, &plusmn;2 times the expected noise of such a contrast. Panels: healing off at injury "
               "70 (the headline), healing off at injury 10, healing on at injury 70.")
 ANIMAL_AXES = ("Columns: four test scenes &mdash; no animal, the harmless rabbit wandering, the rabbit chasing the agent, "
-               "and the hunting predator &mdash; first unhurt (injury 0), then at injury {INJ}. Rows: one per run, "
-               "the plain level-05 reference (seeds 42&ndash;44) first, then world 1 (both seeds), then worlds 2&ndash;8 "
-               "(seed 42), ordinary above modulated. Colour and number: bush dwell, the "
-               "share of the test's 100 steps spent on the bush (%), mean over the newest 20 tested checkpoints, healing "
-               "off in the test scene. No intervals are shown.")
+               "and the hunting predator &mdash; first unhurt (injury 0), then at injury {INJ}. Rows: one per world and agent, "
+               "the plain level-05 reference first, then world 1, then worlds 2&ndash;8, ordinary above modulated; "
+               "n in the row label is the number of tested seeds pooled. Colour and upper number: bush dwell, the "
+               "share of the test's 100 steps spent on the bush (%), healing off in the test scene &mdash; first averaged "
+               "over the newest 20 tested checkpoints of each seed, then averaged over seeds. Lower number: the "
+               "seed-to-seed standard deviation of those per-seed values, in percentage points (sample SD, n&minus;1).")
 
 
 SEEDS_AXES = ("Horizontal: the injury contrast at injury 70, in percentage points of bush dwell &mdash; the rabbit's "
@@ -269,9 +270,9 @@ def animal_tabs():
         tl.append(f'<button class="tab" role="tab" id="tab-i{i}" aria-controls="panel-i{i}" aria-selected="{str(on).lower()}"'
                   + ("" if on else ' tabindex="-1"') + f">Injury {i}</button>")
         fig = FB.figure(
-            f"hf_animals__i{i}", f"Heat map of bush dwell per run and test scene, unhurt and at injury {i}, healing off.",
+            f"hf_animals__i{i}", f"Heat map of bush dwell per world, agent and test scene, unhurt and at injury {i}, healing off: mean over seeds, with the seed-to-seed standard deviation.",
             ANIMAL_AXES.replace("{INJ}", i),
-            f"How much each run hides with each animal, unhurt and at injury {i}; how much room is left for the rabbit to add.",
+            f"How much each world and agent hides with each animal, unhurt and at injury {i}, and how much that varies between seeds; how much room is left for the rabbit to add.",
             f"{FIG} --figure animals", title=f"Figure 5 &mdash; hiding with each animal, injury {i}")
         panels.append(f'<div class="tabpanel" role="tabpanel" id="panel-i{i}" aria-labelledby="tab-i{i}" tabindex="0"'
                       + ("" if on else " hidden") + ">" + fig + "</div>")

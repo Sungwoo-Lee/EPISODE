@@ -1,9 +1,9 @@
 [
  {
-  "what": "24 runs, healing off, 8 scenes each",
-  "used": 480,
-  "total": 1208,
-  "pct": 39.735099337748345,
+  "what": "56 runs (world \u00d7 agent \u00d7 seed), healing off, 8 scenes each",
+  "used": 1120,
+  "total": 2815,
+  "pct": 39.786856127886324,
   "note": "newest 20 tested checkpoints of each run; 30 episodes each"
  }
 ]

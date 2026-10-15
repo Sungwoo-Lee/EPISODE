@@ -10,8 +10,8 @@ checkpoints with a 95 % interval, as in the pre-registered readout.
   curves --world N   bush dwell against starting injury: no animal vs wandering rabbit, healing on | off
   extra  --world N   the rabbit's extra bush dwell (rabbit minus no animal) at each starting injury
   train  --world N   the injury contrast (readout c) at every tested checkpoint, injury 70 | injury 10
-  animals            healing off: bush dwell per run with no animal / wandering rabbit / chasing rabbit /
-                     predator, unhurt and at injury 70 (a heat map, one row per run)
+  animals            healing off: bush dwell per world and agent with no animal / wandering rabbit / chasing rabbit /
+                     predator, unhurt and at one injury (a heat map: mean over tested seeds, seed-to-seed SD below)
   group              the pre-registered group test: each setting group's effect against the bar
   seeds              the injury contrast of every world and agent, seed 42 beside each tested replication seed
   seedtrain          the injury contrast across training, healing off, injury 70, the seeds overlaid
@@ -239,29 +239,41 @@ ANIMAL_INJ = [f"{i}" for i in range(10, 100, 10)]
 
 def fig_animals(injury="70"):
     """One heat map per injury level (user, 2026-10-15: the page lets the reader pick 10-90, as Figure 2's tabs do);
-    each compares that injury with unhurt. Lower injuries keep hiding off the 100 % ceiling (Visualization session)."""
+    each compares that injury with unhurt. Lower injuries keep hiding off the 100 % ceiling (Visualization session).
+    One row per world and agent: the colour and top number are the mean over every tested seed, the number below
+    the seed-to-seed standard deviation (user, 2026-10-15). Each seed's value is its newest-20-checkpoint mean."""
     import matplotlib.pyplot as plt
-    rr = [(w, a, s) for w, a, s in all_runs()]
+    rr = [(w, a, seed_runs(w, a)) for w in ref_worlds() for a in D.AGENTS]
+    rr = [r for r in rr if r[2]]
     cols = [(st, sc, name, inj) for inj in ("00", injury) for st, sc, name in ANIMALS]
     M = np.full((len(rr), len(cols)), np.nan)
+    S = np.full_like(M, np.nan)
     rows = []
-    for i, (w, a, s) in enumerate(rr):
+    for i, (w, a, ss) in enumerate(rr):
         for j, (st, sc, name, inj) in enumerate(cols):
-            v = D.dwell(w, a, "off", st, sc, inj, s).dropna()
-            M[i, j] = summ(v)[0]
-            if j == 0:
-                rows.append(used_row("", v, w, a, s, "off"))
-    fig, ax = plt.subplots(figsize=(8.4, 0.36 * len(rr) + 2.2))
+            per = []
+            for s in ss:
+                v = D.dwell(w, a, "off", st, sc, inj, s).dropna()
+                per.append(summ(v)[0])
+                if j == 0:
+                    rows.append(used_row("", v, w, a, s, "off"))
+            per = np.array(per, float)
+            M[i, j] = np.nanmean(per)
+            if np.isfinite(per).sum() > 1:
+                S[i, j] = np.nanstd(per, ddof=1)
+    fig, ax = plt.subplots(figsize=(8.4, 0.56 * len(rr) + 2.2))
     im = ax.imshow(M, cmap=H.sequential(), vmin=0, vmax=100, aspect="auto")
     ax.grid(False)
     for i in range(M.shape[0]):
         for j in range(M.shape[1]):
-            ax.text(j, i, f"{M[i, j]:.0f}", ha="center", va="center", fontsize=H.FS_LABEL - 1,
-                    color=H.PAPER if M[i, j] > 60 else H.INK)
+            c = H.PAPER if M[i, j] > 75 else H.INK   # crossover of white vs ink contrast on the blue ramp (register F52)
+            ax.text(j, i - 0.17, f"{M[i, j]:.0f}", ha="center", va="center", fontsize=H.FS_LABEL, color=c)
+            sd = "\u2014" if np.isnan(S[i, j]) else f"\u00b1{S[i, j]:.0f}"
+            ax.text(j, i + 0.22, sd, ha="center", va="center", fontsize=H.FS_LABEL, color=c)   # tick size: the page's width floor covers it (F65)
     ax.set_xticks(range(len(cols)), [f"{name}, " + ("unhurt" if inj == "00" else f"injury {int(inj)}") for _, _, name, inj in cols],
                   rotation=35, ha="right", fontsize=H.FS_LABEL)
-    ax.set_yticks(range(len(rr)), [("level 05" if w == D.REF else f"w{w}") + f" {a}" + (f" s{s}" if w in (1, D.REF) else "")
-                                   for w, a, s in rr], fontsize=H.FS_LABEL)
+    ax.set_yticks(range(len(rr)), [("level 05" if w == D.REF else f"w{w}") + f" {a} (n={len(ss)})"
+                                   for w, a, ss in rr], fontsize=H.FS_LABEL)
     ax.axvline(len(ANIMALS) - 0.5, color=H.PAPER, lw=3)
     for i in range(1, len(rr)):
         if rr[i][0] != rr[i - 1][0]:   # a white rule between worlds
@@ -270,9 +282,9 @@ def fig_animals(injury="70"):
         sp.set_visible(False)
     ax.tick_params(length=0)
     cb = fig.colorbar(im, ax=ax, fraction=0.035, pad=0.02)
-    cb.set_label("bush dwell (%)", fontsize=H.FS_LABEL)
+    cb.set_label("bush dwell (%), mean over seeds", fontsize=H.FS_LABEL)
     cb.outline.set_visible(False)
-    fig.subplots_adjust(left=0.2, right=0.95, top=0.98, bottom=0.2)
+    fig.subplots_adjust(left=0.24, right=0.95, top=0.98, bottom=0.2)
     return fig, rows
 
 
@@ -499,7 +511,7 @@ def collapse(rows, what):
 WHAT = {"curves": "series (agent \u00d7 seed \u00d7 healing \u00d7 animal \u00d7 with or without food), counted at injury 70",
         "extra": "series (agent x healing), counted at injury 70",
         "train": "series (agent x healing), whole training",
-        "animals": "runs, healing off, 8 scenes each",
+        "animals": "runs (world \u00d7 agent \u00d7 seed), healing off, 8 scenes each",
         "group": "group tests (one per panel)",
         "seeds": "series (run \u00d7 healing), counted at injury 70",
         "seedtrain": "series (run), healing off, injury 70, whole training",
