@@ -1097,10 +1097,19 @@ as cards free. Nothing else changes: same group values, agents, training command
   separate batches (different days and card mix). Any systematic difference between the batches
   shows up only in the ABCD contrast, because ABCD is the contrast that separates the halves. It
   does not touch any main effect or two-group interaction. That holds only if the code and every
-  shared config layer are identical across the batches. **Checked 2026-10-15:** the world-1 reuse
-  re-check (item 4, all listed paths) prints no commit since `1f1b7b26` and no uncommitted
-  change. The four-group interaction is therefore **not interpreted**. The check is repeated on
-  launch morning, and a behaviour-changing commit stops the launch.
+  shared config layer are identical across the batches, and if the card type is the same. **Checked
+  2026-10-15:** the world-1 reuse re-check (item 4, all listed paths) prints no commit since
+  `1f1b7b26` and no uncommitted change. The four-group interaction is therefore **not
+  interpreted**. On launch morning the check is repeated, together with
+  `timeout 120 git diff bf48ba07 -- configs/environment/experiment/basic/lookalike_hf_*`, which must
+  print nothing (the 15 world configs themselves are unchanged). Either check failing stops the
+  launch.
+- **Card type is kept the same as the first half's seed 42 (user, 2026-10-15).** RTX 2080 Ti cards
+  compute in full 32-bit precision. RTX 3090, 4090 and 6000 Ada cards use the lower-precision TF32
+  format by default (KNOWN_BUGS, matmul precision row). All first-half seed-42 runs, and world 1's
+  seeds 42 and 43, trained on TF32 cards. So every world 9–16 run, at every seed, trains on a
+  TF32 card. Precision then cannot vary between the halves, or within one. See "Run plan" for the
+  card rules.
 - **World 1's offset shrinks.** The world-1 runs are reused from 2026-10-09 (see "World 1 reuse").
   In the full factorial, world 1 is one world of 16, so a shift δ in it moves every contrast by
   ±δ/8 instead of δ/4.
@@ -1150,24 +1159,44 @@ bookkeeping", folder placement).
 
 ### Run plan
 
-- **Seed 42 now:** 8 worlds × 2 agents = **16 runs** (manifest below).
-- **Seeds 43 and 44 next:** 32 more runs, queued as cards free, with a command line identical
-  except `--seed`, `--device` and the tag (`..._s43`, `..._s44`). Order: by world number,
-  both agents of a world together.
+- **Seed 42 first:** 8 worlds × 2 agents = **16 runs** (manifest below). **8 start now** (runs
+  15–22, worlds 9–12), and the other 8 start as TF32 cards free, in run order.
+- **Seeds 43 and 44 next:** 32 runs for worlds 9–16, plus **world 1 at seed 44** (2 runs, approved
+  by the user 2026-10-15), queued as TF32 cards free. Same command line except `--seed`, `--device`
+  and the tag (`..._s43`, `..._s44`). Order: world 1 seed 44 first (it completes the first half's
+  3 seeds), then all of seed 43 for worlds 9–16, then all of seed 44, by world number within a
+  seed, with both agents of a world together. The queue is in "Seeds 43 and 44 queue" below.
+- **Queue mechanism (user, 2026-10-15).** Every launch and every resume goes through the
+  `training-runner` agent, spawned by the orchestrating session when a card frees. **No watcher
+  script launches or resumes runs**: the 2026-10-13 `watch.py` is not reused. Each launch carries
+  the runner's checklist: launch file entry, this doc's run table, diary row, absolute log path.
 - **Agents, flags, horizon:** the same as the first half. Ordinary agent `nmngaenorm_t1none.yaml`,
   modulated agent `nmngaenorm_t16quad_ALL.yaml`. `--episodes 10000000` (10 M steps),
   `--log-interval 10`. `--num-envs` and `--checkpoint-frequency` stay config-owned. WandB group
   `lookalike_half_factorial`, job type `pilot`.
-- **Open decision: world 1 at seed 44.** World 1 has seeds 42 and 43 only (the 2026-10-09
-  lookalike pilot); no seed-44 run exists. The balanced 3-seed analysis below needs both world-1
-  seed-44 runs: 2 extra runs on the lookalike world config, same flags. Proposed tags
-  `rppo_lookalike_l05_t1none_s44` and `rppo_lookalike_l05_t16quad_s44` in WandB group
-  `lookalike_animals`, matching world 1's seeds 42 and 43. Not in the manifest until the user
-  decides. Without them, the balanced contrasts stop at seeds 42–43.
-- **Cards:** one run per card (user rule). Any card class; card type is recorded per run.
+- **World 1 at seed 44 (approved, user 2026-10-15).** World 1 had seeds 42 and 43 only (the
+  2026-10-09 lookalike pilot). Its two seed-44 runs use the lookalike world config
+  (`lookalike_animals_close_pounce_small_food_10x10.yaml`) with the same flags. Tags
+  `rppo_lookalike_l05_t1none_s44` and `rppo_lookalike_l05_t16quad_s44`, WandB group
+  `lookalike_animals`, the same group as world 1's seeds 42 and 43.
+- **Cards (user, 2026-10-15): TF32 cards only.** That means RTX 3090, RTX 4090 or RTX 6000 Ada,
+  one run per card. **RTX 2080 Ti cards (nodes 101, 103, 104, 105) are never used for this study's
+  training.** Node 112 is reserved for a lab member and not used. On node 114, add one run at a time
+  and wait until the node has stayed up (it crashed twice on 2026-10-14). **A run never moves
+  between card types:** a resume goes to a TF32 card as well. The card of every run segment is
+  recorded in the run table.
 - **Compute:** about 12.7 h (ordinary) and 16.7 h (modulated) per run on an RTX 3090. That is
-  ≈ 235 GPU-hours for seed 42, or ≈ 17 h of wall time on 16 cards, and ≈ 470 GPU-hours more for
-  seeds 43 and 44.
+  ≈ 235 GPU-hours for seed 42 (≈ 17 h of wall time per 8-run wave), ≈ 470 GPU-hours more for
+  seeds 43 and 44, and ≈ 30 GPU-hours for world 1 at seed 44.
+- **Known limitation: the first half's seeds 43 and 44 mixed card types.** Before the TF32-only
+  rule, some first-half repeat runs trained on 2080 Tis (run table "Seed 43 and 44 replication"):
+  at seed 43, world 8 (both agents) fully, and world 5 modulated after a move; at seed 44, worlds 4,
+  6 and 7 (both agents) and world 5 ordinary fully, and world 2 ordinary and world 8 modulated
+  after a move. This cannot be undone. So at seeds 43 and 44, card type is not balanced across the
+  first half's worlds, and it can leak into those contrasts. Two consequences for the analysis:
+  the **seed-42 full-factorial read is the hardware-clean reference** (all 32 runs on TF32 cards),
+  and every 3-seed contrast is also reported with the 2080 Ti segments' runs flagged. If leaving
+  them out changes a verdict, the verdict is reported as "card-dependent".
 
 ### Tests: the same as the first half
 
@@ -1190,15 +1219,18 @@ stay deferred for all 16 worlds. Recorded evaluation rollouts in each run's own 
 
 The first half's pass rule stands, as written, for the first half's own read. The full-factorial
 read uses the same readouts, data rules, minimums, checkpoint rules (6, 8 and 10 M sign agreement;
-whole-training view) and agent rule. It changes four items:
+whole-training view) and agent rule. It changes four items, and adds a rule for when the two reads
+disagree (item 5):
 
 1. **Seeds.** Contrasts use the seeds present in **all 16 worlds and both agents**: seed 42 alone
-   at first, then 42–44. World 8's extra seeds 45 and 46 are reported beside it, but kept out of
+   at first, then 42–43, then 42–44. World 8's extra seeds 45 and 46 are reported beside it, but kept out of
    the balanced contrasts. Within each agent, a world's value is the mean over those seeds.
-2. **Noise from the experiment itself.** With 3 seeds in every world, σ is the pooled
-   within-world standard deviation across seeds: 16 worlds × 2 degrees of freedom = 32 per agent.
-   This replaces the borrowed fast-heal σ, but is reported beside it. Until all 16 worlds have 3
-   seeds, the first half's σ rule (item 1 of the pass rule) applies.
+2. **Noise from the experiment itself (plan review 2026-10-15).** As soon as **every one of the 16
+   worlds has 2 or more seeds** of both agents, σ is the pooled within-world standard deviation
+   across seeds, with n = the number of seeds present in all 16 worlds. That gives 16 × (n − 1)
+   degrees of freedom per agent: 16 at n = 2, 32 at n = 3. This replaces the borrowed fast-heal σ,
+   which is reported beside it. Before that point (seed 42 only), the first half's σ rule (item 1
+   of the pass rule) applies.
 3. **Bar.** A contrast is the mean, over the two agents, of (mean of the 8 "+" worlds − mean of the
    8 "−" worlds). With n seeds per world and per-run bootstrap errors SE_i over the 32n runs:
 
@@ -1211,21 +1243,60 @@ whole-training view) and agent rule. It changes four items:
 4. **Interactions.** The six two-group interactions are each reported against the same bar, under
    their own names. Three-group interactions are descriptive only. The four-group interaction is
    not interpreted (batch effect, see above). Interactions are a secondary result and cannot make
-   a group "worth replicating".
+   a group "worth replicating". **Chance crossings:** the bar is 2 SD, so with 4 main effects and 6
+   two-group interactions (10 terms) about **0.46 terms are expected to cross it by chance** when
+   nothing is going on (10 × 0.046, about 0.4–0.5; more if σ is underestimated). This is stated beside the interaction table. An interaction
+   that crosses the bar is described as an interaction only if its sign also agrees at 6, 8 and
+   10 M. Otherwise it stays descriptive.
+5. **When the first-half read and the full-factorial read disagree (plan review 2026-10-15).** A
+   disagreement means: a group passes in one read and not in the other, or the two effects have
+   opposite signs. Then **neither read decides**. The group is reported as **"unresolved: halves
+   disagree"**, never as "worth replicating", with both numbers and the two halves' separate
+   estimates. Reason: the first half estimates a main effect plus a three-group interaction (for
+   example A + BCD), and this half estimates the main effect minus it (A − BCD). So a disagreement
+   is itself evidence of a three-group interaction (or of a batch difference). It is reported as
+   that, and not resolved by picking the read that looks better. Where the two reads agree, the
+   full-factorial numbers are quoted, because they compare 8 worlds against 8 and carry no alias.
+
+**What had been seen before these full-factorial rules were written (2026-10-15).** The rules
+above were written after the first half's test-scene results had been analysed and published on
+the half-factorial results page. The last four versions came out on 2026-10-15: v8 `e02a45ac`,
+v9 `e4d8548f`, v10 `75a46b1f`, v11 `e1680e78`. Earlier versions from 2026-10-14 showed the repeat
+seeds coming in. Seen by then:
+
+- **Readout (c) and its descriptives**, measured in world 1's frozen scenes, for worlds 1–8 at seeds
+  42–44 (world 8 also 45 and 46), both agents, with and without food, healing on and off. That
+  includes bush dwell by injury 0–90, the rabbit's extra bush dwell, the injury contrast over
+  training, hiding with each animal at injuries 10–90, and a level-05 reference.
+- **The first half's group effects on the injury contrast** (healing off, injury 70; bar 7.3
+  points): predator change A +27, hidden hazards C +14, fewer but heavier hazards D −15, bigger
+  food B no clear effect. Two of the three interaction pairs also cleared the bar. World 6 (A + C)
+  showed the strongest pattern (+66 and +55 points). Seven of the 14 new seed-42 agents passed the
+  hypervigilance check.
+
+**Not seen:** readouts (a), (b) and the surprise response (their tooling is not built yet, see
+"Metrics requested"); any rollout in a run's own training world; and anything from worlds 9–16.
+So the rules in items 1–5 could have been shaped by the readout-(c) results, but not by the other
+readouts. The disagreement rule (item 5) is deliberately conservative for that reason.
 
 ### Failure modes specific to this half
 
 - A new world whose run collapses twice (first-half rule) is reported as untrainable. The full
   factorial is then **not** analysed as a balanced design. The first half's analysis stands, and
   the user decides how to proceed.
-- If the launch-morning re-check finds a behaviour-changing commit, the batch effect is no longer
-  limited to GPU nondeterminism and card type. Do not launch: ask the user.
+- If the launch-morning re-check finds a behaviour-changing commit, or the world configs differ
+  from `bf48ba07`, the batch effect is no longer limited to GPU nondeterminism. Do not launch:
+  ask the user.
+- If a world 9–16 run lands on a 2080 Ti by mistake, or is resumed on one, that run segment is
+  invalid for this study. The run is restarted from scratch on a TF32 card with the same seed and
+  tag, and the WandB run of the invalid attempt is marked in the run table.
 
 ### Launch manifest (worlds 9–16, seed 42)
 
 Tag = WandB name, same format as the first half. Runs are numbered on from the first half (1–14).
-Odd-numbered runs use the ordinary agent, even-numbered runs the modulated agent. The
-training-runner fills the empty columns.
+Odd-numbered runs use the ordinary agent, even-numbered runs the modulated agent. TF32 cards
+only (see "Run plan"). Runs 15–22 start now and runs 23–30 as cards free. The training-runner
+fills the empty columns, and the GPU column names the card model (for example `107:0 (3090)`).
 
 | Run | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -1285,6 +1356,51 @@ on the NAS (the first seed-43/44 launches used a relative path, and their logs s
 # [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w16_newBCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w16_t1none_s42" --wandb-name "rppo_lookalike_hf_l05_w16_t1none_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
 # [N:G] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w16_newBCD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 42 --device cuda:G --log-interval 10 --tag "rppo_lookalike_hf_l05_w16_t16quad_s42" --wandb-name "rppo_lookalike_hf_l05_w16_t16quad_s42" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
 ```
+
+### Seeds 43 and 44 queue (worlds 9–16, plus world 1 at seed 44)
+
+34 runs, started in the order below by the `training-runner` as TF32 cards free (see "Run plan":
+TF32 cards only, no node 112, node 114 one run at a time, a run never changes card type). WandB job
+type `pilot`. The command line is the seed-42 line with `--seed`, `--device` and the tag changed.
+World 1's two runs use `--config configs/environment/experiment/basic/lookalike_animals_close_pounce_small_food_10x10.yaml`
+and `--wandb-group "lookalike_animals"`. Tag = WandB name.
+
+| Order | Cell | Tag (= wandb-name) | wandb-group | Seed | Node:GPU (card) | Launched at | WandB run ID | Status |
+|---|---|---|---|---|---|---|---|---|
+| 1 | w1 ordinary | `rppo_lookalike_l05_t1none_s44` | `lookalike_animals` | 44 | — | — | — | queued |
+| 2 | w1 modulated | `rppo_lookalike_l05_t16quad_s44` | `lookalike_animals` | 44 | — | — | — | queued |
+| 3 | w9 ordinary | `rppo_lookalike_hf_l05_w9_t1none_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 4 | w9 modulated | `rppo_lookalike_hf_l05_w9_t16quad_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 5 | w10 ordinary | `rppo_lookalike_hf_l05_w10_t1none_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 6 | w10 modulated | `rppo_lookalike_hf_l05_w10_t16quad_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 7 | w11 ordinary | `rppo_lookalike_hf_l05_w11_t1none_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 8 | w11 modulated | `rppo_lookalike_hf_l05_w11_t16quad_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 9 | w12 ordinary | `rppo_lookalike_hf_l05_w12_t1none_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 10 | w12 modulated | `rppo_lookalike_hf_l05_w12_t16quad_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 11 | w13 ordinary | `rppo_lookalike_hf_l05_w13_t1none_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 12 | w13 modulated | `rppo_lookalike_hf_l05_w13_t16quad_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 13 | w14 ordinary | `rppo_lookalike_hf_l05_w14_t1none_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 14 | w14 modulated | `rppo_lookalike_hf_l05_w14_t16quad_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 15 | w15 ordinary | `rppo_lookalike_hf_l05_w15_t1none_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 16 | w15 modulated | `rppo_lookalike_hf_l05_w15_t16quad_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 17 | w16 ordinary | `rppo_lookalike_hf_l05_w16_t1none_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 18 | w16 modulated | `rppo_lookalike_hf_l05_w16_t16quad_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 19 | w9 ordinary | `rppo_lookalike_hf_l05_w9_t1none_s44` | `lookalike_half_factorial` | 44 | — | — | — | queued |
+| 20 | w9 modulated | `rppo_lookalike_hf_l05_w9_t16quad_s44` | `lookalike_half_factorial` | 44 | — | — | — | queued |
+| 21 | w10 ordinary | `rppo_lookalike_hf_l05_w10_t1none_s44` | `lookalike_half_factorial` | 44 | — | — | — | queued |
+| 22 | w10 modulated | `rppo_lookalike_hf_l05_w10_t16quad_s44` | `lookalike_half_factorial` | 44 | — | — | — | queued |
+| 23 | w11 ordinary | `rppo_lookalike_hf_l05_w11_t1none_s44` | `lookalike_half_factorial` | 44 | — | — | — | queued |
+| 24 | w11 modulated | `rppo_lookalike_hf_l05_w11_t16quad_s44` | `lookalike_half_factorial` | 44 | — | — | — | queued |
+| 25 | w12 ordinary | `rppo_lookalike_hf_l05_w12_t1none_s44` | `lookalike_half_factorial` | 44 | — | — | — | queued |
+| 26 | w12 modulated | `rppo_lookalike_hf_l05_w12_t16quad_s44` | `lookalike_half_factorial` | 44 | — | — | — | queued |
+| 27 | w13 ordinary | `rppo_lookalike_hf_l05_w13_t1none_s44` | `lookalike_half_factorial` | 44 | — | — | — | queued |
+| 28 | w13 modulated | `rppo_lookalike_hf_l05_w13_t16quad_s44` | `lookalike_half_factorial` | 44 | — | — | — | queued |
+| 29 | w14 ordinary | `rppo_lookalike_hf_l05_w14_t1none_s44` | `lookalike_half_factorial` | 44 | — | — | — | queued |
+| 30 | w14 modulated | `rppo_lookalike_hf_l05_w14_t16quad_s44` | `lookalike_half_factorial` | 44 | — | — | — | queued |
+| 31 | w15 ordinary | `rppo_lookalike_hf_l05_w15_t1none_s44` | `lookalike_half_factorial` | 44 | — | — | — | queued |
+| 32 | w15 modulated | `rppo_lookalike_hf_l05_w15_t16quad_s44` | `lookalike_half_factorial` | 44 | — | — | — | queued |
+| 33 | w16 ordinary | `rppo_lookalike_hf_l05_w16_t1none_s44` | `lookalike_half_factorial` | 44 | — | — | — | queued |
+| 34 | w16 modulated | `rppo_lookalike_hf_l05_w16_t16quad_s44` | `lookalike_half_factorial` | 44 | — | — | — | queued |
 
 ## Config-system bookkeeping
 
