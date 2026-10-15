@@ -177,7 +177,7 @@ def run_row(w, a, heal, inj, seed, grid="grid"):
     ru = contrast(w, a, heal, "rabbit_unhurt", inj, seed, grid)
     ni, nr = newest(it), newest(ru)
     wt = whole_training(it)
-    row = {"world": w, "agent": a, "seed": seed, "new": NEW[w] or "-", "heal": heal, "inj": inj,
+    row = {"world": w, "agent": a, "seed": seed, "new": NEW.get(w, "") or "-", "heal": heal, "inj": inj,
            "inter": ni["mean"], "inter_lo": ni["lo"], "inter_hi": ni["hi"], "inter_se": ni["se"],
            "inter_neff": ni["neff"], "rabbit": nr["mean"], "rabbit_lo": nr["lo"], "rabbit_hi": nr["hi"],
            "inj_none": newest(contrast(w, a, heal, "injury_none", inj, seed, grid))["mean"],

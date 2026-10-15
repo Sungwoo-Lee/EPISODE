@@ -66,14 +66,22 @@ def group_table():
                     num=tuple(cols[1:]), raw=tuple(cols[1:]), min_width=700)
 
 
+def rt_ref(heal, inj):
+    """Table 2's rows: the plain level-05 reference first (user, 2026-10-15), then the design's runs."""
+    ref = pd.DataFrame([D.run_row(D.REF, a, heal, inj, s) for a in D.AGENTS for s in D.ref_seeds(a)])
+    return pd.concat([ref, rt(heal, inj)], ignore_index=True)
+
+
 def run_table():
     rows = []
-    base = rt("off", "70")
+    base = rt_ref("off", "70")
     for i, b in base.iterrows():
-        r = {"world": f'{b["world"]}' + ("" if b["world"] > 1 else " (base)"),
-             "changed": b["new"] if b["new"] != "-" else "&mdash;", "agent": f'{b["agent"]}, seed {b["seed"]}'}
+        ref = b["world"] == D.REF   # short label: "(reference)" does not break and widened the table (format review)
+        r = {"world": "level 05" if ref else f'{b["world"]}' + ("" if b["world"] > 1 else " (base)"),
+             "changed": "reference" if ref else b["new"] if b["new"] != "-" else "&mdash;",
+             "agent": f'{b["agent"]}, seed {b["seed"]}'}
         for c in CASES:
-            x = rt(*c).iloc[i]
+            x = rt_ref(*c).iloc[i]
             r["_".join(c)] = ci_cell(x["inter"], x["inter_lo"], x["inter_hi"]) + \
                 f'<br><span class="ci nw">{x["share_pos"] * 100:.0f} % of checkpoints &gt; 0</span>'
         r["rabbit"] = ci_cell(b["rabbit"], b["rabbit_lo"], b["rabbit_hi"])
@@ -215,14 +223,15 @@ FOOD_AXES = ("Horizontal: a run's injury contrast at injury 70 in the scenes wit
 
 def world_tabs():
     tl, panels = [], []
-    # the plain level-05 reference tab comes last, once its runs are tested (user, 2026-10-15)
-    ws = list(D.WORLDS) + ([D.REF] if any(D.ref_seeds(a) for a in D.AGENTS) else [])
+    # the plain level-05 reference tab comes first, left of W1, and is the one shown on opening (user, 2026-10-15)
+    ws = ([D.REF] if any(D.ref_seeds(a) for a in D.AGENTS) else []) + list(D.WORLDS)
     for w in ws:
-        sel = "true" if w == 1 else "false"
+        first = w == ws[0]
+        sel = "true" if first else "false"
         lab = ("W1" if w == 1 else "Level 05 &middot; reference" if w == D.REF
                else f"W{w} &middot; {'+'.join(D.NEW[w])}")
         tl.append(f'<button class="tab" role="tab" id="tab-w{w}" aria-controls="panel-w{w}" aria-selected="{sel}"'
-                  + ("" if w == 1 else ' tabindex="-1"') + f">{lab}</button>")
+                  + ("" if first else ' tabindex="-1"') + f">{lab}</button>")
         name = ("world 1, the lookalike world (no change)" if w == 1 else
                 "plain level 05, the reference: the same two agents trained 10 million steps on level 05 itself, "
                 "without the lookalike world's three changes (same smell for predator and rabbit, pounce at 3 cells, "
@@ -241,7 +250,7 @@ def world_tabs():
             body.append(FB.figure(f"hf_{kind}__w{w}", alt + f", {where}.", axes, shows,
                                   f"{FIG} --figure {kind} --world {w}", title=f"Figure {k} &mdash; {where}"))
         panels.append(f'<div class="tabpanel" role="tabpanel" id="panel-w{w}" aria-labelledby="tab-w{w}" tabindex="0"'
-                      + ("" if w == 1 else " hidden") + ">" + "\n".join(body) + "</div>")
+                      + ("" if first else " hidden") + ">" + "\n".join(body) + "</div>")
     return ('<div class="tabs" data-tabs><p class="cue" hidden>more worlds &mdash; scroll the tabs sideways &rarr;</p>'
             '<div class="tablist" role="tablist" aria-label="Training world">'
             + "".join(tl) + "</div>" + "\n".join(panels) + "</div>")
