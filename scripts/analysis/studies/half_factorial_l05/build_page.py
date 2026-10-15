@@ -113,12 +113,14 @@ def seed_table():
         for a in D.AGENTS:
             r = {"world": f"{w}" + ("" if w > 1 else " (base)"), "changed": D.NEW[w] or "&mdash;", "agent": a,
                  "s42": seed_cell(w, a, 42)}
-            for s_ in D.EXTRA_SEEDS:
-                r[f"s{s_}"] = seed_cell(w, a, s_) if (w > 1 or s_ == 43) else "&mdash;"
+            for s_ in (*D.EXTRA_SEEDS, 45, 46):
+                r[f"s{s_}"] = (seed_cell(w, a, s_) if (w > 1 and s_ in D.extra_seeds(w)) or (w == 1 and s_ == 43)
+                               else "&mdash;")
             rows.append(r)
-    cols = ["world", "changed", "agent", "s42", "s43", "s44"]
-    return FB.table(pd.DataFrame(rows), cols, ["world", "changed", "agent", "seed 42", "seed 43", "seed 44"],
-                    num=("s42", "s43", "s44"), raw=("changed", "s42", "s43", "s44"), min_width=740)
+    cols = ["world", "changed", "agent", "s42", "s43", "s44", "s45", "s46"]
+    return FB.table(pd.DataFrame(rows), cols, ["world", "changed", "agent", "seed 42", "seed 43", "seed 44",
+                                               "seed 45", "seed 46"],
+                    num=tuple(cols[3:]), raw=("changed", *cols[3:]), min_width=880)
 
 
 def food_cell(g):
@@ -148,12 +150,12 @@ def food_count():
     FG_ = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(FG_)   # by path: another 'figures' module is already on sys.path
     n = len(FG_.food_runs())
-    tot = 18 + sum(D.seed_status(w, a, s)[0] == "tested" for w in D.WORLDS[1:] for a in D.AGENTS for s in D.EXTRA_SEEDS)
+    tot = 18 + sum(D.seed_status(w, a, s)[0] == "tested" for w in D.WORLDS[1:] for a in D.AGENTS for s in D.extra_seeds(w))
     return f"{n} of the {tot} runs tested with the food item also have their food-free test complete"
 
 
 def seed_count():
-    st = [D.seed_status(w, a, s_)[0] for w in D.WORLDS[1:] for a in D.AGENTS for s_ in D.EXTRA_SEEDS]
+    st = [D.seed_status(w, a, s_)[0] for w in D.WORLDS[1:] for a in D.AGENTS for s_ in D.extra_seeds(w)]
     n = {k: st.count(k) for k in ("tested", "testing", "training", "queued")}
     parts = [f"{n['tested']} of {len(st)} repeat runs are finished and tested"]
     parts += [f"{n[k]} {txt}" for k, txt in (("testing", "finished and being tested"), ("training", "training"),
@@ -166,7 +168,7 @@ CURVES_AXES = ("Horizontal: starting injury of the test, 0 (unhurt) to 90 in ste
                "switched off in the test scene, so the starting injury lasts the whole test; right column: healing on, as "
                "in training. Grey open circles: no animal; orange squares: a harmless wandering rabbit. Each point is the "
                "mean over the run's newest 20 tested checkpoints; dashed edges and shading: 95&nbsp;% interval. One row per agent "
-               "and seed: seed 42, then each repeat seed (43, 44) once its run is finished and tested (section 06). "
+               "and seed: seed 42, then each repeat seed (43, 44; world 8 also 45, 46) once its run is finished and tested (section 06). "
                "Solid lines with shading: the test scenes with one food item (as everywhere on this page); dotted lines "
                "in the same colours, without shading: the same run in the food-free copy of the scenes, "
                "drawn once that test is complete.")
@@ -202,13 +204,13 @@ SEEDS_AXES = ("Horizontal: the injury contrast at injury 70, in percentage point
               "checkpoints; the line through each mark is its 95&nbsp;% interval. Vertical: the eight training worlds, "
               "world 1 (no change) on top, then worlds 2&ndash;8 with the setting groups they change. Within a world, one "
               "mark per seed: black circle seed 42 (the screen), purple plus sign seed 43, ochre cross "
-              "seed 44; world 1 shows its two existing seeds. Columns: ordinary and modulated agent. Rows: healing off in "
+              "seed 44, and for world 8 only brown hexagon seed 45 and magenta star seed 46; world 1 shows its two existing seeds. Columns: ordinary and modulated agent. Rows: healing off in "
               "the test scene (top, the headline) and healing on (bottom). A seed appears once its run has finished "
-              "training and been tested. Purple and ochre are outside the house series colours on purpose: blue and green "
+              "training and been tested. Purple, ochre, brown and magenta are outside the house series colours on purpose: blue and green "
               "already mean healing off and on on this page.")
 SEEDTRAIN_AXES = ("Horizontal: training, in million steps (0&ndash;10). Vertical: the injury contrast at injury 70 "
                   "with healing off, in percentage points, as a 5-checkpoint moving average. One panel per world (rows) "
-                  "and agent (columns). Solid black: seed 42; purple dashed: seed 43; ochre dotted: seed 44. All panels "
+                  "and agent (columns). Solid black: seed 42; purple dashed: seed 43; ochre dotted: seed 44; world 8 only, brown dash-dot: seed 45 and magenta dash-dot-dot: seed 46. All panels "
                   "share one vertical range, which differs from Figure 4's because these lines are averaged.")
 
 
@@ -278,12 +280,80 @@ def animal_tabs():
             + "".join(tl) + "</div>" + "\n".join(panels) + "</div>")
 
 
+# Table 1: what level 05, world 1 and each setting change set, read from the saved training config of each world's
+# seed-42 ordinary run (models/config.yaml, the config the trainer actually used), never typed by hand.
+def _saved_cfg(world):
+    import glob
+    import yaml
+    pat = ("*_rppo_healrep_l05_t1none_s42" if world == D.REF else "*_rppo_lookalike_l05_t1none_s42" if world == 1
+           else f"*_rppo_lookalike_hf_l05_w{world}_t1none_s42")
+    return yaml.safe_load(open(os.path.join(sorted(glob.glob(os.path.join(D.TRAIN_ROOT, pat)))[0], "models", "config.yaml")))
+
+
+def _item(c, kind, key, name):
+    return next(x for x in c["environment"][kind] if x.get(key) == name)
+
+
+def _rng(lo, hi):
+    return f"{lo}" if lo == hi else f"{lo}&ndash;{hi}"
+
+
+SETTINGS = [   # (setting, what it means for the agent, change that sets it, value from a saved config)
+    ("Smell of predator and rabbit", "mean of the two smell signals each animal gives off (each animal also gets a "
+     "random spread of &plusmn;0.3 in every world); equal means mean smell cannot tell the two apart", "&mdash;",
+     lambda c: "predator {} / {}, rabbit {} / {}".format(*_item(c, "entities", "class", "predator")["properties"][1:3],
+                                                         *_item(c, "entities", "class", "neutral")["properties"][1:3])),
+    ("Predators on the map", "how many predators an episode starts with", "A",
+     lambda c: _rng(_item(c, "entities", "class", "predator")["count_low"], _item(c, "entities", "class", "predator")["count_high"])),
+    ("Predator notices the agent from", "distance in cells at which a predator starts to hunt; drawn per predator",
+     "A", lambda c: _rng(*_item(c, "entities", "class", "predator")["detection_range"]) + " cells"),
+    ("Predator pounces from", "distance in cells from which a hunting predator attacks", "A",
+     lambda c: _rng(*_item(c, "entities", "class", "predator")["attack_range"]) + " cells"),
+    ("Food items on the map", "how many food items an episode has", "B",
+     lambda c: _rng(_item(c, "resources", "name", "food")["count_low"], _item(c, "resources", "name", "food")["count_high"])),
+    ("Size of a food item", "bites before the item is used up, &times; fullness gained per bite (the body aims "
+     "for a fullness of {})", "B",
+     lambda c: "{} bites &times; {} = {}".format(_item(c, "resources", "name", "food")["max_consumption"],
+                                                c["body"]["food_nutrition_gain"],
+                                                _item(c, "resources", "name", "food")["max_consumption"] * c["body"]["food_nutrition_gain"])),
+    ("Rocks and hidden traps visible", "whether the agent can see them before stepping on them; when invisible, "
+     "a hit is the first sign", "C",
+     lambda c: "invisible" if _item(c, "obstacles", "name", "rock").get("visual_mask") else "visible"),
+    ("Rocks on the map", "small hazards, 1&ndash;5 damage per hit", "D",
+     lambda c: _rng(_item(c, "obstacles", "name", "rock")["count_low"], _item(c, "obstacles", "name", "rock")["count_high"])),
+    ("Hidden traps on the map", "how many traps an episode has", "D",
+     lambda c: _rng(_item(c, "resources", "name", "hiding_predator")["count_low"],
+                    _item(c, "resources", "name", "hiding_predator")["count_high"])),
+    ("Damage of a hidden trap", "injury added by one trap hit", "D",
+     lambda c: _rng(*[f"{v:g}" for v in _item(c, "resources", "name", "hiding_predator")["damage"]])),
+]
+
+
+def settings_table():
+    cfg = {w: _saved_cfg(w) for w in (D.REF, 1, 2, 3, 5)}
+    with_change = {"A": cfg[2], "B": cfg[3], "C": cfg[5], "D": cfg[2]}   # a world that has the change
+    rows = []
+    for name, meaning, ch, get in SETTINGS:
+        if "{}" in meaning:
+            meaning = meaning.format(cfg[1]["body"]["satiation_setpoint"])
+        l05, w1 = get(cfg[D.REF]), get(cfg[1])
+        rows.append({"setting": f"<strong>{name}</strong><br><span style=\"color:var(--ink-3);font-size:0.88em\">{meaning}</span>",
+                     "l05": f"<strong>{l05}</strong>" if l05 != w1 else l05, "w1": w1,
+                     "ch": ch if ch == "&mdash;" else f"{ch}, {D.GROUPS[ch]}",
+                     "new": "&mdash;" if ch == "&mdash;" else get(with_change[ch])})
+    cols = ["setting", "l05", "w1", "ch", "new"]
+    return FB.table(pd.DataFrame(rows), cols, ["setting, and what it means", "level 05", "world 1 (lookalike)",
+                                                "changed by", "value with that change"],
+                    raw=tuple(cols), min_width=760)
+
+
 FG_ANIMAL_INJ = [f"{i}" for i in range(10, 100, 10)]
 
 
 def main():
     page = open(os.path.join(PAGE_DIR, "page_template.html")).read()
-    tok = {"{{TABLE:group}}": group_table(), "{{TABLE:runs}}": run_table(), "{{WORLD_TABS}}": world_tabs()}
+    tok = {"{{TABLE:group}}": group_table(), "{{TABLE:runs}}": run_table(), "{{WORLD_TABS}}": world_tabs(),
+           "{{TABLE:settings}}": settings_table()}
     tok["{{FIG:group}}"] = FB.figure(
         "hf_group", "Three panels of setting-change effects against the bar.", GROUP_AXES,
         "Which setting changes move the injury contrast by more than seed-to-seed noise would, in world 1's scenes.",
@@ -293,7 +363,7 @@ def main():
     tok["{{SEED_COUNT}}"] = seed_count()
     tok["{{FIG:seeds}}"] = FB.figure(
         "hf_seeds", "Dot plot of the injury contrast per world and agent, one mark per seed.", SEEDS_AXES,
-        "Whether a world's injury contrast in seed 42 is repeated by seeds 43 and 44, or moves by as much as world 1's "
+        "Whether a world's injury contrast in seed 42 is repeated by seeds 43 and 44 (and 45, 46 in world 8), or moves by as much as world 1's "
         "two seeds differ.", f"{FIG} --figure seeds", title="Figure 6 &mdash; the injury contrast, seed by seed")
     tok["{{FIG:seedtrain}}"] = FB.figure(
         "hf_seedtrain", "Panels of the injury contrast across training, seeds overlaid.", SEEDTRAIN_AXES,

@@ -21,7 +21,7 @@ p.wname { margin:4px 0 0; }
 <div class="wrap">
 
 <header class="col">
-  <p class="eyebrow">grid_world_pain &middot; hypervigilance &middot; level-05 half-factorial screen &middot; 8 training worlds &times; 2 agents, seed 42, plus world 1 at seed 43; repeat seeds 43 and 44</p>
+  <p class="eyebrow">grid_world_pain &middot; hypervigilance &middot; level-05 half-factorial screen &middot; 8 training worlds &times; 2 agents, seed 42, plus world 1 at seed 43; repeat seeds 43 and 44 (world 8 also 45 and 46)</p>
   <h1>Predator, Food and Hazard Settings Screen</h1>
   <p class="lede">Agents were trained in eight versions of the lookalike-animals world, each changing a
   different mix of four settings: how the predator threatens, how food comes, whether hazards can be seen,
@@ -39,7 +39,7 @@ p.wname { margin:4px 0 0; }
     <li><a href="#numbers">03 &middot; Every run in numbers</a></li>
     <li><a href="#worlds">04 &middot; Each world in detail (Figures 2&ndash;4)</a></li>
     <li><a href="#animals">05 &middot; Hiding with each animal (Figure 5)</a></li>
-    <li><a href="#seeds">06 &middot; Repeat runs, seeds 43 and 44 (Figures 6&ndash;7)</a></li>
+    <li><a href="#seeds">06 &middot; Repeat runs, seeds 43&ndash;46 (Figures 6&ndash;7)</a></li>
     <li><a href="#limits">07 &middot; What these results do not show</a></li>
     <li><a href="#how">08 &middot; How it is computed</a></li>
     <li><a href="#prov">09 &middot; Data, scenes and provenance</a></li>
@@ -71,6 +71,14 @@ p.wname { margin:4px 0 0; }
     surprise (and the map looks less cluttered).</li>
     <li><strong>D, hazard load:</strong> fewer rocks and traps, but traps hurt more.</li>
   </ul>
+  <p id="settings"><strong>Settings table.</strong> What each setting is in plain level 05, in world 1 and with each
+  change. Level 05 values that world 1 changed are in bold: world 1 differs from level 05 in three ways only
+  (the same mean smell for both animals, a predator that always notices and pounces at exactly 3 cells, and food
+  items of 6 bites instead of 12); all else, including the cold map, campfires, bushes and healing, is the same.
+  A world with a change (A&ndash;D) uses the value in the last column; a world without it keeps world 1's. Every
+  value is read by the page script from the configuration saved with each world's seed-42 ordinary run, i.e.
+  the one training actually used.</p>
+  {{TABLE:settings}}
   <p><strong>Eight worlds instead of sixteen.</strong> Trying every combination would take 16 worlds. A
   standard <em>half factorial</em> uses 8, chosen so that each change is present in exactly 4 of them;
   each change's effect is the average of its 4 worlds minus the average of the other 4. The price is that
@@ -130,7 +138,7 @@ p.wname { margin:4px 0 0; }
   agent. &ldquo;Pattern&rdquo; is the design's check for hypervigilance at healing off, injury 70: the
   interval lies above zero, the mean exceeds 1.4 points, and the rabbit alone moves an unhurt agent less
   than injury changes the rabbit's effect. The first six rows are the plain level-05 reference (the same
-  agents trained on level 05 itself, before the lookalike world's changes; seeds 42&ndash;44); they are not
+  agents trained on level 05 itself, before the lookalike world's changes, listed in the <a href="#settings">settings table</a>; seeds 42&ndash;44); they are not
   part of the design and enter no group test.</p>
   {{TABLE:runs}}
 </section>
@@ -158,9 +166,10 @@ p.wname { margin:4px 0 0; }
 </section>
 
 <section class="col" id="seeds">
-  <h2><span class="num">06</span> Repeat runs, seeds 43 and 44</h2>
+  <h2><span class="num">06</span> Repeat runs, seeds 43&ndash;46</h2>
   <p>Every world and agent of the screen is being trained again from two new random starting points
-  (seeds 43 and 44), to see which of the results above repeat. Each new run is tested in the same world-1
+  (seeds 43 and 44), to see which of the results above repeat. World 8 got two more seeds (45 and 46),
+  so it has five runs per agent. Each new run is tested in the same world-1
   scenes, with the same 30 episodes per checkpoint, once it has finished its 10 million training steps, and
   appears here only then. Status now: {{SEED_COUNT}}. Figure 2 (in each world's tab) shows every tested seed;
   the other figures and tables in sections 01&ndash;05 show seed 42 only. The group test in section 02 has not yet
@@ -170,7 +179,7 @@ p.wname { margin:4px 0 0; }
   <p><strong>Table 3.</strong> The injury contrast at healing off, injury 70, for every seed, in percentage
   points of bush dwell: the mean over the newest 20 tested checkpoints, its 95&nbsp;% interval in brackets
   (<strong>bold</strong> when it excludes zero), and the design's pattern check below (defined at Table 2).
-  Runs not yet tested show their training state instead. World 1 has no seed-44 run planned (&mdash;).</p>
+  Runs not yet tested show their training state instead. World 1 has no seed-44 run planned (&mdash;); seeds 45 and 46 exist for world 8 only (&mdash; elsewhere).</p>
   {{TABLE:seeds}}
 </section>
 
@@ -179,7 +188,7 @@ p.wname { margin:4px 0 0; }
   <ul>
     <li><strong>One seed per world.</strong> Each of the 16 screen runs is a single training run. The bar
     allows for seed-to-seed variation as measured in earlier runs, but a world can still look different only
-    because of its seed. Repeat seeds 43 and 44 are now trained and tested; see section 06 and Figure 2.</li>
+    because of its seed. Repeat seeds 43 and 44 (and 45, 46 for world 8) are now trained and tested; see section 06 and Figure 2.</li>
     <li><strong>Unfamiliar scenes for some agents.</strong> Agents from worlds with big food (3, 4, 7, 8) or
     invisible hazards (5, 6, 7, 8) meet world 1's small food and visible obstacles in these tests. A difference
     between worlds may partly reflect how each agent copes with a world it was not trained in.</li>

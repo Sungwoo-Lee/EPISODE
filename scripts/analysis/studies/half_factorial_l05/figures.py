@@ -321,8 +321,10 @@ def fig_group():
 
 
 # replication seeds: hues outside the healing (blue / green) and animal (grey / orange) colours used above
-SEED_COL = {42: H.INK, 43: "#7b5ea7", 44: "#b8860b"}
-SEED_MK = {42: "o", 43: "P", 44: "X"}   # shapes used nowhere else on the page (format review, F11)
+SEED_COL = {42: H.INK, 43: "#7b5ea7", 44: "#b8860b", 45: "#7b4a2c", 46: "#c2185b"}
+SEED_MK = {42: "o", 43: "P", 44: "X", 45: "h", 46: "*"}   # shapes used nowhere else on the page (format review, F11)
+SEED_LS = {42: "-", 43: (0, (4, 1.5)), 44: (0, (1.5, 1.2)), 45: (0, (6, 1.5, 1.5, 1.5)), 46: (0, (3, 1, 1, 1, 1, 1))}
+ALL_SEEDS = (42, 43, 44, 45, 46)
 
 
 def seed_runs(w, a):
@@ -345,7 +347,7 @@ def fig_seeds():
                 for k, s in enumerate(ss):
                     v = D.contrast(w, a, heal, "interaction", "70", s)
                     m, lo, hi = summ(v)
-                    yy = y + (k - (len(ss) - 1) / 2) * 0.22
+                    yy = y + (k - (len(ss) - 1) / 2) * min(0.22, 0.8 / len(ss))
                     ax.plot([lo, hi], [yy, yy], color=SEED_COL[s], lw=1.3, zorder=2)
                     ax.plot(m, yy, marker=SEED_MK[s], ms=5.5, color=SEED_COL[s], mfc=SEED_COL[s],
                             mew=1.3, ls="none", zorder=3)
@@ -364,7 +366,7 @@ def fig_seeds():
     axs[0, 0].set_xticks([-lim / 2, 0, lim / 2])   # no end ticks: the two columns' end labels would touch
     from matplotlib.lines import Line2D
     hs = [Line2D([], [], color=SEED_COL[s], marker=SEED_MK[s], mfc=SEED_COL[s], mew=1.3, lw=1.3,
-                 label=f"seed {s}") for s in (42, 43, 44)]
+                 label=f"seed {s}") for s in ALL_SEEDS]
     hs.append(Line2D([], [], color=H.INK_2, lw=1.3, label="line: 95 % interval"))
     fig.legend(handles=hs, loc="lower center", ncol=4, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.005))
     fig.subplots_adjust(left=0.17, right=0.98, top=0.96, bottom=0.11, hspace=0.12, wspace=0.08)
@@ -386,7 +388,7 @@ def fig_seedtrain():
                 sm = d.rolling(5, center=True, min_periods=3).mean().to_numpy()
                 ext += [np.nanmin(sm), np.nanmax(sm)]
                 ax.plot(x, sm, color=SEED_COL[s], lw=1.7,
-                        ls="-" if s == 42 else (0, (4, 1.5)) if s == 43 else (0, (1.5, 1.2)))
+                        ls=SEED_LS[s])
                 rows.append({"what": "", "used": len(d), "total": len(g(w, a, "off", "none", "00", s)),
                              "note": "every tested checkpoint with all four tests (no animal and rabbit, unhurt and "
                                      f"injury 70); {D.n_episodes(w, a, 'off', 'grid', s)} episodes each"})
@@ -400,9 +402,10 @@ def fig_seedtrain():
     axs[0, 0].set_xlim(-0.2, 10.3); axs[0, 0].set_xticks([0, 2, 4, 6, 8, 10]); axs[0, 0].set_ylim(lo, hi)
     axs[0, 0].set_yticks(np.arange(lo, hi + 1, 40 if hi - lo > 80 else 20))
     from matplotlib.lines import Line2D
-    hs = [Line2D([], [], color=SEED_COL[s], lw=1.7, ls="-" if s == 42 else (0, (4, 1.5)) if s == 43 else (0, (1.5, 1.2)),
-                 label=f"seed {s}") for s in (42, 43, 44)]
-    fig.legend(handles=hs, loc="lower center", ncol=3, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.003))
+    hs = [Line2D([], [], color=SEED_COL[s], lw=1.7, ls=SEED_LS[s],
+                 label=f"seed {s}") for s in ALL_SEEDS]
+    fig.legend(handles=hs, loc="lower center", ncol=3, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.003),
+               handlelength=3.5)
     fig.subplots_adjust(left=0.11, right=0.99, top=0.97, bottom=0.62 / (1.55 * len(ws) + 1.2) + 0.02, hspace=0.18, wspace=0.06)
     return fig, rows
 
@@ -410,7 +413,7 @@ def fig_seedtrain():
 def planned_runs_row():
     """Run-level coverage against the planned set (format review F83): the 16 screen runs, world 1's seed-43
     pair and the 28 repeat runs; every repeat run not yet tested is named as missing, with its state."""
-    st = [D.seed_status(w, a, s)[0] for w in D.WORLDS[1:] for a in D.AGENTS for s in D.EXTRA_SEEDS]
+    st = [D.seed_status(w, a, s)[0] for w in D.WORLDS[1:] for a in D.AGENTS for s in D.extra_seeds(w)]
     shown = 18 + st.count("tested")
     n = {k: st.count(k) for k in ("testing", "training", "queued")}
     left = ", ".join(f"{v} {k if k != 'testing' else 'being tested'}" for k, v in n.items() if v)
@@ -421,7 +424,7 @@ def planned_runs_row():
 
 def world_runs_row(w):
     """Figure 2's run-level coverage for one world: drawn (agent, seed) runs of all planned (format review F83)."""
-    plan = [(a, s) for a in D.AGENTS for s in (D.REF_SEEDS if w == D.REF else (42, 43) if w == 1 else (42, *D.EXTRA_SEEDS))]
+    plan = [(a, s) for a in D.AGENTS for s in (D.REF_SEEDS if w == D.REF else (42, 43) if w == 1 else (42, *D.extra_seeds(w)))]
     drawn = sum(1 for a, s in plan if s in seed_runs(w, a))
     st = [D.seed_status(w, a, s)[0] for a, s in plan if s != 42 and w > 1 and s not in seed_runs(w, a)]
     left = ", ".join(f"{st.count(k)} {k if k != 'testing' else 'being tested'}" for k in ("testing", "training", "queued")
@@ -476,7 +479,7 @@ def fig_food():
     from matplotlib.lines import Line2D
     hs = [Line2D([], [], marker="o", color=H.INK_2, ls="none", label="ordinary agent"),
           Line2D([], [], marker="s", color=H.INK_2, mfc=H.PAPER, mew=1.3, ls="none", label="modulated agent")]
-    hs += [Line2D([], [], marker="o", color=SEED_COL[s], ls="none", label=f"seed {s}") for s in (42, 43, 44)]
+    hs += [Line2D([], [], marker="o", color=SEED_COL[s], ls="none", label=f"seed {s}") for s in ALL_SEEDS]
     hs.append(Line2D([], [], color=H.INK_2, lw=0.8, ls=(0, (4, 2)), label="dashed: same value in both"))
     fig.legend(handles=hs, loc="lower center", ncol=3, frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, -0.01))
     fig.subplots_adjust(left=0.1, right=0.98, top=0.93, bottom=0.27, wspace=0.08)
@@ -528,7 +531,7 @@ def main(argv=None):
         if a.figure == "food":
             n = len(food_runs())
             rows.append({"what": "runs drawn, of all tested with food", "used": n, "total": 18 + sum(
-                D.seed_status(w, ag, s)[0] == "tested" for w in D.WORLDS[1:] for ag in D.AGENTS for s in D.EXTRA_SEEDS),
+                D.seed_status(w, ag, s)[0] == "tested" for w in D.WORLDS[1:] for ag in D.AGENTS for s in D.extra_seeds(w)),
                 "note": "a run is drawn once its food-free test holds its final checkpoint, healing on and off"})
         if a.figure == "curves":
             rows.append(world_runs_row(int(stem.rsplit("w", 1)[1])))

@@ -200,6 +200,13 @@ def run_table(heal, inj="70", grid="grid"):
 # finished training and every one of its seven test folders holds the final checkpoint; until then it is listed
 # with its training state. Read straight from disk (never from the cache) so a half-written test is not frozen.
 EXTRA_SEEDS = (43, 44)
+# World 8 alone got two more seeds (45, 46), trained on node 114 on 2026-10-14 (design doc, run table).
+WORLD_EXTRA = {8: (45, 46)}
+
+
+def extra_seeds(world):
+    """Repeat seeds planned for one world (worlds 2-8)."""
+    return EXTRA_SEEDS + WORLD_EXTRA.get(world, ())
 FOLDER_SETS = [("on", st) for st in SETS] + [("off", st) for st in SETS if st != "own"]
 TRAIN_ROOT = os.path.join(ROOT, "results", "JAX_RecurrentPPO")
 AGENT_TAG = {"ordinary": "t1none", "modulated": "t16quad"}
@@ -246,7 +253,7 @@ def ref_seeds(agent):
 
 
 def tested_seeds(world, agent):
-    return [s for s in EXTRA_SEEDS if world > 1 and seed_status(world, agent, s)[0] == "tested"]
+    return [s for s in extra_seeds(world) if world > 1 and seed_status(world, agent, s)[0] == "tested"]
 
 
 def seed_table(heal="off", inj="70"):
