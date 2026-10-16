@@ -3,7 +3,7 @@ title: Lookalike half-factorial at level 05 — which world changes make hiding 
 topic: hypervigilance
 status: active
 created: 2026-10-11
-last_updated: 2026-10-15
+last_updated: 2026-10-16
 wandb_tag: rppo_lookalike_hf_l05
 ---
 
@@ -1371,15 +1371,15 @@ and `--wandb-group "lookalike_animals"`. Tag = WandB name.
 
 | Order | Cell | Tag (= wandb-name) | wandb-group | Seed | Node:GPU (card) | Launched at | WandB run ID | Status |
 |---|---|---|---|---|---|---|---|---|
-| 1 | w1 ordinary | `rppo_lookalike_l05_t1none_s44` | `lookalike_animals` | 44 | — | — | — | queued |
-| 2 | w1 modulated | `rppo_lookalike_l05_t16quad_s44` | `lookalike_animals` | 44 | — | — | — | queued |
+| 1 | w1 ordinary | `rppo_lookalike_l05_t1none_s44` | `lookalike_animals` | 44 | `102:0 (4090)` | 2026-10-16T12:20:02 | `bs2ix9an` | running |
+| 2 | w1 modulated | `rppo_lookalike_l05_t16quad_s44` | `lookalike_animals` | 44 | `102:1 (4090)` | 2026-10-16T12:20:03 | `ghpm7w64` | running |
 | 3 | w9 ordinary | `rppo_lookalike_hf_l05_w9_t1none_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
 | 4 | w9 modulated | `rppo_lookalike_hf_l05_w9_t16quad_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
-| 5 | w10 ordinary | `rppo_lookalike_hf_l05_w10_t1none_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
-| 6 | w10 modulated | `rppo_lookalike_hf_l05_w10_t16quad_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
-| 7 | w11 ordinary | `rppo_lookalike_hf_l05_w11_t1none_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
-| 8 | w11 modulated | `rppo_lookalike_hf_l05_w11_t16quad_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
-| 9 | w12 ordinary | `rppo_lookalike_hf_l05_w12_t1none_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 5 | w10 ordinary | `rppo_lookalike_hf_l05_w10_t1none_s43` | `lookalike_half_factorial` | 43 | `107:0 (3090)` | 2026-10-16T12:20:04 | `oc0ff4d4` | running |
+| 6 | w10 modulated | `rppo_lookalike_hf_l05_w10_t16quad_s43` | `lookalike_half_factorial` | 43 | `108:1 (3090)` | 2026-10-16T12:20:05 | `ygoqx2z6` | running |
+| 7 | w11 ordinary | `rppo_lookalike_hf_l05_w11_t1none_s43` | `lookalike_half_factorial` | 43 | `110:1 (3090)` | 2026-10-16T12:20:06 | `43h570oh` | running |
+| 8 | w11 modulated | `rppo_lookalike_hf_l05_w11_t16quad_s43` | `lookalike_half_factorial` | 43 | `114:0 (6000 Ada)` | 2026-10-16T12:20:07 | `i7d18nnn` | running |
+| 9 | w12 ordinary | `rppo_lookalike_hf_l05_w12_t1none_s43` | `lookalike_half_factorial` | 43 | `114:2 (6000 Ada)` | 2026-10-16T12:25:15 | `svv6te98` | running |
 | 10 | w12 modulated | `rppo_lookalike_hf_l05_w12_t16quad_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
 | 11 | w13 ordinary | `rppo_lookalike_hf_l05_w13_t1none_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
 | 12 | w13 modulated | `rppo_lookalike_hf_l05_w13_t16quad_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
