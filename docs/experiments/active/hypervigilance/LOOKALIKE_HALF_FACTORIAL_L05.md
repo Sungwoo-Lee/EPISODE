@@ -1373,7 +1373,7 @@ and `--wandb-group "lookalike_animals"`. Tag = WandB name.
 |---|---|---|---|---|---|---|---|---|
 | 1 | w1 ordinary | `rppo_lookalike_l05_t1none_s44` | `lookalike_animals` | 44 | `102:0 (4090)` | 2026-10-16T12:20:02 | `bs2ix9an` | running |
 | 2 | w1 modulated | `rppo_lookalike_l05_t16quad_s44` | `lookalike_animals` | 44 | `102:1 (4090)` | 2026-10-16T12:20:03 | `ghpm7w64` | running |
-| 3 | w9 ordinary | `rppo_lookalike_hf_l05_w9_t1none_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
+| 3 | w9 ordinary | `rppo_lookalike_hf_l05_w9_t1none_s43` | `lookalike_half_factorial` | 43 | `114:1 (6000 Ada)` | 2026-10-16T12:33:26 | `ctf45k4c` | running |
 | 4 | w9 modulated | `rppo_lookalike_hf_l05_w9_t16quad_s43` | `lookalike_half_factorial` | 43 | — | — | — | queued |
 | 5 | w10 ordinary | `rppo_lookalike_hf_l05_w10_t1none_s43` | `lookalike_half_factorial` | 43 | `107:0 (3090)` | 2026-10-16T12:20:04 | `oc0ff4d4` | running |
 | 6 | w10 modulated | `rppo_lookalike_hf_l05_w10_t16quad_s43` | `lookalike_half_factorial` | 43 | `108:1 (3090)` | 2026-10-16T12:20:05 | `ygoqx2z6` | running |
