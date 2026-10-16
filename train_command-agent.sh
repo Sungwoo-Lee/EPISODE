@@ -5580,3 +5580,22 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #   one process confirmed after >=60 s; counts advancing (11868 at 12:34:44 -> 76491 at 12:35:33), no traceback;
 #   https://wandb.ai/sungwoolee/grid_world_pain/runs/ctf45k4c
 #   log /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261016_123324_rppo_lookalike_hf_l05_w9_t1none_s43.log
+
+# ---------------------------------------------------------------------------
+# 2026-10-16 — NEW RUNS: lookalike half-factorial 'Seeds 43 and 44 queue', orders 4, 10, 11 (w9 modulated, w12 modulated, w13 ordinary; seed 43)
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Seeds 43 and 44 queue"). User-approved; cards assigned by the orchestrator.
+# Cards freed by finished seed-42 runs ("Training complete" in their logs): 109:1 (w11 modulated s42), 111:1 (w12 modulated s42), 114:3 (w14 modulated s42).
+# Re-checked each card right before its launch (16:28-16:29): <200 MiB, 0 %, no train.py on that device; NAS mounted on all three nodes;
+#   JAX 0.9.0.1 GPU compile OK on all three; node 114 up 1 d 18 h, last launch there 12:33 (one launch at a time).
+# configs unchanged since bf48ba07 (git diff empty). Same line as the seed-42 run of each world/agent with only --seed, --device, tag/name changed.
+# Commented out: running this file must not relaunch them. Launch record below.
+# [109:1] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w9_newA_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 43 --device cuda:1 --log-interval 10 --tag "rppo_lookalike_hf_l05_w9_t16quad_s43" --wandb-name "rppo_lookalike_hf_l05_w9_t16quad_s43" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [111:1] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w12_newD_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 43 --device cuda:1 --log-interval 10 --tag "rppo_lookalike_hf_l05_w12_t16quad_s43" --wandb-name "rppo_lookalike_hf_l05_w12_t16quad_s43" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# [114:3] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w13_newABC_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 43 --device cuda:3 --log-interval 10 --tag "rppo_lookalike_hf_l05_w13_t1none_s43" --wandb-name "rppo_lookalike_hf_l05_w13_t1none_s43" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot"
+# Launch record (2026-10-16; one process per tag confirmed after >=60 s; counts advancing, no traceback):
+#   order 4  [109:1] rppo_lookalike_hf_l05_w9_t16quad_s43   16:29:00 PID 2598463 WandB uj6htcno  (23802 -> 36660 steps, 16:30:40 -> 16:31:55)
+#     log /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261016_162900_rppo_lookalike_hf_l05_w9_t16quad_s43.log
+#   order 10 [111:1] rppo_lookalike_hf_l05_w12_t16quad_s43  16:29:01 PID 2576244 WandB nje53gsr  (24354 -> 36836)
+#     log /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261016_162901_rppo_lookalike_hf_l05_w12_t16quad_s43.log
+#   order 11 [114:3] rppo_lookalike_hf_l05_w13_t1none_s43   16:29:03 PID 1222158 WandB hmtsexc7  (102220 -> 117255)
+#     log /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261016_162903_rppo_lookalike_hf_l05_w13_t1none_s43.log
