@@ -1376,7 +1376,7 @@ and `--wandb-group "lookalike_animals"`. Tag = WandB name.
 | 3 | w9 ordinary | `rppo_lookalike_hf_l05_w9_t1none_s43` | `lookalike_half_factorial` | 43 | `114:1 (6000 Ada)` | 2026-10-16T12:33:26 | `ctf45k4c` | running |
 | 4 | w9 modulated | `rppo_lookalike_hf_l05_w9_t16quad_s43` | `lookalike_half_factorial` | 43 | `109:1 (3090)` | 2026-10-16T16:29:00 | `uj6htcno` | running |
 | 5 | w10 ordinary | `rppo_lookalike_hf_l05_w10_t1none_s43` | `lookalike_half_factorial` | 43 | `107:0 (3090)` | 2026-10-16T12:20:04 | `oc0ff4d4` | running |
-| 6 | w10 modulated | `rppo_lookalike_hf_l05_w10_t16quad_s43` | `lookalike_half_factorial` | 43 | `108:1 (3090)` | 2026-10-16T12:20:05 | `ygoqx2z6` | running |
+| 6 | w10 modulated | `rppo_lookalike_hf_l05_w10_t16quad_s43` | `lookalike_half_factorial` | 43 | `107:1 (3090)` | 2026-10-16T12:20:05 | `ygoqx2z6` | running (resumed from checkpoint 1000064, 2026-10-16T17:28:36; moved from 108:1 at checkpoint 1000064, thermal throttling; log `logs/20261016_172821_rppo_lookalike_hf_l05_w10_t16quad_s43.log`) |
 | 7 | w11 ordinary | `rppo_lookalike_hf_l05_w11_t1none_s43` | `lookalike_half_factorial` | 43 | `110:1 (3090)` | 2026-10-16T12:20:06 | `43h570oh` | running |
 | 8 | w11 modulated | `rppo_lookalike_hf_l05_w11_t16quad_s43` | `lookalike_half_factorial` | 43 | `114:0 (6000 Ada)` | 2026-10-16T12:20:07 | `i7d18nnn` | running |
 | 9 | w12 ordinary | `rppo_lookalike_hf_l05_w12_t1none_s43` | `lookalike_half_factorial` | 43 | `114:2 (6000 Ada)` | 2026-10-16T12:25:15 | `svv6te98` | running |

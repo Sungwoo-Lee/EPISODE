@@ -5599,3 +5599,19 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #     log /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261016_162901_rppo_lookalike_hf_l05_w12_t16quad_s43.log
 #   order 11 [114:3] rppo_lookalike_hf_l05_w13_t1none_s43   16:29:03 PID 1222158 WandB hmtsexc7  (102220 -> 117255)
 #     log /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261016_162903_rppo_lookalike_hf_l05_w13_t1none_s43.log
+
+# ---------------------------------------------------------------------------
+# 2026-10-16 — MOVE + RESUME: lookalike half-factorial 'Seeds 43 and 44 queue', order 6: w10 modulated s43 (WandB id: ygoqx2z6)
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Seeds 43 and 44 queue"). User-approved move.
+# Why: on 108:1 it ran at ~55 it/s (comparable runs 130-160); card at ~91 C, SM clock 240 MHz, foreign 13 GB job on 108:0 -> thermal throttling.
+# Stopped with SIGINT at 17:27:56 (graceful) after checkpoint 1000064 was complete (written 17:25:45). Nothing else placed on 108:1.
+# New card 107:1 (RTX 3090, same card type), freed by w10 modulated s42 ("Training complete" ~17:26). Re-checked right before launch:
+#   7 MiB / 0 %, no compute app on the card, no train.py on cuda:1; NAS mounted; JAX 0.9.0.1 GPU compile OK; configs unchanged since launch.
+# Same command line as the 12:20 launch with --device unchanged (cuda:1) plus --load-checkpoint / --wandb-resume-id; --episodes stays 10M.
+# Commented out: running this file must not relaunch it. Launch record below.
+# [107:1] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w10_newB_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 43 --device cuda:1 --log-interval 10 --tag "rppo_lookalike_hf_l05_w10_t16quad_s43" --wandb-name "rppo_lookalike_hf_l05_w10_t16quad_s43" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot" --load-checkpoint results/JAX_RecurrentPPO/20261016-122011_rppo_lookalike_hf_l05_w10_t16quad_s43/models --wandb-resume-id ygoqx2z6
+# Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261016_172821_rppo_lookalike_hf_l05_w10_t16quad_s43.log
+# Launch record: order 6 [107:1] rppo_lookalike_hf_l05_w10_t16quad_s43  resumed 2026-10-16T17:28:36 PID 3519010 WandB ygoqx2z6 (same run, "Resuming run")
+#   one process confirmed after >=60 s; restored checkpoint step 1000064, first count 1000183; 146 it/s measured (1018175 -> 1026994 in 60 s),
+#   was ~55 it/s on 108:1; no traceback. https://wandb.ai/sungwoolee/grid_world_pain/runs/ygoqx2z6
+#   Downstream must use both results folders: 20261016-122011_... (0-1000064) and the new resumed folder.
