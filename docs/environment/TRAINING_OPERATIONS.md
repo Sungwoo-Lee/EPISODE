@@ -132,7 +132,8 @@ Newest first. Each row: what happened, why, and the rule that now prevents it.
 | Since | Constraint | Until |
 |---|---|---|
 | 2026-10-14 21:43 | **Nodes 113 and 114 unreliable**: crashed twice under load (§6). No training or test workers there, except: the user allowed (22:00) a careful test of 114, one run first, the next only after ~20 min up, a few minutes apart | Someone checks power / cooling and the user clears them |
-| 2026-10-14 15:35 | **Node 112 reserved for another lab member.** Launch nothing there; the half-factorial run still on 112:1 is moved off at its next checkpoint once a card frees elsewhere | The user releases it |
+| 2026-10-16 17:44 | **Nodes 107 and 108 to be switched off for repair.** Place nothing there; our two runs on 107 were moved to 112 at their next checkpoint (17:55–17:56) | The user says they are back |
+| 2026-10-14 15:35 | ~~Node 112 reserved for another lab member.~~ **Lifted 2026-10-16** (user): that lab member moved to node 113; 112 is usable again | Lifted 2026-10-16 |
 | 2026-09-09 | Node 102 sometimes carries another lab member's job | Check its processes at every launch |
 
 ## 8. Changes to the training tooling

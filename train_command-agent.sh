@@ -5615,3 +5615,23 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #   one process confirmed after >=60 s; restored checkpoint step 1000064, first count 1000183; 146 it/s measured (1018175 -> 1026994 in 60 s),
 #   was ~55 it/s on 108:1; no traceback. https://wandb.ai/sungwoolee/grid_world_pain/runs/ygoqx2z6
 #   Downstream must use both results folders: 20261016-122011_... (0-1000064) and the new resumed folder.
+
+# ---------------------------------------------------------------------------
+# 2026-10-16 — MOVE + RESUME: lookalike half-factorial 'Seeds 43 and 44 queue', orders 5 and 6 (w10 s43), 107 -> 112
+# Plan: docs/experiments/active/hypervigilance/LOOKALIKE_HALF_FACTORIAL_L05.md ("Seeds 43 and 44 queue"). User-requested move.
+# Why: nodes 107 and 108 are switched off for repair. Node 112 reservation lifted by the user (lab member moved to 113).
+# Each stopped with SIGINT just after its next checkpoint was committed (orbax commit timestamp present):
+#   order 5 t1none : checkpoint 4000035 written 17:54:05, stopped 17:55:05 (PID 3464894 on 107:0)
+#   order 6 t16quad: checkpoint 1200044 written 17:55:03, stopped 17:56:21 (PID 3519010 on 107:1)
+# Target cards re-checked right before each launch: no compute app / no train.py on the card, NAS mounted,
+#   JAX 0.9.0.1 GPU compile OK on 112:0 and 112:1, configs unchanged since bf48ba07. RTX 3090 -> RTX 3090.
+# Same command lines as before plus --load-checkpoint / --wandb-resume-id; --episodes stays 10M.
+# Commented out: running this file must not relaunch them. Launch record below.
+# [112:0] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w10_newB_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml --episodes 10000000 --seed 43 --device cuda:0 --log-interval 10 --tag "rppo_lookalike_hf_l05_w10_t1none_s43" --wandb-name "rppo_lookalike_hf_l05_w10_t1none_s43" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot" --load-checkpoint results/JAX_RecurrentPPO/20261016-122009_rppo_lookalike_hf_l05_w10_t1none_s43/models --wandb-resume-id oc0ff4d4
+# Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261016_175552_rppo_lookalike_hf_l05_w10_t1none_s43.log
+# [112:1] /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/lookalike_hf_w10_newB_10x10.yaml --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml --episodes 10000000 --seed 43 --device cuda:1 --log-interval 10 --tag "rppo_lookalike_hf_l05_w10_t16quad_s43" --wandb-name "rppo_lookalike_hf_l05_w10_t16quad_s43" --wandb-group "lookalike_half_factorial" --wandb-job-type "pilot" --load-checkpoint results/JAX_RecurrentPPO/20261016-172841_rppo_lookalike_hf_l05_w10_t16quad_s43/models --wandb-resume-id ygoqx2z6
+# Log (absolute): /media/nas01/projects/Interoceptive-AI/grid_world_pain/logs/20261016_175636_rppo_lookalike_hf_l05_w10_t16quad_s43.log
+# Launch record (one process per tag confirmed; "Resuming run" in both logs; no traceback):
+#   order 5 [112:0] t1none_s43   resumed 2026-10-16T17:55:53 PID 5063 WandB oc0ff4d4  first count 4000125 (iter 55425)
+#   order 6 [112:1] t16quad_s43  resumed 2026-10-16T17:56:36 WandB ygoqx2z6  first count 1200156
+#   Downstream: t1none has 2 results folders (20261016-122009_..., new); t16quad has 3 (20261016-122011_..., 20261016-172841_..., new).
