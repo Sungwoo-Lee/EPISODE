@@ -55,8 +55,8 @@ td code { overflow-wrap:normal; white-space:nowrap; }   /* a capture key is one 
   in section 06 are drawn from simulated numbers to fix how results will be shown. They will be redrawn from
   a pilot run's real recordings.</p>
   <div class="callout"><p><strong>Decided with the user (2026-10-15).</strong> Record every unit, not
-  selected layers; record two conditions &mdash; episodes in the agent's own training world and the frozen
-  behaviour test scenes &mdash; and test whether the encoding found in one holds in the other; one file per unit of collection work, so files
+  selected layers; record two conditions &mdash; the <em>training condition</em> (the agent's own training world) and the
+  <em>experiment condition</em> (the frozen behaviour test scenes), both played by the trained agent &mdash; and test whether the encoding found in one holds in the other; one file per unit of collection work, so files
   stay few but collection runs in parallel; use the terms of the neuroscience literature; the unit map of
   Figure 2 is the main figure, the per-regressor maps an appendix.</p></div>
 </section>
@@ -87,11 +87,30 @@ td code { overflow-wrap:normal; white-space:nowrap; }   /* a capture key is one 
   unfamiliar, controlled situation, which need not match how it represents the same variables in normal behaviour
   (a <em>distribution shift</em>). The networks are therefore recorded in two conditions, as a free-behaviour
   session and a controlled task are in neurophysiology:</p>
-  <p><strong>Condition 1, training world (free behaviour).</strong> Episodes played in the run's own training world,
+  <p><strong>Terms (user, 2026-10-16).</strong> <em>Condition</em> always means one of the two data sets below,
+  and every analysis uses the trained agent. The terms keep apart the time when the agent learns and the data
+  the analysis is run on:</p>
+  <dl>
+    <dt>training phase</dt><dd>The period in which the network's parameters are updated by the learning algorithm
+    (proximal policy optimisation, PPO), here 10 million environment steps. No analysis data are taken from it.</dd>
+    <dt>checkpoint</dt><dd>A snapshot of the parameters saved during the training phase, named by its step count.</dd>
+    <dt>trained agent</dt><dd>The network with its parameters fixed at the final checkpoint, unless a page states
+    another checkpoint. It no longer learns: data collection only runs the policy forward (inference), with greedy
+    action choice and no parameter updates.</dd>
+    <dt>in-training evaluation</dt><dd>The three episodes that the training program plays and records at each
+    checkpoint to monitor progress. They are monitoring output only and are not analysed.</dd>
+    <dt>training condition</dt><dd>The trained agent playing fresh episodes in its own training world: the
+    in-distribution data set, the analogue of a free-behaviour session in neurophysiology.</dd>
+    <dt>experiment condition</dt><dd>The trained agent playing the frozen behaviour test scenes, whose layout differs
+    from training on purpose: the out-of-distribution data set, the analogue of trials of a controlled task.</dd>
+    <dt>distribution shift</dt><dd>A difference between the situations a network was trained on and those it is
+    tested in; here, the difference between the training condition and the experiment condition.</dd>
+  </dl>
+  <p><strong>Training condition (free behaviour).</strong> Episodes played by the trained agent in the run's own training world,
   from fixed seeds, until death or the episode limit, so their lengths vary. This is the distribution the network
   was trained on and the more varied data set, used as the main fitting set. 500 episodes per run and checkpoint
   are proposed; their size is measured on the pilot, because episode lengths are not known in advance.</p>
-  <p><strong>Condition 2, test scenes (controlled task).</strong> The <strong>frozen test scenes</strong> already
+  <p><strong>Experiment condition (controlled task).</strong> The trained agent plays the <strong>frozen test scenes</strong> already
   used for the behaviour results: the agent in the middle of the map, one bush three cells away, no campfire; a starting
   injury from 0 to 90; no animal, a wandering rabbit, a chasing rabbit or a predator; healing off (test only)
   or on. Each scene has 30 episodes of 100 steps, from fixed seeds. Recording the same episodes as the
@@ -110,8 +129,8 @@ td code { overflow-wrap:normal; white-space:nowrap; }   /* a capture key is one 
 
 <section class="col" id="structure">
   <h2><span class="num">03</span> Data structure</h2>
-  <p>One HDF5 file per <em>collection job</em>: for the test scenes, one run, one checkpoint and one
-  starting-injury level (all its animal and healing conditions); for the training world, one run, one checkpoint
+  <p>One HDF5 file per <em>collection job</em>: for the experiment condition, one run, one checkpoint and one
+  starting-injury level (all its animal and healing settings); for the training condition, one run, one checkpoint
   and a block of episodes sized to a similar file size. The <code>trials</code> table records each episode's
   condition, so both conditions share one layout. That is the unit of parallel work &mdash; one worker writes one file &mdash;
   so the number of files equals the number of jobs that can run at once (a few hundred), never one file per
@@ -154,10 +173,10 @@ td code { overflow-wrap:normal; white-space:nowrap; }   /* a capture key is one 
     tools find runs by patterns that skip the lookalike runs, and resumed runs have several folders.</div></div></div>
   <div class="stage"><div class="s">STEP 2</div><div class="b">
     <div class="t">Replay and capture</div>
-    <div class="d">Test scenes: each job replays its scenes with the existing exact-replay path
+    <div class="d">Experiment condition: each job replays its scenes with the existing exact-replay path
     (<code>scripts/analysis/obs_manipulation/run.py</code>, live mode, no manipulation) with capture on. Training
-    world: each job plays fixed-seed episodes in the run's own world with the existing replay tool
-    (<code>scripts/analysis/nmn/replay.py</code>) and capture on. Both record activity plus the environment state
+    condition: each job plays fixed-seed episodes in the run's own training world with the existing replay tool
+    (<code>scripts/analysis/nmn/replay.py</code>) and capture on. Both use the trained agent, and both record activity plus the environment state
     that the regressors are computed from.</div></div></div>
   <div class="stage"><div class="s">STEP 3</div><div class="b">
     <div class="t">Write one file, in parallel</div>
@@ -215,8 +234,8 @@ td code { overflow-wrap:normal; white-space:nowrap; }   /* a capture key is one 
     <dt>false discovery rate</dt><dd>The expected share of false positives among units called significant;
     controlled with the Benjamini&ndash;Hochberg procedure across the many units tested.</dd>
   </dl>
-  <p><strong>Cross-condition generalisation.</strong> A model fitted on training-world episodes is scored, without
-  refitting, on the test scenes, and the reverse. The drop in cvR&sup2; from the fitting condition to the other one
+  <p><strong>Cross-condition generalisation.</strong> A model fitted on the training condition is scored, without
+  refitting, on the experiment condition, and the reverse. The drop in cvR&sup2; from the fitting condition to the other one
   measures how much of a unit's encoding is specific to that condition. The regressors are defined identically in
   both conditions so the same coefficients apply.</p>
   <p>Statistics across agents use the <strong>seed</strong> (an independently trained network) as the unit of
@@ -341,7 +360,7 @@ td code { overflow-wrap:normal; white-space:nowrap; }   /* a capture key is one 
     <li><strong>Dynamical-systems analyses</strong> (population trajectories, fixed points of the recurrent
     layer, how injury moves its operating point) read the same files and get their own section once the
     encoding model is running.</li>
-    <li><strong>Training-world episode count.</strong> 500 episodes per run is a starting proposal; the pilot
+    <li><strong>Training-condition episode count.</strong> 500 episodes per run is a starting proposal; the pilot
     measures episode length and file size, and the count is fixed so the encoding model's held-out score is stable.</li>
   </ul>
 </section>

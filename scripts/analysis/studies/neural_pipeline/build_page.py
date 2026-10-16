@@ -58,9 +58,9 @@ SITE = {"unimodal": "encoder stage 1", "multimodal": "encoder hub", "rnn": "recu
 # planned recording sets (section 02): (name, starting injuries, animal conditions, healing conditions, checkpoints)
 EPISODES, STEPS = 30, 100
 N_RUNS = {"ordinary": 53, "modulated": 53}   # 16 worlds x 3 seeds + world-8 seeds 45/46 + level-05 reference 42-44
-SETS = [("Test scenes, core, final checkpoint", 3, 3, 1, 1, "injury 0 / 20 / 70; no animal, wandering rabbit, predator; healing off"),
-        ("Test scenes, pilot, across training", 3, 3, 1, 10, "as core, 4 runs (2 worlds x 2 agents) x 10 checkpoints"),
-        ("Test scenes, every condition, final checkpoint", 10, 4, 2, 1, "injury 0-90; all four animal conditions; healing off and on")]
+SETS = [("Experiment condition, core, final checkpoint", 3, 3, 1, 1, "injury 0 / 20 / 70; no animal, wandering rabbit, predator; healing off"),
+        ("Experiment condition, pilot, across training", 3, 3, 1, 10, "as core, 4 runs (2 worlds x 2 agents) x 10 checkpoints"),
+        ("Experiment condition, every scene, final checkpoint", 10, 4, 2, 1, "injury 0-90; all four animal settings; healing off and on")]
 
 
 def inventory():
@@ -120,7 +120,7 @@ def sizes_table(inv):
         rows.append({"set": f"<strong>{name}</strong><br><span style=\"color:var(--ink-3);font-size:0.88em\">{desc}</span>",
                      "steps": f"{steps:,}", "files": f"{nfiles:,}", "per": f"{byts / nfiles / 1e6:,.0f} MB",
                      "tot": f"{byts / 1e9:,.1f} GB"})
-    rows.insert(0, {"set": "<strong>Training world, final checkpoint</strong><br><span style=\"color:var(--ink-3);"
+    rows.insert(0, {"set": "<strong>Training condition, final checkpoint</strong><br><span style=\"color:var(--ink-3);"
                            "font-size:0.88em\">500 episodes per run in its own world; lengths vary, so sizes are "
                            "measured on the pilot; a few files per run</span>",
                     "steps": "&mdash;", "files": "&mdash;", "per": "&mdash;", "tot": "&mdash;"})
