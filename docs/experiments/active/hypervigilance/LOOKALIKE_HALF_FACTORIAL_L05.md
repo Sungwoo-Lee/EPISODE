@@ -1181,7 +1181,7 @@ bookkeeping", folder placement).
   `lookalike_animals`, the same group as world 1's seeds 42 and 43.
 - **Cards (user, 2026-10-15): TF32 cards only.** That means RTX 3090, RTX 4090 or RTX 6000 Ada,
   one run per card. **RTX 2080 Ti cards (nodes 101, 103, 104, 105) are never used for this study's
-  training.** Node 112 is reserved for a lab member and not used. On node 114, add one run at a time
+  training.** Node 112 was reserved for a lab member until 2026-10-16; the user then allowed it (the member moved to node 113, which is not used). On node 114, add one run at a time
   and wait until the node has stayed up (it crashed twice on 2026-10-14). **A run never moves
   between card types:** a resume goes to a TF32 card as well. The card of every run segment is
   recorded in the run table.
@@ -1364,7 +1364,7 @@ on the NAS (the first seed-43/44 launches used a relative path, and their logs s
 ### Seeds 43 and 44 queue (worlds 9–16, plus world 1 at seed 44)
 
 34 runs, started in the order below by the `training-runner` as TF32 cards free (see "Run plan":
-TF32 cards only, no node 112, node 114 one run at a time, a run never changes card type). WandB job
+TF32 cards only, node 112 allowed since 2026-10-16 (user), no node 113, nodes 107–108 down for repair, node 114 one run at a time, a run never changes card type). WandB job
 type `pilot`. The command line is the seed-42 line with `--seed`, `--device` and the tag changed.
 World 1's two runs use `--config configs/environment/experiment/basic/lookalike_animals_close_pounce_small_food_10x10.yaml`
 and `--wandb-group "lookalike_animals"`. Tag = WandB name.
