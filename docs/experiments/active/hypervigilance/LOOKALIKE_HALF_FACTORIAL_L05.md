@@ -3,7 +3,7 @@ title: Lookalike half-factorial at level 05 — which world changes make hiding 
 topic: hypervigilance
 status: active
 created: 2026-10-11
-last_updated: 2026-10-17
+last_updated: 2026-10-18
 wandb_tag: rppo_lookalike_hf_l05
 ---
 
@@ -1530,6 +1530,153 @@ produce main effects with an unmeasured hardware offset that cannot be removed a
 Balancing the cards before launch costs nothing.
 
 Reviewed by: plan-reviewer
+
+## Figure 5 re-collection: a new layout every episode, sampled and greedy actions (2026-10-18)
+
+**Question.** Figure 5 of the results page ("Predator, Food and Hazard Settings Screen") asks
+whether injury makes an agent hide in the bush more when a harmless rabbit is near than when no
+animal is near, the hypervigilance pattern. Its data came from world 1's frozen test scenes: one
+fixed arrangement of bush, food, agent and animal, the agent always taking its single most likely
+action (greedy play), 30 episodes per checkpoint. A pilot on 2026-10-16 showed that both the single
+fixed arrangement and greedy play change the answer. So the user decided (2026-10-18) to
+re-collect the figure's data with **a new random arrangement every episode**, as in training, and
+with **both** action rules: actions drawn from the policy's probabilities (sampled) and greedy. Each
+agent is tested in 4 animal conditions (none, wandering rabbit, chasing rabbit, predator) x 6
+starting injuries (0, 10, 20, 30, 50, 70) x healing on or off x food or no food, at its newest 20
+checkpoints, 100 episodes each. Every other scene setting is the frozen scene's. This section
+specifies the scenes, the test runs and the cost. Nothing has been launched.
+
+### What was produced
+
+- **Scene generator** `scripts/analysis/studies/half_factorial_l05/make_random_layout_scenes.py`
+  (`scenes`, `specs`). It writes 192 scenes in 8 sets, one set per healing x food x action rule,
+  under `configs/environment/experiment/behavior_probes/random_layout/<set>/`, with set names
+  `heal{on,off}_{food,nofood}_{sampled,greedy}` and scene names `avoid_<animal>_inj<NN>.yaml`
+  (`rabbit` = chasing rabbit, `rabbitwander` = wandering rabbit). Each scene is fully resolved (no
+  `extends:`) and round-trip checked through `load_env_config`. Changes from the frozen source:
+  `environment.random_start_pos: true`; every obstacle `area`, animal `spawn_area` and food
+  `spawn_area` = `[[1, 1], [10, 10]]`; `behavior_measures.eval_policy_mode` = `stochastic` (sampled)
+  or `deterministic` (greedy); `behavior_measures.eval_n_episodes: 100`.
+- **Sources.** With food: `behavior_probes/lookalike/injury_grid__{neutral,chase_neutral}_clean`
+  (healing on) and `behavior_probes/no_healing/lookalike__injury_grid__{neutral,chase_neutral}_clean`
+  (healing off). Without food: `behavior_probes/lookalike_nofood/injury_grid__neutral_clean` (healing
+  on), `behavior_probes/no_healing/lookalike_nofood__injury_grid__neutral_clean` and
+  `behavior_probes/level_ladder/lookalike_nofood_chase__noheal` (healing off, chasing rabbit, injury
+  0-30 only). No food-free chasing-rabbit scene existed for healing on (any injury) or for healing off
+  at injury 50 and 70; those are derived from the with-food scene by emptying `environment.resources`,
+  nothing else.
+- **Checks the generator enforces (all pass, 2026-10-18).** Every existing food-free source equals its
+  food scene with `resources` emptied, and differs in nothing else. Each healing-on scene differs from
+  its healing-off twin only in `body.recovery_base_rate` (0.2 on, 0.0 off). Each random-layout scene
+  differs from its frozen source only in the layout keys and the two `behavior_measures` keys above.
+  All 24 scenes of a set have the same observation layout and action count, so one test process can
+  run them together. Separately, the 16 healing-off scenes of the pilot (`tmp/20261016_layout_check/
+  configs/perep{,_nofood}/`, injury 0 and 20) equal the new greedy healing-off scenes except for
+  `eval_n_episodes` (200 there, 100 here).
+- **Sweep specs**, one per set: `configs/eval_sweeps/lookalike_hf_random_layout/
+  lookalike_hf_random_layout_<set>_rppo.yaml`, output `results/eval/avoidance/
+  metrics_history_rppo_lookalike_hf_random_layout/<set>/<label>/`, `episodes: 100`,
+  `max_checkpoints: 20`, nodes 101, 103, 104, 105, `npar: 26`. `make_random_layout_scenes.py specs`
+  writes the run list: every **finished** run (newest checkpoint at least 9.99 M steps and, where a
+  training log exists, the log ends in "Training complete"), and of each run only the result folders
+  that hold its newest 20 checkpoints. Labels follow the existing specs: `l05ref_<agent>_s<seed>`
+  (plain level 05), `lookalike_<agent>_s<seed>` (world 1), `hf_w<N>_<agent>_s<seed>` (worlds 2-16),
+  with `_resumed`, `_resumed2`, ... for later session folders (empty folders count in the numbering).
+  **To add runs later**, re-run `specs` once they finish and launch again: the sweep's incremental rule
+  tests only the new labels. On 2026-10-18 the list has 83 finished runs in 88 folders: plain level 05
+  seeds 42-44 (6), world 1 seeds 42-44 (6), worlds 2-8 seeds 42-44 plus world 8 seeds 45-46 (46),
+  worlds 9-16 seed 42 (16) and seed 43 for worlds 9-12 and world 13 ordinary (9). Left out, still
+  training or queued: seed 43 of world 13 modulated and worlds 14-16, seed 44 of worlds 9-16.
+- `run_sweep.py --dry-run` on the healing-off, with-food, sampled spec: 1,702 checkpoint lines
+  (83 x 20 plus 42 extra, below), 24 scenes each, about 425 lines per node.
+
+### Checked from a real run: the action rule reaches the rollout
+
+From the code: the sweep worker calls `eval_rollout.py --batched --config-list ... --eval-n-episodes
+100` without `--eval-policy-mode`, so each scene's own `eval_policy_mode` applies;
+`_run_episodes_batched(..., deterministic=(eval_policy_mode == "deterministic"))` passes it into the
+compiled rollout, where `stochastic` draws each action with `jax.random.categorical` from that
+episode's own key chain. The chain starts at `PRNGKey(seed)` of the episode and is split per episode
+inside a `vmap`, so an episode's draws depend on its seed only, not on where it sits in the batch.
+
+Real run on this container's CPU (2026-10-18, worker's thread caps and flags; world 6 modulated
+seed 42 at checkpoint 10,000,034; wandering rabbit and predator at injury 20, healing off, with
+food; 20 episodes):
+
+| Check | Wandering rabbit | Predator |
+|---|---|---|
+| `eval_policy_mode` written to each output's `metadata.json` | stochastic / deterministic as set | same |
+| Same start cell, sampled vs greedy (same seed, same layout) | 20 of 20 | 20 of 20 |
+| Action sequence differs, sampled vs greedy | 20 of 20 | 20 of 20 |
+| Bush dwell, sampled vs greedy | 0.355 vs 0.372 | 0.428 vs 0.309 |
+| Sampled re-run identical (actions, positions, bush, length) | 20 of 20 | 20 of 20 |
+| Sampled, 13 of the seeds in reverse order (different batch size and position), identical per seed | 13 of 13 | 13 of 13 |
+| Distinct layouts over the 20 episodes (predator scene) | | agent start 18, bush 18, predator 17, food 17 |
+
+Two things the reader should know. (1) The episode seeds are the same 100 in every scene, at every
+checkpoint, for both action rules (`eval_seeds: {rng: 42}`). Sampled and greedy, and one checkpoint
+and the next, are therefore compared on the same 100 layouts, which removes layout differences from
+those comparisons. But it also means each scene has **100 distinct layouts, not 2,000**: the 20
+checkpoints re-use them. An interval computed over checkpoints treats them as independent and so
+does not include the uncertainty from which 100 layouts were drawn. The pilot's sample-size check
+(`tmp/20261016_layout_check/n_scaling*.csv`) used distinct layouts at one checkpoint; its per-episode
+spread for the rabbit x injury contrast, about 47 points of bush dwell, gives a layout-sampling error
+of about 4.7 points at 100 layouts. Using a different seed block per checkpoint would need a change
+to the sweep (below); not done, decision for the user. (2) In sampled mode the action key chain and
+the environment's key chain start from the same seed key and stay in step (the first action key is
+the key that draws the agent's start cell; later action keys are the previous step's food-respawn
+key). Those keys feed different random functions (`categorical` on the key itself, `randint` on a
+key derived from it), so no random number is re-used; noted for `code-reviewer`, not expected to
+matter.
+
+### Cost (measured 2026-10-18 on this container, one full line = 1 checkpoint x 24 scenes x 100 episodes)
+
+| | Value |
+|---|---|
+| One line, warm compile cache | 53 s test + 6 s archive and score; about 75 CPU-seconds; 1.5 GB memory |
+| One line, cold cache (first per node, and first greedy line) | 62-66 s, 130-145 CPU-seconds |
+| Archive per cell (one checkpoint x scene) | about 0.95 MB (21-23 MB per line) |
+| Lines | 1,702 per set x 8 sets = 13,616 |
+| Episodes | 13,616 x 24 x 100 = 32.7 million |
+| CPU time | about 300 CPU-hours |
+| Wall time, 4 nodes x 26 processes | about 2.2 h at the measured speed; plan on 3-4 h for all 8 sets |
+| Disk, if no archive is deleted | about 310 GB (NAS has 26 TB free) |
+| Disk at peak, archives deleted after each set is collated | about 39 GB |
+
+The 42 extra lines: four runs resumed close to their end need checkpoints from two folders
+(world 2 ordinary seed 44, world 3 ordinary seed 44, world 5 modulated seed 43, world 8 modulated
+seed 44); the earlier folder is a separate label and gets its own newest 20, of which only 1-17 are
+needed. The sweep has no per-run checkpoint cap; the extra cost is 2.5 %.
+
+**This container as a worker.** `run_command.py 102` reaches it, but it is training two runs (world 15
+modulated and world 16 ordinary, seed 43) on its GPUs, and the user's rule excludes nodes running
+training. `npar` is one number for all nodes, so 26 processes here would compete with the training's
+data loading. Add it (`--nodes 101,103,104,105,102`) once those two runs finish.
+
+### Deleting episode archives after scoring (user decision, not yet supported)
+
+The pipeline keeps every archive: `finish_cells.py` writes `_scratch/<label>/<scene>/<step>.zip`
+before scoring, and nothing removes archives (`EB.delete_verified` removes only original folders
+after packing). Deleting on the node right after scoring is **not** safe: the rows table is checked
+for holes and merged into the per-scene CSVs only at collation, on the driver. The smallest safe
+step, for `senior-developer` to plan (code under `scripts/eval/`):
+a `run_sweep.py --prune-archives` step after collation that deletes a cell's `<step>.zip` only when
+its (run, scene) group was merged in that collation, the CSV row for that step exists with
+`n_episodes` = 100 and its `bundle` column names that archive, and the launch's `_provenance/` holds
+the scene files; it logs path, size and sha256 of each deleted file, and keeps CSVs, rows tables and
+provenance. Recovery after deletion is a re-collection, which reproduces the same episodes (the re-run
+check above). Until that exists, a launch per set followed by the same check by hand keeps peak disk
+near 39 GB; a decision for the user. Note `data.py` reads only the CSVs, never the archives.
+
+### Before launch
+
+1. `env-config-reviewer` on the 8 scene sets and 8 specs; `plan-reviewer` on this section.
+2. `data.py` needs a reader for the new output folders (one folder per set, all run kinds together,
+   two action rules); that is the page builder's work.
+3. Free-node check on the day (`scripts/lab/gpu_status.py`, diary, `pgrep -f train.py`); nodes 101,
+   103, 104 and 105 were idle on 2026-10-18 01:00 (34-36 cores, 120+ GB free memory, 63 GB `/tmp`).
+4. Launch command per set (the user or `training-runner`):
+   `/home/vncuser/miniconda3/envs/grid_world_pain/bin/python scripts/eval/dwell_sweep/run_sweep.py configs/eval_sweeps/lookalike_hf_random_layout/lookalike_hf_random_layout_<set>_rppo.yaml`
 
 ## Results / Conclusions
 
