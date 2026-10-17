@@ -1,12 +1,12 @@
 <!-- Figure 5 dashboard (user, 2026-10-18: interactive, drawn in the page from the embedded data instead of
      pre-generated images). Filled by build_page.py: the data token is the JSON written by dashboard_data.py. -->
 <style>
-.f5 { --hm-0:#fbfbfa; --hm-1:#cfe0f5; --hm-2:#7fb0e6; --hm-3:#2a78d6; --hm-4:#123f77;
-      --neg-1:#f8d3c3; --neg-2:#eb6834; --neg-3:#9c3a12; --cmp-g:#6e747e; --cmp-s:#eb6834; }
+.f5 { --hm-0:#fbfbfa; --hm-1:#cfe0f5; --hm-2:#7fb0e6; --hm-3:#2470c9; --hm-4:#123f77;
+      --neg-1:#f8d3c3; --neg-2:#d85a28; --neg-3:#9c3a12; --cmp-g:#6e747e; --cmp-s:#eb6834; }
 .f5-controls { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr)); gap:10px 18px;
   background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:12px 14px; margin:0 0 12px; }
 .f5-ctl { display:flex; flex-direction:column; gap:5px; min-width:0; }
-.f5-ctl > span { font-family:var(--f-head); font-size:12px; font-weight:600; letter-spacing:.08em;
+.f5-ctl > span, .f5-ctl > label > span { font-family:var(--f-head); font-size:12px; font-weight:600; letter-spacing:.08em;
   text-transform:uppercase; color:var(--ink-2); }
 .f5-seg { display:flex; flex-wrap:wrap; gap:4px; }
 .f5-seg button { font:inherit; font-size:13.5px; line-height:1.2; padding:5px 10px; border:1px solid var(--rule);
@@ -21,24 +21,29 @@ table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numer
 .f5-grid th { font-size:12.5px; font-weight:600; color:var(--ink-2); text-align:center; vertical-align:bottom;
   padding:4px 3px; line-height:1.25; }
 .f5-grid th.rowh { text-align:left; white-space:nowrap; font-weight:500; color:var(--ink); vertical-align:middle;
-  padding-right:8px; }
+  padding-right:8px; position:sticky; left:0; background:var(--ground); z-index:1; }
 .f5-grid th.rowh small { color:var(--ink-3); font-weight:400; }
 .f5-grid td { text-align:center; padding:5px 2px; line-height:1.2; font-size:13.5px; min-width:58px; border-radius:2px; }
-.f5-grid td small { display:block; font-size:11.5px; opacity:.85; }
+.f5-grid td small { display:block; font-size:11.5px; }
 .f5-grid tr.f5-row { cursor:pointer; }
 .f5-grid tr.f5-row:hover th.rowh, .f5-grid tr.f5-row:focus-visible th.rowh { color:var(--accent-text); text-decoration:underline; }
 .f5-grid tr.f5-sel th.rowh { color:var(--accent-text); font-weight:700; }
 .f5-grid tr.f5-gap td, .f5-grid tr.f5-gap th { padding:0; height:5px; }
 .f5-grid th.grp { border-bottom:2px solid var(--rule); font-family:var(--f-head); letter-spacing:.04em; }
 .f5-grid td.sep, .f5-grid th.sep { width:8px; min-width:8px; padding:0; background:transparent; }
-.f5-detail { border:1px solid var(--line); border-radius:6px; padding:10px 14px; margin:10px 0 0; background:var(--ground); }
-.f5-detail h4 { margin:0 0 6px; font-size:15px; }
-.f5-detail table { border-collapse:collapse; font-variant-numeric:tabular-nums; font-size:13px; min-width:600px; }
-.f5-detail td, .f5-detail th { padding:3px 8px; border-bottom:1px solid var(--line); text-align:right; }
+.f5-detail { border:1px solid var(--line); border-radius:6px; padding:10px 14px; margin:4px 0 8px; background:var(--ground); text-align:left; }
+.f5-grid tr.f5-drow > td { padding:0; background:transparent; }
+.f5-grid tr.f5-drow .f5-detail { position:sticky; left:0; box-sizing:border-box; }
+.f5-detail h4 small { display:inline; }
+.f5-grid tr.f5-row > td { font-weight:600; }
+.f5-detail h4 { margin:0 0 6px; font-size:15px; text-transform:none; letter-spacing:0; }
+.f5-detail table { border-collapse:collapse; font-variant-numeric:tabular-nums; font-size:13px; }
+.f5-detail td, .f5-detail th { min-width:0; border-radius:0; font-size:13px; vertical-align:middle; padding:3px 8px; border-bottom:1px solid var(--line); text-align:right; }
 .f5-detail th:first-child, .f5-detail td:first-child { text-align:left; }
 .f5-legend { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; font-size:12.5px; color:var(--ink-2); margin:8px 0 0; }
 .f5-ramp { display:inline-block; width:150px; height:10px; border-radius:2px; vertical-align:middle; border:1px solid var(--line); }
-.f5-cmp svg { display:block; width:100%; height:auto; min-width:600px; }
+.f5-cmp svg { display:block; width:100%; height:auto; }
+.f5-nw { white-space:nowrap; }
 .f5-cmp text { fill:var(--ink); font-family:var(--f-body); }
 .f5-key { display:inline-flex; align-items:center; gap:5px; }
 .f5-key i { display:inline-block; width:10px; height:10px; border-radius:50%; }
@@ -70,10 +75,9 @@ table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numer
   <div class="callout" id="f5-healwarn" hidden><p><strong>Healing on mixes two reasons to stay on the bush.</strong>
   With bush healing on, an injured agent also sits on the bush to heal, so these contrasts do not separate hiding from
   healing. Read them with healing off.</p></div>
-  <p class="cue" hidden>&larr; the table is wider than the screen &mdash; scroll it sideways</p>
+  <p class="cue" hidden>&larr; the figure is wider than the screen &mdash; scroll it sideways</p>
   <div class="scroll" id="f5-body"></div>
   <div class="f5-legend" id="f5-legend"></div>
-  <div id="f5-detail"></div>
   <figcaption id="f5-cap">
     <span><b>Figure 5 &mdash; hiding with each animal, every world, both action rules.</b> Click a row for each seed's values.</span>
     <span><b>Axes.</b> <em>Bush dwell</em> view: columns are four test scenes &mdash; no animal, the harmless rabbit
@@ -83,7 +87,7 @@ table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numer
     Colour and upper number: bush dwell, the share of the test's 100 steps spent on the bush (%), averaged over the
     newest 20 tested checkpoints of each seed, then over seeds. Lower number: the seed-to-seed standard deviation of the
     per-seed values, in percentage points (sample SD, n&minus;1; &ldquo;&mdash;&rdquo; with one seed), or, with
-    the switch, the half-width of the 95&nbsp;% interval over which 100 layouts were drawn.
+    the switch, the half-width of a 95&nbsp;% interval from redrawing the 100 layouts (a bootstrap; see How it is computed).
     <em>Contrasts</em> view: same rows; columns are differences in bush dwell, in percentage points &mdash; the injury effect
     (injured minus unhurt) per scene, the rabbit effect (wandering rabbit minus no animal) unhurt and injured, and
     rabbit &times; injury (the injured rabbit effect minus the unhurt one); orange below zero, blue above.
@@ -116,6 +120,7 @@ table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numer
 (function () {
   "use strict";
   var D = JSON.parse(document.getElementById("f5-data").textContent);
+  var body = document.getElementById("f5-body");
   var M = D.meta;
   var AN = [["none", "no animal"], ["rabbitwander", "wandering rabbit"], ["rabbit", "chasing rabbit"], ["pred", "predator"]];
   var S = { view: "dwell", act: "sampled", heal: "off", food: "food", inj: "20", agent: "both", worlds: "all",
@@ -194,11 +199,17 @@ table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numer
   var NEG = ["--hm-0", "--neg-1", "--neg-2", "--neg-3"].map(tok), POS = ["--hm-0", "--hm-1", "--hm-3", "--hm-4"].map(tok);
   function ramp(stops, t) { t = Math.max(0, Math.min(1, t)); var k = t * (stops.length - 1), i = Math.min(stops.length - 2, Math.floor(k));
     return lerp(stops[i], stops[i + 1], k - i); }
-  function cellDwell(v) { return isFinite(v) ? { bg: ramp(SEQ, v / 100), fg: v > 75 ? "#fff" : tok("--ink") } : { bg: tok("--surface"), fg: tok("--ink-3") }; }
+  function lum(hex) { var n = parseInt(hex.slice(1), 16);
+    return [16, 8, 0].map(function (sh) { var c = ((n >> sh) & 255) / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); })
+      .reduce(function (a, c, i) { return a + c * [0.2126, 0.7152, 0.0722][i]; }, 0); }
+  function textOn(bg) { var lb = lum(bg), li = lum(tok("--ink")), cw = 1.05 / (lb + 0.05), ci = (lb + 0.05) / (li + 0.05);
+    return cw > ci ? "#fff" : tok("--ink"); }
+  function cellDwell(v) { return isFinite(v) ? (function (b) { return { bg: b, fg: textOn(b) }; })(ramp(SEQ, v / 100)) : { bg: tok("--surface"), fg: tok("--ink-3") }; }
   var CMAX = 40;
   function cellDiff(v) { if (!isFinite(v)) return { bg: tok("--surface"), fg: tok("--ink-3") };
-    var t = Math.abs(v) / CMAX; return { bg: ramp(v < 0 ? NEG : POS, t), fg: t > 0.72 ? "#fff" : tok("--ink") }; }
-  function fmt(v, signed) { return !isFinite(v) ? "—" : (signed && v > 0 ? "+" : "") + (Math.abs(v) < 0.5 ? (signed ? "0" : "0") : v.toFixed(0)); }
+    var b = ramp(v < 0 ? NEG : POS, Math.abs(v) / CMAX); return { bg: b, fg: textOn(b) }; }
+  function fmt(v, signed) { if (!isFinite(v)) return "—"; var r = Math.round(v); if (r === 0) r = 0;
+    return (signed && r > 0 ? "+" : "") + r; }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 
   function columns() {
@@ -236,6 +247,7 @@ table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numer
           "<small>" + lowerText(set, g, st, c.id) + "</small></td>";
       });
       h += "</tr>";
+      if (S.sel === key) h += '<tr class="f5-drow"><td colspan="' + (cols.length + 2) + '">' + detailHTML(set, g) + "</td></tr>";
     });
     return h + "</tbody></table>";
   }
@@ -259,17 +271,19 @@ table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numer
     pts.forEach(function (p) { [p.gr, p.sa].forEach(function (q) { if (isFinite(q.m)) {
       var e = isFinite(q.s) ? q.s : 0; lo = Math.min(lo, q.m - e); hi = Math.max(hi, q.m + e); } }); });
     lo = Math.floor(lo / 10) * 10; hi = Math.ceil(hi / 10) * 10;
-    var L = 230, R = 24, W = 900, rh = 22, top = 34, H = top + rows.length * rh + 40;
+    var W = Math.max(body.clientWidth || 900, 320), narrow = W < 600, L = narrow ? 112 : 230, R = 16, rh = 22, top = narrow ? 50 : 34,
+        H = top + rows.length * rh + 40;
+    var hasG = !!D.data[sG], hasS = !!D.data[sS];
     function X(v) { return L + (v - lo) / (hi - lo) * (W - L - R); }
     var s = '<div class="f5-cmp"><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(measureName(m)) +
       ', greedy against sampled actions, one row per world and agent">';
-    for (var t = lo; t <= hi; t += (hi - lo > 80 ? 20 : 10)) {
+    for (var t = lo; t <= hi; t += (narrow || hi - lo > 80 ? 20 : 10)) {
       s += '<line x1="' + X(t) + '" x2="' + X(t) + '" y1="' + (top - 6) + '" y2="' + (H - 34) + '" stroke="' + tok(t === 0 ? "--rule" : "--line") + '" stroke-width="' + (t === 0 ? 1.5 : 1) + '"/>';
-      s += '<text x="' + X(t) + '" y="' + (H - 18) + '" font-size="12" text-anchor="middle">' + (t > 0 && !isD ? "+" : "") + t + "</text>";
+      s += '<text x="' + X(t) + '" y="' + (H - 18) + '" font-size="12" text-anchor="middle">' + (t > 0 && !isD ? "+" : "") + (t < 0 ? "\u2212" + (-t) : t) + "</text>";
     }
     s += '<text x="' + ((L + W - R) / 2) + '" y="' + (H - 2) + '" font-size="12.5" text-anchor="middle">' + esc(measureName(m)) + "</text>";
     pts.forEach(function (p, i) {
-      var y = top + i * rh + rh / 2, lab = (p.g.world === 0 ? "level 05" : "w" + p.g.world) + " " + p.g.agent + " (n=" + Math.max(p.gr.n, p.sa.n) + ")";
+      var y = top + i * rh + rh / 2, lab = (p.g.world === 0 ? (narrow ? "L05" : "level 05") : "w" + p.g.world) + " " + (narrow ? p.g.agent.slice(0, 3) + "." : p.g.agent) + " (" + (narrow ? "" : "n=") + Math.max(p.gr.n, p.sa.n) + ")";
       if (i % 2 === 0) s += '<rect x="0" y="' + (y - rh / 2) + '" width="' + W + '" height="' + rh + '" fill="' + tok("--surface") + '" opacity=".55"/>';
       s += '<text x="' + (L - 10) + '" y="' + (y + 4) + '" font-size="12.5" text-anchor="end">' + esc(lab) + "</text>";
       [[p.gr, tok("--cmp-g"), -4], [p.sa, tok("--cmp-s"), 4]].forEach(function (q) {
@@ -278,17 +292,21 @@ table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numer
         s += '<circle cx="' + X(q[0].m) + '" cy="' + yy + '" r="4.5" fill="' + q[1] + '"/>';
       });
     });
-    s += '<text x="' + L + '" y="16" font-size="12.5"><tspan fill="' + tok("--cmp-g") + '">●</tspan> greedy (most likely move)   <tspan fill="' + tok("--cmp-s") + '">●</tspan> sampled from the policy   line: ' + (S.unc === "lay" ? "layout 95% interval" : "±1 seed SD") + "</text>";
+    var lg = [[tok("--cmp-g"), hasG ? "greedy (most likely move)" : "greedy: not tested yet"],
+              [tok("--cmp-s"), hasS ? "sampled from the policy" : "sampled: not tested yet"]];
+    var ln = "line: " + (S.unc === "lay" ? "layout 95% interval" : "±1 seed SD");
+    if (narrow) {
+      s += '<text x="8" y="16" font-size="12"><tspan fill="' + lg[0][0] + '">●</tspan><tspan dx="4">' + lg[0][1] + '</tspan><tspan dx="12" fill="' + lg[1][0] + '">●</tspan><tspan dx="4">' + lg[1][1] + "</tspan></text>";
+      s += '<text x="8" y="34" font-size="12">' + ln + "</text>";
+    } else {
+      s += '<text x="' + L + '" y="16" font-size="12.5"><tspan fill="' + lg[0][0] + '">●</tspan><tspan dx="4">' + lg[0][1] + '</tspan><tspan dx="16" fill="' + lg[1][0] + '">●</tspan><tspan dx="4">' + lg[1][1] + '</tspan><tspan dx="16">' + ln + "</tspan></text>";
+    }
     return s + "</svg></div>";
   }
 
-  function drawDetail() {
-    var el = document.getElementById("f5-detail");
-    if (!S.sel || S.view === "compare") { el.innerHTML = ""; return; }
-    var set = setKey(), g = rowsFor(set).filter(function (r) { return r.world + "|" + r.agent === S.sel; })[0];
-    if (!g) { el.innerHTML = ""; return; }
+  function detailHTML(set, g) {
     var cols = columns(), signed = S.view !== "dwell";
-    var h = '<div class="f5-detail"><h4>' + rowLabel(g, g.rids.length) + ' — each seed</h4><div class="scroll"><table><thead><tr><th>seed</th><th>checkpoints (M steps)</th>';
+    var h = '<div class="f5-detail"><h4>' + rowLabel(g, g.rids.length) + ' — each seed</h4><p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p><div class="scroll"><table><thead><tr><th>seed</th><th>checkpoints (M steps)</th>';
     cols.forEach(function (c) { h += "<th>" + esc((c.grp === 0 ? (S.view === "dwell" ? "unhurt, " : "injury, ") : (S.view === "dwell" ? "inj. " + S.inj + ", " : "")) + c.top) + "</th>"; });
     h += "</tr></thead><tbody>";
     g.rids.slice().sort(function (a, b) { return D.runs[a].seed - D.runs[b].seed; }).forEach(function (rid) {
@@ -298,27 +316,34 @@ table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numer
         h += "<td>" + fmt(mean(s), signed) + ' <small style="color:var(--ink-3)">±' + sd(s).toFixed(0) + "</small></td>"; });
       h += "</tr>";
     });
-    el.innerHTML = h + '</tbody></table></div><p style="font-size:12.5px;color:var(--ink-2);margin:6px 0 0">Each value: the mean over that seed\'s newest 20 tested checkpoints; ± is the standard deviation across those 20 checkpoints (how much the value moves late in training, not an error bar). Click the row again to close.</p></div>';
+    return h + '</tbody></table></div><p style="font-size:12.5px;color:var(--ink-2);margin:6px 0 0">Each value: the mean over that seed\'s newest 20 tested checkpoints; ± is the standard deviation across those 20 checkpoints (how much the value moves late in training, not an error bar). Click the row again to close.</p></div>';
   }
 
   function legend() {
-    var el = document.getElementById("f5-legend");
-    if (S.view === "dwell") el.innerHTML = '<span>bush dwell, % of steps:</span> 0 <span class="f5-ramp" style="background:linear-gradient(90deg,' + SEQ.join(",") + ')"></span> 100 <span>· lower number: ' + (S.unc === "lay" ? "layout 95% interval" : "seed-to-seed SD") + "</span>";
-    else if (S.view === "contrast") el.innerHTML = '<span>difference in bush dwell, points:</span> −' + CMAX + ' <span class="f5-ramp" style="background:linear-gradient(90deg,' + NEG.slice().reverse().join(",") + "," + POS.slice(1).join(",") + ')"></span> +' + CMAX + "+ <span>· lower number: " + (S.unc === "lay" ? "layout 95% interval" : "seed-to-seed SD") + "</span>";
-    else el.innerHTML = "";
+    var el = document.getElementById("f5-legend"), low = S.unc === "lay" ? "layout 95% interval" : "seed-to-seed SD";
+    var empty = !!document.querySelector("#f5-body .f5-empty");
+    if (empty || S.view === "compare") { el.innerHTML = ""; return; }
+    if (S.view === "dwell") el.innerHTML = '<span>bush dwell, % of steps:</span> <span class="f5-nw">0 <span class="f5-ramp" style="background:linear-gradient(90deg,' + SEQ.join(",") + ')"></span> 100</span> <span>· lower number: ' + low + "</span>";
+    else el.innerHTML = '<span>difference in bush dwell, points:</span> <span class="f5-nw">−' + CMAX + ' or less <span class="f5-ramp" style="background:linear-gradient(90deg,' + NEG.slice().reverse().join(",") + "," + POS.slice(1).join(",") + ')"></span> +' + CMAX + ' or more</span> <span>· lower number: ' + low + "</span>";
   }
+  var PLANNED = ["off", "on"].reduce(function (o, h) { ["food", "nofood"].forEach(function (f) { ["sampled", "greedy"].forEach(function (a) {
+    o.push("heal" + h + "_" + f + "_" + a); }); }); return o; }, []);
+  function setName(s) { var p = s.split("_");
+    return "healing " + p[0].slice(4) + ", " + (p[1] === "food" ? "with food" : "without food") + ", " + p[2]; }
   function dataStatement() {
-    var sets = M.sets, nRuns = {}, eps = 0;
-    sets.forEach(function (s) { nRuns[s] = Object.keys(D.data[s]).length; eps += nRuns[s] * M.newest * M.animals.length * M.injuries.length * M.episodes; });
-    var cur = setKey(), n = D.data[cur] ? Object.keys(D.data[cur]).length : 0, all = Object.keys(D.runs).length;
-    var inc = M.incomplete.filter(function (x) { return x.set === cur; }).length;
-    var h = '<details class="bb-data"><summary><b>Data.</b> This selection uses ' + n + " of " + (n + inc) + " tested runs (" +
-      ((n + inc) ? Math.round(100 * n / (n + inc)) : 0) + "%) &mdash; open for the counts</summary><div class=\"scroll\"><table class=\"wide\" style=\"min-width:640px\"><thead><tr><th>scene set</th><th class=\"n\">runs used</th><th class=\"n\">runs left out</th><th class=\"n\">episodes</th><th>why</th></tr></thead><tbody>";
-    sets.forEach(function (s) { var k = M.incomplete.filter(function (x) { return x.set === s; }).length;
-      h += "<tr><td>" + s.replace("heal", "healing ").replace(/_/g, ", ") + '</td><td class="n">' + nRuns[s] + '</td><td class="n">' + k +
-        '</td><td class="n">' + (nRuns[s] * M.newest * M.animals.length * M.injuries.length * M.episodes).toLocaleString("en") +
-        "</td><td>newest " + M.newest + " checkpoints × " + M.animals.length * M.injuries.length + " scenes × " + M.episodes + " episodes per run; a run is left out of a set until all its 20 checkpoints are tested in every scene</td></tr>"; });
-    h += "</tbody></table></div><p>" + all + " runs in all (level-05 reference and worlds 1&ndash;16, every finished seed). Counts come from the data file the page reads, written by <code>dashboard_data.py</code>.</p></details>";
+    var all = Object.keys(D.runs).length, per = M.newest * M.animals.length * M.injuries.length * M.episodes;
+    var cur = setKey(), n = D.data[cur] ? Object.keys(D.data[cur]).length : 0;
+    var sum = D.data[cur] ? "This selection uses " + n + " of " + all + " finished runs (" + Math.round(100 * n / all) + "%)"
+                          : "No runs tested for this selection yet";
+    var h = '<details class="bb-data"><summary><b>Data.</b> ' + sum + ' &mdash; open for the counts</summary><p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p><div class="scroll"><table class="wide" style="min-width:640px"><thead><tr><th>scene set</th><th class="n">runs used</th><th class="n">of finished</th><th class="n">share</th><th class="n">episodes</th><th>why</th></tr></thead><tbody>';
+    PLANNED.forEach(function (s) {
+      var k = D.data[s] ? Object.keys(D.data[s]).length : 0, inc = M.incomplete.filter(function (x) { return x.set === s; }).length;
+      h += "<tr><td>" + setName(s) + '</td><td class="n">' + (D.data[s] ? k : "&mdash;") + '</td><td class="n">' + all + '</td><td class="n">' +
+        (D.data[s] ? Math.round(100 * k / all) + "%" : "&mdash;") + '</td><td class="n">' + (D.data[s] ? (k * per).toLocaleString("en") : "&mdash;") + "</td><td>" +
+        (D.data[s] ? "newest " + M.newest + " checkpoints × " + M.animals.length * M.injuries.length + " scenes × " + M.episodes + " episodes per run" +
+          (inc ? "; " + inc + " run(s) left out until all 20 checkpoints are tested in every scene" : "") : "not tested yet") + "</td></tr>";
+    });
+    h += "</tbody></table></div><p>" + all + " finished runs (level-05 reference and worlds 1&ndash;16, every finished seed). Counts come from the data file the page reads, written by <code>dashboard_data.py</code>.</p></details>";
     document.getElementById("f5-data-stmt").innerHTML = h;
   }
 
@@ -339,7 +364,8 @@ table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numer
     document.getElementById("f5-healwarn").hidden = !(S.heal === "on" && S.view !== "dwell");
     document.getElementById("f5-state").textContent = state();
     document.getElementById("f5-body").innerHTML = S.view === "compare" ? drawCompare() : drawTable();
-    legend(); drawDetail(); dataStatement();
+    var dt = body.querySelector(".f5-drow .f5-detail"); if (dt) dt.style.width = (body.clientWidth - 4) + "px";
+    legend(); dataStatement();
     if (typeof updateCues === "function") updateCues();
   }
   var sel = document.getElementById("f5-measure");
@@ -354,11 +380,15 @@ table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numer
       S[seg.getAttribute("data-k")] = b.getAttribute("data-v"); render();
     });
   });
-  var body = document.getElementById("f5-body");
-  function toggle(tr) { var k = tr.getAttribute("data-row"); S.sel = S.sel === k ? null : k; render(); }
+  function toggle(tr) { var k = tr.getAttribute("data-row"); S.sel = S.sel === k ? null : k; render();
+    var r = body.querySelector('tr[data-row="' + k + '"]'); if (r) r.focus({ preventScroll: true }); }
   body.addEventListener("click", function (e) { var tr = e.target.closest("tr.f5-row"); if (tr) toggle(tr); });
   body.addEventListener("keydown", function (e) { var tr = e.target.closest("tr.f5-row");
     if (tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(tr); } });
+  var rz = null;   // the compare chart is drawn for the container's width; redraw it when that changes
+  window.addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(function () {
+    if (S.view === "compare") return render();
+    var dt = body.querySelector(".f5-drow .f5-detail"); if (dt) dt.style.width = (body.clientWidth - 4) + "px"; }, 150); });
   render();
 })();
 </script>
