@@ -1,0 +1,364 @@
+<!-- Figure 5 dashboard (user, 2026-10-18: interactive, drawn in the page from the embedded data instead of
+     pre-generated images). Filled by build_page.py: the data token is the JSON written by dashboard_data.py. -->
+<style>
+.f5 { --hm-0:#fbfbfa; --hm-1:#cfe0f5; --hm-2:#7fb0e6; --hm-3:#2a78d6; --hm-4:#123f77;
+      --neg-1:#f8d3c3; --neg-2:#eb6834; --neg-3:#9c3a12; --cmp-g:#6e747e; --cmp-s:#eb6834; }
+.f5-controls { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr)); gap:10px 18px;
+  background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:12px 14px; margin:0 0 12px; }
+.f5-ctl { display:flex; flex-direction:column; gap:5px; min-width:0; }
+.f5-ctl > span { font-family:var(--f-head); font-size:12px; font-weight:600; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--ink-2); }
+.f5-seg { display:flex; flex-wrap:wrap; gap:4px; }
+.f5-seg button { font:inherit; font-size:13.5px; line-height:1.2; padding:5px 10px; border:1px solid var(--rule);
+  border-radius:4px; background:var(--ground); color:var(--ink); cursor:pointer; }
+.f5-seg button[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:#fff; }
+.f5-seg button:disabled { opacity:.45; cursor:not-allowed; }
+.f5-ctl select { font:inherit; font-size:13.5px; padding:5px 8px; border:1px solid var(--rule); border-radius:4px;
+  background:var(--ground); color:var(--ink); max-width:100%; }
+.f5-state { font-size:13.5px; color:var(--ink-2); margin:0 0 8px; }
+.f5 .scroll { overflow-x:auto; }
+table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numeric:tabular-nums; min-width:640px; width:100%; }
+.f5-grid th { font-size:12.5px; font-weight:600; color:var(--ink-2); text-align:center; vertical-align:bottom;
+  padding:4px 3px; line-height:1.25; }
+.f5-grid th.rowh { text-align:left; white-space:nowrap; font-weight:500; color:var(--ink); vertical-align:middle;
+  padding-right:8px; }
+.f5-grid th.rowh small { color:var(--ink-3); font-weight:400; }
+.f5-grid td { text-align:center; padding:5px 2px; line-height:1.2; font-size:13.5px; min-width:58px; border-radius:2px; }
+.f5-grid td small { display:block; font-size:11.5px; opacity:.85; }
+.f5-grid tr.f5-row { cursor:pointer; }
+.f5-grid tr.f5-row:hover th.rowh, .f5-grid tr.f5-row:focus-visible th.rowh { color:var(--accent-text); text-decoration:underline; }
+.f5-grid tr.f5-sel th.rowh { color:var(--accent-text); font-weight:700; }
+.f5-grid tr.f5-gap td, .f5-grid tr.f5-gap th { padding:0; height:5px; }
+.f5-grid th.grp { border-bottom:2px solid var(--rule); font-family:var(--f-head); letter-spacing:.04em; }
+.f5-grid td.sep, .f5-grid th.sep { width:8px; min-width:8px; padding:0; background:transparent; }
+.f5-detail { border:1px solid var(--line); border-radius:6px; padding:10px 14px; margin:10px 0 0; background:var(--ground); }
+.f5-detail h4 { margin:0 0 6px; font-size:15px; }
+.f5-detail table { border-collapse:collapse; font-variant-numeric:tabular-nums; font-size:13px; min-width:600px; }
+.f5-detail td, .f5-detail th { padding:3px 8px; border-bottom:1px solid var(--line); text-align:right; }
+.f5-detail th:first-child, .f5-detail td:first-child { text-align:left; }
+.f5-legend { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; font-size:12.5px; color:var(--ink-2); margin:8px 0 0; }
+.f5-ramp { display:inline-block; width:150px; height:10px; border-radius:2px; vertical-align:middle; border:1px solid var(--line); }
+.f5-cmp svg { display:block; width:100%; height:auto; min-width:600px; }
+.f5-cmp text { fill:var(--ink); font-family:var(--f-body); }
+.f5-key { display:inline-flex; align-items:center; gap:5px; }
+.f5-key i { display:inline-block; width:10px; height:10px; border-radius:50%; }
+.f5-empty { padding:18px; color:var(--ink-2); background:var(--surface); border-radius:6px; }
+</style>
+
+<figure class="f5" id="fig-f5_dashboard" aria-describedby="f5-cap">
+  <div class="f5-controls" role="group" aria-label="Figure 5 options">
+    <div class="f5-ctl"><span id="f5l-view">View</span><div class="f5-seg" data-k="view" aria-labelledby="f5l-view">
+      <button type="button" data-v="dwell">Bush dwell</button><button type="button" data-v="contrast">Contrasts</button><button type="button" data-v="compare">Greedy vs sampled</button></div></div>
+    <div class="f5-ctl"><span id="f5l-act">Actions</span><div class="f5-seg" data-k="act" aria-labelledby="f5l-act">
+      <button type="button" data-v="sampled">Sampled</button><button type="button" data-v="greedy">Greedy</button></div></div>
+    <div class="f5-ctl"><span id="f5l-heal">Bush healing in the test</span><div class="f5-seg" data-k="heal" aria-labelledby="f5l-heal">
+      <button type="button" data-v="off">Off</button><button type="button" data-v="on">On</button></div></div>
+    <div class="f5-ctl"><span id="f5l-food">Food item</span><div class="f5-seg" data-k="food" aria-labelledby="f5l-food">
+      <button type="button" data-v="food">With</button><button type="button" data-v="nofood">Without</button></div></div>
+    <div class="f5-ctl"><span id="f5l-inj">Starting injury</span><div class="f5-seg" data-k="inj" aria-labelledby="f5l-inj">
+      <button type="button" data-v="10">10</button><button type="button" data-v="20">20</button><button type="button" data-v="30">30</button><button type="button" data-v="50">50</button><button type="button" data-v="70">70</button></div></div>
+    <div class="f5-ctl"><span id="f5l-agent">Agent</span><div class="f5-seg" data-k="agent" aria-labelledby="f5l-agent">
+      <button type="button" data-v="both">Both</button><button type="button" data-v="ordinary">Ordinary</button><button type="button" data-v="modulated">Modulated</button></div></div>
+    <div class="f5-ctl"><span id="f5l-worlds">Worlds</span><div class="f5-seg" data-k="worlds" aria-labelledby="f5l-worlds">
+      <button type="button" data-v="all">All</button><button type="button" data-v="h1">1&ndash;8</button><button type="button" data-v="h2">9&ndash;16</button></div></div>
+    <div class="f5-ctl"><span id="f5l-unc">Lower number</span><div class="f5-seg" data-k="unc" aria-labelledby="f5l-unc">
+      <button type="button" data-v="seed">Seed-to-seed SD</button><button type="button" data-v="lay">Layout 95% interval</button></div></div>
+    <div class="f5-ctl" id="f5-measure-ctl"><label for="f5-measure" id="f5l-measure"><span>Measure (greedy vs sampled view)</span></label>
+      <select id="f5-measure"></select></div>
+  </div>
+  <p class="f5-state" id="f5-state" aria-live="polite"></p>
+  <div class="callout" id="f5-healwarn" hidden><p><strong>Healing on mixes two reasons to stay on the bush.</strong>
+  With bush healing on, an injured agent also sits on the bush to heal, so these contrasts do not separate hiding from
+  healing. Read them with healing off.</p></div>
+  <p class="cue" hidden>&larr; the table is wider than the screen &mdash; scroll it sideways</p>
+  <div class="scroll" id="f5-body"></div>
+  <div class="f5-legend" id="f5-legend"></div>
+  <div id="f5-detail"></div>
+  <figcaption id="f5-cap">
+    <span><b>Figure 5 &mdash; hiding with each animal, every world, both action rules.</b> Click a row for each seed's values.</span>
+    <span><b>Axes.</b> <em>Bush dwell</em> view: columns are four test scenes &mdash; no animal, the harmless rabbit
+    wandering, the rabbit chasing the agent, and the hunting predator &mdash; first unhurt (injury 0), then at the chosen
+    starting injury; rows are one per world and agent (the plain level-05 reference first, then worlds 1&ndash;16, ordinary
+    above modulated; the letters name the setting changes the world carries; n is the number of training seeds pooled).
+    Colour and upper number: bush dwell, the share of the test's 100 steps spent on the bush (%), averaged over the
+    newest 20 tested checkpoints of each seed, then over seeds. Lower number: the seed-to-seed standard deviation of the
+    per-seed values, in percentage points (sample SD, n&minus;1; &ldquo;&mdash;&rdquo; with one seed), or, with
+    the switch, the half-width of the 95&nbsp;% interval over which 100 layouts were drawn.
+    <em>Contrasts</em> view: same rows; columns are differences in bush dwell, in percentage points &mdash; the injury effect
+    (injured minus unhurt) per scene, the rabbit effect (wandering rabbit minus no animal) unhurt and injured, and
+    rabbit &times; injury (the injured rabbit effect minus the unhurt one); orange below zero, blue above.
+    <em>Greedy vs sampled</em> view: x-axis is the chosen measure (bush dwell in %, or a contrast in percentage points),
+    one row per world and agent, grey dot greedy and orange dot sampled, each the mean over seeds with a line of
+    &plusmn;1 seed SD.</span>
+    <span><b>What it shows.</b> How much each world and agent hides with each animal when the layout changes every
+    episode, how much injury and the harmless rabbit change that, and whether the answer depends on taking the most likely
+    move (greedy) or drawing moves from the policy (sampled).</span>
+    <span id="f5-data-stmt"></span>
+    <span><details><summary><b>How it is computed.</b></summary>
+    <p>Each trained agent was tested at its newest 20 saved checkpoints, 100 episodes of 100 steps per scene.
+    A scene is world 1's test scene (one bush, one animal or none, healing off or on, with or without one small food
+    item), but each episode places the agent, bush, animal and food at new random cells of the 10&times;10 map. The same
+    100 episode seeds, so the same 100 layouts, are used at every checkpoint, in every scene and under both action
+    rules, so comparisons are made on matched layouts; the predator is placed before the bush, so predator scenes match
+    the others only in the agent's start and the food. <em>Greedy</em> takes the most likely move; <em>sampled</em> draws
+    each move from the agent's move probabilities, as in training. Bush dwell is the share of the 100 steps spent on the
+    bush. A run's value is the mean over its 20 checkpoints; rows pool training seeds (mean over seeds). Two spreads can be
+    shown. The <em>seed-to-seed SD</em> says how far one seed's value typically sits from the others; with one to five
+    seeds it is itself rough. The <em>layout interval</em> repeats the calculation 2,000 times on the 100 layouts redrawn
+    with replacement and keeps the middle 95&nbsp;%: how much the value depends on which layouts were drawn. Neither is a
+    significance test. Results in the agents' own training worlds, or at other checkpoints, may differ.</p></details></span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>scripts/analysis/studies/half_factorial_l05/dashboard_data.py</code>, then <code>build_page.py</code></p>
+  <script type="application/json" id="f5-data">{{F5_DATA}}</script>
+</figure>
+
+<script>
+(function () {
+  "use strict";
+  var D = JSON.parse(document.getElementById("f5-data").textContent);
+  var M = D.meta;
+  var AN = [["none", "no animal"], ["rabbitwander", "wandering rabbit"], ["rabbit", "chasing rabbit"], ["pred", "predator"]];
+  var S = { view: "dwell", act: "sampled", heal: "off", food: "food", inj: "20", agent: "both", worlds: "all",
+            measure: "c:rxi", sel: null, unc: "seed" };
+  var CONTRASTS = [
+    ["inj:none", "injury effect, no animal"], ["inj:rabbitwander", "injury effect, wandering rabbit"],
+    ["inj:rabbit", "injury effect, chasing rabbit"], ["inj:pred", "injury effect, predator"],
+    ["c:r0", "rabbit effect, unhurt"], ["c:r1", "rabbit effect, injured"], ["c:rxi", "rabbit × injury"]];
+
+  function setKey() { return "heal" + S.heal + "_" + S.food + "_" + S.act; }
+  function setKeyAct(act) { return "heal" + S.heal + "_" + S.food + "_" + act; }
+  function mean(a) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i]; return s / a.length; }
+  function sd(a) { if (a.length < 2) return NaN; var m = mean(a), s = 0;
+    for (var i = 0; i < a.length; i++) s += (a[i] - m) * (a[i] - m); return Math.sqrt(s / (a.length - 1)); }
+  function inj2(i) { return (i.length < 2 ? "0" : "") + i; }
+
+  // per-checkpoint series of one measure for one run in one set; measure ids: "d:<animal>:<inj>" or a contrast id
+  function series(set, rid, m) {
+    var r = D.data[set] && D.data[set][rid]; if (!r) return null;
+    var v = r.v, I = inj2(S.inj);
+    function g(a, i) { return v[a + "_" + i]; }
+    function diff(x, y) { return x.map(function (q, k) { return q - y[k]; }); }
+    var p = m.split(":");
+    if (p[0] === "d") return g(p[1], p[2] === "x" ? I : p[2]);
+    if (p[0] === "inj") return diff(g(p[1], I), g(p[1], "00"));
+    if (m === "c:r0") return diff(g("rabbitwander", "00"), g("none", "00"));
+    if (m === "c:r1") return diff(g("rabbitwander", I), g("none", I));
+    if (m === "c:rxi") return diff(diff(g("rabbitwander", I), g("none", I)), diff(g("rabbitwander", "00"), g("none", "00")));
+    return null;
+  }
+  // the layout-error id of a page measure at the current injury (dashboard_data.py measures())
+  function layId(m) { var I = inj2(S.inj), p = m.split(":");
+    if (p[0] === "d") return "d:" + p[1] + ":" + (p[2] === "x" ? I : p[2]);
+    if (p[0] === "inj" || m === "c:r1" || m === "c:rxi") return m + "@" + I;
+    return m; }
+  function layErr(set, g, m) { var L = D.lay && D.lay[set] && D.lay[set][g.world + "|" + g.agent];
+    return L ? L[layId(m)] : NaN; }
+  function lowerText(set, g, st, m) {
+    if (S.unc === "lay") { var e = layErr(set, g, m); return isFinite(e) ? "±" + e.toFixed(1) : "n/a"; }
+    return isFinite(st.s) ? "±" + st.s.toFixed(0) : "—"; }
+  function runVal(set, rid, m) { var s = series(set, rid, m); return s ? mean(s) : NaN; }
+
+  function rowsFor(set) {
+    var groups = {};
+    Object.keys(D.runs).forEach(function (rid) {
+      if (!D.data[set] || !D.data[set][rid]) return;
+      var r = D.runs[rid];
+      if (S.agent !== "both" && r.agent !== S.agent) return;
+      if (S.worlds === "h1" && (r.world < 1 || r.world > 8)) return;
+      if (S.worlds === "h2" && r.world < 9) return;
+      var k = r.world + "|" + r.agent;
+      (groups[k] = groups[k] || { world: r.world, agent: r.agent, rids: [] }).rids.push(rid);
+    });
+    return Object.keys(groups).map(function (k) { return groups[k]; }).sort(function (a, b) {
+      return a.world - b.world || (a.agent === "ordinary" ? -1 : 1); });
+  }
+  function rowLabel(g, n) {
+    var w = g.world === 0 ? "level 05" : "w" + g.world, ch = M.new_groups[String(g.world)];
+    var tag = g.world === 0 ? "reference" : (ch === "" ? "none changed" : ch.split("").join(" "));
+    return w + " " + g.agent + ' <small>· ' + tag + " · n=" + n + "</small>";
+  }
+  function stat(set, g, m) {
+    var per = g.rids.map(function (rid) { return runVal(set, rid, m); }).filter(isFinite);
+    return { m: per.length ? mean(per) : NaN, s: sd(per), n: per.length };
+  }
+
+  function lerp(c1, c2, t) {
+    var a = parseInt(c1.slice(1), 16), b = parseInt(c2.slice(1), 16), o = 0;
+    for (var sh = 16; sh >= 0; sh -= 8) {
+      var x = (a >> sh) & 255, y = (b >> sh) & 255; o = (o << 8) | Math.round(x + (y - x) * t); }
+    return "#" + ("00000" + o.toString(16)).slice(-6);
+  }
+  var CS = getComputedStyle(document.querySelector(".f5"));
+  function tok(n) { return CS.getPropertyValue(n).trim(); }
+  var SEQ = ["--hm-0", "--hm-1", "--hm-2", "--hm-3", "--hm-4"].map(tok);
+  var NEG = ["--hm-0", "--neg-1", "--neg-2", "--neg-3"].map(tok), POS = ["--hm-0", "--hm-1", "--hm-3", "--hm-4"].map(tok);
+  function ramp(stops, t) { t = Math.max(0, Math.min(1, t)); var k = t * (stops.length - 1), i = Math.min(stops.length - 2, Math.floor(k));
+    return lerp(stops[i], stops[i + 1], k - i); }
+  function cellDwell(v) { return isFinite(v) ? { bg: ramp(SEQ, v / 100), fg: v > 75 ? "#fff" : tok("--ink") } : { bg: tok("--surface"), fg: tok("--ink-3") }; }
+  var CMAX = 40;
+  function cellDiff(v) { if (!isFinite(v)) return { bg: tok("--surface"), fg: tok("--ink-3") };
+    var t = Math.abs(v) / CMAX; return { bg: ramp(v < 0 ? NEG : POS, t), fg: t > 0.72 ? "#fff" : tok("--ink") }; }
+  function fmt(v, signed) { return !isFinite(v) ? "—" : (signed && v > 0 ? "+" : "") + (Math.abs(v) < 0.5 ? (signed ? "0" : "0") : v.toFixed(0)); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+  function columns() {
+    if (S.view === "dwell") {
+      var c = [];
+      AN.forEach(function (a) { c.push({ id: "d:" + a[0] + ":00", top: a[1], grp: 0 }); });
+      AN.forEach(function (a) { c.push({ id: "d:" + a[0] + ":x", top: a[1], grp: 1 }); });
+      return c;
+    }
+    return CONTRASTS.map(function (c, i) { return { id: c[0], top: c[1].replace(/^injury effect, /, "").replace(/^rabbit effect, /, ""), grp: i < 4 ? 0 : 1 }; });
+  }
+  function groupHeads() {
+    if (S.view === "dwell") return ["unhurt (injury 0)", "injury " + S.inj];
+    return ["injury effect: injury " + S.inj + " minus unhurt", "the harmless rabbit"];
+  }
+
+  function drawTable() {
+    var set = setKey(), cols = columns(), heads = groupHeads(), rows = rowsFor(set);
+    if (!rows.length) return '<p class="f5-empty">No tested runs for this selection yet.</p>';
+    var nG0 = cols.filter(function (c) { return c.grp === 0; }).length, nG1 = cols.length - nG0;
+    var h = '<table class="f5-grid"><thead><tr><th></th><th class="grp" colspan="' + nG0 + '">' + heads[0] +
+      '</th><th class="sep"></th><th class="grp" colspan="' + nG1 + '">' + heads[1] + "</th></tr><tr><th></th>";
+    cols.forEach(function (c, i) { if (i === nG0) h += '<th class="sep"></th>'; h += "<th>" + esc(c.top) + "</th>"; });
+    h += "</tr></thead><tbody>";
+    var prevW = null;
+    rows.forEach(function (g) {
+      if (prevW !== null && g.world !== prevW) h += '<tr class="f5-gap"><td colspan="' + (cols.length + 2) + '"></td></tr>';
+      prevW = g.world;
+      var key = g.world + "|" + g.agent, n = g.rids.length;
+      h += '<tr class="f5-row' + (S.sel === key ? " f5-sel" : "") + '" tabindex="0" data-row="' + key + '" aria-expanded="' + (S.sel === key) + '"><th class="rowh" scope="row">' + rowLabel(g, n) + "</th>";
+      cols.forEach(function (c, i) {
+        if (i === nG0) h += '<td class="sep"></td>';
+        var st = stat(set, g, c.id), col = S.view === "dwell" ? cellDwell(st.m) : cellDiff(st.m);
+        h += '<td style="background:' + col.bg + ";color:" + col.fg + '">' + fmt(st.m, S.view !== "dwell") +
+          "<small>" + lowerText(set, g, st, c.id) + "</small></td>";
+      });
+      h += "</tr>";
+    });
+    return h + "</tbody></table>";
+  }
+
+  function measureName(m) {
+    var c = CONTRASTS.filter(function (x) { return x[0] === m; })[0];
+    if (c) return c[1] + " (points)";
+    var p = m.split(":"), a = AN.filter(function (x) { return x[0] === p[1]; })[0][1];
+    return "bush dwell, " + a + ", " + (p[2] === "00" ? "unhurt" : "injury " + S.inj) + " (%)";
+  }
+  function drawCompare() {
+    var sG = setKeyAct("greedy"), sS = setKeyAct("sampled"), m = S.measure;
+    var keys = {};
+    [sG, sS].forEach(function (s) { rowsFor(s).forEach(function (g) { keys[g.world + "|" + g.agent] = g; }); });
+    var rows = Object.keys(keys).map(function (k) { return keys[k]; }).sort(function (a, b) { return a.world - b.world || (a.agent === "ordinary" ? -1 : 1); });
+    if (!rows.length) return '<p class="f5-empty">No tested runs for this selection yet.</p>';
+    function st(set, g) { var rids = g.rids.filter(function (r) { return D.data[set] && D.data[set][r]; });
+      var o = stat(set, { rids: rids }, m); if (S.unc === "lay") o.s = layErr(set, g, m); return o; }
+    var pts = rows.map(function (g) { return { g: g, gr: st(sG, g), sa: st(sS, g) }; });
+    var isD = m.charAt(0) === "d", lo = isD ? 0 : -CMAX, hi = isD ? 100 : CMAX;
+    pts.forEach(function (p) { [p.gr, p.sa].forEach(function (q) { if (isFinite(q.m)) {
+      var e = isFinite(q.s) ? q.s : 0; lo = Math.min(lo, q.m - e); hi = Math.max(hi, q.m + e); } }); });
+    lo = Math.floor(lo / 10) * 10; hi = Math.ceil(hi / 10) * 10;
+    var L = 230, R = 24, W = 900, rh = 22, top = 34, H = top + rows.length * rh + 40;
+    function X(v) { return L + (v - lo) / (hi - lo) * (W - L - R); }
+    var s = '<div class="f5-cmp"><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(measureName(m)) +
+      ', greedy against sampled actions, one row per world and agent">';
+    for (var t = lo; t <= hi; t += (hi - lo > 80 ? 20 : 10)) {
+      s += '<line x1="' + X(t) + '" x2="' + X(t) + '" y1="' + (top - 6) + '" y2="' + (H - 34) + '" stroke="' + tok(t === 0 ? "--rule" : "--line") + '" stroke-width="' + (t === 0 ? 1.5 : 1) + '"/>';
+      s += '<text x="' + X(t) + '" y="' + (H - 18) + '" font-size="12" text-anchor="middle">' + (t > 0 && !isD ? "+" : "") + t + "</text>";
+    }
+    s += '<text x="' + ((L + W - R) / 2) + '" y="' + (H - 2) + '" font-size="12.5" text-anchor="middle">' + esc(measureName(m)) + "</text>";
+    pts.forEach(function (p, i) {
+      var y = top + i * rh + rh / 2, lab = (p.g.world === 0 ? "level 05" : "w" + p.g.world) + " " + p.g.agent + " (n=" + Math.max(p.gr.n, p.sa.n) + ")";
+      if (i % 2 === 0) s += '<rect x="0" y="' + (y - rh / 2) + '" width="' + W + '" height="' + rh + '" fill="' + tok("--surface") + '" opacity=".55"/>';
+      s += '<text x="' + (L - 10) + '" y="' + (y + 4) + '" font-size="12.5" text-anchor="end">' + esc(lab) + "</text>";
+      [[p.gr, tok("--cmp-g"), -4], [p.sa, tok("--cmp-s"), 4]].forEach(function (q) {
+        if (!isFinite(q[0].m)) return; var yy = y + q[2];
+        if (isFinite(q[0].s)) s += '<line x1="' + X(q[0].m - q[0].s) + '" x2="' + X(q[0].m + q[0].s) + '" y1="' + yy + '" y2="' + yy + '" stroke="' + q[1] + '" stroke-width="2"/>';
+        s += '<circle cx="' + X(q[0].m) + '" cy="' + yy + '" r="4.5" fill="' + q[1] + '"/>';
+      });
+    });
+    s += '<text x="' + L + '" y="16" font-size="12.5"><tspan fill="' + tok("--cmp-g") + '">●</tspan> greedy (most likely move)   <tspan fill="' + tok("--cmp-s") + '">●</tspan> sampled from the policy   line: ' + (S.unc === "lay" ? "layout 95% interval" : "±1 seed SD") + "</text>";
+    return s + "</svg></div>";
+  }
+
+  function drawDetail() {
+    var el = document.getElementById("f5-detail");
+    if (!S.sel || S.view === "compare") { el.innerHTML = ""; return; }
+    var set = setKey(), g = rowsFor(set).filter(function (r) { return r.world + "|" + r.agent === S.sel; })[0];
+    if (!g) { el.innerHTML = ""; return; }
+    var cols = columns(), signed = S.view !== "dwell";
+    var h = '<div class="f5-detail"><h4>' + rowLabel(g, g.rids.length) + ' — each seed</h4><div class="scroll"><table><thead><tr><th>seed</th><th>checkpoints (M steps)</th>';
+    cols.forEach(function (c) { h += "<th>" + esc((c.grp === 0 ? (S.view === "dwell" ? "unhurt, " : "injury, ") : (S.view === "dwell" ? "inj. " + S.inj + ", " : "")) + c.top) + "</th>"; });
+    h += "</tr></thead><tbody>";
+    g.rids.slice().sort(function (a, b) { return D.runs[a].seed - D.runs[b].seed; }).forEach(function (rid) {
+      var st = D.data[set][rid].steps;
+      h += "<tr><td>" + D.runs[rid].seed + "</td><td>" + (st[0] / 1e6).toFixed(1) + "–" + (st[st.length - 1] / 1e6).toFixed(1) + "</td>";
+      cols.forEach(function (c) { var s = series(set, rid, c.id);
+        h += "<td>" + fmt(mean(s), signed) + ' <small style="color:var(--ink-3)">±' + sd(s).toFixed(0) + "</small></td>"; });
+      h += "</tr>";
+    });
+    el.innerHTML = h + '</tbody></table></div><p style="font-size:12.5px;color:var(--ink-2);margin:6px 0 0">Each value: the mean over that seed\'s newest 20 tested checkpoints; ± is the standard deviation across those 20 checkpoints (how much the value moves late in training, not an error bar). Click the row again to close.</p></div>';
+  }
+
+  function legend() {
+    var el = document.getElementById("f5-legend");
+    if (S.view === "dwell") el.innerHTML = '<span>bush dwell, % of steps:</span> 0 <span class="f5-ramp" style="background:linear-gradient(90deg,' + SEQ.join(",") + ')"></span> 100 <span>· lower number: ' + (S.unc === "lay" ? "layout 95% interval" : "seed-to-seed SD") + "</span>";
+    else if (S.view === "contrast") el.innerHTML = '<span>difference in bush dwell, points:</span> −' + CMAX + ' <span class="f5-ramp" style="background:linear-gradient(90deg,' + NEG.slice().reverse().join(",") + "," + POS.slice(1).join(",") + ')"></span> +' + CMAX + "+ <span>· lower number: " + (S.unc === "lay" ? "layout 95% interval" : "seed-to-seed SD") + "</span>";
+    else el.innerHTML = "";
+  }
+  function dataStatement() {
+    var sets = M.sets, nRuns = {}, eps = 0;
+    sets.forEach(function (s) { nRuns[s] = Object.keys(D.data[s]).length; eps += nRuns[s] * M.newest * M.animals.length * M.injuries.length * M.episodes; });
+    var cur = setKey(), n = D.data[cur] ? Object.keys(D.data[cur]).length : 0, all = Object.keys(D.runs).length;
+    var inc = M.incomplete.filter(function (x) { return x.set === cur; }).length;
+    var h = '<details class="bb-data"><summary><b>Data.</b> This selection uses ' + n + " of " + (n + inc) + " tested runs (" +
+      ((n + inc) ? Math.round(100 * n / (n + inc)) : 0) + "%) &mdash; open for the counts</summary><div class=\"scroll\"><table class=\"wide\" style=\"min-width:640px\"><thead><tr><th>scene set</th><th class=\"n\">runs used</th><th class=\"n\">runs left out</th><th class=\"n\">episodes</th><th>why</th></tr></thead><tbody>";
+    sets.forEach(function (s) { var k = M.incomplete.filter(function (x) { return x.set === s; }).length;
+      h += "<tr><td>" + s.replace("heal", "healing ").replace(/_/g, ", ") + '</td><td class="n">' + nRuns[s] + '</td><td class="n">' + k +
+        '</td><td class="n">' + (nRuns[s] * M.newest * M.animals.length * M.injuries.length * M.episodes).toLocaleString("en") +
+        "</td><td>newest " + M.newest + " checkpoints × " + M.animals.length * M.injuries.length + " scenes × " + M.episodes + " episodes per run; a run is left out of a set until all its 20 checkpoints are tested in every scene</td></tr>"; });
+    h += "</tbody></table></div><p>" + all + " runs in all (level-05 reference and worlds 1&ndash;16, every finished seed). Counts come from the data file the page reads, written by <code>dashboard_data.py</code>.</p></details>";
+    document.getElementById("f5-data-stmt").innerHTML = h;
+  }
+
+  function state() {
+    var t = { dwell: "Bush dwell", contrast: "Contrasts", compare: "Greedy vs sampled" }[S.view];
+    return t + " · " + (S.view === "compare" ? "both action rules" : S.act + " actions") + " · healing " + S.heal + " · " +
+      (S.food === "food" ? "with food" : "without food") + " · injury " + S.inj;
+  }
+  function render() {
+    document.querySelectorAll(".f5-seg").forEach(function (seg) {
+      var k = seg.getAttribute("data-k");
+      seg.querySelectorAll("button").forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b.getAttribute("data-v") === S[k]));
+        b.disabled = (k === "act" && S.view === "compare");
+      });
+    });
+    document.getElementById("f5-measure-ctl").hidden = S.view !== "compare";
+    document.getElementById("f5-healwarn").hidden = !(S.heal === "on" && S.view !== "dwell");
+    document.getElementById("f5-state").textContent = state();
+    document.getElementById("f5-body").innerHTML = S.view === "compare" ? drawCompare() : drawTable();
+    legend(); drawDetail(); dataStatement();
+    if (typeof updateCues === "function") updateCues();
+  }
+  var sel = document.getElementById("f5-measure");
+  AN.forEach(function (a) { sel.insertAdjacentHTML("beforeend", '<option value="d:' + a[0] + ':00">bush dwell, ' + a[1] + ", unhurt</option>"); });
+  AN.forEach(function (a) { sel.insertAdjacentHTML("beforeend", '<option value="d:' + a[0] + ':x">bush dwell, ' + a[1] + ", injured</option>"); });
+  CONTRASTS.forEach(function (c) { sel.insertAdjacentHTML("beforeend", '<option value="' + c[0] + '">' + c[1] + "</option>"); });
+  sel.value = S.measure;
+  sel.addEventListener("change", function () { S.measure = sel.value; render(); });
+  document.querySelectorAll(".f5-seg").forEach(function (seg) {
+    seg.addEventListener("click", function (e) {
+      var b = e.target.closest("button"); if (!b || b.disabled) return;
+      S[seg.getAttribute("data-k")] = b.getAttribute("data-v"); render();
+    });
+  });
+  var body = document.getElementById("f5-body");
+  function toggle(tr) { var k = tr.getAttribute("data-row"); S.sel = S.sel === k ? null : k; render(); }
+  body.addEventListener("click", function (e) { var tr = e.target.closest("tr.f5-row"); if (tr) toggle(tr); });
+  body.addEventListener("keydown", function (e) { var tr = e.target.closest("tr.f5-row");
+    if (tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(tr); } });
+  render();
+})();
+</script>

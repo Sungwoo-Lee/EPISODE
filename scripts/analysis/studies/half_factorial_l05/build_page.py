@@ -191,14 +191,6 @@ GROUP_AXES = ("Horizontal: the effect of one setting change on the injury contra
               "6, 8 and 10 M steps, light grey otherwise); open circle: ordinary agent; open square: modulated agent. Shaded "
               "band: inside the bar, &plusmn;2 times the expected noise of such a contrast. Panels: healing off at injury "
               "70 (the headline), healing off at injury 10, healing on at injury 70.")
-ANIMAL_AXES = ("Columns: four test scenes &mdash; no animal, the harmless rabbit wandering, the rabbit chasing the agent, "
-               "and the hunting predator &mdash; first unhurt (injury 0), then at injury {INJ}. Rows: one per world and agent, "
-               "the plain level-05 reference first, then world 1, then worlds 2&ndash;8, ordinary above modulated; "
-               "n in the row label is the number of tested seeds pooled. Colour and upper number: bush dwell, the "
-               "share of the test's 100 steps spent on the bush (%), healing off in the test scene &mdash; first averaged "
-               "over the newest 20 tested checkpoints of each seed, then averaged over seeds. Lower number: the "
-               "seed-to-seed standard deviation of those per-seed values, in percentage points (sample SD, n&minus;1).")
-
 
 SEEDS_AXES = ("Horizontal: the injury contrast at injury 70, in percentage points of bush dwell &mdash; the rabbit's "
               "extra bush dwell when injured minus the same when unhurt, mean over the run's newest 20 tested "
@@ -259,26 +251,19 @@ def world_tabs():
             + "".join(tl) + "</div>" + "\n".join(panels) + "</div>")
 
 
-ANIMAL_DEFAULT = "20"   # injury 20 keeps hiding off the ceiling (Visualization session, 2026-10-15)
+F5_DATA = os.path.join(PAGE_DIR, "f5_dashboard_data.json")   # written by dashboard_data.py
 
 
-def animal_tabs():
-    """Figure 5, one heat map per injury level 10-90 behind tabs, as Figure 2's world tabs (user, 2026-10-15)."""
-    tl, panels = [], []
-    for i in FG_ANIMAL_INJ:
-        on = i == ANIMAL_DEFAULT
-        tl.append(f'<button class="tab" role="tab" id="tab-i{i}" aria-controls="panel-i{i}" aria-selected="{str(on).lower()}"'
-                  + ("" if on else ' tabindex="-1"') + f">Injury {i}</button>")
-        fig = FB.figure(
-            f"hf_animals__i{i}", f"Heat map of bush dwell per world, agent and test scene, unhurt and at injury {i}, healing off: mean over seeds, with the seed-to-seed standard deviation.",
-            ANIMAL_AXES.replace("{INJ}", i),
-            f"How much each world and agent hides with each animal, unhurt and at injury {i}, and how much that varies between seeds; how much room is left for the rabbit to add.",
-            f"{FIG} --figure animals", title=f"Figure 5 &mdash; hiding with each animal, injury {i}")
-        panels.append(f'<div class="tabpanel" role="tabpanel" id="panel-i{i}" aria-labelledby="tab-i{i}" tabindex="0"'
-                      + ("" if on else " hidden") + ">" + fig + "</div>")
-    return ('<div class="tabs" data-tabs><p class="cue" hidden>more injury levels &mdash; scroll the tabs sideways &rarr;</p>'
-            '<div class="tablist" role="tablist" aria-label="Starting injury">'
-            + "".join(tl) + "</div>" + "\n".join(panels) + "</div>")
+def dashboard():
+    """Figure 5, an interactive dashboard drawn in the page from the embedded data (user, 2026-10-18: the
+    pre-generated-figure rule is waived for this figure). Random layout every episode, sampled and greedy actions,
+    healing on/off, food/no food, injury 0-70; the data are the per-checkpoint values dashboard_data.py writes."""
+    frag = open(os.path.join(PAGE_DIR, "dashboard.html")).read()
+    if not os.path.exists(F5_DATA):
+        raise SystemExit(f"missing {F5_DATA}: run scripts/analysis/studies/half_factorial_l05/dashboard_data.py --out {F5_DATA}")
+    js = open(F5_DATA).read().replace("</", "<\\/")   # cannot close the <script> it sits in
+    assert frag.count("{{F5_DATA}}") == 1
+    return frag.replace("{{F5_DATA}}", js)
 
 
 # Table 1: what level 05, world 1 and each setting change set, read from the saved training config of each world's
@@ -348,7 +333,6 @@ def settings_table():
                     raw=tuple(cols), min_width=760)
 
 
-FG_ANIMAL_INJ = [f"{i}" for i in range(10, 100, 10)]
 
 
 def main():
@@ -359,7 +343,7 @@ def main():
         "hf_group", "Three panels of setting-change effects against the bar.", GROUP_AXES,
         "Which setting changes move the injury contrast by more than seed-to-seed noise would, in world 1's scenes.",
         f"{FIG} --figure group", title="Figure 1 &mdash; the setting changes against the bar")
-    tok["{{FIG:animals}}"] = animal_tabs()
+    tok["{{FIG:animals}}"] = dashboard()
     tok["{{TABLE:seeds}}"] = seed_table()
     tok["{{SEED_COUNT}}"] = seed_count()
     tok["{{FIG:seeds}}"] = FB.figure(

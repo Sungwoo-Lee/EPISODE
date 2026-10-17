@@ -157,12 +157,23 @@ p.wname { margin:4px 0 0; }
 
 <section class="col" id="animals">
   <h2><span class="num">05</span> Hiding with each animal</h2>
-  <p>A descriptive view: how much each world and agent hides with each animal, unhurt and at one starting injury, with
-  healing off. Each cell pools every tested seed: the colour and upper number are the mean over seeds, the lower
-  number the seed-to-seed standard deviation, so a cell with a large spread is one the seeds disagree on. Pick the injury with the tabs (10 to 90); the page opens at injury 20. At injury 70 most runs
-  already hide nearly all the time even with no animal, which leaves the rabbit no room to add more, so the
-  differences between runs and animals show best at low injuries. The top rows are the plain level-05
-  reference.</p>
+  <p>A descriptive view of every world and agent, including worlds 9&ndash;16 (the other half of the full factorial)
+  and the plain level-05 reference: how much each one hides on the bush with no animal, the harmless rabbit wandering,
+  the rabbit chasing it, or the predator, unhurt and at a chosen starting injury. Unlike the rest of this page, these
+  tests place everything at random cells in every episode, and they are run both with the agent's most likely move
+  (<em>greedy</em>) and with moves drawn from its move probabilities as in training (<em>sampled</em>). Use the controls to
+  pick the action rule, healing, the food item, the injury, the agents and the worlds; <em>Contrasts</em> shows the injury
+  effect and the rabbit's effect directly, <em>Greedy vs sampled</em> puts the two action rules side by side for one
+  measure, and clicking a row lists that row's seeds.</p>
+  <div class="callout"><p><strong>This figure was replaced on 2026-10-18.</strong> The earlier Figure 5 used world 1's
+  frozen scenes (one fixed layout: agent in the middle, the bush three cells away), greedy moves only and 30 episodes
+  per checkpoint. A check on world 6's modulated agent, seed 42, showed that both choices change the answer: at injury 20,
+  healing off, the wandering rabbit added about 60 points of hiding in the fixed layout (mean of the newest 20
+  checkpoints), but at the final checkpoint with a new layout every episode (20,000 episodes) it added +7 points with
+  greedy moves and &minus;4 with sampled moves (<code>tmp/20261016_layout_check/</code>). The new
+  tests use a new layout every episode, both action rules, 100 episodes per checkpoint, healing on and off, and the
+  scenes with and without food. Sections 01&ndash;04 and 06 still use the frozen scenes, so their numbers are not
+  comparable with this figure's.</p></div>
   {{FIG:animals}}
 </section>
 
@@ -173,7 +184,7 @@ p.wname { margin:4px 0 0; }
   so it has five runs per agent. Each new run is tested in the same world-1
   scenes, with the same 30 episodes per checkpoint, once it has finished its 10 million training steps, and
   appears here only then. Status now: {{SEED_COUNT}}. Figure 2 (in each world's tab) shows every tested seed;
-  Figure 5 pools every tested seed; the other figures and tables in sections 01&ndash;04 show seed 42 only. The group test in section 02 has not yet
+  Figure 5 pools every tested seed (in its random-layout tests); the other figures and tables in sections 01&ndash;04 show seed 42 only. The group test in section 02 has not yet
   been redone with the repeat runs.</p>
   {{FIG:seeds}}
   {{FIG:seedtrain}}
