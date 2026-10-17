@@ -1678,6 +1678,66 @@ near 39 GB; a decision for the user. Note `data.py` reads only the CSVs, never t
 4. Launch command per set (the user or `training-runner`):
    `/home/vncuser/miniconda3/envs/grid_world_pain/bin/python scripts/eval/dwell_sweep/run_sweep.py configs/eval_sweeps/lookalike_hf_random_layout/lookalike_hf_random_layout_<set>_rppo.yaml`
 
+## Feedback from plan-reviewer: Figure 5 re-collection (2026-10-18)
+
+Reviewed by: plan-reviewer. Covers this section as written, plus two user decisions taken after
+it: (a) the same 100 episode seeds are reused at every checkpoint, so each scene has 100 distinct
+random layouts, and the page must say so; (b) each set's episode archives are deleted in one batch
+once that set's results are merged and checked complete.
+
+**Verdict: NOT READY. The collection itself is fine to launch once one ten-minute check is done
+(M2). The deletion step must not run as currently planned.** The archives are the only place the
+result of each single episode is stored. The per-scene result tables keep only the average over
+each checkpoint's 100 episodes. Decision (a) needs an error bar that reflects which 100 layouts
+were drawn. That error can only be computed from per-episode values, and so can the
+episode-bootstrap standard errors the pre-registered pass rule uses. Deleting the archives first
+makes the error bar the user asked for impossible to compute without re-collecting everything.
+Separately, the deletion step is not written down. The completeness check the plan names cannot be
+run against the tables it names. The new output folder's name also begins with the name of the old
+frozen-scene folder, which still holds about 1.8 GB of archives in its `grid/_scratch` alone, so a
+loosely written delete command would remove the old data too.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run ·
+🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+| # | Sev | Where | Issue | Fix (owner) |
+|---|---|---|---|---|
+| C1 | 🔴 | user decision (b); `cell_measures.py` `cell_row` | The per-scene CSV row is the across-episode `nanmean` only (columns `step, step_M` + 11 measures). Per-episode values live only in `<step>.zip`. Decision (a)'s honest uncertainty (resampling the 100 layouts jointly across checkpoints, seeds and worlds) and the pass rule's episode-bootstrap `SE_i` (§Pass rule, item 2) both need them. | Before deleting anything, extract a per-episode table from the archives: label, scene, step, episode index / seed, 11 measures. Check that its row count is cells × 100, and only then delete. Size it with measured compressed bytes. (senior-developer → developer) |
+| C2 | 🔴 | §Deleting episode archives; user decision (b) | Deletion procedure unspecified and unsafe. (i) The plan's criterion ("the CSV row … with `n_episodes` = 100 and its `bundle` column") cannot be checked: the CSV has neither column. They exist only in `_scratch/_rows/<launch>/rows_<node>.csv`. (ii) Old frozen-scene archives are still on disk under `metrics_history_rppo_lookalike_hf/{grid,gridchase}/_scratch`, `_hf_nofood`, `_hf_noheal`, `_hf_nofood_noheal`, `metrics_history_rppo_lookalike/*/_scratch`. Any `metrics_history_rppo_lookalike_hf*` glob hits them. (iii) Removing a whole `_scratch` also removes `_rows`, `_logs` and `_run_markers`, which are the only record of each cell's episode count and archive name. (iv) Checking completeness against the launch's own worklist is circular: a run missing from the worklist passes. (v) "After the set is merged" is undefined once runs are added later; each later launch needs its own check. | A written procedure: expected cells built independently (spec labels × 24 scenes × that run's newest-20 steps listed from its `models/`); per cell, CSV row present + rows-table row with `n_episodes`=100 + `bundle` naming the zip + zip present; **any miss aborts the whole batch**; delete only the listed `*.zip` under `metrics_history_rppo_lookalike_hf_random_layout/<set>/_scratch/<label>/<scene>/`; log path, size, sha256; keep `_rows`, `_logs`, `_provenance`; show the dry-run list to the user first. (senior-developer) |
+| M1 | 🟡 | §Checked from a real run (1); dashboard spec "± seed SD" | Neither the existing `data.py` `newest()` (a t-interval over 20 checkpoints) nor the seed SD contains the layout-sampling error. That error is shared by every checkpoint, training seed and world (one seed block, `rng: 42`), so it does not shrink as seeds are added. Worlds 9–16 have 1–2 seeds, so a seed SD there is undefined or unreliable. The pilot's rabbit × injury means (+4.6 greedy, −3.7 sampled, with food) are the same size as the plan's own layout error of about 4.7 points. | Form each contrast per run per layout, then bootstrap over the 100 layouts jointly. Show the seed SD and the layout error separately. Show the number of seeds on every row, and individual seed points instead of an SD bar when there are fewer than 3. (page builder / experiment-analyzer) |
+| M2 | 🟡 | §Checked from a real run, table | "Same 100 layouts" was checked only between sampled and greedy within one scene. Whether one seed gives the same bush / agent / food placement across animal scenes (`entities: []` vs one entity), across food and no food, and across injury levels is unverified. The contrast error depends on it. The pilot's 4.7-point figure cannot answer this either: `n_scaling.py` `add()` computes `sd_per_episode` as a sum of independent variances, not a paired difference. | Run 20 episodes per scene of one set and compare start positions seed by seed across the 4 animals × inj00/inj20 × food/nofood. If they match, the contrast error comes from paired differences; if not, the arms are independent and the page says so. (developer, about 10 min) |
+| M3 | 🟡 | §What was produced (newest 20); §Pass rule item 3; `data.py` `_read_table` | Checkpoints are 200 k apart, so the newest 20 run from 6.2 M to 10.0 M. 6.0 M is not collected, so the pass rule's same-sign check at 6, 8 and 10 M cannot be run. Resumed runs have near-duplicate steps: world 2 ordinary seed 44 has `8200036` in its first folder and `8200088` in `_resumed2`. `drop_duplicates("step")` keeps both, so that run's window becomes 6.4–10.0 M with 8.2 M counted twice. `data.py`'s "none overlap in practice" is false here. It is also not stated whether this data feeds the pre-registered readout (c) verdict or is descriptive only (σ = 2.67 was measured on frozen, greedy, 30-episode scenes). | Treat checkpoints within half a checkpoint interval as one, and assert that every run's window is 20 distinct slots from 6.2 to 10.0 M. Collect 21 checkpoints if 6 M is needed. State before launch which role this data plays. (experiment-designer + page builder) |
+| M4 | 🟡 | dashboard selector "healing" | With healing on (`recovery_in_bush_multiplier` 25), bush dwell mixes healing and hiding, so injury × animal contrasts on dwell are confounded (project memory, 2026-10-11). | Default the contrast view to healing off and label healing-on contrasts as confounded. (page builder) |
+| M5 | 🟡 | `data.py` `n_episodes()` | Silent fallback: returns 30 when the CSV has no `n_episodes` column. Sweep CSVs never carry it, so a reused reader would print "30 episodes" for 100-episode data. This breaks the no-fallback-defaults rule. | Read the count from the rows tables or provenance, and raise if it is missing. (developer) |
+| M6 | 🟡 | §Before launch item 4; §Cost | Nothing stops two of the 8 specs from launching on the same 4 nodes at once (separate output roots, `npar` 26 each). One cold-start line already uses about 2.2 cores (130–145 CPU-s per 62–66 s). Cost and NAS load were measured on one line on one machine. Running about 104 writers at roughly 20–40 MB/s plus checksum re-reads, next to 14 trainings, has not been measured. | One set at a time, and the next only after the previous collation reports 0 problems. After the first set, check the 14 trainings' speed in WandB. (training-runner) |
+| L1 | 🟢 | page wording | The glossary (2026-10-16) defines the "experiment condition" as the frozen test scenes. These scenes are neither that nor the training condition. | Give them a plain name ("random-layout test scenes") and ask the user whether the glossary needs a third entry. |
+| L2 | 🟢 | dashboard | `bush_hiding` is a share of the episode's own steps, so early deaths (predator, injury 70 without healing) change what it is a share of. | Show survival steps next to dwell (they are already collected). |
+
+**Assumptions.** Verified in the plan: the action rule reaches the rollout; within a scene, the
+same seed gives the same start cell for sampled and greedy; re-running sampled play reproduces the
+same episodes (on this container's CPU); the nodes run no training (diary 2026-10-17: trainings on
+102, 109–112, 114). Unverified: ❓ layouts match across animal, food and injury scenes (M2);
+❓ the order of episodes in an archive maps to the seed order the same way in every scene (needed
+for per-episode pairing); ❓ re-collection reproduces the same episodes on other nodes' CPUs (the
+plan's recovery route after deletion depends on it); ❓ the NAS keeps up with the trainings during
+the sweep; ❓ nodes 101 and 103–105 are still unclaimed on launch day.
+
+**Prior art.** `KNOWN_BUGS.md`: no row on sweep archives or episode seeds. The spawn-parking bug
+(an entity parked at (0,0) when its spawn area is full) cannot be reached with whole-grid areas.
+Wiki entry `20261006_0758_test_scene_confound_level05_modulator_gap` says to compare runs only
+within one scene set. The new dashboard must not put old frozen-scene numbers and new numbers on
+one scale.
+
+**Exit to SOUND WITH CONCERNS:** C1 adds a per-episode table, checked before any deletion. C2
+becomes a written deletion procedure with an independent list of expected cells, an abort on any
+missing cell, and a delete limited to the exact files in that one output folder. M2 is run.
+
+**Cost of being wrong.** Deleting before extraction makes the user's own uncertainty requirement
+impossible to meet, short of re-collecting everything: about 300 CPU-hours, recoverable only if
+re-collection reproduces the same episodes on the lab nodes, which is unverified. A loose delete
+glob destroys the old Figure 5 archives. Showing the seed SD alone would put a too-narrow error
+bar on a contrast that is about the size of its own layout error, on a page others will cite.
+
 ## Results / Conclusions
 
 To be filled in after training and evaluation.
