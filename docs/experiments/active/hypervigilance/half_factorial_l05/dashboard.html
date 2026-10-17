@@ -158,6 +158,9 @@ table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numer
     return m; }
   function layErr(set, g, m) { var L = D.lay && D.lay[set] && D.lay[set][g.world + "|" + g.agent];
     return L ? L[layId(m)] : NaN; }
+  function noLay() { var L = D.lay || {};
+    return S.unc === "lay" && !(S.view === "compare" ? (L[setKeyAct("sampled")] || L[setKeyAct("greedy")]) : L[setKey()]); }
+  var NOLAY = "layout 95% interval: not computed yet for this set (n/a)";
   function lowerText(set, g, st, m) {
     if (S.unc === "lay") { var e = layErr(set, g, m); return isFinite(e) ? "±" + e.toFixed(1) : "n/a"; }
     return isFinite(st.s) ? "±" + st.s.toFixed(0) : "—"; }
@@ -271,7 +274,7 @@ table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numer
     pts.forEach(function (p) { [p.gr, p.sa].forEach(function (q) { if (isFinite(q.m)) {
       var e = isFinite(q.s) ? q.s : 0; lo = Math.min(lo, q.m - e); hi = Math.max(hi, q.m + e); } }); });
     lo = Math.floor(lo / 10) * 10; hi = Math.ceil(hi / 10) * 10;
-    var W = Math.max(body.clientWidth || 900, 320), narrow = W < 600, L = narrow ? 112 : 230, R = 16, rh = 22, top = narrow ? 50 : 34,
+    var W = Math.max(body.clientWidth || 900, 320), narrow = W < 600, keyRow = W < 800, L = narrow ? 112 : 230, R = 16, rh = 22, top = keyRow ? 50 : 34,
         H = top + rows.length * rh + 40;
     var hasG = !!D.data[sG], hasS = !!D.data[sS];
     function X(v) { return L + (v - lo) / (hi - lo) * (W - L - R); }
@@ -294,10 +297,10 @@ table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numer
     });
     var lg = [[tok("--cmp-g"), hasG ? "greedy (most likely move)" : "greedy: not tested yet"],
               [tok("--cmp-s"), hasS ? "sampled from the policy" : "sampled: not tested yet"]];
-    var ln = "line: " + (S.unc === "lay" ? "layout 95% interval" : "±1 seed SD");
-    if (narrow) {
-      s += '<text x="8" y="16" font-size="12"><tspan fill="' + lg[0][0] + '">●</tspan><tspan dx="4">' + lg[0][1] + '</tspan><tspan dx="12" fill="' + lg[1][0] + '">●</tspan><tspan dx="4">' + lg[1][1] + "</tspan></text>";
-      s += '<text x="8" y="34" font-size="12">' + ln + "</text>";
+    var ln = noLay() ? "no layout interval for this set" : "line: " + (S.unc === "lay" ? "layout 95% interval" : "±1 seed SD");
+    if (keyRow) { var kx = narrow ? 8 : L;   // the key gets its own row whenever one line would not fit (below ~800 px)
+      s += '<text x="' + kx + '" y="16" font-size="12"><tspan fill="' + lg[0][0] + '">●</tspan><tspan dx="4">' + lg[0][1] + '</tspan><tspan dx="12" fill="' + lg[1][0] + '">●</tspan><tspan dx="4">' + lg[1][1] + "</tspan></text>";
+      s += '<text x="' + kx + '" y="34" font-size="12">' + ln + "</text>";
     } else {
       s += '<text x="' + L + '" y="16" font-size="12.5"><tspan fill="' + lg[0][0] + '">●</tspan><tspan dx="4">' + lg[0][1] + '</tspan><tspan dx="16" fill="' + lg[1][0] + '">●</tspan><tspan dx="4">' + lg[1][1] + '</tspan><tspan dx="16">' + ln + "</tspan></text>";
     }
@@ -320,7 +323,7 @@ table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numer
   }
 
   function legend() {
-    var el = document.getElementById("f5-legend"), low = S.unc === "lay" ? "layout 95% interval" : "seed-to-seed SD";
+    var el = document.getElementById("f5-legend"), low = noLay() ? NOLAY : S.unc === "lay" ? "layout 95% interval" : "seed-to-seed SD";
     var empty = !!document.querySelector("#f5-body .f5-empty");
     if (empty || S.view === "compare") { el.innerHTML = ""; return; }
     if (S.view === "dwell") el.innerHTML = '<span>bush dwell, % of steps:</span> <span class="f5-nw">0 <span class="f5-ramp" style="background:linear-gradient(90deg,' + SEQ.join(",") + ')"></span> 100</span> <span>· lower number: ' + low + "</span>";
@@ -343,7 +346,8 @@ table.f5-grid { border-collapse:separate; border-spacing:2px; font-variant-numer
         (D.data[s] ? "newest " + M.newest + " checkpoints × " + M.animals.length * M.injuries.length + " scenes × " + M.episodes + " episodes per run" +
           (inc ? "; " + inc + " run(s) left out until all 20 checkpoints are tested in every scene" : "") : "not tested yet") + "</td></tr>";
     });
-    h += "</tbody></table></div><p>" + all + " finished runs (level-05 reference and worlds 1&ndash;16, every finished seed). Counts come from the data file the page reads, written by <code>dashboard_data.py</code>.</p></details>";
+    h += "</tbody></table></div><p>" + all + " finished runs (level-05 reference and worlds 1&ndash;16, every finished seed). Counts come from the data file the page reads, written by <code>dashboard_data.py</code>.</p><p>Layout 95% intervals are computed so far for: " +
+      (M.layout_error_sets.length ? M.layout_error_sets.map(setName).join("; ") : "no set yet") + ". The other sets show n/a until their per-episode tables are extracted.</p></details>";
     document.getElementById("f5-data-stmt").innerHTML = h;
   }
 
