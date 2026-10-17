@@ -63,6 +63,26 @@ def _get_git_commit() -> str:
     return git_commit(short=True, cwd=PROJECT_ROOT)
 
 
+# Stochastic eval: the action-sampling key chain gets its OWN branch of the episode seed.
+# The env (jax_reset / jax_step) splits the reset key PRNGKey(seed) and then state.key for
+# its own randomness, and in this JAX build split(k, 2)[i] == split(k, n)[i]; a chain that
+# started at the reset key itself therefore walked in lockstep with state.key (step-1
+# action key == the reset agent_key, action key at t+1 == env respawn_key at t;
+# code-reviewer, 2026-10-18). fold_in with this fixed constant gives an independent stream.
+# Deterministic (argmax) eval never reads these keys. Changing this constant changes every
+# stochastic eval trajectory.
+_ACTION_KEY_FOLD = 0xAC71
+
+
+def _action_chain_key(reset_key):
+    """Start of the per-episode action-sampling chain for reset key PRNGKey(seed).
+
+    Shared by the legacy loops and the batched path so sampled episodes stay identical
+    between them. The result is a stream separate from the keys the environment splits.
+    """
+    return jax.random.fold_in(reset_key, _ACTION_KEY_FOLD)
+
+
 
 def _run_episode(
     params,
@@ -92,7 +112,7 @@ def _run_episode(
     }
     step = 0
     done = False
-    step_key = rng_key
+    step_key = _action_chain_key(rng_key)  # own stream, not the env's reset key
     while step < max_steps and not done:
         obs = state  # obs = full state (policy sees sensory obs internally)
         step_key, act_key = jax.random.split(step_key)
@@ -239,7 +259,7 @@ def _run_episode_with_recording(
     step = 0
     done = False
     info = {}
-    step_key = rng_key
+    step_key = _action_chain_key(rng_key)  # own stream, not the env's reset key
     while step < max_steps and not done:
         step_key, act_key = jax.random.split(step_key)
         action, carry = policy_fn(state, carry, act_key, deterministic=deterministic)
@@ -293,8 +313,9 @@ def _rollout_scan_jit(model, params, states0, h0, act_keys0, max_steps, determin
 
     `deterministic=True` (static): argmax action, `act_keys0` carried but unused.
     `deterministic=False`: sampled action, mirroring the legacy `_run_episode` chain
-    exactly per env -- the chain starts at the episode's reset key PRNGKey(seed)
-    (`act_keys0`), and each step does `chain, act = split(chain)` then
+    exactly per env -- the chain starts at `_action_chain_key(PRNGKey(seed))`
+    (`act_keys0`; a fold_in branch of the reset key, so it never aliases the env's own
+    `state.key` stream), and each step does `chain, act = split(chain)` then
     `categorical(act, logits)`.
 
     Root-cause note (found empirically while building the parity harness — flag
@@ -441,8 +462,11 @@ def _run_episodes_batched(
     # would itself be numerically unsafe.)
     action_dim = model.action_dim
 
+    # Action-sampling chains: their own fold_in branch of each reset key (same helper as
+    # the legacy loops), NOT `keys` -- the env splits `keys` for its own randomness.
+    act_keys0 = jax.vmap(_action_chain_key)(keys)
     scan_out = nnx.jit(_rollout_scan_jit, static_argnames=("max_steps", "deterministic"))(
-        model, params, states0, h0, keys, max_steps, deterministic=deterministic
+        model, params, states0, h0, act_keys0, max_steps, deterministic=deterministic
     )
     assert scan_out["action"].shape == (max_steps, num_envs), (
         f"Expected batched action shape (max_steps={max_steps}, num_envs={num_envs}), "

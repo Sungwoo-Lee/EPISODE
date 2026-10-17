@@ -139,3 +139,95 @@ def test_policy_fn_receives_distinct_keys_per_step():
         f"expected {len(seen_keys)} pairwise-distinct per-step keys, got "
         f"{len(unique_keys)} unique (pre-fix: every step reuses the same frozen key)"
     )
+
+
+# ---------------------------------------------------------------------------
+# Regression test — action-key / env-key aliasing (code-reviewer, 2026-10-18).
+# The per-episode action-sampling chain used to start at the reset key
+# PRNGKey(seed) itself, which jax_reset / jax_step also split for the
+# environment's own randomness. Because split(k, 2)[i] == split(k, n)[i] in this
+# JAX build, the action chain walked in lockstep with state.key: the step-1
+# action key equalled the reset agent_key and the action key at t+1 equalled the
+# env respawn_key at t. Fix: the chain starts at
+# fold_in(PRNGKey(seed), er._ACTION_KEY_FOLD) in both the legacy loops and the
+# batched path.
+# ---------------------------------------------------------------------------
+
+def _key_tuple(k):
+    return tuple(np.asarray(k).tolist())
+
+
+def _legacy_action_and_env_keys(params, seed):
+    """Run `_run_episode` with a stub policy; return (action keys, env keys)."""
+    action_keys, env_keys = [], set()
+    reset_key = jax.random.PRNGKey(seed)
+    for k in jax.random.split(reset_key, 5):          # jax_reset's 5-way split
+        env_keys.add(_key_tuple(k))
+    env_keys.add(_key_tuple(reset_key))
+
+    def stub_policy_fn(state, carry, key, deterministic=True):
+        action_keys.append(_key_tuple(key))
+        env_keys.add(_key_tuple(state.key))
+        for k in jax.random.split(state.key, 6):      # jax_step's 6-way split
+            env_keys.add(_key_tuple(k))
+        return 0, carry
+
+    er._run_episode(params=params, policy_fn=stub_policy_fn, rng_key=reset_key,
+                    max_steps=params.max_steps, deterministic=False)
+    return action_keys, env_keys
+
+
+def test_action_key_chain_disjoint_from_env_key_chain():
+    params = load_env_params(_make_config(_ENV_YAML))
+    for seed in (0, 1, 12345):
+        action_keys, env_keys = _legacy_action_and_env_keys(params, seed)
+        assert len(action_keys) == params.max_steps
+        shared = set(action_keys) & env_keys
+        assert not shared, (
+            f"seed={seed}: {len(shared)} of {len(action_keys)} action-sampling keys equal "
+            "an environment key (reset key, jax_reset sub-key, state.key or a jax_step "
+            "sub-key) -- the action chain aliases the env chain"
+        )
+
+
+def test_batched_action_chain_matches_legacy(monkeypatch):
+    """The batched path must start the action chain from the same folded key as the
+    legacy loop (so sampled batched == sampled legacy), not from the reset key."""
+    import flax.nnx as nnx
+
+    params = load_env_params(_make_config(_ENV_YAML))
+    seeds = [0, 1, 12345]
+    captured = {}
+
+    class _Captured(Exception):
+        pass
+
+    def fake_jit(fn, **_kw):
+        def call(model, p, states0, h0, act_keys0, max_steps, deterministic=True):
+            captured["act_keys0"] = np.asarray(act_keys0)
+            captured["reset_keys"] = np.asarray(states0.key)
+            raise _Captured
+        return call
+
+    class _StubModel:
+        action_dim = 5
+
+        def initial_state(self, batch_size):
+            return np.zeros((batch_size, 1), np.float32)
+
+    monkeypatch.setattr(nnx, "jit", fake_jit)
+    try:
+        er._run_episodes_batched(params, _StubModel(), seeds, params.max_steps,
+                                 deterministic=False)
+    except _Captured:
+        pass
+    assert "act_keys0" in captured, "fake nnx.jit was not reached"
+
+    for i, s in enumerate(seeds):
+        chain0 = captured["act_keys0"][i]
+        assert not np.array_equal(chain0, np.asarray(jax.random.PRNGKey(s))), (
+            f"seed={s}: batched action chain starts at the reset key PRNGKey(seed)")
+        legacy_keys, _ = _legacy_action_and_env_keys(params, s)
+        first_batched = _key_tuple(jax.random.split(jax.numpy.asarray(chain0))[1])
+        assert first_batched == legacy_keys[0], (
+            f"seed={s}: batched step-1 action key differs from the legacy loop's")
